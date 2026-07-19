@@ -1,0 +1,116 @@
+/* ForkCaster backend — keys live HERE, never in the client.
+   Persistence: flat JSON + photo files in DATA_DIR (Umbrel volume). */
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+
+const PORT = process.env.PORT || 3450;
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "..", "data");
+const PHOTO_DIR = path.join(DATA_DIR, "photos");
+const STATE_FILE = path.join(DATA_DIR, "state.json");
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
+const PLACES_KEY = process.env.GOOGLE_PLACES_KEY || "";
+
+fs.mkdirSync(PHOTO_DIR, { recursive: true });
+
+const app = express();
+app.use(express.json({ limit: "25mb" }));
+
+/* ── state persistence ── */
+app.get("/api/state", (_req, res) => {
+  try { res.json(JSON.parse(fs.readFileSync(STATE_FILE, "utf8"))); }
+  catch { res.json({ saved: false }); }
+});
+app.post("/api/state", (req, res) => {
+  try { fs.writeFileSync(STATE_FILE, JSON.stringify(req.body)); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: String(e) }); }
+});
+
+/* ── progress photos (stored on-node, private) ── */
+app.post("/api/photo", (req, res) => {
+  try {
+    const { data, media } = req.body || {};
+    if (!data) return res.status(400).json({ error: "no data" });
+    const ext = /png/.test(media || "") ? "png" : "jpg";
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    fs.writeFileSync(path.join(PHOTO_DIR, `${id}.${ext}`), Buffer.from(data, "base64"));
+    res.json({ id, url: `/api/photo/${id}.${ext}` });
+  } catch (e) { res.status(500).json({ error: String(e) }); }
+});
+app.get("/api/photo/:file", (req, res) => {
+  const f = path.join(PHOTO_DIR, path.basename(req.params.file));
+  if (!fs.existsSync(f)) return res.status(404).end();
+  res.sendFile(f);
+});
+
+/* ── AI proxy (ranking, coach, photo estimation) ── */
+app.post("/api/ai", async (req, res) => {
+  if (!ANTHROPIC_KEY) return res.json({ error: "ANTHROPIC_API_KEY not set on the server. Add it to docker-compose env." });
+  try {
+    const { prompt, system, image } = req.body || {};
+    const content = image
+      ? [{ type: "image", source: { type: "base64", media_type: image.media_type || "image/jpeg", data: image.data } }, { type: "text", text: prompt }]
+      : prompt;
+    const body = { model: "claude-sonnet-4-6", max_tokens: 1000, messages: [{ role: "user", content }] };
+    if (system) body.system = system;
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    if (data.error) return res.json({ error: data.error.message || "API error" });
+    res.json({ text: (data.content || []).filter((x) => x.type === "text").map((x) => x.text).join("") });
+  } catch (e) { res.json({ error: String(e) }); }
+});
+
+/* ── Open Food Facts barcode proxy (keyless) ── */
+app.get("/api/off/:barcode", async (req, res) => {
+  try {
+    const bc = req.params.barcode.replace(/\D/g, "");
+    const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${bc}.json?fields=product_name,brands,serving_size,nutriments`, {
+      headers: { "User-Agent": "ForkCaster/0.1 (self-hosted; personal use)" },
+    });
+    res.json(await r.json());
+  } catch (e) { res.json({ status: 0, error: String(e) }); }
+});
+
+/* ── Nearby restaurants via Google Places (optional; demo list if no key) ── */
+app.get("/api/nearby", async (req, res) => {
+  if (!PLACES_KEY) return res.json({ venues: [] }); // client keeps its demo set
+  try {
+    const { lat, lng } = req.query;
+    const r = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": PLACES_KEY,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.rating,places.photos",
+      },
+      body: JSON.stringify({
+        includedTypes: ["restaurant"], maxResultCount: 8,
+        locationRestriction: { circle: { center: { latitude: +lat, longitude: +lng }, radius: 2500 } },
+      }),
+    });
+    const data = await r.json();
+    const venues = (data.places || []).map((p) => ({
+      id: p.id,
+      name: p.displayName && p.displayName.text,
+      cuisine: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || "Restaurant",
+      eta: "nearby",
+      score: Math.min(5, (p.rating || 3.8)),
+      photo: p.photos && p.photos[0]
+        ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?maxWidthPx=400&key=${PLACES_KEY}`
+        : null,
+      menu: null, // Places has no menus; the AI proposes realistic goal-fit orders
+    }));
+    res.json({ venues });
+  } catch (e) { res.json({ venues: [], error: String(e) }); }
+});
+
+/* ── static frontend ── */
+const DIST = path.join(__dirname, "..", "dist");
+app.use(express.static(DIST));
+app.get("*", (_req, res) => res.sendFile(path.join(DIST, "index.html")));
+
+app.listen(PORT, () => console.log(`ForkCaster listening on :${PORT} · data at ${DATA_DIR}`));

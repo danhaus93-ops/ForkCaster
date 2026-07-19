@@ -1,0 +1,11 @@
+# Standalone / dev compose. For the Umbrel manifest see umbrel/forkcaster/.
+services:
+  forkcaster:
+    build: .
+    ports: ["3450:3450"]
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_PLACES_KEY=${GOOGLE_PLACES_KEY:-}
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
