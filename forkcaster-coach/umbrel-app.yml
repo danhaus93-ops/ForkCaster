@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.11"
+version: "0.1.12"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.11: the health-fit ranking now shows its status - a live indicator while
-  ranking, a green confirmation when venues are ranked by your goals, and an
-  explicit red error (with retry) when the AI key is missing or invalid so a
-  silent failure can never look like a no-op again.
+  v0.1.12: saving or successfully testing an API key now immediately clears the
+  stale ranking error and re-runs the health-fit ranking - no manual retry
+  needed after fixing a key.
 dependencies: []
 path: ""
 defaultUsername: ""

@@ -127,12 +127,16 @@ export default function App() {
     setKeyMsg("Saving…");
     const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
     try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      setKeyIn({ a: "", g: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓"); }
+      setKeyIn({ a: "", g: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
+      if (venues.length && !venues[0].menu) rankVenues(venues); }
     catch { setKeyMsg("Save failed — is the node reachable?"); }
   }
   async function testAiKey() {
     setKeyMsg("Testing AI key…");
-    try { const t = await callClaude("Reply with exactly: ok"); setKeyMsg(t.toLowerCase().includes("ok") ? "AI key works ✓" : `Unexpected reply: ${t.slice(0, 40)}`); }
+    try { const t = await callClaude("Reply with exactly: ok");
+      const good = t.toLowerCase().includes("ok");
+      setKeyMsg(good ? "AI key works ✓" : `Unexpected reply: ${t.slice(0, 40)}`);
+      if (good && venues.length && !venues[0].menu) rankVenues(venues); }
     catch (e) { setKeyMsg(`AI key failed: ${(e && e.message) || e}`); }
   }
   const [tab, setTab] = useState("now");
