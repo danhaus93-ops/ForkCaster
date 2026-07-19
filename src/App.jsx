@@ -245,12 +245,21 @@ export default function App() {
     { key: "maintain", label: "Maintenance / off-ramp", focus: "The hard part most apps ignore: hold the loss and plan life after the drug." },
   ];
 
+  function manualLocation() {
+    const v = window.prompt("Enter your location as lat,lng (e.g. 38.62,-90.19).\nTip: Apple Maps \u2192 drop a pin \u2192 the numbers are shown on the place card.");
+    if (!v) return;
+    const m = v.split(",").map((x) => parseFloat(x.trim()));
+    if (m.length === 2 && Number.isFinite(m[0]) && Number.isFinite(m[1])) setGeo({ status: "ok", lat: m[0], lng: m[1], manual: true });
+    else window.alert("Couldn't read that \u2014 format is: 38.62,-90.19");
+  }
   function detectLocation() {
     if (typeof navigator === "undefined" || !navigator.geolocation) { setGeo({ status: "unavailable" }); return; }
+    if (geo.status === "denied") { manualLocation(); return; }  // second tap after a denial = manual entry
     setGeo({ status: "locating" });
     navigator.geolocation.getCurrentPosition(
       (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setGeo({ status: "denied" }), { timeout: 8000, maximumAge: 60000 });
+      (err) => setGeo({ status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) }),
+      { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true });
   }
   function pickMode(k) { setMode(k); setTargets(MODES[k].targets); }
   function toggleIn(list, setList, v) { setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]); }
@@ -988,7 +997,7 @@ function nextDow(dow) {
 function geoLabel(geo, timeStr) {
   if (geo.status === "ok") return `Live GPS ${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)} · ${timeStr}`;
   if (geo.status === "locating") return `Locating… · ${timeStr}`;
-  if (geo.status === "denied") return `Downtown (sample) · tap to enable GPS · ${timeStr}`;
+  if (geo.status === "denied") return `GPS ${geo.code === 1 ? "denied by iOS — allow in Settings › Apps › ForkCaster (or Safari Websites) · tap for manual entry" : geo.code === 3 ? "timed out · tap to retry" : "unavailable · tap for manual entry"} · ${timeStr}`;
   if (geo.status === "unavailable") return `Downtown (sample) · ${timeStr}`;
   return `Right now · ${timeStr}`;
 }
