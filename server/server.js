@@ -168,7 +168,7 @@ app.get("/api/nearby", async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": PLACES_KEY,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.rating,places.photos,places.location",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.primaryType,places.types,places.rating,places.photos,places.location",
       },
       body: JSON.stringify({
         includedTypes: ["restaurant", "fast_food_restaurant", "cafe", "meal_takeaway", "sandwich_shop", "bakery"],
@@ -177,20 +177,36 @@ app.get("/api/nearby", async (req, res) => {
       }),
     });
     const data = await r.json();
-    const venues = (data.places || []).map((p) => ({
+    const NON_FOOD = new Set(["gas_station", "convenience_store", "shopping_mall", "grocery_store", "supermarket", "department_store", "liquor_store", "drugstore"]);
+    const venues = (data.places || [])
+      .filter((p) => !NON_FOOD.has(p.primaryType) && !(p.types || []).some((t) => NON_FOOD.has(t)))
+      .map((p) => ({
       id: p.id,
       name: p.displayName && p.displayName.text,
       cuisine: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || "Restaurant",
       eta: "nearby",
       score: Math.min(5, (p.rating || 3.8)),
       lat: p.location && p.location.latitude, lng: p.location && p.location.longitude,
-      photo: p.photos && p.photos[0]
-        ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?maxWidthPx=400&key=${PLACES_KEY}`
-        : null,
+      photo: p.photos && p.photos[0] ? `/api/vphoto?name=${encodeURIComponent(p.photos[0].name)}` : null,
       menu: null, // Places has no menus; the AI proposes realistic goal-fit orders
     }));
     res.json({ venues });
   } catch (e) { res.json({ venues: [], error: String(e) }); }
+});
+
+/* ── venue photo proxy (keeps the Places key server-side) ── */
+app.get("/api/vphoto", async (req, res) => {
+  const PLACES_KEY = key("GOOGLE_PLACES_KEY");
+  const name = req.query.name;
+  if (!PLACES_KEY || !name) return res.status(404).end();
+  try {
+    const r = await fetch(`https://places.googleapis.com/v1/${name}/media?maxWidthPx=500&key=${PLACES_KEY}`, { redirect: "follow" });
+    if (!r.ok) return res.status(404).end();
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.set("Content-Type", r.headers.get("content-type") || "image/jpeg");
+    res.set("Cache-Control", "public, max-age=86400");
+    res.send(buf);
+  } catch { res.status(502).end(); }
 });
 
 /* ── static frontend ── */

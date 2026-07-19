@@ -518,11 +518,11 @@ export default function App() {
             return (
               <div key={r.id} style={{ minWidth: 178, background: C.surface, borderRadius: 16, flexShrink: 0, overflow: "hidden", border: `1.5px solid ${active ? C.go : C.hair}`, boxShadow: active ? `0 6px 18px ${C.go}22` : `0 1px 3px ${C.ink}0A` }}>
                 <div style={{ height: 100, position: "relative", overflow: "hidden" }}>
-                  <FoodImg photo={PHOTOS[r.id]} kind={FOOD_BY_ID[r.id]} sc={sc} />
+                  <FoodImg photo={PHOTOS[r.id] || r.photo} kind={FOOD_BY_ID[r.id] || "burger"} sc={sc} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 55%)" }} />
                   <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.95)", borderRadius: 20, padding: "3px 9px", display: "flex", alignItems: "center", gap: 3, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
-                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 13, color: sc }}>{Math.round(r.score * 20)}</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: sc, textTransform: "uppercase" }}>match</span>
+                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 13, color: sc }}>{r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: sc, textTransform: "uppercase" }}>{r.menu ? "match" : "★"}</span>
                   </div>
                   <div style={{ position: "absolute", left: 12, bottom: 9 }}>
                     <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: "#fff", lineHeight: 1, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{r.name}</div>
@@ -536,7 +536,7 @@ export default function App() {
             );
           })}
         </div>
-        <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>Demo venues until GPS locks (needs your Tailscale HTTPS URL). Add a Google Places key to secrets.json for live restaurants near you.</div>
+        <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>{venues[0] && !venues[0].menu ? "Live venues from Google Places. Menus aren’t public data anywhere — the AI proposes realistic goal-fit orders for each spot and estimates macros conservatively." : "Demo venues until GPS locks and a Google Places key is added in Settings → API keys."}</div>
       </div>
 
       <div style={{ marginTop: 6 }}>
@@ -553,7 +553,7 @@ export default function App() {
             {(result.picks || []).map((p, i) => (
               <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", background: C.surface, marginBottom: 10, border: `1px solid ${C.hair}`, borderLeft: `4px solid ${medalColor(i)}`, borderRadius: 14, padding: "12px 14px" }}>
                 <div style={{ width: 42, height: 42, borderRadius: 11, flexShrink: 0, overflow: "hidden", position: "relative", boxShadow: `0 1px 3px ${C.ink}22` }}>
-                  <FoodImg photo={PHOTOS[selected]} kind={FOOD_BY_ID[selected] || "bowl"} sc={scoreColor(4.5)} />
+                  <FoodImg photo={PHOTOS[selected] || ((venues.find((v) => v.id === selected) || {}).photo)} kind={FOOD_BY_ID[selected] || "bowl"} sc={scoreColor(4.5)} />
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 99, background: medalColor(i), color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{p.why}</div></div>
