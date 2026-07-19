@@ -214,7 +214,7 @@ export default function App() {
   useEffect(() => {
     if (geo.status !== "ok") return;
     fetch(`/api/nearby?lat=${geo.lat}&lng=${geo.lng}`).then((r) => r.json()).then((j) => {
-      if (j && j.venues && j.venues.length) setVenues(j.venues);
+      if (j && j.venues && j.venues.length) { setVenues(j.venues); rankVenues(j.venues); }
     }).catch(() => {});
   }, [geo.status, geo.lat, geo.lng]);
 
@@ -312,6 +312,24 @@ export default function App() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     return data.text || "";
+  }
+
+  async function rankVenues(vs) {
+    try {
+      const medLine = medObj ? ` User is on ${medObj.label}${nauseaRisk !== "low" ? ` with ${nauseaRisk.toUpperCase()} nausea risk (favor gentle, lean, low-fat venues)` : ""}.` : "";
+      const restrictLine = restrictions.length ? ` Hard restrictions: ${restrictions.join("; ")} — venues that can't safely serve these score LOW.` : "";
+      const prompt =
+        `Score each venue 0-100 by how well a health-focused person can eat there RIGHT NOW toward their goals. ` +
+        `Judge by protein-dense, goal-fit options and customizability (grilled/bowls/salads = high; dessert/pizza-only/fried-only = low). IGNORE popularity and review scores.` +
+        ` User has ${proteinLeft}g protein and ${calLeft} calories remaining today.` + medLine + restrictLine +
+        `\nVenues: ${JSON.stringify(vs.map((v) => ({ id: v.id, name: v.name, type: v.cuisine })))}` +
+        `\nReturn ONLY minified JSON, no markdown: [{"id":"<id>","match":<int 0-100>,"why":"<max 6 words>"}] for every venue.`;
+      const text = await callClaude(prompt);
+      const arr = JSON.parse(text.replace(/```json|```/g, "").trim());
+      setVenues((cur) => cur
+        .map((v) => { const m = Array.isArray(arr) ? arr.find((x) => x.id === v.id) : null; return m && Number.isFinite(+m.match) ? { ...v, match: Math.max(0, Math.min(100, Math.round(+m.match))), why: m.why } : v; })
+        .sort((a, b) => (b.match ?? -1) - (a.match ?? -1)));
+    } catch { /* no AI key or parse issue: keep distance order + star ratings */ }
   }
 
   async function orderForMe(r) {
@@ -521,12 +539,13 @@ export default function App() {
                   <FoodImg photo={PHOTOS[r.id] || r.photo} kind={FOOD_BY_ID[r.id] || "burger"} sc={sc} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 55%)" }} />
                   <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.95)", borderRadius: 20, padding: "3px 9px", display: "flex", alignItems: "center", gap: 3, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
-                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 13, color: sc }}>{r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: sc, textTransform: "uppercase" }}>{r.menu ? "match" : "★"}</span>
+                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 13, color: r.match != null ? scoreColor(r.match / 20) : sc }}>{r.match != null ? r.match : r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: r.match != null ? scoreColor(r.match / 20) : sc, textTransform: "uppercase" }}>{r.match != null || r.menu ? "match" : "★"}</span>
                   </div>
                   <div style={{ position: "absolute", left: 12, bottom: 9 }}>
                     <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: "#fff", lineHeight: 1, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{r.name}</div>
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.92)", marginTop: 2, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{r.cuisine} · {r.lat != null && geo.status === "ok" ? `${distMi(geo.lat, geo.lng, r.lat, r.lng).toFixed(1)} mi` : r.eta}</div>
+                    {r.why && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.85)", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{r.why}</div>}
                   </div>
                 </div>
                 <div style={{ padding: 12 }}>
@@ -1157,8 +1176,8 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
     restaurants.forEach((r, i) => {
       const vLat = r.lat != null ? r.lat : lat + (VENUE_OFFSETS[i % 5][0]);
       const vLng = r.lng != null ? r.lng : lon + (VENUE_OFFSETS[i % 5][1]);
-      const sc = scoreColor(r.score);
-      const html = `<div style="background:${S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)"};color:${S.dark ? "#EDF2F0" : "#17221C"};border-radius:11px;padding:4px 9px 4px 7px;font-weight:700;font-size:11px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;display:flex;gap:6px;align-items:center;"><span style="width:8px;height:8px;border-radius:99px;background:${sc};flex-shrink:0;"></span>${r.name}&nbsp;<span style="color:${sc};">${Math.round(r.score * 20)}</span></div>`;
+      const sc = scoreColor(r.match != null ? r.match / 20 : r.score);
+      const html = `<div style="background:${S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)"};color:${S.dark ? "#EDF2F0" : "#17221C"};border-radius:11px;padding:4px 9px 4px 7px;font-weight:700;font-size:11px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;display:flex;gap:6px;align-items:center;"><span style="width:8px;height:8px;border-radius:99px;background:${sc};flex-shrink:0;"></span>${r.name}&nbsp;<span style="color:${sc};">${r.match != null ? r.match : Math.round(r.score * 20)}</span></div>`;
       const mk = L.marker([vLat, vLng], { icon: L.divIcon({ html, className: "", iconSize: null, iconAnchor: [40, 14] }) }).addTo(m);
       mk.on("click", () => onPin(r));
       mkRef.current.push(mk);
