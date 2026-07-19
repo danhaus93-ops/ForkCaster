@@ -4,7 +4,7 @@ COPY package.json ./
 RUN npm install --no-audit --no-fund
 COPY index.html ./
 COPY src ./src
-COPY dist/icon.svg ./dist/icon.svg
+COPY dist ./dist
 RUN npm run build
 
 FROM node:20-alpine

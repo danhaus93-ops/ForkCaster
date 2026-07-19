@@ -119,7 +119,7 @@ export default function App() {
   const [tab, setTab] = useState("now");
 
   const [targets, setTargets] = useState(MODES.cut.targets);
-  const [eaten, setEaten] = useState({ protein: 105, calories: 1750, carbs: 110, fat: 52, waterOz: 64, fiber: 14, steps: 6100, exerciseCal: 320 });
+  const [eaten, setEaten] = useState({ protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
   const [editing, setEditing] = useState(false);
 
   const [geo, setGeo] = useState({ status: "idle" });
@@ -133,16 +133,7 @@ export default function App() {
   const [now, setNow] = useState(new Date());
 
   const [body, setBody] = useState({ sex: "male", heightIn: 71, neck: 16, waist: 35, hip: 40 });
-  const [weightLog, setWeightLog] = useState([
-    { date: addDays(new Date(), -49).toISOString().slice(0, 10), lbs: 214.2 },
-    { date: addDays(new Date(), -42).toISOString().slice(0, 10), lbs: 212.0 },
-    { date: addDays(new Date(), -35).toISOString().slice(0, 10), lbs: 210.6 },
-    { date: addDays(new Date(), -28).toISOString().slice(0, 10), lbs: 208.1 },
-    { date: addDays(new Date(), -21).toISOString().slice(0, 10), lbs: 206.9 },
-    { date: addDays(new Date(), -14).toISOString().slice(0, 10), lbs: 204.3 },
-    { date: addDays(new Date(), -7).toISOString().slice(0, 10), lbs: 202.8 },
-    { date: todayISO(), lbs: 201.1 },
-  ]);
+  const [weightLog, setWeightLog] = useState([]);
   const [newWeight, setNewWeight] = useState("");
   const [goalWeight, setGoalWeight] = useState(185);
   const [photos, setPhotos] = useState([]);
@@ -152,27 +143,15 @@ export default function App() {
   const photoRef = useRef(null);
 
   const [glp, setGlp] = useState({
-    med: "tirzepatide", dose: 7.5, injectionDay: "SU",
-    lastInjection: addDays(new Date(), -3).toISOString().slice(0, 10), weeksOn: 11, lastDoseChangeWk: 1,
-    sideEffects: [
-      { id: uid(), date: addDays(new Date(), -3).toISOString().slice(0, 10), symptom: "Nausea", severity: 2 },
-      { id: uid(), date: addDays(new Date(), -1).toISOString().slice(0, 10), symptom: "Fatigue", severity: 1 },
-      { id: uid(), date: addDays(new Date(), -10).toISOString().slice(0, 10), symptom: "Nausea", severity: 2 },
-      { id: uid(), date: addDays(new Date(), -17).toISOString().slice(0, 10), symptom: "Nausea", severity: 3 },
-      { id: uid(), date: addDays(new Date(), -8).toISOString().slice(0, 10), symptom: "Constipation", severity: 1 },
-    ],
+    med: "tirzepatide", dose: 2.5, injectionDay: "SU",
+    lastInjection: todayISO(), weeksOn: 1, lastDoseChangeWk: 99,
+    sideEffects: [],
   });
   const [seSymptom, setSeSymptom] = useState("Nausea");
   const [seSeverity, setSeSeverity] = useState(2);
 
   // meal history (fat matters for GLP-1 nausea correlation). Scans/photos/orders append here.
-  const [mealLog, setMealLog] = useState([
-    { id: uid(), date: addDays(new Date(), -3).toISOString().slice(0, 10), name: "Fried chicken plate", fat: 48, protein: 40, calories: 890 },
-    { id: uid(), date: addDays(new Date(), -10).toISOString().slice(0, 10), name: "Double cheeseburger + fries", fat: 52, protein: 38, calories: 950 },
-    { id: uid(), date: addDays(new Date(), -17).toISOString().slice(0, 10), name: "Fettuccine alfredo", fat: 60, protein: 24, calories: 1020 },
-    { id: uid(), date: addDays(new Date(), -8).toISOString().slice(0, 10), name: "Greek salad w/ chicken", fat: 12, protein: 34, calories: 470 },
-    { id: uid(), date: addDays(new Date(), -5).toISOString().slice(0, 10), name: "Grilled chicken bowl", fat: 14, protein: 52, calories: 560 },
-  ]);
+  const [mealLog, setMealLog] = useState([]);
 
   const [coachMsgs, setCoachMsgs] = useState([
     { role: "assistant", text: "I'm your coach. I can see your macros, weight trend, and meds. Ask me what to eat, whether you're on pace, or how to handle a low-appetite day." },
@@ -354,28 +333,16 @@ export default function App() {
   // Real Open Food Facts lookup (keyless, CORS-friendly). Camera decode is stubbed;
   // in production a scanner lib feeds the same barcode into this same call.
   async function lookupBarcode(code) {
-    const bc = String(code || "").replace(/\D/g, ""); if (!bc) return;
+    const bc = String(code || "").replace(/\D/g, ""); if (!bc) { setScan({ status: "miss" }); return; }
     setScan({ status: "loading" });
     try {
-      const res = await fetch(`/api/off/${bc}`);
-      const data = await res.json();
-      if (!data || data.status === 0 || !data.product) { setScan({ status: "miss" }); return; }
-      const n = data.product.nutriments || {};
-      const per = (k) => (n[`${k}_serving`] != null ? +n[`${k}_serving`] : n[`${k}_100g`] != null ? +n[`${k}_100g`] : 0);
-      const basis = n["energy-kcal_serving"] != null || n["proteins_serving"] != null ? (data.product.serving_size || "1 serving") : "100 g";
-      const food = {
-        name: data.product.product_name || "Unknown product",
-        brand: (data.product.brands || "").split(",")[0] || "",
-        basis,
-        calories: Math.round(n["energy-kcal_serving"] != null ? +n["energy-kcal_serving"] : +n["energy-kcal_100g"] || 0),
-        protein: Math.round(per("proteins")), carbs: Math.round(per("carbohydrates")), fat: Math.round(per("fat")), fiber: Math.round(per("fiber")),
-      };
-      setScan({ status: "found", food, src: "Open Food Facts" });
-    } catch { setScan({ status: "error" }); }
+      const res = await fetch(`/api/food/${bc}`);
+      const d = await res.json();
+      if (!d || !d.found) { setScan({ status: "miss" }); return; }
+      setScan({ status: "found", food: { name: d.name, brand: d.brand, basis: d.basis, source: d.source, calories: d.calories || 0, protein: d.protein || 0, carbs: d.carbs || 0, fat: d.fat || 0, fiber: d.fiber || 0 } });
+    } catch { setScan({ status: "failed" }); }
   }
-  function toBase64(file) {
-    return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
-  }
+
   async function estimateFromPhoto(e) {
     const file = (e.target.files || [])[0]; if (!file) return;
     setScan({ status: "loading" });
@@ -620,7 +587,7 @@ export default function App() {
             <div style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{curWeight.toFixed(1)}<span style={{ fontSize: 16, color: C.muted }}> lbs</span></div>
             <div style={{ textAlign: "right" }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.go }}>−{lost.toFixed(1)} lbs</div><div style={{ fontSize: 11, color: C.faint }}>since start</div></div>
           </div>
-          {lineChart(weightLog.map((w) => ({ label: fmtDate(w.date), value: w.lbs })), { color: C.go, goal: goalWeight, goalLabel: `Goal ${goalWeight}` }, C)}
+          {weightLog.length > 1 ? lineChart(weightLog.map((w) => ({ label: fmtDate(w.date), value: w.lbs })), { color: C.go, goal: goalWeight, goalLabel: `Goal ${goalWeight}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
             <input type="number" value={newWeight} placeholder="Log today's weight" onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
             <button onClick={logWeight} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "0 20px", fontFamily: BODY, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Log</button>
@@ -871,7 +838,7 @@ export default function App() {
               {/* camera viewport (stub) */}
               <div style={{ borderRadius: 14, border: `1.5px dashed ${C.faint}`, background: C.surfaceAlt, padding: "26px 16px", textAlign: "center", marginBottom: 14 }}>
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 8px" }}><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" /></svg>
-                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.45 }}>In the shipped app, this is a live camera scanner.<br />Here, type or paste a barcode to run a <b style={{ color: C.ink }}>real</b> Open Food Facts lookup.</div>
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.45 }}>Camera scanning lands in v0.2.<br />Type or paste a barcode for a <b style={{ color: C.ink }}>real</b> Open Food Facts lookup.</div>
               </div>
 
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -904,7 +871,7 @@ export default function App() {
                       <div key={l}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{v}</div><div style={{ fontSize: 10.5, color: C.faint }}>{l}</div></div>
                     ))}
                   </div>
-                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8 }}>per {scan.food.basis} · source: {scan.src || "Open Food Facts"}</div>
+                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8 }}>per {scan.food.basis} · source: {scan.food.source || "Open Food Facts"}</div>
                   <button onClick={addLoggedFood} style={{ width: "100%", marginTop: 12, background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>Add to today →</button>
                 </div>
               )}
@@ -976,6 +943,11 @@ export default function App() {
                 })}
               </div>
               <div style={{ fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.4 }}>Switching goal mode resets today's targets to that preset. Allergy filtering applies to every meal suggestion and the coach.</div>
+
+              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
+                {sectionTitle("Danger zone")}
+                <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, and settings will be wiped.")) { try { await fetch("/api/state", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
+              </div>
             </div>
           </div>
         )}
@@ -1071,30 +1043,39 @@ function FoodImg({ photo, kind, sc }) {
   return (<div style={{ position: "absolute", inset: 0, background: `linear-gradient(140deg, ${sc}, ${sc}BB)`, display: "flex", alignItems: "center", justifyContent: "center" }}>{foodGlyph(kind, "#FFFFFF", 62)}</div>);
 }
 
-/* ── map: multi-tile CARTO basemap, correctly centered, theme-matched ── */
+/* ── map: HD multi-tile basemap, auto day/night, style picker ── */
+const MAP_STYLES = {
+  day:   { name: "Day",   url: (z,x,y) => `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}@2x.png`, attr: "© OpenStreetMap © CARTO", dark: false },
+  night: { name: "Night", url: (z,x,y) => `https://basemaps.cartocdn.com/dark_all/${z}/${x}/${y}@2x.png`, attr: "© OpenStreetMap © CARTO", dark: true },
+  sat:   { name: "Sat",   url: (z,x,y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`, attr: "© Esri", dark: true },
+};
 function MapView({ C, geo, restaurants, pins, onPin, scoreColor }) {
+  const [pick, setPick] = useState("auto");
   const insecure = typeof window !== "undefined" && !window.isSecureContext;
-  const z = 15, TS = 256, W = 720, H = 210;
+  const hour = new Date().getHours();
+  const styleKey = pick === "auto" ? (hour >= 7 && hour < 19 ? "day" : "night") : pick;
+  const S = MAP_STYLES[styleKey];
+  const z = 16, TS = 256, H = 230;
   const lat = geo.status === "ok" ? geo.lat : 39.7392;
   const lon = geo.status === "ok" ? geo.lng : -104.9903;
   const n = 2 ** z;
   const xf = ((lon + 180) / 360) * n;
   const yf = ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * n;
   const xt = Math.floor(xf), yt = Math.floor(yf);
-  const style = C.dark ? "dark_all" : "light_all";
   const tiles = [];
   for (let i = -2; i <= 2; i++) for (let j = -1; j <= 1; j++) tiles.push({ i, j });
+  const pillBg = S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)";
+  const pillInk = S.dark ? "#EDF2F0" : "#17221C";
   return (
-    <div style={{ position: "relative", height: H, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}`, background: C.dark ? "#11181f" : "#e8ecef" }}>
+    <div style={{ position: "relative", height: H, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}`, background: S.dark ? "#11181f" : "#e8ecef" }}>
       <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
         {tiles.map(({ i, j }) => (
-          <img key={`${i}_${j}`} alt="" src={`https://basemaps.cartocdn.com/${style}/${z}/${xt + i}/${yt + j}@2x.png`}
+          <img key={`${styleKey}_${i}_${j}`} alt="" src={S.url(z, xt + i, yt + j)}
             onError={(e) => { e.target.style.display = "none"; }}
             style={{ position: "absolute", left: (xt + i - xf) * TS, top: (yt + j - yf) * TS, width: TS, height: TS, maxWidth: "none" }} />
         ))}
       </div>
-      {/* you */}
-      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 44, height: 44, borderRadius: 99, background: C.go + "1f" }} />
+      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 44, height: 44, borderRadius: 99, background: C.go + "2a" }} />
       <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-100%)", filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.45))" }}>
         <svg width="26" height="32" viewBox="0 0 48 60" fill="none">
           <path d="M24 2 C13 2 4.2 10.8 4.2 21.8 C4.2 36 24 57 24 57 C24 57 43.8 36 43.8 21.8 C43.8 10.8 35 2 24 2 Z" fill={C.go} stroke="#fff" strokeWidth="2.5" />
@@ -1108,23 +1089,28 @@ function MapView({ C, geo, restaurants, pins, onPin, scoreColor }) {
         const p = pins[i]; if (!p) return null; const sc = scoreColor(r.score);
         return (
           <div key={r.id} onClick={() => onPin(r)} style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%,-100%)", cursor: "pointer" }}>
-            <div style={{ background: C.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)", backdropFilter: "blur(4px)", color: C.ink, borderRadius: 11, padding: "4px 9px 4px 7px", fontFamily: DISPLAY, fontWeight: 700, fontSize: 11, boxShadow: "0 2px 8px rgba(0,0,0,0.3)", whiteSpace: "nowrap", display: "flex", gap: 6, alignItems: "center", border: `1px solid ${C.hair}` }}>
+            <div style={{ background: pillBg, backdropFilter: "blur(4px)", color: pillInk, borderRadius: 11, padding: "4px 9px 4px 7px", fontFamily: DISPLAY, fontWeight: 700, fontSize: 11, boxShadow: "0 2px 8px rgba(0,0,0,0.3)", whiteSpace: "nowrap", display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ width: 8, height: 8, borderRadius: 99, background: sc, flexShrink: 0 }} />
               <span>{r.name}</span><span style={{ color: sc }}>{Math.round(r.score * 20)}</span>
             </div>
-            <div style={{ width: 0, height: 0, margin: "0 auto", borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: `6px solid ${C.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)"}` }} />
+            <div style={{ width: 0, height: 0, margin: "0 auto", borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: `6px solid ${pillBg}` }} />
           </div>
         );
       })}
-      <div style={{ position: "absolute", top: 10, left: 10, background: C.surface + "F2", borderRadius: 20, padding: "4px 11px", fontSize: 11, fontWeight: 600, color: C.ink, display: "flex", gap: 5, alignItems: "center" }}>
+      <div style={{ position: "absolute", top: 10, left: 10, background: pillBg, borderRadius: 20, padding: "4px 11px", fontSize: 11, fontWeight: 600, color: pillInk, display: "flex", gap: 5, alignItems: "center" }}>
         <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length} spots near you` : "Demo area — GPS not locked"}
+      </div>
+      <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 4, background: pillBg, borderRadius: 20, padding: 3 }}>
+        {["auto", "day", "night", "sat"].map((k) => (
+          <button key={k} onClick={() => setPick(k)} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "3px 9px", fontFamily: BODY, fontSize: 10.5, fontWeight: 700, background: pick === k ? C.go : "transparent", color: pick === k ? "#fff" : pillInk, textTransform: "capitalize" }}>{k}</button>
+        ))}
       </div>
       {insecure && geo.status !== "ok" && (
         <div style={{ position: "absolute", bottom: 8, left: 10, right: 10, background: "rgba(200,140,20,0.92)", color: "#1a1200", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 600, textAlign: "center" }}>
           GPS is blocked over HTTP — open ForkCaster via your Tailscale HTTPS URL
         </div>
       )}
-      <div style={{ position: "absolute", bottom: insecure && geo.status !== "ok" ? 34 : 3, right: 6, fontSize: 8, color: C.dark ? "#9aa7ad" : "#5a6b62" }}>© OpenStreetMap © CARTO</div>
+      <div style={{ position: "absolute", bottom: insecure && geo.status !== "ok" ? 34 : 3, right: 6, fontSize: 8, color: S.dark ? "#9aa7ad" : "#5a6b62" }}>{S.attr}</div>
     </div>
   );
 }
