@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 /* ══════════════════════════════════════════════════════════════════
    RIGHTNOW — context-aware nutrition coach (extreme prototype)
@@ -193,11 +195,14 @@ export default function App() {
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp(s.glp);
         if (s.mealLog) setMealLog(s.mealLog); if (s.photos) setPhotos(s.photos);
+        if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
       }
       hydrated.current = true;
     }).catch(() => { hydrated.current = true; });
   }, []);
-  const stateBlob = JSON.stringify({ saved: true, theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos });
+  const [savedGeo, setSavedGeo] = useState(null);
+  useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
+  const stateBlob = JSON.stringify({ saved: true, theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -210,7 +215,7 @@ export default function App() {
     fetch(`/api/nearby?lat=${geo.lat}&lng=${geo.lng}`).then((r) => r.json()).then((j) => {
       if (j && j.venues && j.venues.length) setVenues(j.venues);
     }).catch(() => {});
-  }, [geo.status]);
+  }, [geo.status, geo.lat, geo.lng]);
 
   const proteinLeft = Math.max(0, targets.protein - eaten.protein);
   const calLeft = Math.max(0, targets.calories - eaten.calories);
@@ -291,10 +296,10 @@ export default function App() {
   function detectLocation() {
     if (typeof navigator === "undefined" || !navigator.geolocation) { setGeo({ status: "unavailable" }); return; }
     if (geo.status === "denied") { manualLocation(); return; }  // second tap after a denial = manual entry
-    setGeo({ status: "locating" });
+    setGeo((g) => (g.status === "ok" ? g : { status: "locating" }));
     navigator.geolocation.getCurrentPosition(
       (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => setGeo({ status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) }),
+      (err) => setGeo((g) => (g.status === "ok" ? g : { status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) })),
       { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true });
   }
   function pickMode(k) { setMode(k); setTargets(MODES[k].targets); }
@@ -503,7 +508,7 @@ export default function App() {
 
         {/* Live map with match pins */}
         <div style={{ marginBottom: 14 }}>
-          <MapView C={C} geo={geo} restaurants={venues.slice(0, 5)} pins={PINS_PCT} onPin={orderForMe} scoreColor={scoreColor} />
+          <MapView C={C} geo={geo} restaurants={venues.slice(0, 6)} onPin={orderForMe} scoreColor={scoreColor} onSearchArea={(la, ln) => setGeo({ status: "ok", lat: la, lng: ln, manual: true })} />
         </div>
 
         <div style={{ display: "flex", gap: 12, overflowX: "auto", margin: "0 -18px", padding: "0 18px 6px" }}>
@@ -845,7 +850,7 @@ export default function App() {
       <div style={{ width: "100%", maxWidth: 430, background: C.bg, minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
 
         {/* Header */}
-        <div style={{ height: 52, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: `1px solid ${C.hair}`, background: C.bg }}>
+        <div style={{ height: "calc(52px + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)", paddingLeft: 16, paddingRight: 16, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.hair}`, background: C.bg }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
               <g fill={C.go}><circle cx="19" cy="13" r="5" /><circle cx="26" cy="9.5" r="6.5" /><circle cx="32" cy="13.5" r="5" /><rect x="16" y="12.5" width="17" height="5.5" rx="2.75" /></g>
@@ -867,7 +872,7 @@ export default function App() {
         </div>
 
         {/* Bottom nav */}
-        <div style={{ position: "fixed", bottom: 0, width: "100%", maxWidth: 430, background: C.dark ? "rgba(24,32,41,0.94)" : "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.hair}`, display: "flex", padding: "8px 6px 10px" }}>
+        <div style={{ position: "fixed", bottom: 0, width: "100%", maxWidth: 430, background: C.dark ? "rgba(24,32,41,0.94)" : "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.hair}`, display: "flex", padding: "8px 6px calc(10px + env(safe-area-inset-bottom, 0px))" }}>
           {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0" }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 10.5, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
         </div>
 
@@ -1102,74 +1107,87 @@ function FoodImg({ photo, kind, sc }) {
   return (<div style={{ position: "absolute", inset: 0, background: `linear-gradient(140deg, ${sc}, ${sc}BB)`, display: "flex", alignItems: "center", justifyContent: "center" }}>{foodGlyph(kind, "#FFFFFF", 62)}</div>);
 }
 
-/* ── map: HD multi-tile basemap, auto day/night, style picker ── */
-const MAP_STYLES = {
-  day:   { name: "Day",   url: (z,x,y) => `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}@2x.png`, attr: "© OpenStreetMap © CARTO", dark: false },
-  night: { name: "Night", url: (z,x,y) => `https://basemaps.cartocdn.com/dark_all/${z}/${x}/${y}@2x.png`, attr: "© OpenStreetMap © CARTO", dark: true },
-  sat:   { name: "Sat",   url: (z,x,y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`, attr: "© Esri", dark: true },
+/* ── interactive map: Leaflet + HD tiles, drag/pinch/zoom, search-this-area ── */
+const MAP_TILES = {
+  day:   { tl: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", attr: "&copy; OpenStreetMap &copy; CARTO", dark: false },
+  night: { tl: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attr: "&copy; OpenStreetMap &copy; CARTO", dark: true },
+  sat:   { tl: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: "&copy; Esri", dark: true },
 };
-function MapView({ C, geo, restaurants, pins, onPin, scoreColor }) {
+const VENUE_OFFSETS = [[0.0038, -0.0062], [0.0042, 0.0058], [-0.0012, -0.0008], [-0.0035, 0.0052], [-0.0041, -0.0047]];
+const YOU_PIN_SVG = `<svg width="30" height="37" viewBox="0 0 48 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 2 C13 2 4.2 10.8 4.2 21.8 C4.2 36 24 57 24 57 C24 57 43.8 36 43.8 21.8 C43.8 10.8 35 2 24 2 Z" fill="#22B573" stroke="#fff" stroke-width="2.5"/><g transform="translate(9,6) scale(0.6)"><g fill="#fff"><circle cx="19" cy="13" r="5"/><circle cx="26" cy="9.5" r="6.5"/><circle cx="32" cy="13.5" r="5"/><rect x="16" y="12.5" width="17" height="5.5" rx="2.75"/></g><g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 22 V31"/><path d="M24 22 V31"/><path d="M30.5 22 V31"/><path d="M17.5 31 C17.5 37 20.5 39 24 39 C27.5 39 30.5 37 30.5 31"/><path d="M24 39 V45"/></g></g></svg>`;
+function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
+  const ref = useRef(null); const mapRef = useRef(null); const layerRef = useRef(null); const mkRef = useRef([]);
   const [pick, setPick] = useState("auto");
+  const [moved, setMoved] = useState(false);
   const insecure = typeof window !== "undefined" && !window.isSecureContext;
   const hour = new Date().getHours();
   const styleKey = pick === "auto" ? (hour >= 7 && hour < 19 ? "day" : "night") : pick;
-  const S = MAP_STYLES[styleKey];
-  const z = 16, TS = 256, H = 230;
+  const S = MAP_TILES[styleKey];
   const lat = geo.status === "ok" ? geo.lat : 39.7392;
   const lon = geo.status === "ok" ? geo.lng : -104.9903;
-  const n = 2 ** z;
-  const xf = ((lon + 180) / 360) * n;
-  const yf = ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * n;
-  const xt = Math.floor(xf), yt = Math.floor(yf);
-  const tiles = [];
-  for (let i = -2; i <= 2; i++) for (let j = -1; j <= 1; j++) tiles.push({ i, j });
+
+  useEffect(() => {
+    if (mapRef.current || !ref.current) return;
+    const m = L.map(ref.current, { zoomControl: false, attributionControl: true });
+    m.attributionControl.setPrefix(false);
+    m.setView([lat, lon], 15);
+    m.on("dragstart zoomstart", () => setMoved(true));
+    mapRef.current = m;
+    return () => { m.remove(); mapRef.current = null; };
+  }, []);
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m) return;
+    if (layerRef.current) m.removeLayer(layerRef.current);
+    layerRef.current = L.tileLayer(S.tl, { attribution: S.attr, maxZoom: 19, subdomains: "abcd" }).addTo(m);
+  }, [styleKey]);
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || geo.status !== "ok") return;
+    m.setView([geo.lat, geo.lng], m.getZoom() || 15);
+    setMoved(false);
+  }, [geo.status, geo.lat, geo.lng]);
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m) return;
+    mkRef.current.forEach((k) => m.removeLayer(k)); mkRef.current = [];
+    const you = L.marker([lat, lon], { icon: L.divIcon({ html: YOU_PIN_SVG, className: "", iconSize: [30, 37], iconAnchor: [15, 37] }), zIndexOffset: 500 }).addTo(m);
+    mkRef.current.push(you);
+    restaurants.forEach((r, i) => {
+      const vLat = r.lat != null ? r.lat : lat + (VENUE_OFFSETS[i % 5][0]);
+      const vLng = r.lng != null ? r.lng : lon + (VENUE_OFFSETS[i % 5][1]);
+      const sc = scoreColor(r.score);
+      const html = `<div style="background:${S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)"};color:${S.dark ? "#EDF2F0" : "#17221C"};border-radius:11px;padding:4px 9px 4px 7px;font-weight:700;font-size:11px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;display:flex;gap:6px;align-items:center;"><span style="width:8px;height:8px;border-radius:99px;background:${sc};flex-shrink:0;"></span>${r.name}&nbsp;<span style="color:${sc};">${Math.round(r.score * 20)}</span></div>`;
+      const mk = L.marker([vLat, vLng], { icon: L.divIcon({ html, className: "", iconSize: null, iconAnchor: [40, 14] }) }).addTo(m);
+      mk.on("click", () => onPin(r));
+      mkRef.current.push(mk);
+    });
+  }, [restaurants, lat, lon, styleKey]);
+
   const pillBg = S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)";
   const pillInk = S.dark ? "#EDF2F0" : "#17221C";
   return (
-    <div style={{ position: "relative", height: H, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}`, background: S.dark ? "#11181f" : "#e8ecef" }}>
-      <div style={{ position: "absolute", left: "50%", top: "50%", width: 0, height: 0 }}>
-        {tiles.map(({ i, j }) => (
-          <img key={`${styleKey}_${i}_${j}`} alt="" src={S.url(z, xt + i, yt + j)}
-            onError={(e) => { e.target.style.display = "none"; }}
-            style={{ position: "absolute", left: (xt + i - xf) * TS, top: (yt + j - yf) * TS, width: TS, height: TS, maxWidth: "none" }} />
-        ))}
+    <div style={{ position: "relative", height: 280, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}` }}>
+      <div ref={ref} style={{ position: "absolute", inset: 0, background: S.dark ? "#11181f" : "#e8ecef" }} />
+      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 800, background: pillBg, borderRadius: 20, padding: "4px 11px", fontSize: 11, fontWeight: 600, color: pillInk, display: "flex", gap: 5, alignItems: "center", pointerEvents: "none" }}>
+        <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length} spots` : "Demo area"}
       </div>
-      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 44, height: 44, borderRadius: 99, background: C.go + "2a" }} />
-      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-100%)", filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.45))" }}>
-        <svg width="26" height="32" viewBox="0 0 48 60" fill="none">
-          <path d="M24 2 C13 2 4.2 10.8 4.2 21.8 C4.2 36 24 57 24 57 C24 57 43.8 36 43.8 21.8 C43.8 10.8 35 2 24 2 Z" fill={C.go} stroke="#fff" strokeWidth="2.5" />
-          <g transform="translate(9,6) scale(0.6)">
-            <g fill="#fff"><circle cx="19" cy="13" r="5" /><circle cx="26" cy="9.5" r="6.5" /><circle cx="32" cy="13.5" r="5" /><rect x="16" y="12.5" width="17" height="5.5" rx="2.75" /></g>
-            <g fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 22 V31" /><path d="M24 22 V31" /><path d="M30.5 22 V31" /><path d="M17.5 31 C17.5 37 20.5 39 24 39 C27.5 39 30.5 37 30.5 31" /><path d="M24 39 V45" /></g>
-          </g>
-        </svg>
-      </div>
-      {restaurants.map((r, i) => {
-        const p = pins[i]; if (!p) return null; const sc = scoreColor(r.score);
-        return (
-          <div key={r.id} onClick={() => onPin(r)} style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%,-100%)", cursor: "pointer" }}>
-            <div style={{ background: pillBg, backdropFilter: "blur(4px)", color: pillInk, borderRadius: 11, padding: "4px 9px 4px 7px", fontFamily: DISPLAY, fontWeight: 700, fontSize: 11, boxShadow: "0 2px 8px rgba(0,0,0,0.3)", whiteSpace: "nowrap", display: "flex", gap: 6, alignItems: "center" }}>
-              <span style={{ width: 8, height: 8, borderRadius: 99, background: sc, flexShrink: 0 }} />
-              <span>{r.name}</span><span style={{ color: sc }}>{Math.round(r.score * 20)}</span>
-            </div>
-            <div style={{ width: 0, height: 0, margin: "0 auto", borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderTop: `6px solid ${pillBg}` }} />
-          </div>
-        );
-      })}
-      <div style={{ position: "absolute", top: 10, left: 10, background: pillBg, borderRadius: 20, padding: "4px 11px", fontSize: 11, fontWeight: 600, color: pillInk, display: "flex", gap: 5, alignItems: "center" }}>
-        <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length} spots near you` : "Demo area — GPS not locked"}
-      </div>
-      <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 4, background: pillBg, borderRadius: 20, padding: 3 }}>
+      <div style={{ position: "absolute", top: 10, right: 10, zIndex: 800, display: "flex", gap: 4, background: pillBg, borderRadius: 20, padding: 3 }}>
         {["auto", "day", "night", "sat"].map((k) => (
           <button key={k} onClick={() => setPick(k)} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "3px 9px", fontFamily: BODY, fontSize: 10.5, fontWeight: 700, background: pick === k ? C.go : "transparent", color: pick === k ? "#fff" : pillInk, textTransform: "capitalize" }}>{k}</button>
         ))}
       </div>
+      {moved && (
+        <button onClick={() => { const c = mapRef.current && mapRef.current.getCenter(); if (c && onSearchArea) { onSearchArea(c.lat, c.lng); } setMoved(false); }}
+          style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 800, background: C.go, color: "#fff", border: "none", borderRadius: 20, padding: "9px 16px", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 10px rgba(0,0,0,0.35)" }}>
+          Search this area
+        </button>
+      )}
       {insecure && geo.status !== "ok" && (
-        <div style={{ position: "absolute", bottom: 8, left: 10, right: 10, background: "rgba(200,140,20,0.92)", color: "#1a1200", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 600, textAlign: "center" }}>
+        <div style={{ position: "absolute", bottom: 12, left: 10, right: 10, zIndex: 800, background: "rgba(200,140,20,0.92)", color: "#1a1200", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 600, textAlign: "center" }}>
           GPS is blocked over HTTP — open ForkCaster via your Tailscale HTTPS URL
         </div>
       )}
-      <div style={{ position: "absolute", bottom: insecure && geo.status !== "ok" ? 34 : 3, right: 6, fontSize: 8, color: S.dark ? "#9aa7ad" : "#5a6b62" }}>{S.attr}</div>
     </div>
   );
 }

@@ -168,7 +168,7 @@ app.get("/api/nearby", async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": PLACES_KEY,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.rating,places.photos",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.rating,places.photos,places.location",
       },
       body: JSON.stringify({
         includedTypes: ["restaurant"], maxResultCount: 8,
@@ -182,6 +182,7 @@ app.get("/api/nearby", async (req, res) => {
       cuisine: (p.primaryTypeDisplayName && p.primaryTypeDisplayName.text) || "Restaurant",
       eta: "nearby",
       score: Math.min(5, (p.rating || 3.8)),
+      lat: p.location && p.location.latitude, lng: p.location && p.location.longitude,
       photo: p.photos && p.photos[0]
         ? `https://places.googleapis.com/v1/${p.photos[0].name}/media?maxWidthPx=400&key=${PLACES_KEY}`
         : null,

@@ -1,14 +1,15 @@
 {
   "name": "forkcaster",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Self-hosted, medication-aware nutrition coach for Umbrel. GPS ordering, GLP-1 tracking, symptom-food forecasting.",
   "scripts": {
-    "build": "esbuild src/main.jsx --bundle --minify --outfile=dist/app.js --loader:.jsx=jsx --jsx=automatic && cp index.html dist/index.html",
+    "build": "esbuild src/main.jsx --bundle --minify --outfile=dist/app.js --loader:.jsx=jsx --jsx=automatic --loader:.png=dataurl && cp index.html dist/index.html",
     "start": "node server/server.js"
   },
   "dependencies": {
     "express": "^4.19.0",
+    "leaflet": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
