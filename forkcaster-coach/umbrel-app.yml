@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.10"
+version: "0.1.11"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.10: venues are now ranked by health fit, not popularity - the AI scores
-  every nearby spot 0-100 against your remaining macros, GLP-1 state, nausea
-  risk, and allergy filters, sorts the list by it, colors the map pins by it,
-  and shows a one-line reason on each card. Falls back to distance order with
-  star ratings when no AI key is set.
+  v0.1.11: the health-fit ranking now shows its status - a live indicator while
+  ranking, a green confirmation when venues are ranked by your goals, and an
+  explicit red error (with retry) when the AI key is missing or invalid so a
+  silent failure can never look like a no-op again.
 dependencies: []
 path: ""
 defaultUsername: ""

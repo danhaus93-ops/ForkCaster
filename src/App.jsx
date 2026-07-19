@@ -143,6 +143,7 @@ export default function App() {
 
   const [geo, setGeo] = useState({ status: "idle" });
   const [venues, setVenues] = useState(RESTAURANTS);
+  const [rankState, setRankState] = useState("idle"); // idle | ranking | ranked | <error string>
   const hydrated = useRef(false);
 
   const [selected, setSelected] = useState(null);
@@ -315,6 +316,7 @@ export default function App() {
   }
 
   async function rankVenues(vs) {
+    setRankState("ranking");
     try {
       const medLine = medObj ? ` User is on ${medObj.label}${nauseaRisk !== "low" ? ` with ${nauseaRisk.toUpperCase()} nausea risk (favor gentle, lean, low-fat venues)` : ""}.` : "";
       const restrictLine = restrictions.length ? ` Hard restrictions: ${restrictions.join("; ")} — venues that can't safely serve these score LOW.` : "";
@@ -329,7 +331,8 @@ export default function App() {
       setVenues((cur) => cur
         .map((v) => { const m = Array.isArray(arr) ? arr.find((x) => x.id === v.id) : null; return m && Number.isFinite(+m.match) ? { ...v, match: Math.max(0, Math.min(100, Math.round(+m.match))), why: m.why } : v; })
         .sort((a, b) => (b.match ?? -1) - (a.match ?? -1)));
-    } catch { /* no AI key or parse issue: keep distance order + star ratings */ }
+      setRankState("ranked");
+    } catch (e) { setRankState((e && e.message) || "ranking failed"); }
   }
 
   async function orderForMe(r) {
@@ -524,6 +527,18 @@ export default function App() {
 
       <div style={{ marginTop: 18 }}>
         {sectionTitle("Near you")}
+        {rankState === "ranking" && (
+          <div style={{ fontSize: 12, color: C.muted, marginTop: -4, marginBottom: 10 }}>Ranking venues by health fit for your goals right now…</div>
+        )}
+        {rankState === "ranked" && (
+          <div style={{ fontSize: 12, color: C.go, fontWeight: 600, marginTop: -4, marginBottom: 10 }}>✓ Ranked by health fit — your macros, meds &amp; filters, not star ratings</div>
+        )}
+        {rankState !== "idle" && rankState !== "ranking" && rankState !== "ranked" && (
+          <div style={{ fontSize: 12, color: C.avoid, marginTop: -4, marginBottom: 10, lineHeight: 1.4 }}>
+            Health ranking unavailable: {rankState}. Fix your AI key in Settings → API keys, then{" "}
+            <span onClick={() => rankVenues(venues)} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>tap to retry</span>.
+          </div>
+        )}
 
         {/* Live map with match pins */}
         <div style={{ marginBottom: 14 }}>
