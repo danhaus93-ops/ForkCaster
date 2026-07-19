@@ -245,12 +245,32 @@ export default function App() {
     { key: "maintain", label: "Maintenance / off-ramp", focus: "The hard part most apps ignore: hold the loss and plan life after the drug." },
   ];
 
+  function parseCoords(v) {
+    if (!v) return null;
+    const s = String(v).trim().replace(/[()]/g, "");
+    const re = /(-?\d+(?:\.\d+)?)\s*\u00b0?\s*([NSEW])?/gi;
+    let m; const vals = [];
+    while ((m = re.exec(s)) && vals.length < 2) {
+      let num = parseFloat(m[1]); const h = (m[2] || "").toUpperCase();
+      if (h === "S" || h === "W") num = -Math.abs(num);
+      if (h === "N" || h === "E") num = Math.abs(num);
+      vals.push({ num, h });
+    }
+    if (vals.length < 2) return null;
+    let lat = vals[0].num, lng = vals[1].num;
+    const hs = vals.map((x) => x.h).join("");
+    if (vals[0].h === "E" || vals[0].h === "W" || vals[1].h === "N" || vals[1].h === "S") { const t = lat; lat = lng; lng = t; }
+    else if (Math.abs(lat) > 90 && Math.abs(lng) <= 90) { const t = lat; lat = lng; lng = t; }
+    if (!hs && lng > 66 && lng < 180 && lat > 0 && lat <= 72) lng = -lng; // pasted US coords without the minus
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { lat, lng };
+  }
   function manualLocation() {
-    const v = window.prompt("Enter your location as lat,lng (e.g. 38.62,-90.19).\nTip: Apple Maps \u2192 drop a pin \u2192 the numbers are shown on the place card.");
+    const v = window.prompt("Paste your coordinates \u2014 any of these work:\n38.62701\u00b0 N, 90.19940\u00b0 W\n38.62701, -90.19940\n(Apple Maps \u2192 drop pin \u2192 copy from the place card)");
     if (!v) return;
-    const m = v.split(",").map((x) => parseFloat(x.trim()));
-    if (m.length === 2 && Number.isFinite(m[0]) && Number.isFinite(m[1])) setGeo({ status: "ok", lat: m[0], lng: m[1], manual: true });
-    else window.alert("Couldn't read that \u2014 format is: 38.62,-90.19");
+    const c = parseCoords(v);
+    if (c) setGeo({ status: "ok", lat: c.lat, lng: c.lng, manual: true });
+    else window.alert("Couldn't read that. Try the form: 38.62701, -90.19940");
   }
   function detectLocation() {
     if (typeof navigator === "undefined" || !navigator.geolocation) { setGeo({ status: "unavailable" }); return; }
