@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.0"
+version: "0.1.1"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Initial release: GPS ordering, AI meal ranking + coach, GLP-1 module with
-  titration tracking and symptom-food correlation, allergy filtering, barcode
-  scanning via Open Food Facts, AI photo estimation, weight/body/photos, five
-  themes.
+  v0.1.1: proper multi-tile theme-matched map (CARTO dark/light), fixed literal
+  unicode characters across the UI, removed stale prototype copy, real error
+  messages surfaced (missing-key errors now say so), GPS-over-HTTP hint banner.
 dependencies: []
 path: ""
 defaultUsername: ""
