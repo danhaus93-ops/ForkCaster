@@ -8,8 +8,14 @@ const PORT = process.env.PORT || 3450;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "..", "data");
 const PHOTO_DIR = path.join(DATA_DIR, "photos");
 const STATE_FILE = path.join(DATA_DIR, "state.json");
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
-const PLACES_KEY = process.env.GOOGLE_PLACES_KEY || "";
+/* Keys: env first, else /data/secrets.json — so nothing secret ever
+   lives in the (public) store repo. Create the file on the node:
+   echo '{"ANTHROPIC_API_KEY":"sk-ant-..."}' > .../app-data/forkcaster-coach/data/secrets.json */
+function readSecrets() {
+  try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, "secrets.json"), "utf8")); } catch { return {}; }
+}
+const key = (name) => process.env[name] || readSecrets()[name] || "";
+const ANTHROPIC_KEY_ENV = process.env.ANTHROPIC_API_KEY || "";
 
 fs.mkdirSync(PHOTO_DIR, { recursive: true });
 
@@ -45,7 +51,8 @@ app.get("/api/photo/:file", (req, res) => {
 
 /* ── AI proxy (ranking, coach, photo estimation) ── */
 app.post("/api/ai", async (req, res) => {
-  if (!ANTHROPIC_KEY) return res.json({ error: "ANTHROPIC_API_KEY not set on the server. Add it to docker-compose env." });
+  const ANTHROPIC_KEY = key("ANTHROPIC_API_KEY");
+  if (!ANTHROPIC_KEY) return res.json({ error: "No Anthropic key. Create data/secrets.json on the node with {\"ANTHROPIC_API_KEY\":\"sk-ant-...\"} — no restart needed." });
   try {
     const { prompt, system, image } = req.body || {};
     const content = image
@@ -77,6 +84,7 @@ app.get("/api/off/:barcode", async (req, res) => {
 
 /* ── Nearby restaurants via Google Places (optional; demo list if no key) ── */
 app.get("/api/nearby", async (req, res) => {
+  const PLACES_KEY = key("GOOGLE_PLACES_KEY");
   if (!PLACES_KEY) return res.json({ venues: [] }); // client keeps its demo set
   try {
     const { lat, lng } = req.query;
