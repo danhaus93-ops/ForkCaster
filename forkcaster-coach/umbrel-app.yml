@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.8"
+version: "0.1.9"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.8: real venue photos on cards and pick thumbnails (proxied so your
-  Places key stays server-side), gas stations/malls/groceries filtered out of
-  nearby results, live venues show star ratings instead of fake match scores,
-  caption reflects live vs demo state.
+  v0.1.9: fixed the map rendering on top of settings and other overlays
+  (Leaflet z-index stacking context now isolated).
 dependencies: []
 path: ""
 defaultUsername: ""

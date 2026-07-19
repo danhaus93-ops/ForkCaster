@@ -1168,7 +1168,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
   const pillBg = S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)";
   const pillInk = S.dark ? "#EDF2F0" : "#17221C";
   return (
-    <div style={{ position: "relative", height: 280, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}` }}>
+    <div style={{ position: "relative", height: 280, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}`, isolation: "isolate", zIndex: 0 }}>
       <div ref={ref} style={{ position: "absolute", inset: 0, background: S.dark ? "#11181f" : "#e8ecef" }} />
       <div style={{ position: "absolute", top: 10, left: 10, zIndex: 800, background: pillBg, borderRadius: 20, padding: "4px 11px", fontSize: 11, fontWeight: 600, color: pillInk, display: "flex", gap: 5, alignItems: "center", pointerEvents: "none" }}>
         <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length} spots` : "Demo area"}
