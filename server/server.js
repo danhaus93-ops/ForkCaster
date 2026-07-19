@@ -53,6 +53,28 @@ app.get("/api/photo/:file", (req, res) => {
   res.sendFile(f);
 });
 
+/* ── API key management (personal app behind Tailscale; keys never returned in full) ── */
+app.get("/api/keys/status", (_req, res) => {
+  const s = readSecrets();
+  const get = (n) => process.env[n] || s[n] || "";
+  const tail = (v) => (v ? "\u2026" + String(v).slice(-4) : null);
+  res.json({
+    anthropic: !!get("ANTHROPIC_API_KEY"), anthropicTail: tail(get("ANTHROPIC_API_KEY")),
+    places: !!get("GOOGLE_PLACES_KEY"), placesTail: tail(get("GOOGLE_PLACES_KEY")),
+    usda: !!get("USDA_FDC_KEY"),
+  });
+});
+app.post("/api/keys", (req, res) => {
+  try {
+    const cur = readSecrets(); const b = req.body || {};
+    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY"]) {
+      if (typeof b[k] === "string" && b[k].trim()) cur[k] = b[k].trim();
+    }
+    fs.writeFileSync(path.join(DATA_DIR, "secrets.json"), JSON.stringify(cur, null, 2));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: String(e) }); }
+});
+
 /* ── AI proxy (ranking, coach, photo estimation) ── */
 app.post("/api/ai", async (req, res) => {
   const ANTHROPIC_KEY = key("ANTHROPIC_API_KEY");

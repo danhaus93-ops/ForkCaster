@@ -116,6 +116,22 @@ export default function App() {
   const [allergies, setAllergies] = useState([]);
   const [diets, setDiets] = useState([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [keyStatus, setKeyStatus] = useState(null);
+  const [keyIn, setKeyIn] = useState({ a: "", g: "" });
+  const [keyMsg, setKeyMsg] = useState("");
+  useEffect(() => { if (settingsOpen) fetch("/api/keys/status").then((r) => r.json()).then(setKeyStatus).catch(() => {}); }, [settingsOpen]);
+  async function saveKeys() {
+    setKeyMsg("Saving…");
+    const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
+    try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      setKeyIn({ a: "", g: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓"); }
+    catch { setKeyMsg("Save failed — is the node reachable?"); }
+  }
+  async function testAiKey() {
+    setKeyMsg("Testing AI key…");
+    try { const t = await callClaude("Reply with exactly: ok"); setKeyMsg(t.toLowerCase().includes("ok") ? "AI key works ✓" : `Unexpected reply: ${t.slice(0, 40)}`); }
+    catch (e) { setKeyMsg(`AI key failed: ${(e && e.message) || e}`); }
+  }
   const [tab, setTab] = useState("now");
 
   const [targets, setTargets] = useState(MODES.cut.targets);
@@ -248,7 +264,7 @@ export default function App() {
   function parseCoords(v) {
     if (!v) return null;
     const s = String(v).trim().replace(/[()]/g, "");
-    const re = /(-?\d+(?:\.\d+)?)\s*\u00b0?\s*([NSEW])?/gi;
+    const re = /(-?\d+(?:\.\d+)?)\s*°?\s*([NSEW])?/gi;
     let m; const vals = [];
     while ((m = re.exec(s)) && vals.length < 2) {
       let num = parseFloat(m[1]); const h = (m[2] || "").toUpperCase();
@@ -266,7 +282,7 @@ export default function App() {
     return { lat, lng };
   }
   function manualLocation() {
-    const v = window.prompt("Paste your coordinates \u2014 any of these work:\n38.62701\u00b0 N, 90.19940\u00b0 W\n38.62701, -90.19940\n(Apple Maps \u2192 drop pin \u2192 copy from the place card)");
+    const v = window.prompt("Paste your coordinates — any of these work:\n38.62701° N, 90.19940° W\n38.62701, -90.19940\n(Apple Maps → drop pin → copy from the place card)");
     if (!v) return;
     const c = parseCoords(v);
     if (c) setGeo({ status: "ok", lat: c.lat, lng: c.lng, manual: true });
@@ -972,6 +988,20 @@ export default function App() {
                 })}
               </div>
               <div style={{ fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.4 }}>Switching goal mode resets today's targets to that preset. Allergy filtering applies to every meal suggestion and the coach.</div>
+
+              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
+                {sectionTitle("API keys")}
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: -4, marginBottom: 10, lineHeight: 1.45 }}>
+                  Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b>
+                </div>
+                <input value={keyIn.a} onChange={(e) => setKeyIn({ ...keyIn, a: e.target.value })} placeholder="Anthropic key (sk-ant-…)" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
+                <input value={keyIn.g} onChange={(e) => setKeyIn({ ...keyIn, g: e.target.value })} placeholder="Google Places key (AIza…) — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() ? 0.5 : 1 }}>Save keys</button>
+                  <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Test AI key</button>
+                </div>
+                {keyMsg && <div style={{ fontSize: 12, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}
+              </div>
 
               <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("Danger zone")}
