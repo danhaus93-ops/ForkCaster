@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.3: GPS failures now say exactly why (iOS denial vs timeout) with the
-  Settings path to fix it, and a second tap opens manual lat,lng entry so the
-  map and nearby search work even without a GPS grant.
+  v0.1.4: manual location now understands every coordinate format - Apple
+  Maps place-card style (38.627 N, 90.199 W), plain lat,lng, reversed order,
+  and missing minus signs on US longitudes.
 dependencies: []
 path: ""
 defaultUsername: ""
