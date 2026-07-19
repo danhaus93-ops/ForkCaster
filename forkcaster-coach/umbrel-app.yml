@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.1"
+version: "0.1.2"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.1: proper multi-tile theme-matched map (CARTO dark/light), fixed literal
-  unicode characters across the UI, removed stale prototype copy, real error
-  messages surfaced (missing-key errors now say so), GPS-over-HTTP hint banner.
+  v0.1.2: starts fresh (no demo data) with a Reset button in Settings; HD map
+  with auto day/night (CARTO Voyager/Dark) plus satellite and a style picker;
+  installable PWA with home-screen icon; barcode lookups now fall back from
+  Open Food Facts to USDA FoodData Central; clearer scanner copy and guards.
 dependencies: []
 path: ""
 defaultUsername: ""

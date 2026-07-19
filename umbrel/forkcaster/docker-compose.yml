@@ -9,7 +9,7 @@ services:
   web:
     # After pushing to GHCR (classic ghp_ PAT with write:packages — same flow as LoneStrike),
     # pin the digest here:
-    image: ghcr.io/danhaus93-ops/forkcaster:v0.1.1
+    image: ghcr.io/danhaus93-ops/forkcaster:v0.1.2
     restart: on-failure
     stop_grace_period: 30s
     environment:
