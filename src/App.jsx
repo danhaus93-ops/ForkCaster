@@ -240,7 +240,7 @@ export default function App() {
   const goalDate = weeksToGoal ? addDays(new Date(), weeksToGoal * 7) : null;
 
   // ── med-aware signals (WHITE SPACE #1) ──
-  const onMed = medObj && !medObj.investigational;
+  const onMed = !!medObj; // any selected GLP-1 (incl. investigational) drives appetite/nausea-aware ordering
   const escalating = onMed && (glp.lastDoseChangeWk ?? 99) <= 2;                 // recent step-up → GI risk up
   const recentNausea = glp.sideEffects.filter((s) => s.symptom === "Nausea" && daysAgo(s.date) <= 5);
   const nauseaScore = recentNausea.reduce((a, s) => a + s.severity, 0) + (escalating ? 1 : 0);
@@ -699,7 +699,19 @@ export default function App() {
         <>
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>{Object.entries(MEDS).map(([k, m]) => (<button key={k} onClick={() => setGlp({ ...glp, med: k })} style={{ flex: 1, padding: "9px 4px", borderRadius: 9, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet : C.surface, color: glp.med === k ? C.surface : C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{m.label}</button>))}</div>
           {medObj.investigational ? (
-            <div style={{ background: C.cautionSoft, border: `1px solid ${C.caution}55`, borderRadius: 12, padding: 13 }}><div style={{ fontSize: 12.5, fontWeight: 700, color: C.caution, marginBottom: 4 }}>Investigational \u2014 not FDA-approved</div><div style={{ fontSize: 12.5, color: C.ink2, lineHeight: 1.45 }}>{medObj.note} The app tracks trial/clinician-directed doses you enter; it won't suggest a schedule.</div></div>
+            <div>
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                {donut(glp.dose || 0, Math.max(glp.dose || 1, 12), C.violet, `${glp.dose || 0}`, medObj.unit, C)}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{medObj.label}</div>
+                  <div style={{ fontSize: 11.5, color: C.muted }}>{medObj.brand} \u00b7 {medObj.cadence} \u00b7 week {glp.weeksOn}</div>
+                  <div style={{ marginTop: 8 }}>{numField("Your dose (mg)", glp.dose, (v) => setGlp({ ...glp, dose: +v }))}</div>
+                </div>
+              </div>
+              <div style={{ background: C.cautionSoft, border: `1px solid ${C.caution}55`, borderRadius: 12, padding: 11 }}>
+                <div style={{ fontSize: 11.5, color: C.ink2, lineHeight: 1.45 }}><b style={{ color: C.caution }}>Investigational (Phase 3, not FDA-approved).</b> Tracking only \u2014 enter whatever your trial or clinician directs. No schedule is suggested, by design.</div>
+              </div>
+            </div>
           ) : (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {donut(glp.dose, medObj.steps[medObj.steps.length - 1], C.violet, `${glp.dose}`, medObj.unit, C)}
@@ -712,9 +724,9 @@ export default function App() {
         <div style={{ marginBottom: 14 }}>{card(
           <>
             {sectionTitle("Titration ladder")}
-            <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<div key={s} style={{ flex: 1, textAlign: "center" }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontSize: 11, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, fontVariantNumeric: "tabular-nums" }}>{s}</div></div>); })}</div>
+            <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<button key={s} onClick={() => setGlp({ ...glp, dose: s, lastDoseChangeWk: 0 })} style={{ flex: 1, textAlign: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontSize: 11, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, fontVariantNumeric: "tabular-nums" }}>{s}</div></button>); })}</div>
             <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.4 }}>{medObj.note}</div>
-            <div style={{ fontSize: 10.5, color: C.faint, marginTop: 6 }}>Reference only \u2014 confirm every step with your prescriber.</div>
+            <div style={{ fontSize: 10.5, color: C.faint, marginTop: 6 }}>Tap a step to record the dose your prescriber directed \u2014 confirm every change with them.</div>
           </>)}</div>
       )}
 
