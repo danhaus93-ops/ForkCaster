@@ -110,6 +110,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const fmtDate = (d) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" });
 const daysAgo = (iso) => Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+const distMi = (a, b, c, d) => { const R = 3958.8, dl = (c - a) * Math.PI / 180, dg = (d - b) * Math.PI / 180, h = Math.sin(dl / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(dg / 2) ** 2; return R * 2 * Math.asin(Math.sqrt(h)); };
 
 export default function App() {
   const [theme, setTheme] = useState("midnight");
@@ -508,7 +509,7 @@ export default function App() {
 
         {/* Live map with match pins */}
         <div style={{ marginBottom: 14 }}>
-          <MapView C={C} geo={geo} restaurants={venues.slice(0, 6)} onPin={orderForMe} scoreColor={scoreColor} onSearchArea={(la, ln) => setGeo({ status: "ok", lat: la, lng: ln, manual: true })} />
+          <MapView C={C} geo={geo} restaurants={venues.slice(0, 12)} onPin={orderForMe} scoreColor={scoreColor} onSearchArea={(la, ln) => setGeo({ status: "ok", lat: la, lng: ln, manual: true })} />
         </div>
 
         <div style={{ display: "flex", gap: 12, overflowX: "auto", margin: "0 -18px", padding: "0 18px 6px" }}>
@@ -525,7 +526,7 @@ export default function App() {
                   </div>
                   <div style={{ position: "absolute", left: 12, bottom: 9 }}>
                     <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: "#fff", lineHeight: 1, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{r.name}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.92)", marginTop: 2, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{r.cuisine} · {r.eta}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.92)", marginTop: 2, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{r.cuisine} · {r.lat != null && geo.status === "ok" ? `${distMi(geo.lat, geo.lng, r.lat, r.lng).toFixed(1)} mi` : r.eta}</div>
                   </div>
                 </div>
                 <div style={{ padding: 12 }}>

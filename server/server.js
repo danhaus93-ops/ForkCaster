@@ -171,8 +171,9 @@ app.get("/api/nearby", async (req, res) => {
         "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.rating,places.photos,places.location",
       },
       body: JSON.stringify({
-        includedTypes: ["restaurant"], maxResultCount: 8,
-        locationRestriction: { circle: { center: { latitude: +lat, longitude: +lng }, radius: 2500 } },
+        includedTypes: ["restaurant", "fast_food_restaurant", "cafe", "meal_takeaway", "sandwich_shop", "bakery"],
+        maxResultCount: 20, rankPreference: "DISTANCE",
+        locationRestriction: { circle: { center: { latitude: +lat, longitude: +lng }, radius: 3000 } },
       }),
     });
     const data = await r.json();

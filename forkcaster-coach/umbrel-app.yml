@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.6"
+version: "0.1.7"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.6: fully interactive map (drag, pinch-zoom, inertia via Leaflet) with a
-  Search-this-area button, real venue coordinates from Places, HD retina tiles;
-  your location now persists across app opens; header and nav respect the
-  iPhone notch so the settings gear is reachable again.
+  v0.1.7: nearby search now returns up to 20 venues ranked by distance across
+  restaurants, fast food, cafes, takeaway, sandwich shops and bakeries within
+  3 km; venue cards show real distances in miles; up to 12 pins on the map.
 dependencies: []
 path: ""
 defaultUsername: ""
