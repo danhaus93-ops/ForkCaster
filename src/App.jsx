@@ -141,7 +141,7 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
     ? (queasy ? "Dose week: small-volume, protein-first — sip slowly." : "Protein-first, small volume — GLP-1 friendly picks up top.")
     : mode === "gain" ? "Max protein first — upsize and add whey where offered."
     : "Protein-dense picks under your remaining calories.";
-  return { coach, picks: picks.map((it) => ({ item: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0 })), avoid };
+  return { coach, picks: picks.map((it) => ({ item: it.item, name: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0 })), avoid };
 }
 function sanitizePicks(parsed, allergies) {
   if (!parsed || !Array.isArray(parsed.picks) || !allergies.length) return parsed;
@@ -915,7 +915,7 @@ export default function App() {
             ))}
             {result.picks && result.picks[0] && (
               <>
-                <button style={{ width: "100%", marginTop: 6, background: C.go, color: C.surface, border: "none", borderRadius: 13, padding: "15px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Send "{result.picks[0].name.split("(")[0].trim()}" to a delivery app →</button>
+                <button style={{ width: "100%", marginTop: 6, background: C.go, color: C.surface, border: "none", borderRadius: 13, padding: "15px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Send "{result.picks[0] && (result.picks[0].item || (result.picks[0].item || result.picks[0].name || "") || "").split("(")[0].trim()}" to a delivery app →</button>
                 <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 7 }}>Hands off to DoorDash / Uber Eats / Grubhub with the order pre-built</div>
               </>
             )}

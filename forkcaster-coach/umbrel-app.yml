@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.35"
+version: "0.2.36"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.35: goal rules are now enforced by code, not model obedience - the AI
-  only extracts menu items (an easy task every model handles); deterministic
-  selection then applies the goal, so GLP-1 mode fills picks from GLP-1
-  section items by construction, on every model. Falls back to the classic
-  single-prompt path when extraction comes up short.
+  v0.2.36 HOTFIX: fixes a crash when opening order results from the new
+  deterministic pipeline - picks now carry both item and name keys and the
+  delivery handoff reads defensively.
 dependencies: []
 path: ""
 defaultUsername: ""
