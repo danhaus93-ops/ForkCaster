@@ -20,9 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.36 HOTFIX: fixes a crash when opening order results from the new
-  deterministic pipeline - picks now carry both item and name keys and the
-  delivery handoff reads defensively.
+  v0.2.38 STRUCTURED OUTPUTS (complete): AI responses are schema-guaranteed
+  at the API level via constrained decoding - the entire class of JSON parse
+  errors dies on every model. Extraction and ranking run at temperature 0 for
+  repeatable results. Intelligence restored: an AI polish pass writes sharp
+  why lines and customization tips for picks the code already locked in. Med
+  banner is goal-aware and honest. Supersedes 0.2.37.
 dependencies: []
 path: ""
 defaultUsername: ""

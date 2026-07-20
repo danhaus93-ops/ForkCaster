@@ -110,6 +110,9 @@ function violatesAllergy(text, allergies) {
   }
   return null;
 }
+const RANK_SCHEMA = { type: "array", items: { type: "object", properties: { id: { type: "string" }, match: { type: "integer" }, why: { type: "string" } }, required: ["id", "match", "why"] } };
+const EXTRACT_SCHEMA = { type: "array", items: { type: "object", properties: { item: { type: "string" }, section: { type: "string" }, cal: { type: "integer" }, protein: { type: "integer" } }, required: ["item", "section", "cal", "protein"] } };
+const POLISH_SCHEMA = { type: "object", properties: { coach: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { item: { type: "string" }, why: { type: "string" } }, required: ["item", "why"] } } }, required: ["coach", "notes"] };
 /* Deterministic pick selection: AI only extracts items; code enforces goal rules. */
 function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
   const glpTag = (it) => /glp/i.test(String(it.section || ""));
@@ -555,9 +558,9 @@ export default function App() {
   function toggleIn(list, setList, v) { setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]); }
   const restrictions = [...allergies.map((a) => `ALLERGY: ${a}`), ...diets.map((d) => `DIET: ${d}`)];
 
-  async function callClaude(prompt, sys, image, maxTokens) {
+  async function callClaude(prompt, sys, image, maxTokens, schema, temperature) {
     const styleLine = { concise: " Keep replies very brief.", balanced: "", detailed: " Be thorough and explain reasoning.", "tough-love": " Be direct, no sugarcoating, drill-sergeant energy." }[prefs.coachStyle] || "";
-    const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, system: (sys || "") + styleLine, image, model: prefs.aiModel, max_tokens: maxTokens }) });
+    const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, system: (sys || "") + styleLine, image, model: prefs.aiModel, max_tokens: maxTokens, schema, temperature }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     return data.text || "";
@@ -592,7 +595,7 @@ export default function App() {
         ` User has ${proteinLeft}g protein and ${calLeft} calories remaining today.` + medLine + restrictLine +
         `\nVenues: ${JSON.stringify(vs.map((v) => ({ id: v.id, name: v.name, type: v.cuisine })))}` +
         `\nReturn ONLY minified JSON, no markdown: [{"id":"<id>","match":<int 0-100>,"why":"<max 6 words>"}] for every venue.`;
-      const text = await callClaude(prompt, null, null, 2400);
+      const text = await callClaude(prompt, null, null, 2400, RANK_SCHEMA, 0);
       const arr = salvageJSONArray(text);
       applyRank(vs, arr);
       setSavedRank({ key, at: now, arr });
@@ -622,11 +625,21 @@ export default function App() {
       try {
         const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, estimated calories and protein grams. ` +
           `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
-        const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600)).filter((i) => i && i.item);
+        const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
           const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);
           const cleaned = sanitizePicks(composed, allergies);
           cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method;
+          try { // intelligence layer: AI annotates picks CODE already locked
+            const polishPrompt = `User goal: ${MODES[mode] ? MODES[mode].label : mode}. Med context: ${nauseaRisk} nausea risk. Remaining: ${proteinLeft}g protein, ${calLeft} cal. ` +
+              `These items were selected (do NOT change them): ${JSON.stringify(cleaned.picks.map((p) => ({ item: p.item, protein: p.protein, cal: p.cal })))}. ` +
+              `Write one sharp coach line for this visit and, for each item, a short why (max 12 words) including a smart customization tip when one exists (add whey, sugar-free base, dressing on side).`;
+            const pol = salvageJSONObject(await callClaude(polishPrompt, null, null, 900, POLISH_SCHEMA));
+            if (pol && Array.isArray(pol.notes)) {
+              cleaned.picks = cleaned.picks.map((p) => { const n = pol.notes.find((x) => x.item && p.item && x.item.toLowerCase().slice(0, 12) === p.item.toLowerCase().slice(0, 12)); return n && n.why ? { ...p, why: n.why } : p; });
+              if (pol.coach) cleaned.coach = pol.coach;
+            }
+          } catch {}
           setResult(cleaned); doneViaExtraction = true;
         }
       } catch {}
@@ -817,7 +830,7 @@ export default function App() {
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.violet, letterSpacing: 0.3 }}>MED-AWARE ORDERING · {nauseaRisk.toUpperCase()} NAUSEA RISK</div>
             <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.4 }}>
-              {escalating ? "Dose-increase week" : "Recent nausea logged"} — picks below skew lighter, lean, and protein-dense, steering off fried/greasy. No other app does this.
+              {escalating ? "Dose-increase week" : "Recent nausea logged"} — {mode === "gain" ? "protein targets stay king; picks adjust texture and volume for comfort, never protein." : "picks skew lighter, lean, and protein-dense, steering off fried/greasy."} The only app that adapts restaurant ordering to your dose week.
             </div>
           </div>
         </div>
