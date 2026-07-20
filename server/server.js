@@ -366,6 +366,25 @@ async function renderPage(startUrl) {
     return { text: text.replace(/\s+/g, " ").trim(), source: src };
   } finally { try { await browser.close(); } catch {} }
 }
+app.get("/api/foodsearch", async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  if (!q) return res.json({ results: [] });
+  try {
+    const r = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,brands,nutriments,serving_size`, { headers: { "User-Agent": "ForkCaster/0.2 personal nutrition app" }, signal: AbortSignal.timeout(9000) });
+    const j = await r.json();
+    const results = (j.products || []).map((p) => {
+      const n = p.nutriments || {};
+      return {
+        found: true, source: "Open Food Facts",
+        name: p.product_name || "Unnamed", brand: p.brands || "", basis: "100 g",
+        calories: Math.round(n["energy-kcal_100g"] || 0), protein: Math.round(n.proteins_100g || 0),
+        carbs: Math.round(n.carbohydrates_100g || 0), fat: Math.round(n.fat_100g || 0), fiber: Math.round(n.fiber_100g || 0),
+      };
+    }).filter((x) => x.name !== "Unnamed" && (x.calories || x.protein));
+    res.json({ results: results.slice(0, 6) });
+  } catch { res.json({ results: [] }); }
+});
+
 app.get("/api/menu", async (req, res) => {
   const url = req.query.url;
   if (!url || !urlAllowed(url)) return res.json({ ok: false });

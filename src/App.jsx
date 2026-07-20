@@ -1,4 +1,28 @@
-import { useState, useEffect, useRef } from "react";
+impor
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <input value={foodQuery} onChange={(e) => setFoodQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") searchFood(); }} placeholder="Or search food by name (e.g. grilled chicken breast)"
+                  style={{ flex: 1, fontFamily: BODY, fontSize: 14, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "12px 14px", outline: "none" }} />
+                <button onClick={searchFood} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "0 16px", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Search</button>
+              </div>
+              {foodResults === "loading" && <div style={{ fontSize: 12.5, color: C.faint, padding: "8px 2px" }}>Searching…</div>}
+              {Array.isArray(foodResults) && foodResults.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, padding: "8px 2px" }}>No matches — try fewer words.</div>}
+              {Array.isArray(foodResults) && foodResults.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {foodResults.map((f, i) => (
+                    <div key={i} onClick={() => { setScan({ status: "found", food: f }); setFoodResults(null); setFoodQuery(""); }}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.hair}`, marginBottom: 6, cursor: "pointer", background: C.surfaceAlt }}>
+                      <div style={{ minWidth: 0, paddingRight: 10 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</div>
+                        <div style={{ fontSize: 11, color: C.faint }}>{f.brand || f.source} · per {f.basis}</div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: C.go }}>{f.protein}g</div>
+                        <div style={{ fontSize: 10.5, color: C.faint }}>{f.calories} cal</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}t { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BrowserMultiFormatReader } from "@zxing/browser";
@@ -605,7 +629,7 @@ export default function App() {
   }
 
   async function orderForMe(r) {
-    setSelected(r.id); setLoading(true); setResult(null); setError(null);
+    setSelected(r.id); setLoading(true); setResult(null); setError(null); setLoggedPicks([]);
     const medLine = onMed
       ? ` They use ${medObj.label} (week ${glp.weeksOn}${escalating ? ", DOSE-INCREASE WEEK" : ""}). Appetite suppressed — smaller volume, protein density first.` +
         (nauseaRisk !== "low" ? ` Nausea risk is ${nauseaRisk.toUpperCase()} right now: AVOID fried/greasy/very heavy/high-fat dishes, favor gentle, lean, protein-dense options.` : "")
@@ -709,6 +733,9 @@ export default function App() {
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
   const [doseLogged, setDoseLogged] = useState(false);
   const [presetSaved, setPresetSaved] = useState(false);
+  const [loggedPicks, setLoggedPicks] = useState([]);
+  const [foodQuery, setFoodQuery] = useState("");
+  const [foodResults, setFoodResults] = useState(null);
   function logInjection() {
     setGlp((g) => {
       const today = todayISO();
@@ -718,6 +745,15 @@ export default function App() {
     setDoseLogged(true); setTimeout(() => setDoseLogged(false), 2500);
   }
 
+  async function searchFood() {
+    const q = foodQuery.trim(); if (!q) return;
+    setFoodResults("loading");
+    try {
+      const res = await fetch(`/api/foodsearch?q=${encodeURIComponent(q)}`);
+      const j = await res.json();
+      setFoodResults(Array.isArray(j.results) ? j.results : []);
+    } catch { setFoodResults([]); }
+  }
   // Real Open Food Facts lookup (keyless, CORS-friendly). Camera decode is stubbed;
   // in production a scanner lib feeds the same barcode into this same call.
   async function lookupBarcode(code) {
@@ -925,6 +961,8 @@ export default function App() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{p.why}</div></div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{p.calories} cal</div></div>
+                <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: 0 }]); setLoggedPicks((l) => [...l, nm]); }}
+                  style={{ marginLeft: 10, flexShrink: 0, alignSelf: "center", background: loggedPicks.includes(p.item || p.name) ? C.goSoft : "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 9, padding: "7px 10px", fontFamily: BODY, fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>{loggedPicks.includes(p.item || p.name) ? "✓" : "Log"}</button>
               </div>
             ))}
             {result.picks && result.picks[0] && (
@@ -1197,8 +1235,8 @@ export default function App() {
   );
 
   const renderCoach = () => (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "18px 18px 8px" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><div style={{ fontSize: 13, color: C.muted }}>Knows your macros, weight &amp; meds — live</div></div>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 128px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", overflow: "hidden" }}>
+      <div style={{ padding: "14px 18px 6px" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><div style={{ fontSize: 13, color: C.muted }}>Knows your macros, weight &amp; meds — live</div></div>
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
         {coachMsgs.map((m, i) => (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
@@ -1229,7 +1267,7 @@ export default function App() {
       <div style={{ width: "100%", maxWidth: 430, background: C.bg, minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
 
         {/* Header */}
-        <div style={{ height: "calc(52px + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)", paddingLeft: 16, paddingRight: 16, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.hair}`, background: C.bg }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 45, height: "calc(52px + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)", paddingLeft: 16, paddingRight: 16, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.hair}`, background: C.bg }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
               <g fill={C.go}><circle cx="19" cy="13" r="5" /><circle cx="26" cy="9.5" r="6.5" /><circle cx="32" cy="13.5" r="5" /><rect x="16" y="12.5" width="17" height="5.5" rx="2.75" /></g>
