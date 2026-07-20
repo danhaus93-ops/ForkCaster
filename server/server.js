@@ -69,12 +69,13 @@ app.get("/api/keys/status", (_req, res) => {
     anthropic: !!get("ANTHROPIC_API_KEY"), anthropicTail: tail(get("ANTHROPIC_API_KEY")),
     places: !!get("GOOGLE_PLACES_KEY"), placesTail: tail(get("GOOGLE_PLACES_KEY")),
     usda: !!get("USDA_FDC_KEY"),
+    fatsecret: !!(get("FATSECRET_CLIENT_ID") && get("FATSECRET_CLIENT_SECRET")),
   });
 });
 app.post("/api/keys", (req, res) => {
   try {
     const cur = readSecrets(); const b = req.body || {};
-    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY"]) {
+    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY", "FATSECRET_CLIENT_ID", "FATSECRET_CLIENT_SECRET"]) {
       if (typeof b[k] === "string" && b[k].trim()) cur[k] = b[k].trim();
     }
     fs.writeFileSync(path.join(DATA_DIR, "secrets.json"), JSON.stringify(cur, null, 2));
@@ -114,6 +115,23 @@ app.get("/api/off/:barcode", async (req, res) => {
     res.json(await r.json());
   } catch (e) { res.json({ status: 0, error: String(e) }); }
 });
+
+/* ── FatSecret OAuth2 (client credentials; cached ~23h) ── */
+let fsTok = null;
+async function fatsecretToken() {
+  const id = key("FATSECRET_CLIENT_ID"), sec = key("FATSECRET_CLIENT_SECRET");
+  if (!id || !sec) throw new Error("fatsecret not configured");
+  if (fsTok && fsTok.exp > Date.now() + 60000) return fsTok.t;
+  const r = await fetch("https://oauth.fatsecret.com/connect/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: "Basic " + Buffer.from(`${id}:${sec}`).toString("base64") },
+    body: "grant_type=client_credentials&scope=basic",
+  });
+  const d = await r.json();
+  if (!d.access_token) throw new Error(d.error_description || d.error || "token failed");
+  fsTok = { t: d.access_token, exp: Date.now() + Math.max(60, (d.expires_in || 86400) - 300) * 1000 };
+  return fsTok.t;
+}
 
 /* ── Normalized food lookup: Open Food Facts → USDA FDC fallback ──
    USDA works with the public DEMO_KEY out of the box (rate-limited);
@@ -161,6 +179,30 @@ app.get("/api/food/:barcode", async (req, res) => {
       });
     }
   } catch (e) { console.error("USDA lookup failed:", e.message); }
+  // 3) FatSecret barcode lookup (restaurant/brand strength; needs client id+secret in secrets.json)
+  try {
+    const tok = await fatsecretToken();
+    const gtin = bc.padStart(13, "0");
+    const r1 = await fetch(`https://platform.fatsecret.com/rest/server.api?method=food.find_id_for_barcode&barcode=${gtin}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
+    const d1 = await r1.json();
+    const fid = d1 && d1.food_id && d1.food_id.value;
+    if (fid && fid !== "0") {
+      const r2 = await fetch(`https://platform.fatsecret.com/rest/server.api?method=food.get.v4&food_id=${fid}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
+      const d2 = await r2.json();
+      const f = d2 && d2.food;
+      const servs = f && f.servings && f.servings.serving;
+      const sv = Array.isArray(servs) ? servs[0] : servs;
+      if (f && sv) {
+        return res.json({
+          found: true, source: "FatSecret",
+          name: f.food_name || "Unknown product", brand: f.brand_name || "",
+          basis: sv.serving_description || "1 serving",
+          calories: Math.round(+sv.calories || 0), protein: Math.round(+sv.protein || 0),
+          carbs: Math.round(+sv.carbohydrate || 0), fat: Math.round(+sv.fat || 0), fiber: Math.round(+sv.fiber || 0),
+        });
+      }
+    }
+  } catch (e) { console.error("FatSecret lookup failed:", e.message); }
   res.json({ found: false });
 });
 

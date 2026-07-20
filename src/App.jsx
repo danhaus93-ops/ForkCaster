@@ -123,19 +123,20 @@ export default function App() {
   const [appVer, setAppVer] = useState("");
   useEffect(() => { fetch("/api/version").then((r) => r.json()).then((j) => j && j.version && setAppVer(j.version)).catch(() => {}); }, []);
   const [keyStatus, setKeyStatus] = useState(null);
-  const [keyIn, setKeyIn] = useState({ a: "", g: "" });
+  const [keyIn, setKeyIn] = useState({ a: "", g: "", fi: "", fs: "" });
   const [keyMsg, setKeyMsg] = useState("");
   useEffect(() => { if (settingsOpen) fetch("/api/keys/status").then((r) => r.json()).then(setKeyStatus).catch(() => {}); }, [settingsOpen]);
   async function saveKeys() {
     setKeyMsg("Saving…");
     const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
+    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim();
     try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      setKeyIn({ a: "", g: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
+      setKeyIn({ a: "", g: "", fi: "", fs: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
       if (venues.length && !venues[0].menu) rankVenues(venues); }
     catch { setKeyMsg("Save failed — is the node reachable?"); }
   }
   async function testAiKey() {
-    if (keyIn.a.trim() || keyIn.g.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
+    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
     setKeyMsg("Testing AI key…");
     try { const t = await callClaude("Reply with exactly: ok");
       const good = t.toLowerCase().includes("ok");
@@ -1041,7 +1042,7 @@ export default function App() {
                   <button onClick={addLoggedFood} style={{ width: "100%", marginTop: 12, background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>Add to today →</button>
                 </div>
               )}
-              {scan.status === "miss" && <div style={{ fontSize: 13, color: C.muted, padding: "4px 2px" }}>Not found in Open Food Facts or USDA. Try another barcode, or use the AI photo estimate below.</div>}
+              {scan.status === "miss" && <div style={{ fontSize: 13, color: C.muted, padding: "4px 2px" }}>Not found in Open Food Facts, USDA, or FatSecret. Try another barcode, or use the AI photo estimate below.</div>}
               {scan.status === "error" && <div style={{ fontSize: 13, color: C.avoid, padding: "4px 2px" }}>Lookup failed — barcode not found or the node couldn't reach Open Food Facts.</div>}
             </div>
           </div>
@@ -1113,12 +1114,14 @@ export default function App() {
               <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("API keys")}
                 <div style={{ fontSize: 11.5, color: C.muted, marginTop: -4, marginBottom: 10, lineHeight: 1.45 }}>
-                  Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b>
+                  Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b> · FatSecret: <b style={{ color: keyStatus && keyStatus.fatsecret ? C.go : C.avoid }}>{keyStatus ? (keyStatus.fatsecret ? "set" : "not set") : "…"}</b>
                 </div>
                 <input value={keyIn.a} onChange={(e) => setKeyIn({ ...keyIn, a: e.target.value })} placeholder="Anthropic key (sk-ant-…)" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.g} onChange={(e) => setKeyIn({ ...keyIn, g: e.target.value })} placeholder="Google Places key (AIza…) — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
+                <input value={keyIn.fi} onChange={(e) => setKeyIn({ ...keyIn, fi: e.target.value })} placeholder="FatSecret Client ID — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
+                <input value={keyIn.fs} onChange={(e) => setKeyIn({ ...keyIn, fs: e.target.value })} placeholder="FatSecret Client Secret — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() ? 0.5 : 1 }}>Save keys</button>
+                  <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() ? 0.5 : 1 }}>Save keys</button>
                   <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Test AI key</button>
                 </div>
                 {keyMsg && <div style={{ fontSize: 12, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}
