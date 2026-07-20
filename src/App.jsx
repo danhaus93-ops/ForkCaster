@@ -1164,8 +1164,11 @@ export default function App() {
 /* ── pure helpers (no theme) ── */
 function bmiBand(b) { if (!b) return ""; if (b < 18.5) return "underweight"; if (b < 25) return "healthy"; if (b < 30) return "overweight"; return "obese"; }
 function calcBodyFat(body, weight) {
-  const { sex, heightIn: h, neck: n, waist: w, hip: hp } = body;
-  if (!h || !n || !w) return 0;
+  const { sex, heightIn, neck, waist, hip } = body;
+  if (!heightIn || !neck || !waist) return 0;
+  // Navy method constants expect CENTIMETERS; inputs are inches
+  const CM = 2.54;
+  const h = heightIn * CM, n = neck * CM, w = waist * CM, hp = (hip || 0) * CM;
   try {
     if (sex === "male") { if (w - n <= 0) return 0; return 495 / (1.0324 - 0.19077 * log10(w - n) + 0.15456 * log10(h)) - 450; }
     if (w + hp - n <= 0) return 0;

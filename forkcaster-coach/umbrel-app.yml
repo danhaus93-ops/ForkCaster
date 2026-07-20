@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.30"
+version: "0.1.31"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.30: live viewfinder fixed for real - the camera stream was attaching to
-  a not-yet-rendered video element (the decoder silently used its own hidden
-  one, which is why scanning worked while the preview stayed black). The video
-  element is now permanently mounted. Sample Try barcodes removed.
+  v0.1.31: body-fat fix - the Navy method was fed inch measurements into its
+  centimeter formula, understating body fat (e.g. 13.3 percent instead of
+  19.9). Measurements now convert to cm correctly; lean mass updates to match.
 dependencies: []
 path: ""
 defaultUsername: ""
