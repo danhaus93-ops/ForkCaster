@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.1.26"
+version: "0.1.27"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.1.26: FatSecret is live as the third barcode fallback (Open Food Facts,
-  then USDA, then FatSecret - strong on restaurant and brand foods). Paste
-  your FatSecret Client ID and Secret in Settings, API keys.
+  v0.1.27: barcode scanner actually decodes now - requests the high-res rear
+  camera (Safari was serving a soft low-res feed), restricts decoding to food
+  barcode formats with try-harder mode, shows a coaching hint if it struggles
+  for 10s, triple-buzzes on success, and auto-scrolls to the result.
 dependencies: []
 path: ""
 defaultUsername: ""

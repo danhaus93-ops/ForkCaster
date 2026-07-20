@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 
 /* ══════════════════════════════════════════════════════════════════
    RIGHTNOW — context-aware nutrition coach (extreme prototype)
@@ -193,22 +194,35 @@ export default function App() {
   const [barcode, setBarcode] = useState("");
   const [camOn, setCamOn] = useState(false);
   const [camErr, setCamErr] = useState("");
+  const [camHint, setCamHint] = useState(false);
+  const resultRef = useRef(null);
+  useEffect(() => {
+    if (!camOn) { setCamHint(false); return; }
+    const t = setTimeout(() => setCamHint(true), 10000);
+    return () => clearTimeout(t);
+  }, [camOn]);
+  useEffect(() => { if (scan.status === "found" && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [scan.status]);
   const camVideoRef = useRef(null);
   const camControlsRef = useRef(null);
   async function startCam() {
     setCamErr("");
     if (typeof navigator === "undefined" || !navigator.mediaDevices) { setCamErr("Camera needs HTTPS — open ForkCaster from your ts.net URL."); return; }
     setCamOn(true);
+    setCamHint(false);
     try {
-      const reader = new BrowserMultiFormatReader();
-      camControlsRef.current = await reader.decodeFromVideoDevice(undefined, camVideoRef.current, (result, _err, controls) => {
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E, BarcodeFormat.CODE_128]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+      const reader = new BrowserMultiFormatReader(hints);
+      const constraints = { audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } } };
+      camControlsRef.current = await reader.decodeFromConstraints(constraints, camVideoRef.current, (result, _err, controls) => {
         if (result) {
           try { controls.stop(); } catch {}
           setCamOn(false);
           const code = result.getText();
           setBarcode(code);
           lookupBarcode(code);
-          if (navigator.vibrate) navigator.vibrate(60);
+          if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
         }
       });
     } catch (e) {
@@ -997,7 +1011,7 @@ export default function App() {
                     <div style={{ width: "72%", height: 90, border: "2.5px solid rgba(99,212,140,0.95)", borderRadius: 12, boxShadow: "0 0 0 2000px rgba(0,0,0,0.35)" }} />
                   </div>
                   <button onClick={stopCam} style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: 20, padding: "6px 13px", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>Stop</button>
-                  <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 600, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>Center the barcode in the box</div>
+                  <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 600, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>{camHint ? "Struggling? More light, hold 4–8 inches away, keep steady — or type the number below" : "Center the barcode in the box"}</div>
                 </div>
               ) : (
                 <button onClick={startCam} style={{ width: "100%", borderRadius: 14, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "22px 16px", textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
@@ -1030,7 +1044,7 @@ export default function App() {
               </button>
 
               {scan.status === "found" && (
-                <div style={{ background: C.goSoft, border: `1px solid ${C.go}44`, borderRadius: 14, padding: 15, marginBottom: 12 }}>
+                <div ref={resultRef} style={{ background: C.goSoft, border: `1px solid ${C.go}44`, borderRadius: 14, padding: 15, marginBottom: 12 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{scan.food.name}</div>
                   {scan.food.brand && <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>{scan.food.brand}</div>}
                   <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
