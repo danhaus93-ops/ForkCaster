@@ -326,7 +326,7 @@ export default function App() {
         if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
-        if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp(s.glp);
+        if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog); if (s.photos) setPhotos(s.photos);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
       }
@@ -378,6 +378,7 @@ export default function App() {
     ? new Date(new Date(glp.lastInjection).getTime() + (prefs.injIntervalDays || 7) * 86400000)
     : nextDow(glp.injectionDay);
   const daysToInjection = Math.max(0, Math.ceil((nextInjection - new Date()) / 86400000));
+  const dueISO = nextInjection.toLocaleDateString("sv-SE");
   const recentRate = weeklyRate(weightLog);
   const weeksToGoal = recentRate > 0.05 && curWeight > goalWeight ? Math.ceil((curWeight - goalWeight) / recentRate) : null;
   const goalDate = weeksToGoal ? addDays(new Date(), weeksToGoal * 7) : null;
@@ -564,7 +565,11 @@ export default function App() {
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
   const [doseLogged, setDoseLogged] = useState(false);
   function logInjection() {
-    setGlp((g) => ({ ...g, lastInjection: todayISO(), weeksOn: g.weeksOn + 1 }));
+    setGlp((g) => {
+      const today = todayISO();
+      const log = (g.doseLog || []).filter((d) => d.date !== today);
+      return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, mg: g.dose || 0 }] };
+    });
     setDoseLogged(true); setTimeout(() => setDoseLogged(false), 2500);
   }
 
@@ -962,6 +967,7 @@ export default function App() {
           <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>Next injection</div><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>Last dose: {fmtDate(glp.lastInjection)}{glp.dose ? ` · ${glp.dose} mg` : ""} · week {glp.weeksOn}</div></div>
           <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.surface, border: "none", borderRadius: 11, padding: "12px 18px", fontFamily: BODY, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
         </div>)}</div>
+      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} doseLog={glp.doseLog || []} dueISO={dueISO} />)}</div>
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
@@ -1284,6 +1290,59 @@ export default function App() {
   );
 }
 
+/* Month calendar for dose adherence: syringe on logged days, DUE ring on the scheduled day */
+function DoseCalendar({ C, doseLog, dueISO }) {
+  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const todayIso = new Date().toLocaleDateString("sv-SE");
+  const first = new Date(ym.y, ym.m, 1);
+  const startDow = first.getDay();
+  const dim = new Date(ym.y, ym.m + 1, 0).getDate();
+  const monthName = first.toLocaleDateString([], { month: "long", year: "numeric" });
+  const iso = (day) => `${ym.y}-${String(ym.m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const logged = (i) => (doseLog || []).find((d) => d.date === i);
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= dim; d++) cells.push(d);
+  const syr = (color, s = 11) => (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg>
+  );
+  const navB = { background: "none", border: `1px solid ${C.hair}`, borderRadius: 8, color: C.ink2, width: 28, height: 28, fontSize: 15, cursor: "pointer", lineHeight: 1 };
+  return (
+    <div>
+      {dueISO === todayIso && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 10, padding: "9px 12px", marginBottom: 12 }}>
+          {syr(C.violet, 15)}
+          <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 700, color: C.violet }}>Dose due today — log it once injected</span>
+        </div>
+      )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <button onClick={() => setYm(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }))} style={navB}>‹</button>
+        <div style={{ fontFamily: BODY, fontSize: 12.5, fontWeight: 700, color: C.ink2 }}>{monthName}</div>
+        <button onClick={() => setYm(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }))} style={navB}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 9, fontWeight: 700, color: C.faint }}>{d}</div>)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", rowGap: 4 }}>
+        {cells.map((d, i) => {
+          if (d == null) return <div key={i} />;
+          const di = iso(d), lg = logged(di), due = di === dueISO, today = di === todayIso;
+          return (
+            <div key={i} style={{ height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, borderRadius: 9, margin: "0 2px", border: due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: lg ? C.goSoft : "transparent" }}>
+              <span style={{ fontSize: 10.5, fontWeight: today || due || lg ? 800 : 500, color: lg ? C.go : due ? C.violet : today ? C.ink : C.muted }}>{d}</span>
+              {lg ? syr(C.go) : due ? <span style={{ fontSize: 7.5, color: C.violet, fontWeight: 800, letterSpacing: 0.5 }}>DUE</span> : <span style={{ height: 11 }} />}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 10, fontSize: 10, color: C.faint, alignItems: "center" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>{syr(C.go, 10)} dose logged</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, border: `1.5px dashed ${C.violet}`, display: "inline-block" }} /> due</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, border: `1.5px solid ${C.go}88`, display: "inline-block" }} /> today</span>
+      </div>
+    </div>
+  );
+}
 /* Number input that lets you clear it while typing; commits valid numbers, restores on blur */
 function NumFieldC({ label, value, onChange, C, DISPLAY, w, step, bare }) {
   const [draft, setDraft] = useState(value == null || Number.isNaN(value) ? "" : String(value));
