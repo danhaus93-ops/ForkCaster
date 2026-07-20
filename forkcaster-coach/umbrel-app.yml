@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.21"
+version: "0.2.22"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.21: goal mode now explicitly steers venue ranking and ordering (GLP-1
-  menu sections get prioritized when scraped); My Preset save confirms visibly
-  and the goal-mode card shows your actual saved numbers; health scores are
-  cached for 6 hours and survive app reopens (stable scores, fewer AI calls);
-  Opus added to the model picker; home-screen icons re-rendered with proper
-  anti-aliasing.
+  v0.2.22: health scores now refresh on meal cadence - 4-hour cache by default
+  (was 6), adjustable in Preferences under AI as Score refresh hours.
 dependencies: []
 path: ""
 defaultUsername: ""

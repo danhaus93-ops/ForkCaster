@@ -86,6 +86,7 @@ const DEFAULT_PREFS = {
   requeryMi: 0.15,          // GPS movement before venues re-query
   paceLbPerWeek: 1.5,       // target loss pace
   aiModel: "claude-sonnet-4-6", // or claude-haiku-4-5-20251001 (cheaper)
+  rankCacheHours: 4,        // health scores refresh on roughly meal cadence
   coachStyle: "balanced",   // concise | balanced | detailed | tough-love
   customTargets: null,      // saved personal macro preset
 };
@@ -491,7 +492,7 @@ export default function App() {
   async function rankVenues(vs) {
     const key = vs.map((v) => v.id).sort().join(",");
     const now = Date.now();
-    if (savedRank && savedRank.key === key && now - savedRank.at < 6 * 3600000) {
+    if (savedRank && savedRank.key === key && now - savedRank.at < (prefs.rankCacheHours || 4) * 3600000) {
       applyRank(vs, savedRank.arr); setRankState("ranked"); return; // reuse persisted scores: stable + free
     }
     if (key === lastRank.current.key && now - lastRank.current.at < 30 * 60000) return;
@@ -1301,6 +1302,7 @@ export default function App() {
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "14px 0 2px" }}>AI</div>
                       {row("Model", sel(P.aiModel, [["claude-opus-4-8", "Opus (max accuracy)"], ["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
                       {row("Coach style", sel(P.coachStyle, [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"], ["tough-love", "Tough love"]], set("coachStyle")))}
+                      {row("Score refresh (hours)", num(P.rankCacheHours, set("rankCacheHours"), 64, 0.5))}
                       <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
                     </div>
                   );
