@@ -201,7 +201,6 @@ export default function App() {
     const t = setTimeout(() => setCamHint(true), 10000);
     return () => clearTimeout(t);
   }, [camOn]);
-  useEffect(() => { if (scan.status === "found" && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [scan.status]);
   const camVideoRef = useRef(null);
   const camControlsRef = useRef(null);
   const camCanvasRef = useRef(null);
@@ -244,6 +243,7 @@ export default function App() {
   }
   function stopCam() { try { camControlsRef.current && camControlsRef.current.stop(); } catch {} setCamOn(false); }
   const [scan, setScan] = useState({ status: "idle" }); // idle|loading|found|miss|error + food
+  useEffect(() => { if (scan.status === "found" && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [scan.status]);
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
   useEffect(() => { detectLocation(); }, []);

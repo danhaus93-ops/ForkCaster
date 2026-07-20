@@ -16,6 +16,14 @@
 </head>
 <body>
   <div id="root"></div>
+  <script>
+    window.onerror = function (msg, src2, line, col, err) {
+      var d = document.createElement("div");
+      d.style.cssText = "position:fixed;inset:0;background:#0E141A;color:#ff8a80;font:13px/1.5 -apple-system,monospace;padding:60px 20px;z-index:99999;white-space:pre-wrap;overflow:auto";
+      d.textContent = "ForkCaster crashed:\n\n" + msg + "\n\n" + (src2||"") + " line " + line + "\n\n" + (err && err.stack ? err.stack.slice(0, 800) : "") + "\n\nScreenshot this and send it to the developer.";
+      document.body.appendChild(d);
+    };
+  </script>
   <script src="/app.js"></script>
 </body>
 </html>
