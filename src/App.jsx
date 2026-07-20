@@ -204,6 +204,17 @@ export default function App() {
   useEffect(() => { if (scan.status === "found" && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [scan.status]);
   const camVideoRef = useRef(null);
   const camControlsRef = useRef(null);
+  const camCanvasRef = useRef(null);
+  const camOnRef = useRef(false);
+  useEffect(() => { camOnRef.current = camOn; }, [camOn]);
+  function paintLoop() {
+    const v = camVideoRef.current, c = camCanvasRef.current;
+    if (v && c && v.videoWidth) {
+      if (c.width !== v.videoWidth) { c.width = v.videoWidth; c.height = v.videoHeight; }
+      c.getContext("2d").drawImage(v, 0, 0);
+    }
+    if (camOnRef.current) requestAnimationFrame(paintLoop);
+  }
   async function startCam() {
     setCamErr("");
     if (typeof navigator === "undefined" || !navigator.mediaDevices) { setCamErr("Camera needs HTTPS — open ForkCaster from your ts.net URL."); return; }
@@ -225,6 +236,7 @@ export default function App() {
           if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
         }
       });
+      requestAnimationFrame(paintLoop);
     } catch (e) {
       setCamOn(false);
       setCamErr(e && e.name === "NotAllowedError" ? "Camera permission denied — allow it in iOS Settings for ForkCaster." : `Camera failed: ${(e && e.message) || e}`);
@@ -1006,7 +1018,8 @@ export default function App() {
               {/* live camera scanner */}
               {camOn ? (
                 <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", marginBottom: 14, background: "#000" }}>
-                  <video ref={camVideoRef} autoPlay playsInline muted style={{ width: "100%", height: 240, objectFit: "cover", display: "block" }} />
+                  <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
+                  <canvas ref={camCanvasRef} style={{ width: "100%", height: 240, objectFit: "cover", display: "block", background: "#000" }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
                     <div style={{ width: "72%", height: 90, border: "2.5px solid rgba(99,212,140,0.95)", borderRadius: 12, boxShadow: "0 0 0 2000px rgba(0,0,0,0.35)" }} />
                   </div>
