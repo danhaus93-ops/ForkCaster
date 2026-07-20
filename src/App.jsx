@@ -55,6 +55,16 @@ const ALLERGEN_WORDS = {
   soy: ["soy", "tofu", "edamame", "tempeh", "miso", "teriyaki"],
   sesame: ["sesame", "tahini", "hummus", "halva"],
 };
+function salvageJSONArray(text) {
+  const t = String(text).replace(/```json|```/g, "").trim();
+  try { return JSON.parse(t); } catch {}
+  const start = t.indexOf("[");
+  const lastObj = t.lastIndexOf("}");
+  if (start >= 0 && lastObj > start) {
+    try { return JSON.parse(t.slice(start, lastObj + 1) + "]"); } catch {}
+  }
+  throw new Error("unparseable AI response");
+}
 function violatesAllergy(text, allergies) {
   const t = String(text || "").toLowerCase();
   for (const a of allergies) {
@@ -475,9 +485,9 @@ export default function App() {
   function toggleIn(list, setList, v) { setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]); }
   const restrictions = [...allergies.map((a) => `ALLERGY: ${a}`), ...diets.map((d) => `DIET: ${d}`)];
 
-  async function callClaude(prompt, sys, image) {
+  async function callClaude(prompt, sys, image, maxTokens) {
     const styleLine = { concise: " Keep replies very brief.", balanced: "", detailed: " Be thorough and explain reasoning.", "tough-love": " Be direct, no sugarcoating, drill-sergeant energy." }[prefs.coachStyle] || "";
-    const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, system: (sys || "") + styleLine, image, model: prefs.aiModel }) });
+    const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, system: (sys || "") + styleLine, image, model: prefs.aiModel, max_tokens: maxTokens }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     return data.text || "";
@@ -489,14 +499,16 @@ export default function App() {
       .map((v) => { const m = Array.isArray(arr) ? arr.find((x) => x.id === v.id) : null; return m && Number.isFinite(+m.match) ? { ...v, match: Math.max(0, Math.min(100, Math.round(+m.match))), why: m.why } : v; })
       .sort((a, b) => (b.match ?? -1) - (a.match ?? -1)));
   }
-  async function rankVenues(vs) {
+  async function rankVenues(vs, force) {
     const key = vs.map((v) => v.id).sort().join(",") + `|${mode}|${targets.protein}|${targets.calories}`;
     const now = Date.now();
-    if (savedRank && savedRank.key === key && now - savedRank.at < (prefs.rankCacheHours || 4) * 3600000) {
-      applyRank(vs, savedRank.arr); setRankState("ranked"); return; // reuse persisted scores: stable + free
+    if (!force) {
+      if (savedRank && savedRank.key === key && now - savedRank.at < (prefs.rankCacheHours || 4) * 3600000) {
+        applyRank(vs, savedRank.arr); setRankState("ranked"); return; // reuse persisted scores: stable + free
+      }
+      if (key === lastRank.current.key && now - lastRank.current.at < 30 * 60000) return;
+      if (now - lastRank.current.at < 120000) return;
     }
-    if (key === lastRank.current.key && now - lastRank.current.at < 30 * 60000) return;
-    if (now - lastRank.current.at < 120000) return;
     lastRank.current = { key, at: now };
     setRankState("ranking");
     try {
@@ -506,11 +518,12 @@ export default function App() {
         `User goal mode: ${MODES[mode] ? MODES[mode].label : mode}. Score each venue 0-100 by the BEST goal-fit order an informed customer can build there RIGHT NOW — not the menu average. ` +
         `Credit customization power: added protein, sugar-free/light bases, grilled swaps, sauces on the side (e.g., a smoothie shop with a high-protein low-sugar line scores on THAT line, not its dessert smoothies). ` +
         `Dessert-only/fried-only with no workaround = low. IGNORE popularity and review scores.` +
+        `Anchor the scale: 90-100 trivially fits remaining macros with high protein; 75-89 solid fit, minor tradeoffs; 55-74 possible with care; 35-54 limited workarounds; under 35 hostile to the goal. ` +
         ` User has ${proteinLeft}g protein and ${calLeft} calories remaining today.` + medLine + restrictLine +
         `\nVenues: ${JSON.stringify(vs.map((v) => ({ id: v.id, name: v.name, type: v.cuisine })))}` +
         `\nReturn ONLY minified JSON, no markdown: [{"id":"<id>","match":<int 0-100>,"why":"<max 6 words>"}] for every venue.`;
-      const text = await callClaude(prompt);
-      const arr = JSON.parse(text.replace(/```json|```/g, "").trim());
+      const text = await callClaude(prompt, null, null, 2400);
+      const arr = salvageJSONArray(text);
       applyRank(vs, arr);
       setSavedRank({ key, at: now, arr });
       setRankState("ranked");
@@ -540,7 +553,7 @@ export default function App() {
       `\nRank this menu to maximize remaining protein under remaining calories, favoring whole/grilled foods` +
       (nauseaRisk === "high" || nauseaRisk === "moderate" ? ` and low-fat, easy-on-the-stomach picks` : ``) + `.\n` +
       (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
-        : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal"), prioritize those items:\n"""${liveMenu.text}"""\n\n`
+        : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section:\n"""${liveMenu.text}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
       `Return ONLY minified JSON, no markdown:\n` +
       `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"why":"<max 9 words>"}],` +
@@ -741,8 +754,8 @@ export default function App() {
         )}
         {rankState !== "idle" && rankState !== "ranking" && rankState !== "ranked" && (
           <div style={{ fontSize: 12, color: C.avoid, marginTop: -4, marginBottom: 10, lineHeight: 1.4 }}>
-            Health ranking unavailable: {rankState}. Fix your AI key in Settings → API keys, then{" "}
-            <span onClick={() => rankVenues(venues)} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>tap to retry</span>.
+            Ranking hiccup ({rankState}) — usually a cut-off AI response, not your key.{" "}
+            <span onClick={() => rankVenues(venues, true)} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>tap to retry</span>.
           </div>
         )}
 
