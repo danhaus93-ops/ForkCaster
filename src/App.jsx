@@ -621,8 +621,8 @@ export default function App() {
         "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"calories\":<int>,\"protein\":<int>,\"carbs\":<int>,\"fat\":<int>,\"fiber\":<int>}. Best estimate if unsure.";
       const text = await callClaude(prompt, null, { data: b64, media_type: "image/jpeg" });
       const f = JSON.parse(text.replace(/```json|```/g, "").trim());
-      setScan({ status: "found", src: "AI photo estimate", food: {
-        name: f.name || "Photo estimate", brand: "", basis: "portion shown",
+      setScan({ status: "found", food: {
+        name: f.name || "Photo estimate", brand: "", basis: "portion shown", source: "AI photo estimate",
         calories: Math.round(f.calories || 0), protein: Math.round(f.protein || 0), carbs: Math.round(f.carbs || 0), fat: Math.round(f.fat || 0), fiber: Math.round(f.fiber || 0) } });
     } catch { setScan({ status: "error" }); }
   }
@@ -1316,7 +1316,7 @@ export default function App() {
                 {sectionTitle("Danger zone")}
                 <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, and settings will be wiped.")) { hydrated.current = false; try { await fetch("/api/state", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
-              <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""} · LoneStrike Labs · self-hosted</div>
+              <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""} · self-hosted · your data stays on your node</div>
             </div>
           </div>
         )}

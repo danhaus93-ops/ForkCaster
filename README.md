@@ -2,7 +2,7 @@
 
 **Self-hosted, medication-aware nutrition coach.** GPS-aware "what should I order right now" ranking against your remaining macros · GLP-1 dose/titration tracking with symptom↔food correlation · allergy filtering on every suggestion · barcode scanning (Open Food Facts) · AI plate-photo estimation · weight, body composition, progress photos · live AI coach. All data stays on your node.
 
-Built by LoneStrike Labs. Personal-use build for Umbrel.
+Self-hosted personal build for Umbrel.
 
 ---
 
@@ -39,7 +39,7 @@ Without `GOOGLE_PLACES_KEY` the app uses its built-in demo venues (AI ranking st
 
 ## Umbrel install (community app store flow)
 
-Same two-step flow as the LoneStrike apps:
+Two-step release flow:
 
 1. **Build + push the image to GHCR** (classic `ghp_` PAT with `write:packages` — fine-grained tokens get 403'd):
    ```bash
@@ -88,4 +88,4 @@ ForkCaster is a tracking and decision-support tool, not medical advice. Medicati
 
 ## License
 
-AGPL-3.0 (matching LoneStrike house style). © LoneStrike Labs.
+AGPL-3.0.

@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.14"
+version: "0.2.15"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -13,7 +13,7 @@ description: >-
   suggestion, and tracks weight, body composition, and progress photos — all
   on your own hardware. Requires an Anthropic API key for AI features; a
   Google Places key is optional for live nearby restaurants.
-developer: LoneStrike Labs
+developer: ForkCaster
 website: https://github.com/danhaus93-ops/ForkCaster
 repo: https://github.com/danhaus93-ops/ForkCaster
 support: https://github.com/danhaus93-ops/ForkCaster/issues
@@ -28,5 +28,5 @@ dependencies: []
 path: ""
 defaultUsername: ""
 defaultPassword: ""
-submitter: LoneStrike Labs
+submitter: ForkCaster
 submission: https://github.com/danhaus93-ops/ForkCaster
