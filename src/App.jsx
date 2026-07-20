@@ -1105,7 +1105,7 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
               <g fill={C.go}><circle cx="19" cy="13" r="5" /><circle cx="26" cy="9.5" r="6.5" /><circle cx="32" cy="13.5" r="5" /><rect x="16" y="12.5" width="17" height="5.5" rx="2.75" /></g>
-              <g fill="none" stroke={C.go} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 22 V31" /><path d="M24 22 V45" /><path d="M30.5 22 V31" /><path d="M17.5 31 C17.5 37 20.5 39 24 39 C27.5 39 30.5 37 30.5 31" /></g>
+              <path d="M15.9 21 V30 C15.9 34.6 18.4 36.7 22.6 37.3 L22.6 43.6 C22.6 44.4 23.2 45 24 45 C24.8 45 25.4 44.4 25.4 43.6 L25.4 37.3 C29.6 36.7 32.1 34.6 32.1 30 V21 H29.9 V29 H27.4 V21 H25.2 V29 H22.8 V21 H20.6 V29 H18.1 V21 Z" fill={C.go} />
             </svg>
             <span style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: -0.3 }}>ForkCaster</span>
             {appVer && <span style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 4 }}>v{appVer}</span>}
@@ -1492,7 +1492,7 @@ const MAP_TILES = {
   sat:   { tl: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr: "&copy; Esri", dark: true },
 };
 const VENUE_OFFSETS = [[0.0038, -0.0062], [0.0042, 0.0058], [-0.0012, -0.0008], [-0.0035, 0.0052], [-0.0041, -0.0047]];
-const YOU_PIN_SVG = `<svg width="30" height="37" viewBox="0 0 48 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 2 C13 2 4.2 10.8 4.2 21.8 C4.2 36 24 57 24 57 C24 57 43.8 36 43.8 21.8 C43.8 10.8 35 2 24 2 Z" fill="#22B573" stroke="#fff" stroke-width="2.5"/><g transform="translate(9,6) scale(0.6)"><g fill="#fff"><circle cx="19" cy="13" r="5"/><circle cx="26" cy="9.5" r="6.5"/><circle cx="32" cy="13.5" r="5"/><rect x="16" y="12.5" width="17" height="5.5" rx="2.75"/></g><g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 22 V31"/><path d="M24 22 V45"/><path d="M30.5 22 V31"/><path d="M17.5 31 C17.5 37 20.5 39 24 39 C27.5 39 30.5 37 30.5 31"/></g></g></svg>`;
+const YOU_PIN_SVG = `<svg width="30" height="37" viewBox="0 0 48 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 2 C13 2 4.2 10.8 4.2 21.8 C4.2 36 24 57 24 57 C24 57 43.8 36 43.8 21.8 C43.8 10.8 35 2 24 2 Z" fill="#22B573" stroke="#fff" stroke-width="2.5"/><g transform="translate(9,6) scale(0.6)"><g fill="#fff"><circle cx="19" cy="13" r="5"/><circle cx="26" cy="9.5" r="6.5"/><circle cx="32" cy="13.5" r="5"/><rect x="16" y="12.5" width="17" height="5.5" rx="2.75"/></g><path d="M15.9 21 V30 C15.9 34.6 18.4 36.7 22.6 37.3 L22.6 43.6 C22.6 44.4 23.2 45 24 45 C24.8 45 25.4 44.4 25.4 43.6 L25.4 37.3 C29.6 36.7 32.1 34.6 32.1 30 V21 H29.9 V29 H27.4 V21 H25.2 V29 H22.8 V21 H20.6 V29 H18.1 V21 Z" fill="#fff"/></g></svg>`;
 function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea, prefs }) {
   const ref = useRef(null); const mapRef = useRef(null); const layerRef = useRef(null); const mkRef = useRef([]);
   const [pick, setPick] = useState((prefs && prefs.mapStyle) || "auto");

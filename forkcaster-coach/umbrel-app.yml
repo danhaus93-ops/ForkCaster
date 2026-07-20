@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.17"
+version: "0.2.18"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.17: icon refinement - the fork's middle tine now runs continuously
-  through the bowl into the stem instead of floating above it. Updated across
-  the favicon, map pin, and home-screen icons.
+  v0.2.18: the fork is now a proper four-tine dinner fork - filled silhouette
+  with tines rooting into a solid shoulder and handle, matching real fork
+  anatomy and the filled cloud. Updated across logo, map pin, favicon, and
+  home-screen icons.
 dependencies: []
 path: ""
 defaultUsername: ""
