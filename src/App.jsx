@@ -1,28 +1,4 @@
-impor
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <input value={foodQuery} onChange={(e) => setFoodQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") searchFood(); }} placeholder="Or search food by name (e.g. grilled chicken breast)"
-                  style={{ flex: 1, fontFamily: BODY, fontSize: 14, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "12px 14px", outline: "none" }} />
-                <button onClick={searchFood} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "0 16px", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Search</button>
-              </div>
-              {foodResults === "loading" && <div style={{ fontSize: 12.5, color: C.faint, padding: "8px 2px" }}>Searching…</div>}
-              {Array.isArray(foodResults) && foodResults.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, padding: "8px 2px" }}>No matches — try fewer words.</div>}
-              {Array.isArray(foodResults) && foodResults.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  {foodResults.map((f, i) => (
-                    <div key={i} onClick={() => { setScan({ status: "found", food: f }); setFoodResults(null); setFoodQuery(""); }}
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.hair}`, marginBottom: 6, cursor: "pointer", background: C.surfaceAlt }}>
-                      <div style={{ minWidth: 0, paddingRight: 10 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</div>
-                        <div style={{ fontSize: 11, color: C.faint }}>{f.brand || f.source} · per {f.basis}</div>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: C.go }}>{f.protein}g</div>
-                        <div style={{ fontSize: 10.5, color: C.faint }}>{f.calories} cal</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}t { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BrowserMultiFormatReader } from "@zxing/browser";
@@ -1328,6 +1304,30 @@ export default function App() {
                   style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
                 <button onClick={() => lookupBarcode(barcode)} disabled={scan.status === "loading"} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "0 18px", fontFamily: BODY, fontWeight: 700, fontSize: 14, cursor: "pointer", opacity: scan.status === "loading" ? 0.6 : 1 }}>{scan.status === "loading" ? "…" : "Look up"}</button>
               </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <input value={foodQuery} onChange={(e) => setFoodQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") searchFood(); }} placeholder="Or search food by name (e.g. grilled chicken breast)"
+                  style={{ flex: 1, fontFamily: BODY, fontSize: 14, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "12px 14px", outline: "none" }} />
+                <button onClick={searchFood} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "0 16px", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Search</button>
+              </div>
+              {foodResults === "loading" && <div style={{ fontSize: 12.5, color: C.faint, padding: "8px 2px" }}>Searching…</div>}
+              {Array.isArray(foodResults) && foodResults.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, padding: "8px 2px" }}>No matches — try fewer words.</div>}
+              {Array.isArray(foodResults) && foodResults.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  {foodResults.map((f, i) => (
+                    <div key={i} onClick={() => { setScan({ status: "found", food: f }); setFoodResults(null); setFoodQuery(""); }}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.hair}`, marginBottom: 6, cursor: "pointer", background: C.surfaceAlt }}>
+                      <div style={{ minWidth: 0, paddingRight: 10 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</div>
+                        <div style={{ fontSize: 11, color: C.faint }}>{f.brand || f.source} · per {f.basis}</div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: C.go }}>{f.protein}g</div>
+                        <div style={{ fontSize: 10.5, color: C.faint }}>{f.calories} cal</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 14px" }}>
                 <div style={{ flex: 1, height: 1, background: C.hair }} /><span style={{ fontSize: 11, color: C.faint }}>or</span><div style={{ flex: 1, height: 1, background: C.hair }} />
