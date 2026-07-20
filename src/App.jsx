@@ -729,8 +729,8 @@ export default function App() {
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 55%)" }} />
                   {r.menu && <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(200,140,20,0.95)", color: "#1a1200", borderRadius: 20, padding: "3px 9px", fontSize: 9, fontWeight: 800, letterSpacing: 0.5 }}>DEMO</div>}
                   <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.95)", borderRadius: 20, padding: "3px 9px", display: "flex", alignItems: "center", gap: 3, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
-                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 13, color: r.match != null ? scoreColor(r.match / 20) : sc }}>{r.match != null ? r.match : r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: r.match != null ? scoreColor(r.match / 20) : sc, textTransform: "uppercase" }}>{r.match != null || r.menu ? "match" : "★"}</span>
+                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 13, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : "#6b7a71" }}>{r.match != null ? r.match : r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : "#6b7a71", textTransform: "uppercase" }}>{r.match != null || r.menu ? "match" : "★"}</span>
                   </div>
                   <div style={{ position: "absolute", left: 12, bottom: 9 }}>
                     <div style={{ fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: "#fff", lineHeight: 1, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{r.name}</div>
@@ -1506,8 +1506,9 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea, prefs }
     restaurants.forEach((r, i) => {
       const vLat = r.lat != null ? r.lat : lat + (VENUE_OFFSETS[i % 5][0]);
       const vLng = r.lng != null ? r.lng : lon + (VENUE_OFFSETS[i % 5][1]);
-      const sc = scoreColor(r.match != null ? r.match / 20 : r.score);
-      const html = `<div style="background:${S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)"};color:${S.dark ? "#EDF2F0" : "#17221C"};border-radius:11px;padding:4px 9px 4px 7px;font-weight:700;font-size:11px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;display:flex;gap:6px;align-items:center;"><span style="width:8px;height:8px;border-radius:99px;background:${sc};flex-shrink:0;"></span>${r.name}&nbsp;<span style="color:${sc};">${r.match != null ? r.match : Math.round(r.score * 20)}</span></div>`;
+      const ranked = r.match != null;
+      const sc = ranked ? scoreColor(r.match / 20) : (S.dark ? "#9aa7ad" : "#8a958c");
+      const html = `<div style="background:${S.dark ? "rgba(20,27,34,0.92)" : "rgba(255,255,255,0.95)"};color:${S.dark ? "#EDF2F0" : "#17221C"};border-radius:11px;padding:4px 9px 4px 7px;font-weight:700;font-size:11px;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,0.3);white-space:nowrap;display:flex;gap:6px;align-items:center;"><span style="width:8px;height:8px;border-radius:99px;background:${sc};flex-shrink:0;"></span>${r.name}&nbsp;<span style="color:${sc};font-weight:${ranked ? 700 : 600};">${ranked ? r.match : "★" + (+r.score).toFixed(1)}</span></div>`;
       const mk = L.marker([vLat, vLng], { icon: L.divIcon({ html, className: "", iconSize: null, iconAnchor: [40, 14] }) }).addTo(m);
       mk.on("click", () => onPin(r));
       mkRef.current.push(mk);

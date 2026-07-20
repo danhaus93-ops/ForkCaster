@@ -1,6 +1,6 @@
 {
   "name": "forkcaster",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "private": true,
   "description": "Self-hosted, medication-aware nutrition coach for Umbrel. GPS ordering, GLP-1 tracking, symptom-food forecasting.",
   "scripts": {
