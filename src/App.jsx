@@ -132,6 +132,7 @@ export default function App() {
     catch { setKeyMsg("Save failed — is the node reachable?"); }
   }
   async function testAiKey() {
+    if (keyIn.a.trim() || keyIn.g.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
     setKeyMsg("Testing AI key…");
     try { const t = await callClaude("Reply with exactly: ok");
       const good = t.toLowerCase().includes("ok");
