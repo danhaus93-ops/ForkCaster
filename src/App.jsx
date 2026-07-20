@@ -58,6 +58,20 @@ const ALLERGEN_WORDS = {
 function salvageJSONObject(text) {
   const t = String(text).replace(/```json|```/g, "").trim();
   try { return JSON.parse(t); } catch {}
+  // models sometimes wrap JSON in prose: extract the first balanced {...} block
+  const first = t.indexOf("{");
+  if (first >= 0) {
+    let depth = 0, inStr = false, esc = false;
+    for (let i = first; i < t.length; i++) {
+      const ch = t[i];
+      if (esc) { esc = false; continue; }
+      if (ch === "\\") { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === "{") depth++;
+      if (ch === "}") { depth--; if (depth === 0) { try { return JSON.parse(t.slice(first, i + 1)); } catch {} break; } }
+    }
+  }
   // truncated: cut to last complete value, then close every open brace/bracket
   let cut = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"), t.lastIndexOf('"'));
   for (; cut > 0; cut--) {
@@ -580,9 +594,9 @@ export default function App() {
         ? ` Medication note: ${nauseaRisk} nausea risk — prefer smoother, lower-fat, smaller-volume VERSIONS of goal-fit items, but NEVER swap to a lower-protein item when a tolerable higher-protein one exists; the goal outranks comfort tweaks. GLP-1-branded menu sections are only preferred when the user's goal mode is GLP-1.`
         : ``) + `\n` +
       (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
-        : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section. If the text turns out to be boilerplate with no actual menu items, DISREGARD it and propose well-known typical orders for this chain instead — NEVER refuse and NEVER return zero picks:\n"""${liveMenu.text}"""\n\n`
+        : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section. If the text turns out to be boilerplate with no actual menu items, DISREGARD it and propose well-known typical orders for this chain instead — NEVER refuse and NEVER return zero picks:\n"""${liveMenu.text.slice(0, prefs.aiModel && prefs.aiModel.includes("haiku") ? 3500 : prefs.aiModel && prefs.aiModel.includes("sonnet") ? 6000 : 8000)}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
-      `Keep all strings short (under 12 words); no prose outside the JSON. Return ONLY minified JSON, no markdown:\n` +
+      `Keep all strings short (under 12 words). Your ENTIRE response must be exactly one JSON object — the first character { and the last character } — no prose, no markdown, nothing else. Format:\n` +
       `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"why":"<max 9 words>"}],` +
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
