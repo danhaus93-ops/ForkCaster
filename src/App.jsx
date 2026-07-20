@@ -468,7 +468,13 @@ export default function App() {
     return data.text || "";
   }
 
+  const lastRank = useRef({ key: "", at: 0 });
   async function rankVenues(vs) {
+    const key = vs.map((v) => v.id).sort().join(",");
+    const now = Date.now();
+    if (key === lastRank.current.key && now - lastRank.current.at < 30 * 60000) return; // same venues, ranked <30min ago: keep scores
+    if (now - lastRank.current.at < 120000) return; // hard floor: never rank more than once per 2 min
+    lastRank.current = { key, at: now };
     setRankState("ranking");
     try {
       const medLine = medObj ? ` User is on ${medObj.label}${nauseaRisk !== "low" ? ` with ${nauseaRisk.toUpperCase()} nausea risk (favor gentle, lean, low-fat venues)` : ""}.` : "";

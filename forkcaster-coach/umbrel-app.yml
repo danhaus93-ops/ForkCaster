@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.9"
+version: "0.2.10"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.9: no more score whiplash - before the AI ranking completes, venues
-  show their Google star rating in neutral gray with a star symbol; green
-  colored numbers are now reserved exclusively for real health-fit match
-  scores. What looked like scores dropping was star ratings being replaced
-  by health fit.
+  v0.2.10 COST CONTROL: venue ranking now only calls the AI when the venue set
+  actually changes, with a 2-minute hard floor and 30-minute reuse of existing
+  scores - highway driving no longer burns a ranking call every few hundred
+  meters. Combined with the Haiku model option, typical monthly AI cost drops
+  to well under a dollar.
 dependencies: []
 path: ""
 defaultUsername: ""
