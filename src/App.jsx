@@ -43,6 +43,36 @@ const THEMES = {
 const ALLERGENS = ["Milk", "Eggs", "Fish", "Shellfish", "Tree nuts", "Peanuts", "Wheat/Gluten", "Soy", "Sesame"];
 const DIETS = ["Vegetarian", "Vegan", "Pork-free", "Keto"];
 
+/* Deterministic allergen post-filter — safety net over AI output. Over-filters by design. */
+const ALLERGEN_WORDS = {
+  eggs: ["egg", "omelet", "omelette", "frittata", "mayo", "mayonnaise", "aioli", "meringue", "hollandaise", "quiche", "custard", "benedict"],
+  dairy: ["cheese", "milk", "cream", "yogurt", "butter", "queso", "alfredo", "ranch", "parmesan", "mozzarella", "cheddar", "whey", "latte", "ice cream"],
+  peanuts: ["peanut", "satay", "pad thai"],
+  "tree nuts": ["almond", "cashew", "walnut", "pecan", "pistachio", "hazelnut", "macadamia", "praline", "nutella"],
+  gluten: ["bread", "bun", "wrap", "tortilla", "pasta", "noodle", "breaded", "battered", "croissant", "biscuit", "pita", "bagel", "flour", "panko", "pretzel", "crouton"],
+  shellfish: ["shrimp", "crab", "lobster", "prawn", "scallop", "clam", "mussel", "oyster", "calamari", "crawfish"],
+  fish: ["salmon", "tuna", "cod", "tilapia", "fish", "anchovy", "mahi", "halibut", "trout", "sardine"],
+  soy: ["soy", "tofu", "edamame", "tempeh", "miso", "teriyaki"],
+  sesame: ["sesame", "tahini", "hummus", "halva"],
+};
+function violatesAllergy(text, allergies) {
+  const t = String(text || "").toLowerCase();
+  for (const a of allergies) {
+    const words = ALLERGEN_WORDS[a.toLowerCase()] || [a.toLowerCase()];
+    for (const w of words) if (t.includes(w)) return a;
+  }
+  return null;
+}
+function sanitizePicks(parsed, allergies) {
+  if (!parsed || !Array.isArray(parsed.picks) || !allergies.length) return parsed;
+  const clean = [], moved = [];
+  for (const p of parsed.picks) {
+    const hit = violatesAllergy(`${p.item || p.name || ""} ${p.why || p.desc || ""}`, allergies);
+    if (hit) moved.push({ item: p.item || p.name, reason: `auto-filtered: may contain ${hit}` });
+    else clean.push(p);
+  }
+  return { ...parsed, picks: clean, avoid: [...moved, ...(parsed.avoid || [])] };
+}
 const DEFAULT_PREFS = {
   rolloverHour: 0,          // hour of day when "today" resets (0 = midnight; night shift might use 4)
   units: "imperial",        // imperial | metric
@@ -477,7 +507,7 @@ export default function App() {
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);
-    try { const text = await callClaude(prompt); setResult(JSON.parse(text.replace(/```json|```/g, "").trim())); }
+    try { const text = await callClaude(prompt); setResult(sanitizePicks(JSON.parse(text.replace(/```json|```/g, "").trim()), allergies)); }
     catch (e) { setError((e && e.message) || "Couldn't reach the coach. Tap a venue to retry."); }
     setLoading(false);
   }
@@ -490,7 +520,7 @@ export default function App() {
       weight_lbs: curWeight, goal_lbs: goalWeight, weekly_loss_lbs: +recentRate.toFixed(2),
       body_fat_pct: bodyFat ? +bodyFat.toFixed(1) : null,
       medication: medObj ? `${medObj.label} ${glp.dose}${medObj.unit} weekly, week ${glp.weeksOn}` : "none", allergies, diets };
-    const sys = "You are ForkCaster, a concise, encouraging nutrition and GLP-1 coach. Use the user's live stats. " +
+    const sys = "You are ForkCaster, a concise, encouraging nutrition and GLP-1 coach. Use the user's live stats. " + (restrictions.length ? `HARD SAFETY RULE: user has ${restrictions.join("; ")} — never suggest foods containing these. ` : "") +
       "NEVER recommend any food containing the user's listed allergies; respect their diet. " +
       "Give specific, actionable answers in 2-4 sentences. Never encourage extreme restriction or unsafe rapid loss; " +
       "for medication questions defer final decisions to their prescriber. No markdown headers.";
