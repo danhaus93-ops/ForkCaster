@@ -191,13 +191,15 @@ export default function App() {
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
   useEffect(() => { detectLocation(); }, []);
-  useEffect(() => {
+  const watchRef = useRef(null);
+  function startWatch() {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
-    const id = navigator.geolocation.watchPosition(
+    if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
+    watchRef.current = navigator.geolocation.watchPosition(
       (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true, ts: Date.now() }),
       () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
-    return () => navigator.geolocation.clearWatch(id);
-  }, []);
+  }
+  useEffect(() => { startWatch(); return () => { if (watchRef.current != null && navigator.geolocation) navigator.geolocation.clearWatch(watchRef.current); }; }, []);
 
   // ── server persistence (Umbrel backend) ──
   useEffect(() => {
@@ -315,7 +317,7 @@ export default function App() {
     if (geo.status === "denied") { manualLocation(); return; }  // second tap after a denial = manual entry
     setGeo((g) => (g.status === "ok" ? g : { status: "locating" }));
     navigator.geolocation.getCurrentPosition(
-      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true, ts: Date.now() }),
+      (pos) => { setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true, ts: Date.now() }); startWatch(); },
       (err) => setGeo((g) => (g.status === "ok" ? g : { status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) })),
       { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true });
   }
