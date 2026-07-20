@@ -14,7 +14,12 @@ const STATE_FILE = path.join(DATA_DIR, "state.json");
 function readSecrets() {
   try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, "secrets.json"), "utf8")); } catch { return {}; }
 }
-const key = (name) => process.env[name] || readSecrets()[name] || "";
+const key = (name) => {
+  const sv = readSecrets()[name];
+  if (sv && String(sv).trim()) return String(sv).trim();
+  const ev = process.env[name];
+  return ev && ev !== "CHANGEME" ? ev : "";
+};
 const ANTHROPIC_KEY_ENV = process.env.ANTHROPIC_API_KEY || "";
 
 fs.mkdirSync(PHOTO_DIR, { recursive: true });
@@ -55,8 +60,7 @@ app.get("/api/photo/:file", (req, res) => {
 
 /* ── API key management (personal app behind Tailscale; keys never returned in full) ── */
 app.get("/api/keys/status", (_req, res) => {
-  const s = readSecrets();
-  const get = (n) => process.env[n] || s[n] || "";
+  const get = (n) => key(n);
   const tail = (v) => (v ? "\u2026" + String(v).slice(-4) : null);
   res.json({
     anthropic: !!get("ANTHROPIC_API_KEY"), anthropicTail: tail(get("ANTHROPIC_API_KEY")),
@@ -136,8 +140,8 @@ app.get("/api/food/:barcode", async (req, res) => {
   } catch (e) { console.error("OFF lookup failed:", e.message); }
   // 2) USDA FoodData Central branded search by UPC
   try {
-    const key = (process.env.USDA_FDC_KEY || readSecrets().USDA_FDC_KEY || "DEMO_KEY");
-    const r = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${key}`, {
+    const key2 = key("USDA_FDC_KEY") || "DEMO_KEY";
+    const r = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${key2}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: bc, dataType: ["Branded"], pageSize: 3 }),
     });
