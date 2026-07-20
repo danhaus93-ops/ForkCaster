@@ -74,12 +74,13 @@ app.get("/api/keys/status", (_req, res) => {
     places: !!get("GOOGLE_PLACES_KEY"), placesTail: tail(get("GOOGLE_PLACES_KEY")),
     usda: !!get("USDA_FDC_KEY"),
     fatsecret: !!(get("FATSECRET_CLIENT_ID") && get("FATSECRET_CLIENT_SECRET")),
+    gemini: !!get("GEMINI_API_KEY"), geminiTail: tail(get("GEMINI_API_KEY")),
   });
 });
 app.post("/api/keys", (req, res) => {
   try {
     const cur = readSecrets(); const b = req.body || {};
-    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY", "FATSECRET_CLIENT_ID", "FATSECRET_CLIENT_SECRET"]) {
+    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY", "FATSECRET_CLIENT_ID", "FATSECRET_CLIENT_SECRET", "GEMINI_API_KEY"]) {
       if (typeof b[k] === "string" && b[k].trim()) cur[k] = b[k].trim();
     }
     fs.writeFileSync(path.join(DATA_DIR, "secrets.json"), JSON.stringify(cur, null, 2));
@@ -475,6 +476,42 @@ app.get("/api/vphoto", async (req, res) => {
     res.set("Cache-Control", "public, max-age=86400");
     res.send(buf);
   } catch { res.status(502).end(); }
+});
+
+/* ── goal body simulation (Gemini image editing) ── */
+app.post("/api/goalsim", async (req, res) => {
+  try {
+    const GK = key("GEMINI_API_KEY");
+    if (!GK) return res.status(400).json({ error: "No Gemini key. Add it in Settings \u2192 API keys (aistudio.google.com \u2014 paid key required for image models)." });
+    const { photoUrl, currentLbs, goalLbs, heightIn, sex } = req.body || {};
+    const fname = path.basename(String(photoUrl || ""));
+    const fpath = path.join(PHOTO_DIR, fname);
+    if (!fname || !fs.existsSync(fpath)) return res.status(400).json({ error: "photo not found on node" });
+    const b64 = fs.readFileSync(fpath).toString("base64");
+    const mime = fname.endsWith(".png") ? "image/png" : "image/jpeg";
+    const delta = Math.max(0, Math.round((+currentLbs || 0) - (+goalLbs || 0)));
+    const goalBMI = heightIn ? ((703 * (+goalLbs || 0)) / (heightIn * heightIn)).toFixed(1) : null;
+    const prompt = `Edit this photo of a person. Keep the SAME person: identical face, identity, skin tone, hair, tattoos, clothing (do not add or remove any clothing), pose, camera angle, lighting, and background. ` +
+      `Change ONLY their body composition to show them approximately ${delta} pounds lighter${goalBMI ? ` (a healthy BMI of about ${goalBMI})` : ""}, with a natural ${sex === "female" ? "female" : "male"} fat-loss pattern \u2014 leaner face, reduced abdomen and waist, visible but realistic muscle definition. ` +
+      `Photorealistic result that looks like an authentic photo of the same person after successful healthy weight loss. Do not change anything else in the image.`;
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${encodeURIComponent(GK)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: prompt }] }] }),
+      signal: AbortSignal.timeout(90000),
+    });
+    const j = await r.json();
+    if (!r.ok) return res.status(502).json({ error: (j.error && j.error.message) || `Gemini ${r.status}` });
+    const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+    const img = parts.find((p) => p.inlineData || p.inline_data);
+    if (!img) {
+      const txt = parts.find((p) => p.text);
+      return res.status(502).json({ error: txt ? `Model declined: ${String(txt.text).slice(0, 200)}` : "no image returned (possibly moderated)" });
+    }
+    const data = (img.inlineData || img.inline_data).data;
+    const id = "sim_" + Date.now().toString(36);
+    fs.writeFileSync(path.join(PHOTO_DIR, `${id}.jpg`), Buffer.from(data, "base64"));
+    res.json({ id, url: `/api/photo/${id}.jpg` });
+  } catch (e) { res.status(500).json({ error: String(e) }); }
 });
 
 /* ── web push: self-hosted dose-day reminders ── */

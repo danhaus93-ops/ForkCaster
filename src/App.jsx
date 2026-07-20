@@ -259,20 +259,20 @@ export default function App() {
   const [appVer, setAppVer] = useState("");
   useEffect(() => { fetch("/api/version").then((r) => r.json()).then((j) => j && j.version && setAppVer(j.version)).catch(() => {}); }, []);
   const [keyStatus, setKeyStatus] = useState(null);
-  const [keyIn, setKeyIn] = useState({ a: "", g: "", fi: "", fs: "" });
+  const [keyIn, setKeyIn] = useState({ a: "", g: "", fi: "", fs: "", gm: "" });
   const [keyMsg, setKeyMsg] = useState("");
   useEffect(() => { if (settingsOpen) fetch("/api/keys/status").then((r) => r.json()).then(setKeyStatus).catch(() => {}); }, [settingsOpen]);
   async function saveKeys() {
     setKeyMsg("Saving…");
     const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
-    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim();
+    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim();
     try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      setKeyIn({ a: "", g: "", fi: "", fs: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
+      setKeyIn({ a: "", g: "", fi: "", fs: "", gm: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
       if (venues.length && !venues[0].menu) rankVenues(venues); }
     catch { setKeyMsg("Save failed — is the node reachable?"); }
   }
   async function testAiKey() {
-    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
+    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim() || keyIn.gm.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
     setKeyMsg("Testing AI key…");
     try { const t = await callClaude("Reply with exactly: ok");
       const good = t.toLowerCase().includes("ok");
@@ -315,6 +315,7 @@ export default function App() {
   const [compareA, setCompareA] = useState(0);
   const [compareB, setCompareB] = useState(0);
   const [activeSide, setActiveSide] = useState("B");
+  const [simBusy, setSimBusy] = useState(false);
   const fileRef = useRef(null);
   const photoRef = useRef(null);
 
@@ -725,6 +726,21 @@ export default function App() {
       setCompareA((v) => clamp(v)); setCompareB((v) => clamp(v));
       return next;
     });
+  }
+  async function simulateGoal() {
+    const srcP = photos[activeSide === "A" ? compareA : compareB];
+    if (!srcP || simBusy) return;
+    if (!srcP.url || !srcP.url.startsWith("/api/photo/")) { alert("This photo isn't stored on your node yet — re-add it first."); return; }
+    setSimBusy(true);
+    try {
+      const r = await fetch("/api/goalsim", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl: srcP.url, currentLbs: curWeight || 0, goalLbs: goalWeight, heightIn: body.heightIn, sex: body.sex }) });
+      const j = await r.json();
+      if (!r.ok || j.error) throw new Error(j.error || "simulation failed");
+      const entry = { id: j.id, url: j.url, date: todayISO(), sim: true };
+      setPhotos((all) => { const next = [...all, entry]; setCompareB(next.length - 1); setActiveSide("B"); return next; });
+    } catch (e) { alert("Goal simulation failed: " + (e && e.message ? e.message : e)); }
+    setSimBusy(false);
   }
   async function shareComparison() {
     const pa = photos[compareA], pb = photos[compareB];
@@ -1209,6 +1225,7 @@ export default function App() {
                   <button onClick={() => setActiveSide(side)} style={{ fontSize: 11, marginBottom: 5, fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: activeSide === side ? C.go : C.muted, padding: 0 }}>{activeSide === side ? "● " : ""}{lbl}</button>
                   <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${activeSide === side ? C.go : C.hair}` }}>
                     {photos[idx] && <img src={photos[idx].url} alt={lbl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    {photos[idx] && photos[idx].sim && <div style={{ position: "absolute", bottom: 6, left: 6, background: "rgba(167,139,250,0.9)", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 7, padding: "3px 7px", letterSpacing: 0.3 }}>AI GOAL PREVIEW</div>}
                     {photos[idx] && <button onClick={() => deletePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
                   </div>
                   <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4, textAlign: "center" }}>{photos[idx] ? fmtDate(photos[idx].date) : ""}{w ? ` · ${fmtWt(w.lbs)} ${wtU}` : ""}</div>
@@ -1225,6 +1242,8 @@ export default function App() {
             </div>
             <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Tap a pane label to choose which side the strip sets · purple = Before, green = After</div>
             {photos.length >= 2 && compareA !== compareB && <button onClick={shareComparison} style={{ width: "100%", marginTop: 10, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share this comparison →</button>}
+            {photos.length > 0 && <button onClick={simulateGoal} disabled={simBusy} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: simBusy ? 0.6 : 1 }}>{simBusy ? "Simulating… (≈15s)" : `✨ Simulate my body at goal (${fmtWt(goalWeight, 0)} ${wtU})`}</button>}
+            {photos.length > 0 && <div style={{ fontSize: 10, color: C.faint, marginTop: 5, lineHeight: 1.45 }}>Uses the active pane's photo. Same person, same clothing — only body composition changes. A visualization, not a prediction. Requires a Gemini key (Settings) · ~7¢ per render.</div>}
             </>
           )}
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: "none" }} />
@@ -1634,6 +1653,7 @@ export default function App() {
                 <input value={keyIn.g} onChange={(e) => setKeyIn({ ...keyIn, g: e.target.value })} placeholder="Google Places key (AIza…) — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
                 <input value={keyIn.fi} onChange={(e) => setKeyIn({ ...keyIn, fi: e.target.value })} placeholder="FatSecret Client ID — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.fs} onChange={(e) => setKeyIn({ ...keyIn, fs: e.target.value })} placeholder="FatSecret Client Secret — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
+                <input value={keyIn.gm} onChange={(e) => setKeyIn({ ...keyIn, gm: e.target.value })} placeholder="Google AI (Gemini) key — for goal body simulation" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginTop: 8, marginBottom: 8 }} />
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() ? 0.5 : 1 }}>Save keys</button>
                   <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Test AI key</button>
