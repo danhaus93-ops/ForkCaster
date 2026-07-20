@@ -314,13 +314,21 @@ export default function App() {
     if (c) setGeo({ status: "ok", lat: c.lat, lng: c.lng, manual: true });
     else window.alert("Couldn't read that. Try the form: 38.62701, -90.19940");
   }
-  function detectLocation() {
+  function detectLocation(fromTap) {
     if (typeof navigator === "undefined" || !navigator.geolocation) { setGeo({ status: "unavailable" }); return; }
-    if (geo.status === "denied") { manualLocation(); return; }  // second tap after a denial = manual entry
+    if (geo.status === "denied" && fromTap) { manualLocation(); return; }  // second tap after a denial = manual entry
     setGeo((g) => (g.status === "ok" ? g : { status: "locating" }));
     navigator.geolocation.getCurrentPosition(
       (pos) => { setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true, ts: Date.now() }); startWatch(); },
-      (err) => setGeo((g) => (g.status === "ok" ? g : { status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) })),
+      (err) => {
+        if (fromTap) {
+          const denied = err && err.code === 1;
+          window.alert(denied
+            ? "iOS refused the location request without prompting — this app is marked Denied.\n\nFix: iPhone Settings → Apps → ForkCaster → Location → While Using + Precise.\n\nIf ForkCaster isn't listed there: Settings → Privacy & Security → Location Services → Safari Websites → While Using."
+            : `Location failed: ${(err && err.message) || "unknown"}. Tap again to retry.`);
+        }
+        setGeo((g) => (g.status === "ok" ? g : { status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) }));
+      },
       { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true });
   }
   function pickMode(k) { setMode(k); setTargets(MODES[k].targets); }
@@ -483,7 +491,7 @@ export default function App() {
   const renderNow = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button onClick={detectLocation} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontSize: 11, letterSpacing: 1.1, color: C.muted, textTransform: "uppercase", fontWeight: 600, fontFamily: BODY }}>{geoLabel(geo, timeStr)}</button>
+        <button onClick={() => detectLocation(true)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontSize: 11, letterSpacing: 1.1, color: C.muted, textTransform: "uppercase", fontWeight: 600, fontFamily: BODY }}>{geoLabel(geo, timeStr)}</button>
         <div style={{ fontSize: 11, color: C.go, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {MODES[mode].label}</div>
       </div>
 
