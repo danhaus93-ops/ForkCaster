@@ -92,7 +92,7 @@ app.post("/api/ai", async (req, res) => {
     const content = image
       ? [{ type: "image", source: { type: "base64", media_type: image.media_type || "image/jpeg", data: image.data } }, { type: "text", text: prompt }]
       : prompt;
-    const body = { model: (["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"].includes(req.body && req.body.model) ? req.body.model : "claude-sonnet-4-6"), max_tokens: 1000, messages: [{ role: "user", content }] };
+    const body = { model: (["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"].includes(req.body && req.body.model) ? req.body.model : "claude-sonnet-4-6"), max_tokens: Math.max(256, Math.min(3000, parseInt(req.body && req.body.max_tokens) || 1000)), messages: [{ role: "user", content }] };
     if (system) body.system = system;
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -399,11 +399,11 @@ app.get("/api/menu", async (req, res) => {
         try {
           const b = await fetchAny(link);
           if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) { sections.push(`--- ${link} ---\n` + t.slice(0, 3000)); anyPdf = true; } }
-          else if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > 300) { sections.push(`--- ${link} ---\n` + mt.slice(0, 3000)); } }
+          else if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > 300) { const isGoal = goalWords.some((w) => link.toLowerCase().includes(w)); sections.push(`--- ${link} ---\n` + mt.slice(0, isGoal ? 4500 : 2000)); } }
         } catch {}
       }
       if (sections.length) {
-        const joined = sections.join("\n\n").slice(0, 7500);
+        const joined = sections.join("\n\n").slice(0, 8000);
         return res.json({ ok: true, method: anyPdf && sections.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
       }
       if (bestText.length > 700) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
