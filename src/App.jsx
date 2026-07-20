@@ -191,6 +191,13 @@ export default function App() {
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
   useEffect(() => { detectLocation(); }, []);
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    const id = navigator.geolocation.watchPosition(
+      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true }),
+      () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
 
   // ── server persistence (Umbrel backend) ──
   useEffect(() => {
@@ -217,8 +224,11 @@ export default function App() {
   }, [stateBlob]);
 
   // ── live nearby venues via Google Places (falls back to demo set) ──
+  const lastQ = useRef(null);
   useEffect(() => {
     if (geo.status !== "ok") return;
+    if (lastQ.current && distMi(lastQ.current.lat, lastQ.current.lng, geo.lat, geo.lng) < 0.15) return;
+    lastQ.current = { lat: geo.lat, lng: geo.lng };
     fetch(`/api/nearby?lat=${geo.lat}&lng=${geo.lng}`).then((r) => r.json()).then((j) => {
       if (j && j.venues && j.venues.length) { setVenues(j.venues); rankVenues(j.venues); }
     }).catch(() => {});
@@ -305,7 +315,7 @@ export default function App() {
     if (geo.status === "denied") { manualLocation(); return; }  // second tap after a denial = manual entry
     setGeo((g) => (g.status === "ok" ? g : { status: "locating" }));
     navigator.geolocation.getCurrentPosition(
-      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true }),
       (err) => setGeo((g) => (g.status === "ok" ? g : { status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) })),
       { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true });
   }
@@ -1090,7 +1100,7 @@ function nextDow(dow) {
   const x = new Date(d); x.setDate(x.getDate() + add); return x;
 }
 function geoLabel(geo, timeStr) {
-  if (geo.status === "ok") return `Live GPS ${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)} · ${timeStr}`;
+  if (geo.status === "ok") return `${geo.manual && !geo.live ? "Pinned" : "Live GPS"} ${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)} · ${timeStr}`;
   if (geo.status === "locating") return `Locating… · ${timeStr}`;
   if (geo.status === "denied") return `GPS ${geo.code === 1 ? "denied by iOS — allow in Settings › Apps › ForkCaster (or Safari Websites) · tap for manual entry" : geo.code === 3 ? "timed out · tap to retry" : "unavailable · tap for manual entry"} · ${timeStr}`;
   if (geo.status === "unavailable") return `Downtown (sample) · ${timeStr}`;
@@ -1159,6 +1169,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
   const ref = useRef(null); const mapRef = useRef(null); const layerRef = useRef(null); const mkRef = useRef([]);
   const [pick, setPick] = useState("auto");
   const [moved, setMoved] = useState(false);
+  const [follow, setFollow] = useState(true);
   const insecure = typeof window !== "undefined" && !window.isSecureContext;
   const hour = new Date().getHours();
   const styleKey = pick === "auto" ? (hour >= 7 && hour < 19 ? "day" : "night") : pick;
@@ -1171,7 +1182,8 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
     const m = L.map(ref.current, { zoomControl: false, attributionControl: true });
     m.attributionControl.setPrefix(false);
     m.setView([lat, lon], 15);
-    m.on("dragstart zoomstart", () => setMoved(true));
+    m.on("dragstart", () => { setMoved(true); setFollow(false); });
+    m.on("zoomstart", () => setMoved(true));
     mapRef.current = m;
     return () => { m.remove(); mapRef.current = null; };
   }, []);
@@ -1183,10 +1195,9 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
   }, [styleKey]);
 
   useEffect(() => {
-    const m = mapRef.current; if (!m || geo.status !== "ok") return;
-    m.setView([geo.lat, geo.lng], m.getZoom() || 15);
-    setMoved(false);
-  }, [geo.status, geo.lat, geo.lng]);
+    const m = mapRef.current; if (!m || geo.status !== "ok" || !follow) return;
+    m.setView([geo.lat, geo.lng], m.getZoom() || 15, { animate: true });
+  }, [geo.status, geo.lat, geo.lng, follow]);
 
   useEffect(() => {
     const m = mapRef.current; if (!m) return;
@@ -1223,6 +1234,10 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
           Search this area
         </button>
       )}
+      <button onClick={() => { setFollow(true); setMoved(false); const m = mapRef.current; if (m && geo.status === "ok") m.setView([geo.lat, geo.lng], 16, { animate: true }); }}
+        style={{ position: "absolute", bottom: 12, right: 12, zIndex: 800, width: 40, height: 40, borderRadius: 99, border: "none", cursor: "pointer", background: follow ? C.go : pillBg, boxShadow: "0 2px 8px rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={follow ? "#fff" : pillInk} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22" /></svg>
+      </button>
       {insecure && geo.status !== "ok" && (
         <div style={{ position: "absolute", bottom: 12, left: 10, right: 10, zIndex: 800, background: "rgba(200,140,20,0.92)", color: "#1a1200", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 600, textAlign: "center" }}>
           GPS is blocked over HTTP — open ForkCaster via your Tailscale HTTPS URL
