@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.5"
+version: "0.2.6"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.5 DOSE CALENDAR: a real month calendar under Next Injection - syringe
-  marks on every logged dose day, a dashed DUE ring on the scheduled day, a
-  'Dose due today' banner when it's time, today outlined, month navigation,
-  and a legend. Doses now build a real history (not just last-dose), which
-  also feeds the clinic export.
+  v0.2.6: image slimmed by roughly 700MB - the runtime now installs only the
+  three packages the server actually uses instead of the whole build tree,
+  fixing push failures (unknown blob) caused by marathon uploads outliving
+  the registry auth token. Same dose-calendar features as v0.2.5.
 dependencies: []
 path: ""
 defaultUsername: ""
