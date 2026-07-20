@@ -55,6 +55,29 @@ const ALLERGEN_WORDS = {
   soy: ["soy", "tofu", "edamame", "tempeh", "miso", "teriyaki"],
   sesame: ["sesame", "tahini", "hummus", "halva"],
 };
+function salvageJSONObject(text) {
+  const t = String(text).replace(/```json|```/g, "").trim();
+  try { return JSON.parse(t); } catch {}
+  // truncated: cut to last complete value, then close every open brace/bracket
+  let cut = Math.max(t.lastIndexOf("}"), t.lastIndexOf("]"), t.lastIndexOf('"'));
+  for (; cut > 0; cut--) {
+    const cand = t.slice(0, cut + 1);
+    let closers = "", inStr = false, esc = false;
+    const stack = [];
+    for (const ch of cand) {
+      if (esc) { esc = false; continue; }
+      if (ch === "\\") { esc = true; continue; }
+      if (ch === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (ch === "{" || ch === "[") stack.push(ch);
+      if (ch === "}" || ch === "]") stack.pop();
+    }
+    if (inStr) continue; // don't cut mid-string
+    for (let i = stack.length - 1; i >= 0; i--) closers += stack[i] === "{" ? "}" : "]";
+    try { return JSON.parse(cand + closers); } catch {}
+  }
+  throw new Error("unparseable AI response");
+}
 function salvageJSONArray(text) {
   const t = String(text).replace(/```json|```/g, "").trim();
   try { return JSON.parse(t); } catch {}
@@ -555,12 +578,12 @@ export default function App() {
       (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
         : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section:\n"""${liveMenu.text}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
-      `Return ONLY minified JSON, no markdown:\n` +
+      `Keep all strings short (under 12 words); no prose outside the JSON. Return ONLY minified JSON, no markdown:\n` +
       `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"why":"<max 9 words>"}],` +
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);
-    try { const text = await callClaude(prompt); const parsed = sanitizePicks(JSON.parse(text.replace(/```json|```/g, "").trim()), allergies); parsed._menuSource = r.menu ? "demo" : liveMenu ? "live" : "ai"; parsed._menuMethod = liveMenu ? liveMenu.method : null; setResult(parsed); }
+    try { const text = await callClaude(prompt, null, null, 2000); const parsed = sanitizePicks(salvageJSONObject(text), allergies); parsed._menuSource = r.menu ? "demo" : liveMenu ? "live" : "ai"; parsed._menuMethod = liveMenu ? liveMenu.method : null; setResult(parsed); }
     catch (e) { setError((e && e.message) || "Couldn't reach the coach. Tap a venue to retry."); }
     setLoading(false);
   }
