@@ -1086,6 +1086,7 @@ export default function App() {
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Body</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
 
+      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightLog} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x) => fmtWt(x)} unit={wtU} />)}</div>
       <div style={{ marginBottom: 14 }}>{card(
         <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -1644,6 +1645,36 @@ function MedLevelChart({ C, doseLog, med }) {
   );
 }
 /* Month calendar for dose adherence: syringe on logged days, DUE ring on the scheduled day */
+/* Deterministic 7-day report card */
+function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, fmtW, unit }) {
+  const days = [];
+  for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
+  const byDay = {}; (mealLog || []).forEach((m) => { if (days.includes(m.date)) { byDay[m.date] = (byDay[m.date] || 0) + (m.protein || 0); } });
+  const loggedDays = Object.keys(byDay).length;
+  const adherence = loggedDays ? Math.round((Object.values(byDay).reduce((s, p) => s + Math.min(1, p / Math.max(1, proteinGoal)), 0) / loggedDays) * 100) : null;
+  const wIn = (weightLog || []).filter((w) => w.date >= days[0]);
+  const wDelta = wIn.length >= 2 ? wIn[wIn.length - 1].lbs - wIn[0].lbs : null;
+  const doses = (doseLog || []).filter((d) => d.date >= days[0]).length;
+  const ses = (sideEffects || []).filter((s) => s.date >= days[0]);
+  const kpi = (v, l, col) => (
+    <div style={{ flex: 1, textAlign: "center", padding: "10px 4px", borderRadius: 12, background: C.surfaceAlt, border: `1px solid ${C.hair}` }}>
+      <div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: col || C.ink }}>{v}</div>
+      <div style={{ fontSize: 9.5, color: C.faint, marginTop: 2, lineHeight: 1.3 }}>{l}</div>
+    </div>
+  );
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>This week</div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {kpi(adherence == null ? "—" : adherence + "%", "protein adherence", adherence == null ? C.muted : adherence >= 85 ? C.go : adherence >= 60 ? C.caution : C.avoid)}
+        {kpi(wDelta == null ? "—" : (wDelta > 0 ? "+" : "") + fmtW(Math.abs(wDelta) * Math.sign(wDelta)) + " " + unit, "weight change", wDelta == null ? C.muted : wDelta <= 0 ? C.go : C.caution)}
+        {kpi(String(doses), doses ? "dose logged" : "no dose this week", doses ? C.violet : C.muted)}
+        {kpi(String(ses.length), ses.length === 1 ? "side effect" : "side effects", ses.length ? C.caution : C.go)}
+      </div>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 7 }}>{loggedDays}/7 days with food logged · adherence = average of daily protein vs goal</div>
+    </div>
+  );
+}
 /* Adaptive injection-site avatar (violet-edge capsule style). Sites keep legacy names. */
 const SITE_NAMES = ["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"];
 function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite }) {
