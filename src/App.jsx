@@ -1157,7 +1157,7 @@ export default function App() {
                 </div>
               )}
               {scan.status === "miss" && <div style={{ fontSize: 13, color: C.muted, padding: "4px 2px" }}>Not found in Open Food Facts, USDA, or FatSecret. Try another barcode, or use the AI photo estimate below.</div>}
-              {scan.status === "error" && <div style={{ fontSize: 13, color: C.avoid, padding: "4px 2px" }}>Lookup failed — barcode not found or the node couldn't reach Open Food Facts.</div>}
+              {scan.status === "error" && <div style={{ fontSize: 13, color: C.avoid, padding: "4px 2px" }}>Couldn't reach your node — check the connection (or log into the Umbrel dashboard once) and retry.</div>}
             </div>
           </div>
         )}
