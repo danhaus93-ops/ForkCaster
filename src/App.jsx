@@ -573,8 +573,12 @@ export default function App() {
     const prompt =
       `You are a sharp, medication-aware nutrition coach. User is at ${r.name} right now. Goal mode: ${MODES[mode] ? MODES[mode].label : mode}.\n` +
       `Remaining today: ${proteinLeft}g protein, ${calLeft} calories.` + medLine + restrictLine +
-      `\nRank this menu to maximize remaining protein under remaining calories, favoring whole/grilled foods` +
-      (nauseaRisk === "high" || nauseaRisk === "moderate" ? ` and low-fat, easy-on-the-stomach picks` : ``) + `.\n` +
+      `\n` + (mode === "gain"
+        ? `Objective (Muscle gain): pick the HIGHEST-protein items available first, then calorie density — recommend size upgrades and protein add-ons (extra whey, peanut butter, oats) freely.`
+        : `Objective: maximize remaining protein under remaining calories, favoring whole/grilled foods.`) +
+      (nauseaRisk === "high" || nauseaRisk === "moderate"
+        ? ` Medication note: ${nauseaRisk} nausea risk — prefer smoother, lower-fat, smaller-volume VERSIONS of goal-fit items, but NEVER swap to a lower-protein item when a tolerable higher-protein one exists; the goal outranks comfort tweaks. GLP-1-branded menu sections are only preferred when the user's goal mode is GLP-1.`
+        : ``) + `\n` +
       (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
         : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section:\n"""${liveMenu.text}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
