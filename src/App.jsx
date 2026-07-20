@@ -1611,9 +1611,18 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
   // rotation cycle math: pure derivation from sited doses
   const sited = (doseLog || []).filter((d) => d.site).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
   const cyc = SITE_NAMES.length * perSite;
-  const rem = sited.length % cyc;
-  const cur = rem === 0 ? [] : sited.slice(-rem);
-  const used = {}; SITE_NAMES.forEach((z) => { used[z] = cur.filter((d) => d.site === z).length; });
+  // content-aware rotation: a cycle only completes when EVERY site has hit its per-site limit
+  const used = {}; SITE_NAMES.forEach((z) => { used[z] = 0; });
+  const boardFull = () => SITE_NAMES.every((z) => used[z] >= perSite);
+  const resetBoard = () => SITE_NAMES.forEach((z) => { used[z] = 0; });
+  for (const d of sited) {
+    if (boardFull()) resetBoard();                      // previous rotation finished -> fresh board
+    if (!(d.site in used)) continue;
+    if (used[d.site] >= perSite) resetBoard();          // legacy over-use of a site -> treat as new rotation
+    used[d.site] += 1;
+  }
+  if (boardFull()) resetBoard();                        // a just-completed rotation shows a fresh board
+  const cycleLogged = SITE_NAMES.reduce((s, z) => s + used[z], 0);
   const daysSince = (z) => { const u = (doseLog || []).filter((d) => d.site === z); if (!u.length) return 9999; return Math.floor((Date.now() - new Date(u.map((d) => d.date).sort().slice(-1)[0] + "T12:00:00")) / 86400000); };
   const avail = SITE_NAMES.filter((z) => used[z] < perSite);
   const suggested = avail.length ? avail.reduce((a, b) => (daysSince(b) > daysSince(a) ? b : a)) : null;
@@ -1628,7 +1637,7 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
       <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
         Injection site — rotate{pendingSite ? <span style={{ textTransform: "none", color: C.violet }}> · next dose: {pendingSite}{pendingSite.startsWith("Arm") ? " (back of arm)" : ""}</span> : null}
       </div>
-      <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 6 }}>Cycle {sited.length ? rem === 0 ? cyc : rem : 0}/{cyc} · {perSite} per site · resets when every site is used</div>
+      <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 6 }}>Cycle {cycleLogged}/{cyc} · {perSite} per site · resets when every site is used</div>
       <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: 240, margin: "0 auto" }}>
         <defs>
           <linearGradient id="siteFadeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>

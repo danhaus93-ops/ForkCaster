@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.43"
+version: "0.2.44"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.43 INJECTION AVATAR: the site grid is now a body avatar in the app's
-  own style - violet-edged figure that matches your sex setting and morphs
-  with your live BMI as weights are logged. Tap a site dot to select it, then
-  Log dose; pips track uses per site, the least-recently-used site glows as
-  suggested, and the rotation cycle resets automatically once every site
-  reaches your per-site limit (new Preference: injections per site per
-  cycle). Arm dots explicitly mean the back of the upper arm.
+  v0.2.44 HOTFIX: site rotation now resets only after a genuinely completed
+  rotation - every site at its per-site limit - instead of a dose-count
+  window that could misalign with older logs. Historical data that reused a
+  site is treated as starting a new rotation rather than corrupting the
+  current board.
 dependencies: []
 path: ""
 defaultUsername: ""
