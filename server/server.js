@@ -92,7 +92,7 @@ app.post("/api/ai", async (req, res) => {
     const content = image
       ? [{ type: "image", source: { type: "base64", media_type: image.media_type || "image/jpeg", data: image.data } }, { type: "text", text: prompt }]
       : prompt;
-    const body = { model: "claude-sonnet-4-6", max_tokens: 1000, messages: [{ role: "user", content }] };
+    const body = { model: (["claude-sonnet-4-6", "claude-haiku-4-5-20251001"].includes(req.body && req.body.model) ? req.body.model : "claude-sonnet-4-6"), max_tokens: 1000, messages: [{ role: "user", content }] };
     if (system) body.system = system;
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -221,8 +221,8 @@ app.get("/api/nearby", async (req, res) => {
       },
       body: JSON.stringify({
         includedTypes: ["restaurant", "fast_food_restaurant", "cafe", "meal_takeaway", "sandwich_shop", "bakery"],
-        maxResultCount: 20, rankPreference: "DISTANCE",
-        locationRestriction: { circle: { center: { latitude: +lat, longitude: +lng }, radius: 3000 } },
+        maxResultCount: Math.max(1, Math.min(20, parseInt(req.query.max) || 20)), rankPreference: "DISTANCE",
+        locationRestriction: { circle: { center: { latitude: +lat, longitude: +lng }, radius: Math.max(500, Math.min(50000, parseInt(req.query.radius) || 3000)) } },
       }),
     });
     const data = await r.json();

@@ -43,11 +43,30 @@ const THEMES = {
 const ALLERGENS = ["Milk", "Eggs", "Fish", "Shellfish", "Tree nuts", "Peanuts", "Wheat/Gluten", "Soy", "Sesame"];
 const DIETS = ["Vegetarian", "Vegan", "Pork-free", "Keto"];
 
+const DEFAULT_PREFS = {
+  rolloverHour: 0,          // hour of day when "today" resets (0 = midnight; night shift might use 4)
+  units: "imperial",        // imperial | metric
+  injIntervalDays: 7,       // injection cadence
+  proteinFloor: 30,         // per-meal protein floor (g) used in nudges/ordering
+  nauseaSensitivity: "normal", // low | normal | high
+  searchRadiusMi: 2,        // nearby venue search radius (miles)
+  venueCount: 20,           // max venues fetched
+  dayStart: 7, dayEnd: 19,  // map auto day/night hours
+  mapZoom: 15, mapStyle: "auto",
+  requeryMi: 0.15,          // GPS movement before venues re-query
+  paceLbPerWeek: 1.5,       // target loss pace
+  aiModel: "claude-sonnet-4-6", // or claude-haiku-4-5-20251001 (cheaper)
+  coachStyle: "balanced",   // concise | balanced | detailed | tough-love
+  customTargets: null,      // saved personal macro preset
+};
+const KG = 0.45359237, ML_PER_OZ = 29.5735, CM_PER_IN = 2.54;
+function dayISOAt(rolloverHour) { return new Date(Date.now() - (rolloverHour || 0) * 3600000).toLocaleDateString("sv-SE"); }
 const MODES = {
   glp1: { label: "GLP-1", targets: { protein: 160, calories: 1400, carbs: 110, fat: 45, waterOz: 110, fiber: 28 } },
   cut: { label: "Cutting", targets: { protein: 170, calories: 1900, carbs: 150, fat: 55, waterOz: 100, fiber: 30 } },
   maintain: { label: "Maintain", targets: { protein: 150, calories: 2200, carbs: 220, fat: 70, waterOz: 100, fiber: 30 } },
   gain: { label: "Muscle gain", targets: { protein: 190, calories: 2600, carbs: 280, fat: 80, waterOz: 110, fiber: 35 } },
+  custom: { label: "My preset", targets: { protein: 170, calories: 1900, carbs: 150, fat: 55, waterOz: 100, fiber: 30 } },
 };
 
 const RESTAURANTS = [
@@ -148,6 +167,15 @@ export default function App() {
   const [tab, setTab] = useState("now");
 
   const [targets, setTargets] = useState(MODES.cut.targets);
+  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const isMetric = prefs.units === "metric";
+  const wtU = isMetric ? "kg" : "lbs";
+  const fmtWt = (lb, d = 1) => (isMetric ? (lb * KG).toFixed(d) : (+lb).toFixed(d));
+  const parseWt = (v) => (isMetric ? parseFloat(v) / KG : parseFloat(v));
+  const fmtLen = (inch) => (isMetric ? Math.round(inch * CM_PER_IN) : inch);
+  const parseLen = (v) => (isMetric ? parseFloat(v) / CM_PER_IN : parseFloat(v));
+  const volU = isMetric ? "ml" : "oz";
+  const fmtVol = (oz) => (isMetric ? Math.round(oz * ML_PER_OZ) : Math.round(oz));
   const [eaten, setEaten] = useState({ protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
   const [editing, setEditing] = useState(false);
 
@@ -263,7 +291,9 @@ export default function App() {
       if (s && s.saved) {
         if (s.theme) setTheme(s.theme); if (s.mode) { setMode(s.mode); }
         if (s.targets) setTargets(s.targets);
-        if (s.eaten) setEaten(s.eatenDate === todayISO() ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
+        const roll = (s.prefs && s.prefs.rolloverHour) || 0;
+        if (s.prefs) setPrefs({ ...DEFAULT_PREFS, ...s.prefs });
+        if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp(s.glp);
@@ -275,7 +305,7 @@ export default function App() {
   }, []);
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: todayISO(), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -286,9 +316,9 @@ export default function App() {
   const lastQ = useRef(null);
   useEffect(() => {
     if (geo.status !== "ok") return;
-    if (lastQ.current && distMi(lastQ.current.lat, lastQ.current.lng, geo.lat, geo.lng) < 0.15) return;
+    if (lastQ.current && distMi(lastQ.current.lat, lastQ.current.lng, geo.lat, geo.lng) < (prefs.requeryMi || 0.15)) return;
     lastQ.current = { lat: geo.lat, lng: geo.lng };
-    fetch(`/api/nearby?lat=${geo.lat}&lng=${geo.lng}`).then((r) => r.json()).then((j) => {
+    fetch(`/api/nearby?lat=${geo.lat}&lng=${geo.lng}&radius=${Math.round((prefs.searchRadiusMi || 2) * 1609)}&max=${prefs.venueCount || 20}`).then((r) => r.json()).then((j) => {
       if (!j) return;
       if (j.live) {
         setVenues(j.venues || []);
@@ -314,8 +344,10 @@ export default function App() {
   const lost = startWeight - curWeight;
 
   const medObj = MEDS[glp.med];
-  const nextInjection = nextDow(glp.injectionDay);
-  const daysToInjection = Math.ceil((nextInjection - new Date()) / 86400000);
+  const nextInjection = glp.lastInjection
+    ? new Date(new Date(glp.lastInjection).getTime() + (prefs.injIntervalDays || 7) * 86400000)
+    : nextDow(glp.injectionDay);
+  const daysToInjection = Math.max(0, Math.ceil((nextInjection - new Date()) / 86400000));
   const recentRate = weeklyRate(weightLog);
   const weeksToGoal = recentRate > 0.05 && curWeight > goalWeight ? Math.ceil((curWeight - goalWeight) / recentRate) : null;
   const goalDate = weeksToGoal ? addDays(new Date(), weeksToGoal * 7) : null;
@@ -325,7 +357,9 @@ export default function App() {
   const escalating = onMed && (glp.lastDoseChangeWk ?? 99) <= 2;                 // recent step-up → GI risk up
   const recentNausea = glp.sideEffects.filter((s) => s.symptom === "Nausea" && daysAgo(s.date) <= 5);
   const nauseaScore = recentNausea.reduce((a, s) => a + s.severity, 0) + (escalating ? 1 : 0);
-  const nauseaRisk = !onMed ? "none" : nauseaScore >= 3 ? "high" : nauseaScore >= 1 ? "moderate" : "low";
+  const nauseaShift = prefs.nauseaSensitivity === "high" ? 1 : prefs.nauseaSensitivity === "low" ? -1 : 0;
+  const nauseaAdj = nauseaScore + nauseaShift;
+  const nauseaRisk = !onMed ? "none" : nauseaAdj >= 3 ? "high" : nauseaAdj >= 1 ? "moderate" : "low";
 
   // ── symptom↔food correlation (WHITE SPACE #2) ──
   const nauseaDays = glp.sideEffects.filter((s) => s.symptom === "Nausea");
@@ -391,12 +425,13 @@ export default function App() {
       },
       { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true });
   }
-  function pickMode(k) { setMode(k); setTargets(MODES[k].targets); }
+  function pickMode(k) { setMode(k); setTargets(k === "custom" && prefs.customTargets ? prefs.customTargets : MODES[k].targets); }
   function toggleIn(list, setList, v) { setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]); }
   const restrictions = [...allergies.map((a) => `ALLERGY: ${a}`), ...diets.map((d) => `DIET: ${d}`)];
 
   async function callClaude(prompt, sys, image) {
-    const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, system: sys, image }) });
+    const styleLine = { concise: " Keep replies very brief.", balanced: "", detailed: " Be thorough and explain reasoning.", "tough-love": " Be direct, no sugarcoating, drill-sergeant energy." }[prefs.coachStyle] || "";
+    const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, system: (sys || "") + styleLine, image, model: prefs.aiModel }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     return data.text || "";
@@ -467,7 +502,7 @@ export default function App() {
   }
 
   function logWeight() {
-    const v = parseFloat(newWeight); if (!v) return;
+    const v = parseWt(newWeight); if (!v || !Number.isFinite(v)) return;
     const filtered = weightLog.filter((w) => w.date !== todayISO());
     setWeightLog([...filtered, { date: todayISO(), lbs: v }].sort((a, b) => a.date.localeCompare(b.date))); setNewWeight("");
   }
@@ -588,7 +623,10 @@ export default function App() {
       {editing && card(
         <>
           <div style={{ display: "flex", gap: 10 }}>{numField("Protein goal", targets.protein, (v) => setTargets({ ...targets, protein: +v }))}{numField("Calorie goal", targets.calories, (v) => setTargets({ ...targets, calories: +v }))}</div>
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField("Carbs goal", targets.carbs, (v) => setTargets({ ...targets, carbs: +v }))}{numField("Fat goal", targets.fat, (v) => setTargets({ ...targets, fat: +v }))}</div>
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Water goal (${volU})`, fmtVol(targets.waterOz), (v) => setTargets({ ...targets, waterOz: isMetric ? +v / ML_PER_OZ : +v }))}{numField("Fiber goal (g)", targets.fiber, (v) => setTargets({ ...targets, fiber: +v }))}</div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField("Protein eaten", eaten.protein, (v) => setEaten({ ...eaten, protein: +v }))}{numField("Calories eaten", eaten.calories, (v) => setEaten({ ...eaten, calories: +v }))}</div>
+          <button onClick={() => { setPrefs({ ...prefs, customTargets: { ...targets } }); setMode("custom"); }} style={{ marginTop: 12, width: "100%", background: "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Save these as "My preset"</button>
         </>, { marginTop: 10 })}
 
       {onMed && nauseaRisk !== "low" && (
@@ -629,7 +667,7 @@ export default function App() {
 
         {/* Live map with match pins */}
         <div style={{ marginBottom: 14 }}>
-          <MapView C={C} geo={geo} restaurants={venues.slice(0, 12)} onPin={orderForMe} scoreColor={scoreColor} onSearchArea={(la, ln) => setGeo({ status: "ok", lat: la, lng: ln, manual: true })} />
+          <MapView C={C} geo={geo} restaurants={venues.slice(0, 12)} onPin={orderForMe} scoreColor={scoreColor} onSearchArea={(la, ln) => setGeo({ status: "ok", lat: la, lng: ln, manual: true })} prefs={prefs} />
         </div>
 
         {geo.status === "ok" && venues.length === 0 && (
@@ -736,7 +774,7 @@ export default function App() {
 
         <div style={{ marginTop: 14 }}>{card(
           <>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Water</div><div style={{ fontFamily: DISPLAY, fontWeight: 700, color: C.blue }}>{eaten.waterOz} / {targets.waterOz} oz</div></div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Water</div><div style={{ fontFamily: DISPLAY, fontWeight: 700, color: C.blue }}>{fmtVol(eaten.waterOz)} / {fmtVol(targets.waterOz)} {volU}</div></div>
             <div style={{ height: 10, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 8 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
           </>)}</div>
@@ -763,12 +801,12 @@ export default function App() {
       <div style={{ marginBottom: 14 }}>{card(
         <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <div style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{curWeight.toFixed(1)}<span style={{ fontSize: 16, color: C.muted }}> lbs</span></div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{fmtWt(curWeight)}<span style={{ fontSize: 16, color: C.muted }}> {wtU}</span></div>
             <div style={{ textAlign: "right" }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.go }}>−{lost.toFixed(1)} lbs</div><div style={{ fontSize: 11, color: C.faint }}>since start</div></div>
           </div>
-          {weightLog.length > 1 ? lineChart(weightLog.map((w) => ({ label: fmtDate(w.date), value: w.lbs })), { color: C.go, goal: goalWeight, goalLabel: `Goal ${goalWeight}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
+          {weightLog.length > 1 ? lineChart(weightLog.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-            <input type="number" value={newWeight} placeholder="Log today's weight" onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
+            <input type="number" value={newWeight} placeholder={`Log today's weight (${wtU})`} onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
             <button onClick={logWeight} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "0 20px", fontFamily: BODY, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Log</button>
           </div>
         </>)}</div>
@@ -794,7 +832,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
             <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
+            <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect".replace("XX","XX</div></div>
           </div>
           <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
         </>)}</div>
@@ -809,8 +847,8 @@ export default function App() {
         <>
           {sectionTitle("Body stats")}
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>{["male", "female"].map((s) => (<button key={s} onClick={() => setBody({ ...body, sex: s })} style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${body.sex === s ? C.ink : C.hair}`, background: body.sex === s ? C.ink : C.surface, color: body.sex === s ? C.surface : C.muted, fontFamily: BODY, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{s}</button>))}</div>
-          <div style={{ display: "flex", gap: 10 }}>{numField("Height (in)", body.heightIn, (v) => setBody({ ...body, heightIn: +v }))}{numField("Neck (in)", body.neck, (v) => setBody({ ...body, neck: +v }))}</div>
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField("Waist (in)", body.waist, (v) => setBody({ ...body, waist: +v }))}{body.sex === "female" ? numField("Hip (in)", body.hip, (v) => setBody({ ...body, hip: +v })) : numField("Goal weight", goalWeight, (v) => setGoalWeight(+v))}</div>
+          <div style={{ display: "flex", gap: 10 }}>{numField(`Height (${isMetric ? "cm" : "in"})`, fmtLen(body.heightIn), (v) => setBody({ ...body, heightIn: parseLen(v) }))}{numField(`Neck (${isMetric ? "cm" : "in"})`, fmtLen(body.neck), (v) => setBody({ ...body, neck: parseLen(v) }))}</div>
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Waist (${isMetric ? "cm" : "in"})`, fmtLen(body.waist), (v) => setBody({ ...body, waist: parseLen(v) }))}{body.sex === "female" ? numField(`Hip (${isMetric ? "cm" : "in"})`, fmtLen(body.hip), (v) => setBody({ ...body, hip: parseLen(v) })) : numField(`Goal weight (${wtU})`, +fmtWt(goalWeight, 0), (v) => setGoalWeight(parseWt(v)))}</div>
         </>)}</div>
 
       {card(
@@ -887,7 +925,7 @@ export default function App() {
           {sectionTitle("On-med nudges", C.violet)}
           {[
             proteinLeft > 0 ? [`${proteinLeft}g protein still needed`, "Appetite's suppressed — front-load a protein-dense pick.", C.go] : ["Protein goal hit", "Nice — muscle protected on a deficit.", C.go],
-            eaten.waterOz < targets.waterOz ? [`Hydration low (${eaten.waterOz}/${targets.waterOz} oz)`, "GLP-1 raises dehydration risk. Keep sipping.", C.blue] : ["Hydration on track", "Good — helps with nausea and constipation.", C.blue],
+            eaten.waterOz < targets.waterOz ? [`Hydration low (${fmtVol(eaten.waterOz)}/${fmtVol(targets.waterOz)} ${volU})`, "GLP-1 raises dehydration risk. Keep sipping.", C.blue] : ["Hydration on track", "Good — helps with nausea and constipation.", C.blue],
             ["Fiber for GI comfort", "Constipation is common on-med. Aim 25g+ fiber.", C.caution],
           ].map(([t, d, col], i) => (
             <div key={i} style={{ display: "flex", gap: 11, padding: "10px 0", borderBottom: i < 2 ? `1px solid ${C.hair}` : "none" }}><div style={{ width: 4, borderRadius: 3, background: col, flexShrink: 0 }} /><div><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{t}</div><div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>{d}</div></div></div>
@@ -1133,6 +1171,50 @@ export default function App() {
               <div style={{ fontSize: 11, color: C.faint, marginTop: 12, lineHeight: 1.4 }}>Switching goal mode resets today's targets to that preset. Allergy filtering applies to every meal suggestion and the coach.</div>
 
               <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
+                {sectionTitle("Preferences")}
+                {(() => {
+                  const row = (label, control) => (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${C.hair}` }}>
+                      <div style={{ fontSize: 13, color: C.ink2, paddingRight: 10 }}>{label}</div>
+                      <div style={{ flexShrink: 0 }}>{control}</div>
+                    </div>
+                  );
+                  const sel = (val, opts, on) => (
+                    <select value={val} onChange={(e) => on(e.target.value)} style={{ background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "7px 9px", fontFamily: BODY, fontSize: 12.5 }}>
+                      {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  );
+                  const num = (val, on, w = 64, step = 1) => (
+                    <input type="number" value={val} step={step} onChange={(e) => on(parseFloat(e.target.value) || 0)} style={{ width: w, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "7px 9px", fontFamily: BODY, fontSize: 12.5, boxSizing: "border-box" }} />
+                  );
+                  const P = prefs, set = (k) => (v) => setPrefs({ ...prefs, [k]: v });
+                  return (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "6px 0 2px" }}>Day & units</div>
+                      {row("Day resets at", sel(String(P.rolloverHour), Array.from({ length: 24 }, (_, h) => [String(h), h === 0 ? "Midnight" : h < 12 ? `${h} AM` : h === 12 ? "Noon" : `${h - 12} PM`]), (v) => set("rolloverHour")(+v)))}
+                      {row("Units", sel(P.units, [["imperial", "lbs · oz · in"], ["metric", "kg · ml · cm"]], set("units")))}
+                      {row("Target pace (lb/week)", num(P.paceLbPerWeek, set("paceLbPerWeek"), 64, 0.1))}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "14px 0 2px" }}>GLP-1</div>
+                      {row("Injection every (days)", num(P.injIntervalDays, set("injIntervalDays")))}
+                      {row("Per-meal protein floor (g)", num(P.proteinFloor, set("proteinFloor")))}
+                      {row("Nausea sensitivity", sel(P.nauseaSensitivity, [["low", "Low"], ["normal", "Normal"], ["high", "High"]], set("nauseaSensitivity")))}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "14px 0 2px" }}>Map & nearby</div>
+                      {row("Search radius (mi)", num(P.searchRadiusMi, set("searchRadiusMi"), 64, 0.5))}
+                      {row("Max venues", num(P.venueCount, set("venueCount")))}
+                      {row("Day map starts", sel(String(P.dayStart), Array.from({ length: 13 }, (_, h) => [String(h + 4), `${h + 4 <= 12 ? h + 4 : h - 8} ${h + 4 < 12 ? "AM" : "PM"}`]), (v) => set("dayStart")(+v)))}
+                      {row("Night map starts", sel(String(P.dayEnd), Array.from({ length: 10 }, (_, h) => [String(h + 15), `${h + 3} PM`]), (v) => set("dayEnd")(+v)))}
+                      {row("Default zoom", num(P.mapZoom, set("mapZoom")))}
+                      {row("Re-search after moving (mi)", num(P.requeryMi, set("requeryMi"), 64, 0.05))}
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "14px 0 2px" }}>AI</div>
+                      {row("Model", sel(P.aiModel, [["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
+                      {row("Coach style", sel(P.coachStyle, [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"], ["tough-love", "Tough love"]], set("coachStyle")))}
+                      <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("API keys")}
                 <div style={{ fontSize: 11.5, color: C.muted, marginTop: -4, marginBottom: 10, lineHeight: 1.45 }}>
                   Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b> · FatSecret: <b style={{ color: keyStatus && keyStatus.fatsecret ? C.go : C.avoid }}>{keyStatus ? (keyStatus.fatsecret ? "set" : "not set") : "…"}</b>
@@ -1259,9 +1341,9 @@ const MAP_TILES = {
 };
 const VENUE_OFFSETS = [[0.0038, -0.0062], [0.0042, 0.0058], [-0.0012, -0.0008], [-0.0035, 0.0052], [-0.0041, -0.0047]];
 const YOU_PIN_SVG = `<svg width="30" height="37" viewBox="0 0 48 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 2 C13 2 4.2 10.8 4.2 21.8 C4.2 36 24 57 24 57 C24 57 43.8 36 43.8 21.8 C43.8 10.8 35 2 24 2 Z" fill="#22B573" stroke="#fff" stroke-width="2.5"/><g transform="translate(9,6) scale(0.6)"><g fill="#fff"><circle cx="19" cy="13" r="5"/><circle cx="26" cy="9.5" r="6.5"/><circle cx="32" cy="13.5" r="5"/><rect x="16" y="12.5" width="17" height="5.5" rx="2.75"/></g><g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 22 V31"/><path d="M24 22 V31"/><path d="M30.5 22 V31"/><path d="M17.5 31 C17.5 37 20.5 39 24 39 C27.5 39 30.5 37 30.5 31"/><path d="M24 39 V45"/></g></g></svg>`;
-function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
+function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea, prefs }) {
   const ref = useRef(null); const mapRef = useRef(null); const layerRef = useRef(null); const mkRef = useRef([]);
-  const [pick, setPick] = useState("auto");
+  const [pick, setPick] = useState((prefs && prefs.mapStyle) || "auto");
   const [moved, setMoved] = useState(false);
   const [follow, setFollow] = useState(true);
   const [gmap, setGmap] = useState(null); // null=probing, true=Google tiles live, false=CARTO fallback
@@ -1270,7 +1352,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
   useEffect(() => { const t = setInterval(() => setTick((x) => x + 1), 3000); return () => clearInterval(t); }, []);
   const insecure = typeof window !== "undefined" && !window.isSecureContext;
   const hour = new Date().getHours();
-  const styleKey = pick === "auto" ? (hour >= 7 && hour < 19 ? "day" : "night") : pick;
+  const styleKey = pick === "auto" ? (hour >= ((prefs && prefs.dayStart) ?? 7) && hour < ((prefs && prefs.dayEnd) ?? 19) ? "day" : "night") : pick;
   const S = MAP_TILES[styleKey];
   const lat = geo.status === "ok" ? geo.lat : 39.7392;
   const lon = geo.status === "ok" ? geo.lng : -104.9903;
@@ -1279,7 +1361,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
     if (mapRef.current || !ref.current) return;
     const m = L.map(ref.current, { zoomControl: false, attributionControl: true });
     m.attributionControl.setPrefix(false);
-    m.setView([lat, lon], 15);
+    m.setView([lat, lon], (prefs && prefs.mapZoom) || 15);
     m.on("dragstart", () => { setMoved(true); setFollow(false); });
     m.on("zoomstart", () => setMoved(true));
     mapRef.current = m;
