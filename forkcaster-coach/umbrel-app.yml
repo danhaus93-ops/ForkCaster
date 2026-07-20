@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.13"
+version: "0.2.14"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.13: pick your dose day - a Su-Sa selector in the GLP-1 tab anchors
-  weekly schedules to your chosen weekday (next injection and the calendar
-  DUE ring follow it). Non-weekly intervals keep counting days from the last
-  dose, and the picker explains when it applies.
+  v0.2.14: fresh starts no longer show a phantom logged dose - the default
+  state pre-dated a dose on day one (leftover demo scaffolding). New installs
+  and resets now honestly say no dose logged yet, and the reset flow blocks a
+  pending autosave from resurrecting wiped data.
 dependencies: []
 path: ""
 defaultUsername: ""
