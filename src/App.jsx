@@ -194,7 +194,7 @@ export default function App() {
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
     const id = navigator.geolocation.watchPosition(
-      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true }),
+      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true, ts: Date.now() }),
       () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
     return () => navigator.geolocation.clearWatch(id);
   }, []);
@@ -315,7 +315,7 @@ export default function App() {
     if (geo.status === "denied") { manualLocation(); return; }  // second tap after a denial = manual entry
     setGeo((g) => (g.status === "ok" ? g : { status: "locating" }));
     navigator.geolocation.getCurrentPosition(
-      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true }),
+      (pos) => setGeo({ status: "ok", lat: pos.coords.latitude, lng: pos.coords.longitude, live: true, ts: Date.now() }),
       (err) => setGeo((g) => (g.status === "ok" ? g : { status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) })),
       { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true });
   }
@@ -1170,6 +1170,8 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
   const [pick, setPick] = useState("auto");
   const [moved, setMoved] = useState(false);
   const [follow, setFollow] = useState(true);
+  const [, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick((x) => x + 1), 3000); return () => clearInterval(t); }, []);
   const insecure = typeof window !== "undefined" && !window.isSecureContext;
   const hour = new Date().getHours();
   const styleKey = pick === "auto" ? (hour >= 7 && hour < 19 ? "day" : "night") : pick;
@@ -1221,7 +1223,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
     <div style={{ position: "relative", height: 280, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}`, isolation: "isolate", zIndex: 0 }}>
       <div ref={ref} style={{ position: "absolute", inset: 0, background: S.dark ? "#11181f" : "#e8ecef" }} />
       <div style={{ position: "absolute", top: 10, left: 10, zIndex: 800, background: pillBg, borderRadius: 20, padding: "4px 11px", fontSize: 11, fontWeight: 600, color: pillInk, display: "flex", gap: 5, alignItems: "center", pointerEvents: "none" }}>
-        <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length} spots` : "Demo area"}
+        <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length} spots${geo.live && geo.ts ? ` · fix ${Math.max(0, Math.round((Date.now() - geo.ts) / 1000))}s ago` : geo.manual ? " · pinned" : ""}` : "Demo area"}
       </div>
       <div style={{ position: "absolute", top: 10, right: 10, zIndex: 800, display: "flex", gap: 4, background: pillBg, borderRadius: 20, padding: 3 }}>
         {["auto", "day", "night", "sat"].map((k) => (
