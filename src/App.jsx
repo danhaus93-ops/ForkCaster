@@ -374,9 +374,21 @@ export default function App() {
   const lost = startWeight - curWeight;
 
   const medObj = MEDS[glp.med];
-  const nextInjection = glp.lastInjection
-    ? new Date(new Date(glp.lastInjection).getTime() + (prefs.injIntervalDays || 7) * 86400000)
-    : nextDow(glp.injectionDay);
+  const injInterval = prefs.injIntervalDays || 7;
+  const nextInjection = (() => {
+    if (injInterval !== 7) {
+      return glp.lastInjection
+        ? new Date(new Date(glp.lastInjection).getTime() + injInterval * 86400000)
+        : new Date(Date.now() + injInterval * 86400000);
+    }
+    // weekly: next occurrence of the chosen dose day after the last dose (or after today)
+    const map = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const target = map[glp.injectionDay] ?? 0;
+    const base = glp.lastInjection ? new Date(glp.lastInjection + "T12:00:00") : new Date();
+    base.setHours(0, 0, 0, 0);
+    let add = (target - base.getDay() + 7) % 7; if (add === 0) add = 7;
+    const x = new Date(base); x.setDate(x.getDate() + add); return x;
+  })();
   const daysToInjection = Math.max(0, Math.ceil((nextInjection - new Date()) / 86400000));
   const dueISO = nextInjection.toLocaleDateString("sv-SE");
   const recentRate = weeklyRate(weightLog);
@@ -981,6 +993,15 @@ export default function App() {
           <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>Next injection</div><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>Last dose: {fmtDate(glp.lastInjection)}{glp.dose ? ` · ${glp.dose} mg` : ""} · week {glp.weeksOn}</div></div>
           <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.surface, border: "none", borderRadius: 11, padding: "12px 18px", fontFamily: BODY, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
         </div>)}</div>
+      <div style={{ marginBottom: 14 }}>{card(<>
+        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Dose day{(prefs.injIntervalDays || 7) !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {prefs.injIntervalDays} days)</span> : null}</div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
+            <button key={k} onClick={() => setGlp({ ...glp, injectionDay: k })}
+              style={{ flex: 1, height: 38, borderRadius: 10, border: glp.injectionDay === k ? "none" : `1.5px solid ${C.hair}`, background: glp.injectionDay === k ? C.violet : "transparent", color: glp.injectionDay === k ? "#fff" : C.muted, fontFamily: BODY, fontWeight: 800, fontSize: 12.5, cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
+          ))}
+        </div>
+      </>)}</div>
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} doseLog={glp.doseLog || []} dueISO={dueISO} />)}</div>
 
       <div style={{ marginBottom: 14 }}>{card(
