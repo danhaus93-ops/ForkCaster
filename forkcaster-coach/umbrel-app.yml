@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.7"
+version: "0.2.8"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.7: images now serve from a local registry on the node itself - build
-  and push complete in seconds on-device, eliminating the GHCR upload failures
-  (unknown blob) caused by the 700MB Chromium layer outliving upload sessions.
-  Same features as v0.2.5/0.2.6.
+  v0.2.8 HOTFIX: server crash-looped because the slim image installed Express 5
+  (unpinned), which rejects the classic catch-all route. Express is now pinned
+  to v4 and the fallback route rewritten to be version-proof.
 dependencies: []
 path: ""
 defaultUsername: ""

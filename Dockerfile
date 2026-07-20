@@ -14,7 +14,7 @@ RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefo
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser PUPPETEER_SKIP_DOWNLOAD=1
 # server needs ONLY these three at runtime; client deps live in the build stage.
 # installed in a clean dir so npm can't resurrect the full tree from package.json
-RUN npm install express pdf-parse puppeteer-core --no-audit --no-fund
+RUN npm install express@4 pdf-parse puppeteer-core --no-audit --no-fund
 COPY package.json ./
 COPY server ./server
 COPY --from=build /app/dist ./dist
