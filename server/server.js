@@ -55,6 +55,10 @@ app.post("/api/photo", (req, res) => {
     res.json({ id, url: `/api/photo/${id}.${ext}` });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });
+app.delete("/api/photo/:file", (req, res) => {
+  try { fs.rmSync(path.join(PHOTO_DIR, path.basename(req.params.file)), { force: true }); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: String(e) }); }
+});
 app.get("/api/photo/:file", (req, res) => {
   const f = path.join(PHOTO_DIR, path.basename(req.params.file));
   if (!fs.existsSync(f)) return res.status(404).end();

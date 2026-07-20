@@ -314,6 +314,7 @@ export default function App() {
   const [photos, setPhotos] = useState([]);
   const [compareA, setCompareA] = useState(0);
   const [compareB, setCompareB] = useState(0);
+  const [activeSide, setActiveSide] = useState("B");
   const fileRef = useRef(null);
   const photoRef = useRef(null);
 
@@ -707,6 +708,53 @@ export default function App() {
         setPhotos((p) => { const all = [...p, entry]; setCompareB(all.length - 1); return all; });
       }
     }
+  }
+  function nearestWeight(dateISO) {
+    if (!weightLog.length || !dateISO) return null;
+    let best = null, bd = Infinity;
+    for (const w of weightLog) { const d = Math.abs(new Date(w.date) - new Date(dateISO)); if (d < bd) { bd = d; best = w; } }
+    return bd <= 10 * 86400000 ? best : null; // within 10 days or don't claim it
+  }
+  async function deletePhoto(idx) {
+    const p = photos[idx]; if (!p) return;
+    if (!window.confirm("Delete this progress photo?")) return;
+    try { const f = (p.url || "").split("/").pop(); if (f && p.url.startsWith("/api/photo/")) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {}
+    setPhotos((all) => {
+      const next = all.filter((_, i) => i !== idx);
+      const clamp = (v) => Math.max(0, Math.min(next.length - 1, v > idx ? v - 1 : v));
+      setCompareA((v) => clamp(v)); setCompareB((v) => clamp(v));
+      return next;
+    });
+  }
+  async function shareComparison() {
+    const pa = photos[compareA], pb = photos[compareB];
+    if (!pa || !pb) return;
+    const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
+    try {
+      const [ia, ib] = await Promise.all([load(pa.url), load(pb.url)]);
+      const W = 1080, PH = 660, FOOT = 150, cv = document.createElement("canvas");
+      cv.width = W; cv.height = PH + FOOT;
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = "#0E141A"; ctx.fillRect(0, 0, W, PH + FOOT);
+      const drawCover = (im, x, w) => { const s = Math.max(w / im.width, PH / im.height); const dw = im.width * s, dh = im.height * s; ctx.save(); ctx.beginPath(); ctx.rect(x, 0, w, PH); ctx.clip(); ctx.drawImage(im, x + (w - dw) / 2, (PH - dh) / 2, dw, dh); ctx.restore(); };
+      drawCover(ia, 0, W / 2 - 2); drawCover(ib, W / 2 + 2, W / 2 - 2);
+      const wa = nearestWeight(pa.date), wb = nearestWeight(pb.date);
+      ctx.fillStyle = "#E8ECEA"; ctx.font = "600 34px -apple-system, sans-serif";
+      const cap = (p, w) => `${fmtDate(p.date)}${w ? ` \u00b7 ${fmtWt(w.lbs)} ${wtU}` : ""}`;
+      ctx.textAlign = "center";
+      ctx.fillText(cap(pa, wa), W / 4, PH + 52); ctx.fillText(cap(pb, wb), (3 * W) / 4, PH + 52);
+      if (wa && wb) {
+        const d = wb.lbs - wa.lbs;
+        ctx.fillStyle = d <= 0 ? "#63D48C" : "#E8B45A"; ctx.font = "800 40px -apple-system, sans-serif";
+        ctx.fillText(`${d > 0 ? "+" : "\u2212"}${fmtWt(Math.abs(d))} ${wtU}`, W / 2, PH + 104);
+      }
+      ctx.fillStyle = "#8A968C"; ctx.font = "600 22px -apple-system, sans-serif";
+      ctx.fillText("ForkCaster", W / 2, PH + 138);
+      const blob = await new Promise((ok) => cv.toBlob(ok, "image/jpeg", 0.9));
+      const file = new File([blob], "forkcaster-progress.jpg", { type: "image/jpeg" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Progress" }); return; }
+      const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "forkcaster-progress.jpg"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+    } catch (e) { alert("Share failed: " + (e && e.message ? e.message : e)); }
   }
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
   const [doseLogged, setDoseLogged] = useState(false);
@@ -1152,16 +1200,32 @@ export default function App() {
           {photos.length === 0 ? (
             <div style={{ textAlign: "center", padding: "24px 12px", color: C.faint, fontSize: 13, lineHeight: 1.5 }}>Add photos to build a visual transformation timeline.<br /><span style={{ fontSize: 11 }}>Stored privately on your node.</span></div>
           ) : (
+            <>
             <div style={{ display: "flex", gap: 10 }}>
-              {[["Before", compareA, setCompareA], ["After", compareB, setCompareB]].map(([lbl, idx, setIdx]) => (
+              {[["Before", "A", compareA], ["After", "B", compareB]].map(([lbl, side, idx]) => {
+                const w = photos[idx] ? nearestWeight(photos[idx].date) : null;
+                return (
                 <div key={lbl} style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600 }}>{lbl}</div>
-                  <div style={{ aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1px solid ${C.hair}` }}>{photos[idx] && <img src={photos[idx].url} alt={lbl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4, textAlign: "center" }}>{photos[idx] ? fmtDate(photos[idx].date) : ""}</div>
-                  <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 4 }}><button onClick={() => setIdx(Math.max(0, idx - 1))} style={arrowBtn}>‹</button><button onClick={() => setIdx(Math.min(photos.length - 1, idx + 1))} style={arrowBtn}>›</button></div>
+                  <button onClick={() => setActiveSide(side)} style={{ fontSize: 11, marginBottom: 5, fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: activeSide === side ? C.go : C.muted, padding: 0 }}>{activeSide === side ? "● " : ""}{lbl}</button>
+                  <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${activeSide === side ? C.go : C.hair}` }}>
+                    {photos[idx] && <img src={photos[idx].url} alt={lbl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                    {photos[idx] && <button onClick={() => deletePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4, textAlign: "center" }}>{photos[idx] ? fmtDate(photos[idx].date) : ""}{w ? ` · ${fmtWt(w.lbs)} ${wtU}` : ""}</div>
                 </div>
+              ); })}
+            </div>
+            {(() => { const wa = photos[compareA] && nearestWeight(photos[compareA].date), wb = photos[compareB] && nearestWeight(photos[compareB].date);
+              if (!wa || !wb || compareA === compareB) return null; const d = wb.lbs - wa.lbs;
+              return <div style={{ textAlign: "center", marginTop: 8, fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: d <= 0 ? C.go : C.caution }}>{d > 0 ? "+" : "−"}{fmtWt(Math.abs(d))} {wtU} between these photos</div>; })()}
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 10, paddingBottom: 4 }}>
+              {photos.map((p, i) => (
+                <img key={p.id || i} src={p.url} onClick={() => (activeSide === "A" ? setCompareA(i) : setCompareB(i))} alt="" style={{ width: 44, height: 58, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === compareA ? C.violet : i === compareB ? C.go : "transparent"}`, opacity: i === compareA || i === compareB ? 1 : 0.65 }} />
               ))}
             </div>
+            <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Tap a pane label to choose which side the strip sets · purple = Before, green = After</div>
+            {photos.length >= 2 && compareA !== compareB && <button onClick={shareComparison} style={{ width: "100%", marginTop: 10, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share this comparison →</button>}
+            </>
           )}
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: "none" }} />
           <button onClick={() => fileRef.current && fileRef.current.click()} style={{ width: "100%", marginTop: 12, background: C.surfaceAlt, color: C.ink, border: `1px dashed ${C.faint}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>+ Add progress photo</button>
