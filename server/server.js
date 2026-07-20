@@ -93,12 +93,19 @@ app.post("/api/ai", async (req, res) => {
       ? [{ type: "image", source: { type: "base64", media_type: image.media_type || "image/jpeg", data: image.data } }, { type: "text", text: prompt }]
       : prompt;
     const body = { model: (["claude-fable-5", "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"].includes(req.body && req.body.model) ? req.body.model : "claude-sonnet-4-6"), max_tokens: Math.max(256, Math.min(3000, parseInt(req.body && req.body.max_tokens) || 1000)), messages: [{ role: "user", content }] };
+    if (req.body && req.body.temperature != null) body.temperature = Math.max(0, Math.min(1, +req.body.temperature));
+    if (req.body && req.body.schema) body.output_config = { format: { type: "json_schema", schema: req.body.schema } };
     if (system) body.system = system;
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    let r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify(body),
     });
+    if (!r.ok && body.output_config) {
+      // structured-output shape rejected (API drift): retry plain, client salvage still guards
+      delete body.output_config;
+      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" }, body: JSON.stringify(body) });
+    }
     const data = await r.json();
     if (data.error) return res.json({ error: data.error.message || "API error" });
     res.json({ text: (data.content || []).filter((x) => x.type === "text").map((x) => x.text).join("") });
