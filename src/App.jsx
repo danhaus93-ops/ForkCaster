@@ -414,6 +414,7 @@ export default function App() {
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog); if (s.photos) setPhotos(s.photos);
         if (s.savedRank) setSavedRank(s.savedRank);
+        if (Array.isArray(s.coachMsgs) && s.coachMsgs.length) setCoachMsgs(s.coachMsgs);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
       }
       hydrated.current = true;
@@ -421,7 +422,7 @@ export default function App() {
   }, []);
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -1129,6 +1130,7 @@ export default function App() {
         </div>
       </>)}</div>
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} doseLog={glp.doseLog || []} dueISO={dueISO} />)}</div>
+      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} />)}</div>}
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
@@ -1452,6 +1454,50 @@ export default function App() {
   );
 }
 
+/* Estimated medication-level curve: one-compartment model from published half-lives. Informational only. */
+function MedLevelChart({ C, doseLog, med }) {
+  const HL_DAYS = { tirzepatide: 5, semaglutide: 7, retatrutide: 6 }; // reta = trial-data estimate
+  const hl = HL_DAYS[med] || 6;
+  const ke = Math.log(2) / (hl * 24), ka = ke * 10; // absorption tuned for ~1.5d peak
+  const doses = (doseLog || []).map((d) => ({ t: new Date(d.date + "T09:00:00").getTime(), mg: +d.mg || 1 })).sort((a, b) => a.t - b.t);
+  if (!doses.length) return null;
+  const now = Date.now();
+  const start = Math.max(doses[0].t - 86400000, now - 42 * 86400000);
+  const end = now + 7 * 86400000;
+  const level = (t) => doses.reduce((s, d) => {
+    const h = (t - d.t) / 3600000; if (h <= 0) return s;
+    return s + d.mg * (ka / (ka - ke)) * (Math.exp(-ke * h) - Math.exp(-ka * h));
+  }, 0);
+  const N = 140, pts = [];
+  let maxL = 0;
+  for (let i = 0; i <= N; i++) { const t = start + (i / N) * (end - start); const L = level(t); maxL = Math.max(maxL, L); pts.push({ t, L }); }
+  if (maxL <= 0) return null;
+  const W = 320, H = 110, PADB = 16;
+  const x = (t) => ((t - start) / (end - start)) * W;
+  const y = (L) => (H - PADB) - (L / maxL) * (H - PADB - 8);
+  const nowX = x(now);
+  const past = pts.filter((p) => p.t <= now).map((p) => `${x(p.t).toFixed(1)},${y(p.L).toFixed(1)}`).join(" ");
+  const fut = pts.filter((p) => p.t >= now).map((p) => `${x(p.t).toFixed(1)},${y(p.L).toFixed(1)}`).join(" ");
+  const nowLevelPct = Math.round((level(now) / maxL) * 100);
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>Estimated med level</div>
+        <div style={{ fontFamily: BODY, fontSize: 12, fontWeight: 700, color: C.violet }}>~{nowLevelPct}% of your peak</div>
+      </div>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+        <polyline points={past} fill="none" stroke={C.violet} strokeWidth="2.4" strokeLinejoin="round" />
+        <polyline points={fut} fill="none" stroke={C.violet} strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />
+        <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
+        {doses.filter((d) => d.t >= start).map((d, i) => (
+          <g key={i}><circle cx={x(d.t)} cy={H - PADB} r="3" fill={C.violet} /><text x={x(d.t)} y={H - 3} textAnchor="middle" fontSize="8" fill={C.faint}>{d.mg}</text></g>
+        ))}
+        <text x={nowX + 4} y="12" fontSize="8.5" fill={C.go}>now</text>
+      </svg>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection. Informational only — not medical advice.</div>
+    </div>
+  );
+}
 /* Month calendar for dose adherence: syringe on logged days, DUE ring on the scheduled day */
 function DoseCalendar({ C, doseLog, dueISO }) {
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
