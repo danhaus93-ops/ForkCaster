@@ -1127,7 +1127,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
             <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect".replace("XX","XX</div></div>
+            <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
           </div>
           <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
         </>)}</div>
