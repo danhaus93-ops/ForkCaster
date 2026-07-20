@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.51"
+version: "0.2.52"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.51 GOAL BODY SIMULATOR: take a progress photo and generate a
-  photorealistic preview of yourself at your goal weight (Gemini Nano Banana
-  2 image editing - same person, same clothing, only body composition
-  changes, computed from your real current/goal numbers). Results land in the
-  Before/After strip with an AI GOAL PREVIEW badge. Requires a Google AI
-  (Gemini) key in Settings; roughly 7 cents per render. Visualization, not a
-  prediction.
+  v0.2.52: the goal simulator moves to its own sheet - tap Goal body
+  simulator to open a dedicated Now vs At-goal view with a source photo
+  picker, per-photo simulation history, re-simulate, delete, and a Now-vs-
+  Goal share image. Real Before/After progress photos stay completely
+  untouched; any earlier simulations are migrated out of the real strip
+  automatically.
 dependencies: []
 path: ""
 defaultUsername: ""

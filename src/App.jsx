@@ -316,6 +316,9 @@ export default function App() {
   const [compareB, setCompareB] = useState(0);
   const [activeSide, setActiveSide] = useState("B");
   const [simBusy, setSimBusy] = useState(false);
+  const [simOpen, setSimOpen] = useState(false);
+  const [simShots, setSimShots] = useState([]);
+  const [simSel, setSimSel] = useState(0);
   const fileRef = useRef(null);
   const photoRef = useRef(null);
 
@@ -416,7 +419,9 @@ export default function App() {
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
-        if (s.mealLog) setMealLog(s.mealLog); if (s.photos) setPhotos(s.photos);
+        if (s.mealLog) setMealLog(s.mealLog);
+        if (s.photos) { const real = s.photos.filter((p) => !p.sim); const legacySims = s.photos.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
+        if (Array.isArray(s.simShots) && s.simShots.length) setSimShots((x) => [...x.filter((p) => !s.simShots.find((q) => q.id === p.id)), ...s.simShots]);
         if (s.savedRank) setSavedRank(s.savedRank);
         if (Array.isArray(s.coachMsgs) && s.coachMsgs.length) setCoachMsgs(s.coachMsgs);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
@@ -426,7 +431,7 @@ export default function App() {
   }, []);
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -728,7 +733,7 @@ export default function App() {
     });
   }
   async function simulateGoal() {
-    const srcP = photos[activeSide === "A" ? compareA : compareB];
+    const srcP = photos[simSel];
     if (!srcP || simBusy) return;
     if (!srcP.url || !srcP.url.startsWith("/api/photo/")) { alert("This photo isn't stored on your node yet — re-add it first."); return; }
     setSimBusy(true);
@@ -737,10 +742,33 @@ export default function App() {
         body: JSON.stringify({ photoUrl: srcP.url, currentLbs: curWeight || 0, goalLbs: goalWeight, heightIn: body.heightIn, sex: body.sex }) });
       const j = await r.json();
       if (!r.ok || j.error) throw new Error(j.error || "simulation failed");
-      const entry = { id: j.id, url: j.url, date: todayISO(), sim: true };
-      setPhotos((all) => { const next = [...all, entry]; setCompareB(next.length - 1); setActiveSide("B"); return next; });
+      setSimShots((all) => [...all, { id: j.id, url: j.url, date: todayISO(), srcUrl: srcP.url, sim: true }]);
     } catch (e) { alert("Goal simulation failed: " + (e && e.message ? e.message : e)); }
     setSimBusy(false);
+  }
+  async function deleteSim(idx) {
+    const p = simShots[idx]; if (!p) return;
+    if (!window.confirm("Delete this simulation?")) return;
+    try { const f = (p.url || "").split("/").pop(); if (f) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {}
+    setSimShots((all) => all.filter((_, i) => i !== idx));
+  }
+  async function shareSim(srcP, simP) {
+    const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
+    try {
+      const [ia, ib] = await Promise.all([load(srcP.url), load(simP.url)]);
+      const W = 1080, PH = 660, FOOT = 130, cv = document.createElement("canvas");
+      cv.width = W; cv.height = PH + FOOT; const ctx = cv.getContext("2d");
+      ctx.fillStyle = "#0E141A"; ctx.fillRect(0, 0, W, PH + FOOT);
+      const draw = (im, x, w) => { const s = Math.max(w / im.width, PH / im.height); const dw = im.width * s, dh = im.height * s; ctx.save(); ctx.beginPath(); ctx.rect(x, 0, w, PH); ctx.clip(); ctx.drawImage(im, x + (w - dw) / 2, (PH - dh) / 2, dw, dh); ctx.restore(); };
+      draw(ia, 0, W / 2 - 2); draw(ib, W / 2 + 2, W / 2 - 2);
+      ctx.fillStyle = "#E8ECEA"; ctx.font = "600 34px -apple-system, sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("Now", W / 4, PH + 50); ctx.fillText(`At goal · ${fmtWt(goalWeight, 0)} ${wtU} (AI preview)`, (3 * W) / 4, PH + 50);
+      ctx.fillStyle = "#8A968C"; ctx.font = "600 22px -apple-system, sans-serif"; ctx.fillText("ForkCaster · visualization, not a prediction", W / 2, PH + 104);
+      const blob = await new Promise((ok) => cv.toBlob(ok, "image/jpeg", 0.9));
+      const file = new File([blob], "forkcaster-goal.jpg", { type: "image/jpeg" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Goal preview" }); return; }
+      const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "forkcaster-goal.jpg"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+    } catch (e) { alert("Share failed: " + (e && e.message ? e.message : e)); }
   }
   async function shareComparison() {
     const pa = photos[compareA], pb = photos[compareB];
@@ -1225,7 +1253,6 @@ export default function App() {
                   <button onClick={() => setActiveSide(side)} style={{ fontSize: 11, marginBottom: 5, fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: activeSide === side ? C.go : C.muted, padding: 0 }}>{activeSide === side ? "● " : ""}{lbl}</button>
                   <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${activeSide === side ? C.go : C.hair}` }}>
                     {photos[idx] && <img src={photos[idx].url} alt={lbl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                    {photos[idx] && photos[idx].sim && <div style={{ position: "absolute", bottom: 6, left: 6, background: "rgba(167,139,250,0.9)", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 7, padding: "3px 7px", letterSpacing: 0.3 }}>AI GOAL PREVIEW</div>}
                     {photos[idx] && <button onClick={() => deletePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
                   </div>
                   <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4, textAlign: "center" }}>{photos[idx] ? fmtDate(photos[idx].date) : ""}{w ? ` · ${fmtWt(w.lbs)} ${wtU}` : ""}</div>
@@ -1242,8 +1269,7 @@ export default function App() {
             </div>
             <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Tap a pane label to choose which side the strip sets · purple = Before, green = After</div>
             {photos.length >= 2 && compareA !== compareB && <button onClick={shareComparison} style={{ width: "100%", marginTop: 10, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share this comparison →</button>}
-            {photos.length > 0 && <button onClick={simulateGoal} disabled={simBusy} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: simBusy ? 0.6 : 1 }}>{simBusy ? "Simulating… (≈15s)" : `✨ Simulate my body at goal (${fmtWt(goalWeight, 0)} ${wtU})`}</button>}
-            {photos.length > 0 && <div style={{ fontSize: 10, color: C.faint, marginTop: 5, lineHeight: 1.45 }}>Uses the active pane's photo. Same person, same clothing — only body composition changes. A visualization, not a prediction. Requires a Gemini key (Settings) · ~7¢ per render.</div>}
+            {photos.length > 0 && <button onClick={() => { setSimSel(photos.length - 1); setSimOpen(true); }} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>✨ Goal body simulator →</button>}
             </>
           )}
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: "none" }} />
@@ -1527,6 +1553,44 @@ export default function App() {
         )}
 
         {/* Settings sheet */}
+        {simOpen && (
+          <div onClick={() => setSimOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, maxHeight: "88dvh", overflowY: "auto", background: C.bg, borderRadius: "22px 22px 0 0", padding: "18px 18px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>Goal body simulator</div>
+                <button onClick={() => setSimOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 16, width: 32, height: 32, color: C.muted, fontSize: 15, cursor: "pointer" }}>×</button>
+              </div>
+              <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12 }}>Photorealistic preview of you at {fmtWt(goalWeight, 0)} {wtU}. Your real Before/After photos stay untouched.</div>
+              <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Source photo</div>
+              <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 12 }}>
+                {photos.map((p, i) => (
+                  <img key={p.id || i} src={p.url} onClick={() => setSimSel(i)} alt="" style={{ width: 48, height: 64, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === simSel ? C.violet : "transparent"}`, opacity: i === simSel ? 1 : 0.6 }} />
+                ))}
+              </div>
+              {(() => { const srcP = photos[simSel]; const mine = simShots.filter((s2) => !s2.srcUrl || (srcP && s2.srcUrl === srcP.url)); const latest = mine[mine.length - 1];
+                return (
+                  <div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600 }}>Now</div>
+                        <div style={{ aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1px solid ${C.hair}` }}>{srcP && <img src={srcP.url} alt="Now" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: C.violet, marginBottom: 5, fontWeight: 600 }}>At goal · AI preview</div>
+                        <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${C.violet}66` }}>
+                          {latest ? <img src={latest.url} alt="Goal" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 11, padding: 12, textAlign: "center" }}>{simBusy ? "Rendering… ≈15s" : "No simulation yet for this photo"}</div>}
+                          {latest && <button onClick={() => deleteSim(simShots.indexOf(latest))} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={simulateGoal} disabled={simBusy || !srcP} style={{ width: "100%", marginTop: 12, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: simBusy ? 0.6 : 1 }}>{simBusy ? "Simulating…" : latest ? "✨ Re-simulate" : "✨ Simulate at goal"}</button>
+                    {latest && srcP && <button onClick={() => shareSim(srcP, latest)} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share Now vs Goal →</button>}
+                    <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Same person, same clothing — only body composition changes, computed from your logged weight vs goal. A visualization, not a prediction. Gemini key required · ~7¢ per render.</div>
+                  </div>
+                ); })()}
+            </div>
+          </div>
+        )}
         {settingsOpen && (
           <div onClick={() => setSettingsOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px 28px", maxHeight: "82vh", overflowY: "auto" }}>
