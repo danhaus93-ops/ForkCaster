@@ -217,7 +217,7 @@ app.get("/api/nearby", async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": PLACES_KEY,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.primaryType,places.types,places.rating,places.photos,places.location",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.primaryTypeDisplayName,places.primaryType,places.types,places.rating,places.photos,places.location,places.websiteUri",
       },
       body: JSON.stringify({
         includedTypes: ["restaurant", "fast_food_restaurant", "cafe", "meal_takeaway", "sandwich_shop", "bakery"],
@@ -236,6 +236,7 @@ app.get("/api/nearby", async (req, res) => {
       eta: "nearby",
       score: Math.min(5, (p.rating || 3.8)),
       lat: p.location && p.location.latitude, lng: p.location && p.location.longitude,
+      website: p.websiteUri || null,
       photo: p.photos && p.photos[0] ? `/api/vphoto?name=${encodeURIComponent(p.photos[0].name)}` : null,
       menu: null, // Places has no menus; the AI proposes realistic goal-fit orders
     }));
@@ -288,6 +289,53 @@ app.get("/api/gmap/tile/:style/:z/:x/:y", async (req, res) => {
     res.set("Cache-Control", "public, max-age=604800");
     res.send(Buffer.from(await r.arrayBuffer()));
   } catch { res.status(404).end(); }
+});
+
+/* ── Best-effort live menu scrape from a venue's own website.
+   HTML-only (JS-rendered menus and PDFs won't yield); personal-use fetches. ── */
+function stripHtml(html) {
+  return String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ").replace(/&nbsp;|&amp;|&#\d+;|&[a-z]+;/gi, " ")
+    .replace(/\s+/g, " ").trim();
+}
+function urlAllowed(u) {
+  try {
+    const { protocol, hostname } = new URL(u);
+    if (!/^https?:$/.test(protocol)) return false;
+    if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(hostname)) return false;
+    return true;
+  } catch { return false; }
+}
+app.get("/api/menu", async (req, res) => {
+  const url = req.query.url;
+  if (!url || !urlAllowed(url)) return res.json({ ok: false });
+  const UA = { "User-Agent": "Mozilla/5.0 (iPhone) ForkCaster/0.2 personal nutrition assistant" };
+  const grab = async (u) => {
+    const r = await fetch(u, { headers: UA, redirect: "follow", signal: AbortSignal.timeout(8000) });
+    if (!r.ok || !(r.headers.get("content-type") || "").includes("html")) return null;
+    return await r.text();
+  };
+  try {
+    let html = await grab(url);
+    if (!html) return res.json({ ok: false });
+    // hunt for a same-site menu link
+    let menuUrl = null;
+    const linkRe = /href=["']([^"']+)["'][^>]*>([^<]{0,60})/gi; let m;
+    while ((m = linkRe.exec(html))) {
+      const href = m[1], label = (m[2] || "").toLowerCase();
+      if (/menu/i.test(href) || /menu/.test(label)) {
+        try { const abs = new URL(href, url).href; if (urlAllowed(abs)) { menuUrl = abs; break; } } catch {}
+      }
+    }
+    let text = stripHtml(html);
+    if (menuUrl && menuUrl !== url) {
+      const mh = await grab(menuUrl);
+      if (mh) { const mt = stripHtml(mh); if (mt.length > 300) text = mt; }
+    }
+    if (text.length < 400) return res.json({ ok: false });
+    res.json({ ok: true, source: menuUrl || url, text: text.slice(0, 6000) });
+  } catch { res.json({ ok: false }); }
 });
 
 /* ── venue photo proxy (keeps the Places key server-side) ── */

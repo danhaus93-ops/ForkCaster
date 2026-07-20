@@ -496,18 +496,28 @@ export default function App() {
     const restrictLine = restrictions.length
       ? `\nHARD SAFETY RULE — the user has: ${restrictions.join("; ")}. NEVER put any item containing or possibly containing these in "picks". Exclude anything uncertain. List excluded items in "avoid" with reason "contains <allergen>" or "not <diet>".`
       : "";
+    let liveMenu = null;
+    if (!r.menu && r.website) {
+      try {
+        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}`, { signal: AbortSignal.timeout(9000) });
+        const mj = await mres.json();
+        if (mj && mj.ok && mj.text) liveMenu = mj;
+      } catch {}
+    }
     const prompt =
       `You are a sharp, medication-aware nutrition coach. User is at ${r.name} right now.\n` +
       `Remaining today: ${proteinLeft}g protein, ${calLeft} calories.` + medLine + restrictLine +
       `\nRank this menu to maximize remaining protein under remaining calories, favoring whole/grilled foods` +
       (nauseaRisk === "high" || nauseaRisk === "moderate" ? ` and low-fat, easy-on-the-stomach picks` : ``) + `.\n` +
-      (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n` : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
+      (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
+        : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively):\n"""${liveMenu.text}"""\n\n`
+        : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
       `Return ONLY minified JSON, no markdown:\n` +
       `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"why":"<max 9 words>"}],` +
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);
-    try { const text = await callClaude(prompt); setResult(sanitizePicks(JSON.parse(text.replace(/```json|```/g, "").trim()), allergies)); }
+    try { const text = await callClaude(prompt); const parsed = sanitizePicks(JSON.parse(text.replace(/```json|```/g, "").trim()), allergies); parsed._menuSource = r.menu ? "demo" : liveMenu ? "live" : "ai"; setResult(parsed); }
     catch (e) { setError((e && e.message) || "Couldn't reach the coach. Tap a venue to retry."); }
     setLoading(false);
   }
@@ -738,7 +748,12 @@ export default function App() {
       <div style={{ marginTop: 6 }}>
         {error && <div style={{ background: C.avoidSoft, color: C.avoid, borderRadius: 12, padding: 14, fontSize: 13.5, marginTop: 12 }}>{error}</div>}
         {loading && !result && <div style={{ textAlign: "center", color: C.muted, fontSize: 13.5, padding: "22px 0" }}>Reading the menu against your {proteinLeft}g / {calLeft} cal…</div>}
-        {result && (
+        {result && result._menuSource && (
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: result._menuSource === "live" ? C.go : C.faint, marginBottom: 8 }}>
+                  {result._menuSource === "live" ? "● RANKED FROM THEIR LIVE ONLINE MENU" : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
+                </div>
+              )}
+              {result && (
           <div style={{ marginTop: 14 }}>
             {result.coachLine && (
               <div style={{ background: C.goSoft, border: `1px solid ${C.go}33`, borderRadius: 14, padding: "13px 15px", marginBottom: 14 }}>
