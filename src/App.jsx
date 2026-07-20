@@ -492,8 +492,9 @@ export default function App() {
       const medLine = medObj ? ` User is on ${medObj.label}${nauseaRisk !== "low" ? ` with ${nauseaRisk.toUpperCase()} nausea risk (favor gentle, lean, low-fat venues)` : ""}.` : "";
       const restrictLine = restrictions.length ? ` Hard restrictions: ${restrictions.join("; ")} — venues that can't safely serve these score LOW.` : "";
       const prompt =
-        `Score each venue 0-100 by how well a health-focused person can eat there RIGHT NOW toward their goals. ` +
-        `Judge by protein-dense, goal-fit options and customizability (grilled/bowls/salads = high; dessert/pizza-only/fried-only = low). IGNORE popularity and review scores.` +
+        `Score each venue 0-100 by the BEST goal-fit order an informed customer can build there RIGHT NOW — not the menu average. ` +
+        `Credit customization power: added protein, sugar-free/light bases, grilled swaps, sauces on the side (e.g., a smoothie shop with a high-protein low-sugar line scores on THAT line, not its dessert smoothies). ` +
+        `Dessert-only/fried-only with no workaround = low. IGNORE popularity and review scores.` +
         ` User has ${proteinLeft}g protein and ${calLeft} calories remaining today.` + medLine + restrictLine +
         `\nVenues: ${JSON.stringify(vs.map((v) => ({ id: v.id, name: v.name, type: v.cuisine })))}` +
         `\nReturn ONLY minified JSON, no markdown: [{"id":"<id>","match":<int 0-100>,"why":"<max 6 words>"}] for every venue.`;
