@@ -104,7 +104,7 @@ app.post("/api/ai", async (req, res) => {
     if (!r.ok && body.output_config) {
       // structured-output shape rejected (API drift): retry plain, client salvage still guards
       delete body.output_config;
-      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" }, body: JSON.stringify(body) });
+      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify(body) });
     }
     const data = await r.json();
     if (data.error) return res.json({ error: data.error.message || "API error" });
