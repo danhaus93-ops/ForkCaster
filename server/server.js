@@ -24,8 +24,11 @@ const ANTHROPIC_KEY_ENV = process.env.ANTHROPIC_API_KEY || "";
 
 fs.mkdirSync(PHOTO_DIR, { recursive: true });
 
+const VERSION = (() => { try { return require("../package.json").version; } catch { return "?"; } })();
 const app = express();
 app.use(express.json({ limit: "25mb" }));
+
+app.get("/api/version", (_req, res) => res.json({ version: VERSION }));
 
 /* ── state persistence ── */
 app.get("/api/state", (_req, res) => {

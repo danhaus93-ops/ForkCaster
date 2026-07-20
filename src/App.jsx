@@ -119,6 +119,8 @@ export default function App() {
   const [allergies, setAllergies] = useState([]);
   const [diets, setDiets] = useState([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [appVer, setAppVer] = useState("");
+  useEffect(() => { fetch("/api/version").then((r) => r.json()).then((j) => j && j.version && setAppVer(j.version)).catch(() => {}); }, []);
   const [keyStatus, setKeyStatus] = useState(null);
   const [keyIn, setKeyIn] = useState({ a: "", g: "" });
   const [keyMsg, setKeyMsg] = useState("");
@@ -909,6 +911,7 @@ export default function App() {
               <g fill="none" stroke={C.go} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 22 V31" /><path d="M24 22 V31" /><path d="M30.5 22 V31" /><path d="M17.5 31 C17.5 37 20.5 39 24 39 C27.5 39 30.5 37 30.5 31" /><path d="M24 39 V45" /></g>
             </svg>
             <span style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink, letterSpacing: -0.3 }}>ForkCaster</span>
+            {appVer && <span style={{ fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 4 }}>v{appVer}</span>}
           </div>
           <button onClick={() => setSettingsOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke={C.muted} strokeWidth="2" /><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 1h-4l-.5 2.4a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 23h4l.5-2.4a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z" stroke={C.muted} strokeWidth="1.4" strokeLinejoin="round" /></svg>
@@ -1064,6 +1067,7 @@ export default function App() {
                 {sectionTitle("Danger zone")}
                 <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, and settings will be wiped.")) { try { await fetch("/api/state", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
+              <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""} · LoneStrike Labs · self-hosted</div>
             </div>
           </div>
         )}
