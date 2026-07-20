@@ -1269,7 +1269,7 @@ export default function App() {
             </div>
             <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Tap a pane label to choose which side the strip sets · purple = Before, green = After</div>
             {photos.length >= 2 && compareA !== compareB && <button onClick={shareComparison} style={{ width: "100%", marginTop: 10, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share this comparison →</button>}
-            {photos.length > 0 && <button onClick={() => { setSimSel(photos.length - 1); setSimOpen(true); }} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>✨ Goal body simulator →</button>}
+            {photos.length > 0 && <button onClick={() => { setSimSel(photos.length - 1); setSimOpen(true); }} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>✨ Body Forecaster →</button>}
             </>
           )}
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: "none" }} />
@@ -1557,7 +1557,7 @@ export default function App() {
           <div onClick={() => setSimOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, maxHeight: "88dvh", overflowY: "auto", background: C.bg, borderRadius: "22px 22px 0 0", padding: "18px 18px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>Goal body simulator</div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>Body Forecaster</div>
                 <button onClick={() => setSimOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 16, width: 32, height: 32, color: C.muted, fontSize: 15, cursor: "pointer" }}>×</button>
               </div>
               <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12 }}>Photorealistic preview of you at {fmtWt(goalWeight, 0)} {wtU}. Your real Before/After photos stay untouched.</div>
