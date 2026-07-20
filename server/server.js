@@ -376,10 +376,11 @@ app.get("/api/menu", async (req, res) => {
       const goal = String(req.query.goal || "").toLowerCase();
       const goalWords = goal.includes("glp") ? ["glp"] : goal.includes("gain") ? ["protein", "bowl"] : ["protein", "light", "fit", "under"];
       const linkScore = (href, label) => {
-        const t = (href + " " + label).toLowerCase(); let sc = 0;
-        if (/menu|nutrition/.test(t)) sc += 10;
+        const t = (href + " " + label).toLowerCase();
+        if (!/menu|nutrition|food/.test(t)) return 0; // must be a menu-ish link at all; goal words never qualify alone
+        let sc = 10;
         for (const w of goalWords) if (t.includes(w)) sc += 50;
-        if (/smoothie|bowl|salad|grill|food/.test(t)) sc += 5;
+        if (/smoothie|bowl|salad|grill/.test(t)) sc += 5;
         if (/\.pdf(\?|$)/i.test(href)) sc += 6;
         return sc;
       };
@@ -393,7 +394,11 @@ app.get("/api/menu", async (req, res) => {
           if (sc >= 10) cands.set(abs, Math.max(cands.get(abs) || 0, sc));
         } catch {}
       }
-      const top = [...cands.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3);
+      const sorted = [...cands.entries()].sort((x, y) => y[1] - x[1]);
+      const goalTop = sorted.filter(([, sc]) => sc >= 50).slice(0, 2);
+      const plainTop = sorted.filter(([, sc]) => sc < 50).slice(0, 2);
+      const seen = new Set();
+      const top = [...goalTop, ...plainTop].filter(([l]) => !seen.has(l) && seen.add(l)).slice(0, 3);
       const sections = []; let anyPdf = false;
       for (const [link] of top) {
         try {
@@ -402,8 +407,9 @@ app.get("/api/menu", async (req, res) => {
           else if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > 300) { const isGoal = goalWords.some((w) => link.toLowerCase().includes(w)); sections.push(`--- ${link} ---\n` + mt.slice(0, isGoal ? 4500 : 2000)); } }
         } catch {}
       }
-      const foodSignal = (t) => (t.match(/\$\s?\d|calor|protein|smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|oz\b/gi) || []).length;
-      const good = sections.filter((sec) => foodSignal(sec) >= 6);
+      const priceCal = (t) => (t.match(/\$\s?\d|\b\d{2,4}\s?cal/gi) || []).length;
+      const dishWords = (t) => (t.match(/smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|protein|oz\b/gi) || []).length;
+      const good = sections.filter((sec) => priceCal(sec) >= 2 || dishWords(sec) >= 10);
       if (good.length) {
         const joined = good.join("\n\n").slice(0, 8000);
         return res.json({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
