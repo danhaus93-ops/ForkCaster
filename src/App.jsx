@@ -234,7 +234,12 @@ export default function App() {
     if (lastQ.current && distMi(lastQ.current.lat, lastQ.current.lng, geo.lat, geo.lng) < 0.15) return;
     lastQ.current = { lat: geo.lat, lng: geo.lng };
     fetch(`/api/nearby?lat=${geo.lat}&lng=${geo.lng}`).then((r) => r.json()).then((j) => {
-      if (j && j.venues && j.venues.length) { setVenues(j.venues); rankVenues(j.venues); }
+      if (!j) return;
+      if (j.live) {
+        setVenues(j.venues || []);
+        if (j.venues && j.venues.length) rankVenues(j.venues); else setRankState("idle");
+      }
+      // no Places key (live:false): keep the labeled demo set
     }).catch(() => {});
   }, [geo.status, geo.lat, geo.lng]);
 
@@ -572,6 +577,12 @@ export default function App() {
           <MapView C={C} geo={geo} restaurants={venues.slice(0, 12)} onPin={orderForMe} scoreColor={scoreColor} onSearchArea={(la, ln) => setGeo({ status: "ok", lat: la, lng: ln, manual: true })} />
         </div>
 
+        {geo.status === "ok" && venues.length === 0 && (
+          <div style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, padding: "22px 18px", textAlign: "center", marginBottom: 6 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>No food spots near you</div>
+            <div style={{ fontSize: 12.5, color: C.muted, marginTop: 5, lineHeight: 1.5 }}>Nothing within ~2 miles of this point. Keep driving, or drag the map ahead and tap "Search this area" to scout your route.</div>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 12, overflowX: "auto", margin: "0 -18px", padding: "0 18px 6px" }}>
           {venues.map((r, i) => {
             const active = selected === r.id; const sc = scoreColor(r.score);
@@ -580,6 +591,7 @@ export default function App() {
                 <div style={{ height: 100, position: "relative", overflow: "hidden" }}>
                   <FoodImg photo={PHOTOS[r.id] || r.photo} kind={FOOD_BY_ID[r.id] || "burger"} sc={sc} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 55%)" }} />
+                  {r.menu && <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(200,140,20,0.95)", color: "#1a1200", borderRadius: 20, padding: "3px 9px", fontSize: 9, fontWeight: 800, letterSpacing: 0.5 }}>DEMO</div>}
                   <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.95)", borderRadius: 20, padding: "3px 9px", display: "flex", alignItems: "center", gap: 3, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
                     <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 13, color: r.match != null ? scoreColor(r.match / 20) : sc }}>{r.match != null ? r.match : r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
                     <span style={{ fontSize: 9, fontWeight: 700, color: r.match != null ? scoreColor(r.match / 20) : sc, textTransform: "uppercase" }}>{r.match != null || r.menu ? "match" : "★"}</span>
@@ -1237,7 +1249,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
     <div style={{ position: "relative", height: 280, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.hair}`, isolation: "isolate", zIndex: 0 }}>
       <div ref={ref} style={{ position: "absolute", inset: 0, background: S.dark ? "#11181f" : "#e8ecef" }} />
       <div style={{ position: "absolute", top: 10, left: 10, zIndex: 800, background: pillBg, borderRadius: 20, padding: "4px 11px", fontSize: 11, fontWeight: 600, color: pillInk, display: "flex", gap: 5, alignItems: "center", pointerEvents: "none" }}>
-        <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length} spots${geo.live && geo.ts ? ` · fix ${Math.max(0, Math.round((Date.now() - geo.ts) / 1000))}s ago` : geo.manual ? " · pinned" : ""}` : "Demo area"}
+        <span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length === 0 ? "No spots here" : `${restaurants.length} spots`}${geo.live && geo.ts ? ` · fix ${Math.max(0, Math.round((Date.now() - geo.ts) / 1000))}s ago` : geo.manual ? " · pinned" : ""}` : "Demo area"}
       </div>
       <div style={{ position: "absolute", top: 10, right: 10, zIndex: 800, display: "flex", gap: 4, background: pillBg, borderRadius: 20, padding: 3 }}>
         {["auto", "day", "night", "sat"].map((k) => (

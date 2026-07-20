@@ -167,7 +167,7 @@ app.get("/api/food/:barcode", async (req, res) => {
 /* ── Nearby restaurants via Google Places (optional; demo list if no key) ── */
 app.get("/api/nearby", async (req, res) => {
   const PLACES_KEY = key("GOOGLE_PLACES_KEY");
-  if (!PLACES_KEY) return res.json({ venues: [] }); // client keeps its demo set
+  if (!PLACES_KEY) return res.json({ venues: [], live: false }); // no key: client keeps labeled demo set
   try {
     const { lat, lng } = req.query;
     const r = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
@@ -197,8 +197,8 @@ app.get("/api/nearby", async (req, res) => {
       photo: p.photos && p.photos[0] ? `/api/vphoto?name=${encodeURIComponent(p.photos[0].name)}` : null,
       menu: null, // Places has no menus; the AI proposes realistic goal-fit orders
     }));
-    res.json({ venues });
-  } catch (e) { res.json({ venues: [], error: String(e) }); }
+    res.json({ venues, live: true });
+  } catch (e) { res.json({ venues: [], live: false, error: String(e) }); }
 });
 
 /* ── venue photo proxy (keeps the Places key server-side) ── */
