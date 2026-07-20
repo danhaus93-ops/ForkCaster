@@ -483,7 +483,6 @@ export default function App() {
   }
 
   const lastRank = useRef({ key: "", at: 0 });
-  const [savedRank, setSavedRank] = useState(null); // { key, at, arr } persisted — scores survive reopen
   function applyRank(vsList, arr) {
     setVenues((cur) => cur
       .map((v) => { const m = Array.isArray(arr) ? arr.find((x) => x.id === v.id) : null; return m && Number.isFinite(+m.match) ? { ...v, match: Math.max(0, Math.min(100, Math.round(+m.match))), why: m.why } : v; })
@@ -592,6 +591,7 @@ export default function App() {
     }
   }
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
+  const [savedRank, setSavedRank] = useState(null); // persisted rank cache
   const [doseLogged, setDoseLogged] = useState(false);
   const [presetSaved, setPresetSaved] = useState(false);
   function logInjection() {

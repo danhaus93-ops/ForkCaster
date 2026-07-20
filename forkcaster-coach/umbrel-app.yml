@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.22"
+version: "0.2.23"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,8 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.22: health scores now refresh on meal cadence - 4-hour cache by default
-  (was 6), adjustable in Preferences under AI as Score refresh hours.
+  v0.2.23 HOTFIX: fixes a crash on load introduced in v0.2.21/22 - the
+  persisted score cache was declared after code that referenced it.
 dependencies: []
 path: ""
 defaultUsername: ""
