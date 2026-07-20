@@ -92,7 +92,7 @@ app.post("/api/ai", async (req, res) => {
     const content = image
       ? [{ type: "image", source: { type: "base64", media_type: image.media_type || "image/jpeg", data: image.data } }, { type: "text", text: prompt }]
       : prompt;
-    const body = { model: (["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"].includes(req.body && req.body.model) ? req.body.model : "claude-sonnet-4-6"), max_tokens: Math.max(256, Math.min(3000, parseInt(req.body && req.body.max_tokens) || 1000)), messages: [{ role: "user", content }] };
+    const body = { model: (["claude-fable-5", "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"].includes(req.body && req.body.model) ? req.body.model : "claude-sonnet-4-6"), max_tokens: Math.max(256, Math.min(3000, parseInt(req.body && req.body.max_tokens) || 1000)), messages: [{ role: "user", content }] };
     if (system) body.system = system;
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

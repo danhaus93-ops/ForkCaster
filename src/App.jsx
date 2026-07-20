@@ -1313,7 +1313,7 @@ export default function App() {
                       {row("Default zoom", num(P.mapZoom, set("mapZoom")))}
                       {row("Re-search after moving (mi)", num(P.requeryMi, set("requeryMi"), 64, 0.05))}
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "14px 0 2px" }}>AI</div>
-                      {row("Model", sel(P.aiModel, [["claude-opus-4-8", "Opus (max accuracy)"], ["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
+                      {row("Model", sel(P.aiModel, [["claude-fable-5", "Fable 5 (most capable)"], ["claude-opus-4-8", "Opus (max accuracy)"], ["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
                       {row("Coach style", sel(P.coachStyle, [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"], ["tough-love", "Tough love"]], set("coachStyle")))}
                       {row("Score refresh (hours)", num(P.rankCacheHours, set("rankCacheHours"), 64, 0.5))}
                       <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
