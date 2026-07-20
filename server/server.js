@@ -369,27 +369,42 @@ app.get("/api/menu", async (req, res) => {
       const t = await pdfText(a.pdf);
       if (t.length > 300) return res.json({ ok: true, method: "pdf", source: a.url, text: t.slice(0, 6000) });
     }
-    let bestText = "", bestSrc = url, pdfLink = null;
+    let bestText = "", bestSrc = url;
     if (a && a.html) {
       bestText = stripHtml(a.html);
-      const linkRe = /href=["']([^"']+)["'][^>]*>([^<]{0,60})/gi; let m;
+      // gather ALL menu-ish links, score them against the user's goal, fetch the top few
+      const goal = String(req.query.goal || "").toLowerCase();
+      const goalWords = goal.includes("glp") ? ["glp"] : goal.includes("gain") ? ["protein", "bowl"] : ["protein", "light", "fit", "under"];
+      const linkScore = (href, label) => {
+        const t = (href + " " + label).toLowerCase(); let sc = 0;
+        if (/menu|nutrition/.test(t)) sc += 10;
+        for (const w of goalWords) if (t.includes(w)) sc += 50;
+        if (/smoothie|bowl|salad|grill|food/.test(t)) sc += 5;
+        if (/\.pdf(\?|$)/i.test(href)) sc += 6;
+        return sc;
+      };
+      const cands = new Map();
+      const linkRe = /href=["']([^"']+)["'][^>]*>([^<]{0,80})/gi; let m;
       while ((m = linkRe.exec(a.html))) {
-        const href = m[1], label = (m[2] || "").toLowerCase();
-        if (/menu/i.test(href) || /menu/.test(label)) {
-          try {
-            const abs = new URL(href, a.url).href;
-            if (!urlAllowed(abs)) continue;
-            if (/\.pdf(\?|$)/i.test(abs)) { pdfLink = abs; break; }
-            const b = await fetchAny(abs);
-            if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: abs, text: t.slice(0, 6000) }); }
-            if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > bestText.length) { bestText = mt; bestSrc = abs; } }
-            break;
-          } catch {}
-        }
+        try {
+          const abs = new URL(m[1], a.url).href;
+          if (!urlAllowed(abs) || abs === a.url) continue;
+          const sc = linkScore(m[1], m[2] || "");
+          if (sc >= 10) cands.set(abs, Math.max(cands.get(abs) || 0, sc));
+        } catch {}
       }
-      if (pdfLink) {
-        const b = await fetchAny(pdfLink);
-        if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: pdfLink, text: t.slice(0, 6000) }); }
+      const top = [...cands.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3);
+      const sections = []; let anyPdf = false;
+      for (const [link] of top) {
+        try {
+          const b = await fetchAny(link);
+          if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) { sections.push(`--- ${link} ---\n` + t.slice(0, 3000)); anyPdf = true; } }
+          else if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > 300) { sections.push(`--- ${link} ---\n` + mt.slice(0, 3000)); } }
+        } catch {}
+      }
+      if (sections.length) {
+        const joined = sections.join("\n\n").slice(0, 7500);
+        return res.json({ ok: true, method: anyPdf && sections.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
       }
       if (bestText.length > 700) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     }

@@ -490,7 +490,7 @@ export default function App() {
       .sort((a, b) => (b.match ?? -1) - (a.match ?? -1)));
   }
   async function rankVenues(vs) {
-    const key = vs.map((v) => v.id).sort().join(",");
+    const key = vs.map((v) => v.id).sort().join(",") + `|${mode}|${targets.protein}|${targets.calories}`;
     const now = Date.now();
     if (savedRank && savedRank.key === key && now - savedRank.at < (prefs.rankCacheHours || 4) * 3600000) {
       applyRank(vs, savedRank.arr); setRankState("ranked"); return; // reuse persisted scores: stable + free
@@ -529,7 +529,7 @@ export default function App() {
     let liveMenu = null;
     if (!r.menu && r.website) {
       try {
-        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}`, { signal: AbortSignal.timeout(9000) });
+        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}`, { signal: AbortSignal.timeout(14000) });
         const mj = await mres.json();
         if (mj && mj.ok && mj.text) liveMenu = mj;
       } catch {}
