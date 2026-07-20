@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 
 /* ══════════════════════════════════════════════════════════════════
    RIGHTNOW — context-aware nutrition coach (extreme prototype)
@@ -189,6 +190,32 @@ export default function App() {
   // food logging / barcode scan
   const [logOpen, setLogOpen] = useState(false);
   const [barcode, setBarcode] = useState("");
+  const [camOn, setCamOn] = useState(false);
+  const [camErr, setCamErr] = useState("");
+  const camVideoRef = useRef(null);
+  const camControlsRef = useRef(null);
+  async function startCam() {
+    setCamErr("");
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) { setCamErr("Camera needs HTTPS — open ForkCaster from your ts.net URL."); return; }
+    setCamOn(true);
+    try {
+      const reader = new BrowserMultiFormatReader();
+      camControlsRef.current = await reader.decodeFromVideoDevice(undefined, camVideoRef.current, (result, _err, controls) => {
+        if (result) {
+          try { controls.stop(); } catch {}
+          setCamOn(false);
+          const code = result.getText();
+          setBarcode(code);
+          lookupBarcode(code);
+          if (navigator.vibrate) navigator.vibrate(60);
+        }
+      });
+    } catch (e) {
+      setCamOn(false);
+      setCamErr(e && e.name === "NotAllowedError" ? "Camera permission denied — allow it in iOS Settings for ForkCaster." : `Camera failed: ${(e && e.message) || e}`);
+    }
+  }
+  function stopCam() { try { camControlsRef.current && camControlsRef.current.stop(); } catch {} setCamOn(false); }
   const [scan, setScan] = useState({ status: "idle" }); // idle|loading|found|miss|error + food
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t); }, []);
@@ -208,7 +235,8 @@ export default function App() {
     fetch("/api/state").then((r) => r.json()).then((s) => {
       if (s && s.saved) {
         if (s.theme) setTheme(s.theme); if (s.mode) { setMode(s.mode); }
-        if (s.targets) setTargets(s.targets); if (s.eaten) setEaten(s.eaten);
+        if (s.targets) setTargets(s.targets);
+        if (s.eaten) setEaten(s.eatenDate === todayISO() ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp(s.glp);
@@ -220,7 +248,7 @@ export default function App() {
   }, []);
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: todayISO(), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -957,14 +985,27 @@ export default function App() {
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px 28px", maxHeight: "82vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>Scan or log food</div>
-                <button onClick={() => setLogOpen(false)} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 99, color: C.muted, fontSize: 15, cursor: "pointer" }}>✕</button>
+                <button onClick={() => { stopCam(); setLogOpen(false); }} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 99, color: C.muted, fontSize: 15, cursor: "pointer" }}>✕</button>
               </div>
 
-              {/* camera viewport (stub) */}
-              <div style={{ borderRadius: 14, border: `1.5px dashed ${C.faint}`, background: C.surfaceAlt, padding: "26px 16px", textAlign: "center", marginBottom: 14 }}>
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 8px" }}><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" /></svg>
-                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.45 }}>Camera scanning lands in v0.2.<br />Type or paste a barcode for a <b style={{ color: C.ink }}>real</b> Open Food Facts lookup.</div>
-              </div>
+              {/* live camera scanner */}
+              {camOn ? (
+                <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", marginBottom: 14, background: "#000" }}>
+                  <video ref={camVideoRef} autoPlay playsInline muted style={{ width: "100%", height: 240, objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                    <div style={{ width: "72%", height: 90, border: "2.5px solid rgba(99,212,140,0.95)", borderRadius: 12, boxShadow: "0 0 0 2000px rgba(0,0,0,0.35)" }} />
+                  </div>
+                  <button onClick={stopCam} style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: 20, padding: "6px 13px", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>Stop</button>
+                  <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 600, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>Center the barcode in the box</div>
+                </div>
+              ) : (
+                <button onClick={startCam} style={{ width: "100%", borderRadius: 14, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "22px 16px", textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 8px", display: "block" }}><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.go} strokeWidth="1.8" strokeLinecap="round" /></svg>
+                  <div style={{ fontFamily: BODY, fontSize: 14.5, fontWeight: 700, color: C.go }}>Scan with camera</div>
+                  <div style={{ fontFamily: BODY, fontSize: 11.5, color: C.muted, marginTop: 3 }}>Point at any food barcode — or type it below</div>
+                </button>
+              )}
+              {camErr && <div style={{ fontSize: 12, color: C.avoid, marginTop: -6, marginBottom: 10 }}>{camErr}</div>}
 
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                 <input value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") lookupBarcode(barcode); }} placeholder="Barcode number" inputMode="numeric"
@@ -1000,7 +1041,7 @@ export default function App() {
                   <button onClick={addLoggedFood} style={{ width: "100%", marginTop: 12, background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>Add to today →</button>
                 </div>
               )}
-              {scan.status === "miss" && <div style={{ fontSize: 13, color: C.muted, padding: "4px 2px" }}>No match in Open Food Facts for that barcode. Real app falls back to USDA / FatSecret, then AI photo estimate.</div>}
+              {scan.status === "miss" && <div style={{ fontSize: 13, color: C.muted, padding: "4px 2px" }}>Not found in Open Food Facts or USDA. Try another barcode, or use the AI photo estimate below.</div>}
               {scan.status === "error" && <div style={{ fontSize: 13, color: C.avoid, padding: "4px 2px" }}>Lookup failed — barcode not found or the node couldn't reach Open Food Facts.</div>}
             </div>
           </div>
