@@ -170,6 +170,7 @@ const DEFAULT_PREFS = {
   paceLbPerWeek: 1.5,       // target loss pace
   aiModel: "claude-sonnet-4-6", // or claude-haiku-4-5-20251001 (cheaper)
   rankCacheHours: 4,        // health scores refresh on roughly meal cadence
+  sitePerCycle: 1,          // injections allowed per site before rotation completes
   coachStyle: "balanced",   // concise | balanced | detailed | tough-love
   customTargets: null,      // saved personal macro preset
 };
@@ -1161,24 +1162,7 @@ export default function App() {
         </div>
       </>)}</div>
       <div style={{ marginBottom: 14 }}>{card(<>
-        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Injection site — rotate{pendingSite ? <span style={{ textTransform: "none", color: C.violet }}> · next dose: {pendingSite}</span> : null}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"].map((z) => {
-            const uses = (glp.doseLog || []).filter((d) => d.site === z);
-            const lastUse = uses.length ? uses.map((d) => d.date).sort().slice(-1)[0] : null;
-            const days = lastUse ? Math.floor((Date.now() - new Date(lastUse + "T12:00:00")) / 86400000) : null;
-            const allDays = ["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"].map((zz) => { const u = (glp.doseLog || []).filter((d) => d.site === zz); return u.length ? Math.floor((Date.now() - new Date(u.map((d) => d.date).sort().slice(-1)[0] + "T12:00:00")) / 86400000) : 9999; });
-            const rec = (days == null ? 9999 : days) === Math.max(...allDays) && !pendingSite;
-            const sel = pendingSite === z;
-            return (
-              <button key={z} onClick={() => setPendingSite(sel ? null : z)} style={{ padding: "10px 8px", borderRadius: 11, border: sel ? "none" : `1.5px solid ${rec ? C.go : C.hair}`, background: sel ? C.violet : "transparent", color: sel ? "#fff" : C.ink2, fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
-                {z}{rec && !sel ? <span style={{ color: C.go, fontSize: 10, fontWeight: 800 }}> · suggested</span> : null}
-                <div style={{ fontSize: 10, fontWeight: 500, color: sel ? "rgba(255,255,255,0.8)" : C.faint }}>{days == null ? "never used" : days === 0 ? "used today" : `${days}d ago`}</div>
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ fontSize: 10, color: C.faint, marginTop: 8 }}>Pick a site before tapping Log dose — it saves with the dose and the grid tracks rotation.</div>
+        <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>)}</div>
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} />)}</div>}
@@ -1507,6 +1491,7 @@ export default function App() {
                       {row("Model", sel(P.aiModel, [["claude-fable-5", "Fable 5 (most capable)"], ["claude-opus-4-8", "Opus (max accuracy)"], ["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
                       {row("Coach style", sel(P.coachStyle, [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"], ["tough-love", "Tough love"]], set("coachStyle")))}
                       {row("Score refresh (hours)", num(P.rankCacheHours, set("rankCacheHours"), 64, 0.5))}
+                      {row("Injections per site per cycle", num(P.sitePerCycle || 1, set("sitePerCycle"), 4, 1))}
                       <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
                     </div>
                   );
@@ -1587,6 +1572,98 @@ function MedLevelChart({ C, doseLog, med }) {
   );
 }
 /* Month calendar for dose adherence: syringe on logged days, DUE ring on the scheduled day */
+/* Adaptive injection-site avatar (violet-edge capsule style). Sites keep legacy names. */
+const SITE_NAMES = ["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"];
+function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite }) {
+  const F = sex === "female";
+  const g = Math.max(0, Math.min(1, ((bmi || 30) - 22) / 18));
+  const lp = (a, b) => a + (b - a) * g;
+  const CX = 60;
+  const sh = lp(F ? 15.5 : 18.5, F ? 21.5 : 25.5);
+  const waist = lp(F ? 10 : 12.5, F ? 22.5 : 26.5);
+  const wy = lp(78, 84);
+  const hip = lp(F ? 16.5 : 14, F ? 24.5 : 23);
+  const armW = lp(6.2, 9.2); // beefed up per feedback
+  const thW = lp(7.6, 11.5);
+  const HIPY = 104, TT = 108, TE = 150, NAVY = 90;
+  const fillB = C.dark ? "#2A3542" : "#DFE6ED";
+  const edge = C.violet, sw = 1.8;
+  const R = (dx, y) => `${(CX + dx).toFixed(1)} ${y}`;
+  const L = (dx, y) => `${(CX - dx).toFixed(1)} ${y}`;
+  const torso = ["M " + L(5.5, 41),
+    "C " + L(sh * 0.75, 41.5) + " " + L(sh, 45) + " " + L(sh, 50),
+    "C " + L(sh, 58) + " " + L(waist + 0.5, wy - 8) + " " + L(waist, wy),
+    "C " + L(waist + 0.4 + 2.2 * g, wy + 7) + " " + L(hip, HIPY - 8) + " " + L(hip, HIPY - 2),
+    "C " + L(hip, HIPY + 3) + " " + L(hip - 3, HIPY + 6) + " " + L(hip - 6, HIPY + 6),
+    "L " + R(hip - 6, HIPY + 6),
+    "C " + R(hip - 3, HIPY + 6) + " " + R(hip, HIPY + 3) + " " + R(hip, HIPY - 2),
+    "C " + R(hip, HIPY - 8) + " " + R(waist + 0.4 + 2.2 * g, wy + 7) + " " + R(waist, wy),
+    "C " + R(waist + 0.5, wy - 8) + " " + R(sh, 58) + " " + R(sh, 50),
+    "C " + R(sh, 45) + " " + R(sh * 0.75, 41.5) + " " + R(5.5, 41), "Z"].join(" ");
+  const arm = (s) => {
+    const P = (dx, y) => `${(CX + s * dx).toFixed(1)} ${y}`;
+    const ax0 = sh - 1, ay0 = 44, ax1 = sh + lp(7, 10), ay1 = 92;
+    return ["M " + P(ax0 - armW * 0.4, ay0),
+      "C " + P(ax0 + armW * 0.9, ay0 + 2) + " " + P(ax1 + armW * 0.5, ay1 - 24) + " " + P(ax1 + armW * 0.45, ay1 - 6),
+      `A ${(armW * 0.95).toFixed(1)} ${(armW * 0.95).toFixed(1)} 0 0 ${s === 1 ? 0 : 1} ` + P(ax1 - armW * 0.45, ay1 - 4),
+      "C " + P(ax1 - armW * 0.5, ay1 - 22) + " " + P(ax0 - armW * 0.6, ay0 + 8) + " " + P(ax0 - armW * 0.4, ay0), "Z"].join(" ");
+  };
+  // rotation cycle math: pure derivation from sited doses
+  const sited = (doseLog || []).filter((d) => d.site).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+  const cyc = SITE_NAMES.length * perSite;
+  const rem = sited.length % cyc;
+  const cur = rem === 0 ? [] : sited.slice(-rem);
+  const used = {}; SITE_NAMES.forEach((z) => { used[z] = cur.filter((d) => d.site === z).length; });
+  const daysSince = (z) => { const u = (doseLog || []).filter((d) => d.site === z); if (!u.length) return 9999; return Math.floor((Date.now() - new Date(u.map((d) => d.date).sort().slice(-1)[0] + "T12:00:00")) / 86400000); };
+  const avail = SITE_NAMES.filter((z) => used[z] < perSite);
+  const suggested = avail.length ? avail.reduce((a, b) => (daysSince(b) > daysSince(a) ? b : a)) : null;
+  const belly = waist * 0.5 + 1.5 * g;
+  const pos = {
+    "Arm L": [-(sh + lp(7, 10)), 68], "Arm R": [sh + lp(7, 10), 68],
+    "Abdomen L": [-belly * 0.8, NAVY + 5], "Abdomen R": [belly * 0.8, NAVY + 5],
+    "Thigh L": [-(thW + 2.5), 128], "Thigh R": [thW + 2.5, 128],
+  };
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
+        Injection site — rotate{pendingSite ? <span style={{ textTransform: "none", color: C.violet }}> · next dose: {pendingSite}{pendingSite.startsWith("Arm") ? " (back of arm)" : ""}</span> : null}
+      </div>
+      <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 6 }}>Cycle {sited.length ? rem === 0 ? cyc : rem : 0}/{cyc} · {perSite} per site · resets when every site is used</div>
+      <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: 240, margin: "0 auto" }}>
+        <defs>
+          <linearGradient id="siteFadeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
+          <mask id="siteFadeM"><rect x="0" y="0" width="120" height="160" fill="url(#siteFadeG)" /></mask>
+        </defs>
+        {[1, -1].map((s) => (
+          <rect key={"t" + s} x={CX + s * (thW + 2.5) - thW} y={TT} width={thW * 2} height={TE - TT} rx={thW} fill={fillB} stroke={edge} strokeWidth={sw} mask="url(#siteFadeM)" />
+        ))}
+        <path d={torso} fill={fillB} stroke={edge} strokeWidth={sw} strokeLinejoin="round" />
+        {F && <path d={`M ${L(3, 58)} C ${L(9, 62)} ${L(sh - 3, 62)} ${L(sh - 1.5, 57)} M ${R(3, 58)} C ${R(9, 62)} ${R(sh - 3, 62)} ${R(sh - 1.5, 57)}`} stroke={edge} strokeWidth="1.1" fill="none" opacity="0.7" />}
+        <path d={arm(1)} fill={fillB} stroke={edge} strokeWidth={sw} strokeLinejoin="round" />
+        <path d={arm(-1)} fill={fillB} stroke={edge} strokeWidth={sw} strokeLinejoin="round" />
+        <path d={`M ${L(4.5, 32)} C ${L(4.5, 36)} ${L(5, 38)} ${L(5.5, 40)} L ${R(5.5, 40)} C ${R(5, 38)} ${R(4.5, 36)} ${R(4.5, 32)} Z`} fill={fillB} stroke={edge} strokeWidth={sw} />
+        <circle cx="60" cy="21" r="11" fill={fillB} stroke={edge} strokeWidth={sw} />
+        <circle cx="60" cy={NAVY} r="1.3" fill={edge} opacity="0.7" />
+        {SITE_NAMES.map((z) => {
+          const [dx, y] = pos[z]; const x = 60 + dx;
+          const full = used[z] >= perSite, sel = pendingSite === z, sug = suggested === z && !pendingSite;
+          const col = sel ? C.violet : full ? "#4A5560" : sug ? C.go : C.muted;
+          return (
+            <g key={z} onClick={() => { if (!full) setPendingSite(sel ? null : z); }} style={{ cursor: full ? "default" : "pointer" }}>
+              {sug && <circle cx={x} cy={y} r="9.5" fill="none" stroke={C.go} strokeWidth="1.6" opacity="0.55" />}
+              <circle cx={x} cy={y} r="8.5" fill="transparent" />
+              <circle cx={x} cy={y} r="5.6" fill={sel || full ? col : "none"} stroke={col} strokeWidth="2.2" />
+              {Array.from({ length: Math.min(perSite, 4) }).map((_, i) => (
+                <circle key={i} cx={x - (Math.min(perSite, 4) - 1) * 3 + i * 6} cy={y + 11} r="1.7" fill={i < used[z] ? C.violet : "none"} stroke={C.violet} strokeWidth="0.9" opacity="0.9" />
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>Arm dots mean the <b>back</b> of the upper arm (shown front-view). Tap a site, then Log dose — it saves with the dose. Faded sites are used up this cycle.</div>
+    </div>
+  );
+}
 function DoseCalendar({ C, doseLog, dueISO, onRemove }) {
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const todayIso = new Date().toLocaleDateString("sv-SE");
