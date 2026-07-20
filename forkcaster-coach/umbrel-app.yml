@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.11"
+version: "0.2.12"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.11: direct access port 3451 bypasses the Umbrel auth proxy for the
-  Tailscale/PWA path, so a rotated dashboard session can never silently break
-  API calls again. Network error copy now says what actually happened.
+  v0.2.12: photo plate estimates work on iPhone - photos are now re-encoded
+  on-device to compact JPEG before upload (iPhones shoot HEIC and oversized
+  images, both rejected by the vision API, so plate estimates always failed).
 dependencies: []
 path: ""
 defaultUsername: ""

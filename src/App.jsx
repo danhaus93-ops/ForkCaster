@@ -592,14 +592,22 @@ export default function App() {
     } catch { setScan({ status: "failed" }); }
   }
 
+  async function shrinkToJpeg(file, maxDim = 1280, q = 0.82) {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", q).split(",")[1]; // always JPEG, well under API limits
+  }
   async function estimateFromPhoto(e) {
     const file = (e.target.files || [])[0]; if (!file) return;
     setScan({ status: "loading" });
     try {
-      const b64 = await toBase64(file);
+      const b64 = await shrinkToJpeg(file);
       const prompt = "Identify the food in this photo and estimate the macros for the full portion shown. " +
         "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"calories\":<int>,\"protein\":<int>,\"carbs\":<int>,\"fat\":<int>,\"fiber\":<int>}. Best estimate if unsure.";
-      const text = await callClaude(prompt, null, { data: b64, media_type: file.type || "image/jpeg" });
+      const text = await callClaude(prompt, null, { data: b64, media_type: "image/jpeg" });
       const f = JSON.parse(text.replace(/```json|```/g, "").trim());
       setScan({ status: "found", src: "AI photo estimate", food: {
         name: f.name || "Photo estimate", brand: "", basis: "portion shown",
