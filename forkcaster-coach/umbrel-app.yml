@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.6"
+version: "0.2.7"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.6: image slimmed by roughly 700MB - the runtime now installs only the
-  three packages the server actually uses instead of the whole build tree,
-  fixing push failures (unknown blob) caused by marathon uploads outliving
-  the registry auth token. Same dose-calendar features as v0.2.5.
+  v0.2.7: images now serve from a local registry on the node itself - build
+  and push complete in seconds on-device, eliminating the GHCR upload failures
+  (unknown blob) caused by the 700MB Chromium layer outliving upload sessions.
+  Same features as v0.2.5/0.2.6.
 dependencies: []
 path: ""
 defaultUsername: ""
