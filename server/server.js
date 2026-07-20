@@ -473,6 +473,109 @@ app.get("/api/vphoto", async (req, res) => {
   } catch { res.status(502).end(); }
 });
 
+/* ── web push: self-hosted dose-day reminders ── */
+const webpush = require("web-push");
+const PUSH_FILE = path.join(DATA_DIR, "push.json");
+function pushStore() { try { return JSON.parse(fs.readFileSync(PUSH_FILE, "utf8")); } catch { return {}; } }
+function savePushStore(o) { fs.writeFileSync(PUSH_FILE, JSON.stringify(o)); }
+function vapid() {
+  const st = pushStore();
+  if (!st.vapid) { st.vapid = webpush.generateVAPIDKeys(); savePushStore(st); }
+  webpush.setVapidDetails("mailto:forkcaster@selfhosted.local", st.vapid.publicKey, st.vapid.privateKey);
+  return st.vapid;
+}
+app.get("/api/push/pubkey", (_req, res) => res.json({ key: vapid().publicKey }));
+app.post("/api/push/subscribe", (req, res) => {
+  const st = pushStore(); vapid();
+  st.sub = req.body && req.body.subscription ? req.body.subscription : null;
+  savePushStore(st); res.json({ ok: !!st.sub });
+});
+app.delete("/api/push/subscribe", (_req, res) => { const st = pushStore(); delete st.sub; savePushStore(st); res.json({ ok: true }); });
+
+const SITE_NAMES_SRV = ["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"];
+function suggestedSite(glp, perSite) {
+  const sited = ((glp && glp.doseLog) || []).filter((d) => d.site).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const used = {}; SITE_NAMES_SRV.forEach((z) => (used[z] = 0));
+  const full = () => SITE_NAMES_SRV.every((z) => used[z] >= perSite);
+  const reset = () => SITE_NAMES_SRV.forEach((z) => (used[z] = 0));
+  for (const d of sited) { if (full()) reset(); if (!(d.site in used)) continue; if (used[d.site] >= perSite) reset(); used[d.site] += 1; }
+  if (full()) reset();
+  const avail = SITE_NAMES_SRV.filter((z) => used[z] < perSite);
+  const days = (z) => { const u = sited.filter((d) => d.site === z); return u.length ? (Date.now() - new Date(u[u.length - 1].date + "T12:00:00")) / 86400000 : 9999; };
+  return avail.length ? avail.reduce((a, b) => (days(b) > days(a) ? b : a)) : SITE_NAMES_SRV[0];
+}
+async function doseReminderTick() {
+  try {
+    const st = pushStore();
+    if (!st.sub) return;
+    const state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    const glp = state.glp || {}; const prefs = state.prefs || {};
+    if (!glp.lastInjection) return;
+    const hour = Math.max(0, Math.min(23, parseInt(prefs.reminderHour) || 9));
+    const now = new Date();
+    if (now.getHours() !== hour) return;
+    const due = new Date(glp.lastInjection + "T00:00:00"); due.setDate(due.getDate() + 7);
+    const todayISO = now.toISOString().slice(0, 10);
+    if (todayISO < due.toISOString().slice(0, 10)) return;
+    if (st.lastSent === todayISO) return;
+    vapid();
+    const site = suggestedSite(glp, Math.max(1, Math.min(4, parseInt(prefs.sitePerCycle) || 1)));
+    const medName = glp.med ? glp.med.charAt(0).toUpperCase() + glp.med.slice(1) : "your GLP-1";
+    await webpush.sendNotification(st.sub, JSON.stringify({ title: "\uD83D\uDC89 Dose day", body: `Time for ${medName} \u2014 suggested site: ${site} (back of arm sites)` }));
+    st.lastSent = todayISO; savePushStore(st);
+  } catch (e) { if (e && e.statusCode === 410) { const st = pushStore(); delete st.sub; savePushStore(st); } }
+}
+setInterval(doseReminderTick, 10 * 60 * 1000);
+
+/* ── PDF report: rendered by the bundled Chromium ── */
+app.post("/api/report/pdf", async (req, res) => {
+  try {
+    const st = req.body || {};
+    const glp = st.glp || {}; const wl = st.weightLog || []; const ml = st.mealLog || []; const se = (glp.sideEffects || []);
+    const esc = (x) => String(x == null ? "" : x).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+    const fmtD = (d) => { try { return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); } catch { return d; } };
+    const doses = (glp.doseLog || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
+    const doseRows = doses.map((d) => `<tr><td>${fmtD(d.date)}</td><td>${esc(d.mg)} mg</td><td>${esc(d.site || "\u2014")}</td></tr>`).join("");
+    const wRows = wl.slice(-20).reverse().map((w) => `<tr><td>${fmtD(w.date)}</td><td>${(+w.lbs).toFixed(1)} lb</td></tr>`).join("");
+    const seRows = se.slice().reverse().map((x) => `<tr><td>${fmtD(x.date)}</td><td>${esc(x.symptom)}</td><td>${["Mild","Moderate","Severe"][x.severity - 1] || ""}</td></tr>`).join("");
+    const byDay = {}; ml.forEach((m) => { byDay[m.date] = byDay[m.date] || { p: 0, c: 0 }; byDay[m.date].p += m.protein || 0; byDay[m.date].c += m.calories || 0; });
+    const mealRows = Object.keys(byDay).sort().slice(-14).reverse().map((d) => `<tr><td>${fmtD(d)}</td><td>${byDay[d].p} g</td><td>${byDay[d].c}</td></tr>`).join("");
+    const first = wl[0], last = wl[wl.length - 1];
+    const delta = first && last ? (last.lbs - first.lbs).toFixed(1) : null;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+      body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1a2430;margin:36px 44px;font-size:12px}
+      h1{font-size:20px;margin:0}.sub{color:#5a6a7a;font-size:11px;margin-top:2px}
+      h2{font-size:13px;border-bottom:1.5px solid #2f9e63;padding-bottom:4px;margin:22px 0 8px;color:#1f7a4d}
+      table{width:100%;border-collapse:collapse}td,th{padding:5px 8px;border-bottom:1px solid #e3e8ee;text-align:left;font-size:11.5px}
+      th{color:#5a6a7a;font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.4px}
+      .kpis{display:flex;gap:14px;margin-top:14px}.kpi{border:1px solid #dfe6ec;border-radius:10px;padding:10px 14px;flex:1}
+      .kpi b{font-size:16px;display:block}.kpi span{color:#5a6a7a;font-size:10px}
+      .foot{margin-top:26px;color:#8a97a4;font-size:9.5px}</style></head><body>
+      <h1>ForkCaster \u2014 Progress Report</h1>
+      <div class="sub">Generated ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} \u00b7 self-reported data \u00b7 for review with your care team</div>
+      <div class="kpis">
+        <div class="kpi"><b>${esc(glp.med ? glp.med : "\u2014")}</b><span>medication \u00b7 ${esc(glp.dose || "?")} mg weekly \u00b7 week ${esc(glp.weeksOn || "?")}</span></div>
+        <div class="kpi"><b>${doses.length}</b><span>doses logged</span></div>
+        <div class="kpi"><b>${delta != null ? (delta > 0 ? "+" : "") + delta + " lb" : "\u2014"}</b><span>weight change over log</span></div>
+      </div>
+      <h2>Dose history &amp; injection sites</h2><table><tr><th>Date</th><th>Dose</th><th>Site</th></tr>${doseRows || "<tr><td colspan=3>None logged</td></tr>"}</table>
+      <h2>Weight log</h2><table><tr><th>Date</th><th>Weight</th></tr>${wRows || "<tr><td colspan=2>None logged</td></tr>"}</table>
+      <h2>Side effects</h2><table><tr><th>Date</th><th>Symptom</th><th>Severity</th></tr>${seRows || "<tr><td colspan=3>None logged</td></tr>"}</table>
+      <h2>Daily nutrition (last 14 logged days)</h2><table><tr><th>Date</th><th>Protein</th><th>Calories</th></tr>${mealRows || "<tr><td colspan=3>None logged</td></tr>"}</table>
+      <div class="foot">Generated by ForkCaster, a self-hosted nutrition companion. Injection sites labeled Arm refer to the posterior (back) upper arm. This report is informational and not medical advice.</div>
+      </body></html>`;
+    const puppeteer = require("puppeteer-core");
+    const browser = await puppeteer.launch({ executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium-browser", args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "load" });
+    const pdf = await page.pdf({ format: "Letter", printBackground: true, margin: { top: "0.4in", bottom: "0.5in", left: "0.4in", right: "0.4in" } });
+    await browser.close();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="ForkCaster-report.pdf"');
+    res.send(Buffer.from(pdf));
+  } catch (e) { res.status(500).json({ error: String(e) }); }
+});
+
 /* ── static frontend ── */
 const DIST = path.join(__dirname, "..", "dist");
 app.use(express.static(DIST));

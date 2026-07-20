@@ -171,6 +171,7 @@ const DEFAULT_PREFS = {
   aiModel: "claude-sonnet-4-6", // or claude-haiku-4-5-20251001 (cheaper)
   rankCacheHours: 4,        // health scores refresh on roughly meal cadence
   sitePerCycle: 1,          // injections allowed per site before rotation completes
+  reminderHour: 9,          // hour of day for dose-day push reminders
   coachStyle: "balanced",   // concise | balanced | detailed | tough-love
   customTargets: null,      // saved personal macro preset
 };
@@ -714,6 +715,15 @@ export default function App() {
   const [foodQuery, setFoodQuery] = useState("");
   const [customAllergy, setCustomAllergy] = useState("");
   const [pendingSite, setPendingSite] = useState(null);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").then(async (reg) => {
+        try { const sub = await reg.pushManager.getSubscription(); setPushOn(!!sub); } catch {}
+      }).catch(() => {});
+    }
+  }, []);
   const [foodResults, setFoodResults] = useState(null);
   function logInjection() {
     setGlp((g) => {
@@ -724,6 +734,57 @@ export default function App() {
     setDoseLogged(true); setPendingSite(null); setTimeout(() => setDoseLogged(false), 2500);
   }
 
+  function b64ToU8(b64) {
+    const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+  async function togglePush() {
+    if (pushBusy) return; setPushBusy(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (pushOn) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+        await fetch("/api/push/subscribe", { method: "DELETE" });
+        setPushOn(false);
+      } else {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") { alert("Notifications are blocked. On iPhone, ForkCaster must be added to the Home Screen, then allow notifications."); setPushBusy(false); return; }
+        const { key: pub } = await (await fetch("/api/push/pubkey")).json();
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(pub) });
+        await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub }) });
+        setPushOn(true);
+      }
+    } catch (e) { alert("Push setup failed: " + (e && e.message ? e.message : e)); }
+    setPushBusy(false);
+  }
+  async function exportPDF() {
+    try {
+      const r = await fetch("/api/report/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob });
+      if (!r.ok) throw new Error("report failed");
+      const blob = await r.blob();
+      const file = new File([blob], "ForkCaster-report.pdf", { type: "application/pdf" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "ForkCaster report" }); return; }
+      const url = URL.createObjectURL(blob); const a = document.createElement("a");
+      a.href = url; a.download = "ForkCaster-report.pdf"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (e) { alert("PDF export failed: " + e.message); }
+  }
+  function exportJSON() {
+    const blob = new Blob([stateBlob], { type: "application/json" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = `forkcaster-backup-${todayISO()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  async function restoreJSON(file) {
+    try {
+      const text = await file.text(); const parsed = JSON.parse(text);
+      if (!parsed || parsed.saved !== true) throw new Error("not a ForkCaster backup");
+      if (!window.confirm("Replace ALL current data with this backup?")) return;
+      hydrated.current = false;
+      await fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: text });
+      window.location.reload();
+    } catch (e) { alert("Restore failed: " + e.message); }
+  }
   async function searchFood() {
     const q = foodQuery.trim(); if (!q) return;
     setFoodResults("loading");
@@ -1492,6 +1553,7 @@ export default function App() {
                       {row("Coach style", sel(P.coachStyle, [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"], ["tough-love", "Tough love"]], set("coachStyle")))}
                       {row("Score refresh (hours)", num(P.rankCacheHours, set("rankCacheHours"), 64, 0.5))}
                       {row("Injections per site per cycle", num(P.sitePerCycle || 1, set("sitePerCycle"), 4, 1))}
+                      {row("Reminder hour (0-23)", num(P.reminderHour == null ? 9 : P.reminderHour, set("reminderHour"), 23, 1))}
                       <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
                     </div>
                   );
@@ -1516,6 +1578,16 @@ export default function App() {
 
               <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("Danger zone")}
+                {sectionTitle("Reminders")}
+                <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", marginBottom: 6, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
+                <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>Fires at your reminder hour on dose day with the suggested site. iPhone: add ForkCaster to the Home Screen first (Share → Add to Home Screen).</div>
+                {sectionTitle("Export & backup")}
+                <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", marginBottom: 8 }}>Export PDF report — for your prescriber</button>
+                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <button onClick={exportJSON} style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Backup (JSON)</button>
+                  <label style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>Restore…<input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) restoreJSON(e.target.files[0]); e.target.value = ""; }} /></label>
+                </div>
+                <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>The PDF is a clean, organized report (doses &amp; sites, weight, side effects, nutrition) you can email or AirDrop to your care team. JSON is the full-fidelity backup for restore.</div>
                 <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, and settings will be wiped.")) { hydrated.current = false; try { await fetch("/api/state", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
               <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
