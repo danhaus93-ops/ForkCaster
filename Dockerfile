@@ -11,6 +11,8 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production DATA_DIR=/data PORT=3450
 COPY package.json ./
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser PUPPETEER_SKIP_DOWNLOAD=1
 RUN npm install --omit=dev --no-audit --no-fund
 COPY server ./server
 COPY --from=build /app/dist ./dist

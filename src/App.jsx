@@ -517,7 +517,7 @@ export default function App() {
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);
-    try { const text = await callClaude(prompt); const parsed = sanitizePicks(JSON.parse(text.replace(/```json|```/g, "").trim()), allergies); parsed._menuSource = r.menu ? "demo" : liveMenu ? "live" : "ai"; setResult(parsed); }
+    try { const text = await callClaude(prompt); const parsed = sanitizePicks(JSON.parse(text.replace(/```json|```/g, "").trim()), allergies); parsed._menuSource = r.menu ? "demo" : liveMenu ? "live" : "ai"; parsed._menuMethod = liveMenu ? liveMenu.method : null; setResult(parsed); }
     catch (e) { setError((e && e.message) || "Couldn't reach the coach. Tap a venue to retry."); }
     setLoading(false);
   }
@@ -750,7 +750,7 @@ export default function App() {
         {loading && !result && <div style={{ textAlign: "center", color: C.muted, fontSize: 13.5, padding: "22px 0" }}>Reading the menu against your {proteinLeft}g / {calLeft} cal…</div>}
         {result && result._menuSource && (
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: result._menuSource === "live" ? C.go : C.faint, marginBottom: 8 }}>
-                  {result._menuSource === "live" ? "● RANKED FROM THEIR LIVE ONLINE MENU" : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
+                  {result._menuSource === "live" ? `● RANKED FROM THEIR LIVE MENU${result._menuMethod === "pdf" ? " (PDF)" : result._menuMethod === "js" ? " (RENDERED SITE)" : ""}` : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
                 </div>
               )}
               {result && (

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.2"
+version: "0.2.3"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.2 LIVE MENUS: Order-for-me now fetches the venue's actual website
-  through your node, hunts for their menu page, and feeds the real menu text
-  to the AI - so picks come from items they actually serve. Results are
-  badged: ranked from their live online menu vs AI-proposed typical orders.
-  HTML menus only (JS widgets and PDFs fall back gracefully).
+  v0.2.3 FULL MENU COVERAGE: PDF menus are now text-extracted, and JS-built
+  menus (Toast, Square, popmenu etc.) are captured by a headless Chromium
+  browser running on your node that renders the site like a phone and reads
+  the final page. Three-stage escalation (HTML then PDF then render) with the
+  method shown on the result badge. Image grows ~180MB for Chromium; first
+  build takes a few minutes longer.
 dependencies: []
 path: ""
 defaultUsername: ""

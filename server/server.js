@@ -291,8 +291,9 @@ app.get("/api/gmap/tile/:style/:z/:x/:y", async (req, res) => {
   } catch { res.status(404).end(); }
 });
 
-/* ── Best-effort live menu scrape from a venue's own website.
-   HTML-only (JS-rendered menus and PDFs won't yield); personal-use fetches. ── */
+/* ── Live menu extraction, three-stage escalation:
+   (1) plain HTML fetch  (2) PDF text extraction  (3) headless Chromium render for JS menus.
+   Personal-use fetches; every stage falls through gracefully. ── */
 function stripHtml(html) {
   return String(html)
     .replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -307,35 +308,104 @@ function urlAllowed(u) {
     return true;
   } catch { return false; }
 }
+const MENU_UA = { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 ForkCaster/0.2 personal use" };
+async function fetchAny(u) {
+  const r = await fetch(u, { headers: MENU_UA, redirect: "follow", signal: AbortSignal.timeout(9000) });
+  if (!r.ok) return null;
+  const ct = (r.headers.get("content-type") || "").toLowerCase();
+  const len = parseInt(r.headers.get("content-length") || "0");
+  if (ct.includes("pdf") || /\.pdf(\?|$)/i.test(u)) {
+    if (len > 15e6) return null;
+    return { pdf: Buffer.from(await r.arrayBuffer()), url: r.url || u };
+  }
+  if (ct.includes("html")) return { html: await r.text(), url: r.url || u };
+  return null;
+}
+async function pdfText(buf) {
+  try { const pdfParse = require("pdf-parse"); const d = await pdfParse(buf, { max: 25 }); return (d.text || "").replace(/\s+/g, " ").trim(); }
+  catch (e) { console.error("pdf parse failed:", e.message); return ""; }
+}
+let renderChain = Promise.resolve();
+function withRenderLock(fn) { const p = renderChain.then(fn, fn); renderChain = p.catch(() => {}); return p; }
+async function renderPage(startUrl) {
+  const puppeteer = require("puppeteer-core");
+  const browser = await puppeteer.launch({
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--no-zygote"],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setUserAgent(MENU_UA["User-Agent"]);
+    await page.setViewport({ width: 414, height: 896 });
+    let src = startUrl;
+    await page.goto(src, { waitUntil: "networkidle2", timeout: 22000 });
+    await new Promise((r) => setTimeout(r, 1500));
+    let text = await page.evaluate(() => (document.body ? document.body.innerText : ""));
+    const menuHref = await page.evaluate(() => {
+      const as = Array.from(document.querySelectorAll("a[href]"));
+      const hit = as.find((a) => /menu/i.test(a.getAttribute("href") || "") || /^\s*(view\s+)?(our\s+)?(full\s+)?menu\s*$/i.test(a.textContent || ""));
+      return hit ? hit.href : null;
+    }).catch(() => null);
+    if (menuHref && menuHref !== src && urlAllowed(menuHref)) {
+      if (/\.pdf(\?|$)/i.test(menuHref)) { await browser.close(); return { pdfUrl: menuHref }; }
+      try {
+        await page.goto(menuHref, { waitUntil: "networkidle2", timeout: 22000 });
+        await new Promise((r) => setTimeout(r, 1500));
+        const t2 = await page.evaluate(() => (document.body ? document.body.innerText : ""));
+        if (t2.length > text.length) { text = t2; src = menuHref; }
+      } catch {}
+    }
+    return { text: text.replace(/\s+/g, " ").trim(), source: src };
+  } finally { try { await browser.close(); } catch {} }
+}
 app.get("/api/menu", async (req, res) => {
   const url = req.query.url;
   if (!url || !urlAllowed(url)) return res.json({ ok: false });
-  const UA = { "User-Agent": "Mozilla/5.0 (iPhone) ForkCaster/0.2 personal nutrition assistant" };
-  const grab = async (u) => {
-    const r = await fetch(u, { headers: UA, redirect: "follow", signal: AbortSignal.timeout(8000) });
-    if (!r.ok || !(r.headers.get("content-type") || "").includes("html")) return null;
-    return await r.text();
-  };
   try {
-    let html = await grab(url);
-    if (!html) return res.json({ ok: false });
-    // hunt for a same-site menu link
-    let menuUrl = null;
-    const linkRe = /href=["']([^"']+)["'][^>]*>([^<]{0,60})/gi; let m;
-    while ((m = linkRe.exec(html))) {
-      const href = m[1], label = (m[2] || "").toLowerCase();
-      if (/menu/i.test(href) || /menu/.test(label)) {
-        try { const abs = new URL(href, url).href; if (urlAllowed(abs)) { menuUrl = abs; break; } } catch {}
+    // Stage 1: plain fetch
+    const a = await fetchAny(url);
+    if (a && a.pdf) {
+      const t = await pdfText(a.pdf);
+      if (t.length > 300) return res.json({ ok: true, method: "pdf", source: a.url, text: t.slice(0, 6000) });
+    }
+    let bestText = "", bestSrc = url, pdfLink = null;
+    if (a && a.html) {
+      bestText = stripHtml(a.html);
+      const linkRe = /href=["']([^"']+)["'][^>]*>([^<]{0,60})/gi; let m;
+      while ((m = linkRe.exec(a.html))) {
+        const href = m[1], label = (m[2] || "").toLowerCase();
+        if (/menu/i.test(href) || /menu/.test(label)) {
+          try {
+            const abs = new URL(href, a.url).href;
+            if (!urlAllowed(abs)) continue;
+            if (/\.pdf(\?|$)/i.test(abs)) { pdfLink = abs; break; }
+            const b = await fetchAny(abs);
+            if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: abs, text: t.slice(0, 6000) }); }
+            if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > bestText.length) { bestText = mt; bestSrc = abs; } }
+            break;
+          } catch {}
+        }
       }
+      if (pdfLink) {
+        const b = await fetchAny(pdfLink);
+        if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: pdfLink, text: t.slice(0, 6000) }); }
+      }
+      if (bestText.length > 700) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     }
-    let text = stripHtml(html);
-    if (menuUrl && menuUrl !== url) {
-      const mh = await grab(menuUrl);
-      if (mh) { const mt = stripHtml(mh); if (mt.length > 300) text = mt; }
+    // Stage 3: headless render for JS-built menus
+    const rendered = await withRenderLock(() => renderPage(url));
+    if (rendered && rendered.pdfUrl) {
+      const b = await fetchAny(rendered.pdfUrl);
+      if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
     }
-    if (text.length < 400) return res.json({ ok: false });
-    res.json({ ok: true, source: menuUrl || url, text: text.slice(0, 6000) });
-  } catch { res.json({ ok: false }); }
+    if (rendered && rendered.text && rendered.text.length > 400) {
+      return res.json({ ok: true, method: "js", source: rendered.source, text: rendered.text.slice(0, 6000) });
+    }
+    // last resort: thin HTML is better than nothing
+    if (bestText.length > 400) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
+    res.json({ ok: false });
+  } catch (e) { console.error("menu extraction failed:", e.message); res.json({ ok: false }); }
 });
 
 /* ── venue photo proxy (keeps the Places key server-side) ── */
