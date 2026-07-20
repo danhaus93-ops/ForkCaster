@@ -1316,7 +1316,7 @@ export default function App() {
                 {sectionTitle("Danger zone")}
                 <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, and settings will be wiped.")) { hydrated.current = false; try { await fetch("/api/state", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
-              <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""} · self-hosted · your data stays on your node</div>
+              <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
             </div>
           </div>
         )}
