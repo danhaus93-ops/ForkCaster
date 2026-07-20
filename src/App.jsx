@@ -328,6 +328,7 @@ export default function App() {
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog); if (s.photos) setPhotos(s.photos);
+        if (s.savedRank) setSavedRank(s.savedRank);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
       }
       hydrated.current = true;
@@ -335,7 +336,7 @@ export default function App() {
   }, []);
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -481,18 +482,27 @@ export default function App() {
   }
 
   const lastRank = useRef({ key: "", at: 0 });
+  const [savedRank, setSavedRank] = useState(null); // { key, at, arr } persisted — scores survive reopen
+  function applyRank(vsList, arr) {
+    setVenues((cur) => cur
+      .map((v) => { const m = Array.isArray(arr) ? arr.find((x) => x.id === v.id) : null; return m && Number.isFinite(+m.match) ? { ...v, match: Math.max(0, Math.min(100, Math.round(+m.match))), why: m.why } : v; })
+      .sort((a, b) => (b.match ?? -1) - (a.match ?? -1)));
+  }
   async function rankVenues(vs) {
     const key = vs.map((v) => v.id).sort().join(",");
     const now = Date.now();
-    if (key === lastRank.current.key && now - lastRank.current.at < 30 * 60000) return; // same venues, ranked <30min ago: keep scores
-    if (now - lastRank.current.at < 120000) return; // hard floor: never rank more than once per 2 min
+    if (savedRank && savedRank.key === key && now - savedRank.at < 6 * 3600000) {
+      applyRank(vs, savedRank.arr); setRankState("ranked"); return; // reuse persisted scores: stable + free
+    }
+    if (key === lastRank.current.key && now - lastRank.current.at < 30 * 60000) return;
+    if (now - lastRank.current.at < 120000) return;
     lastRank.current = { key, at: now };
     setRankState("ranking");
     try {
       const medLine = medObj ? ` User is on ${medObj.label}${nauseaRisk !== "low" ? ` with ${nauseaRisk.toUpperCase()} nausea risk (favor gentle, lean, low-fat venues)` : ""}.` : "";
       const restrictLine = restrictions.length ? ` Hard restrictions: ${restrictions.join("; ")} — venues that can't safely serve these score LOW.` : "";
       const prompt =
-        `Score each venue 0-100 by the BEST goal-fit order an informed customer can build there RIGHT NOW — not the menu average. ` +
+        `User goal mode: ${MODES[mode] ? MODES[mode].label : mode}. Score each venue 0-100 by the BEST goal-fit order an informed customer can build there RIGHT NOW — not the menu average. ` +
         `Credit customization power: added protein, sugar-free/light bases, grilled swaps, sauces on the side (e.g., a smoothie shop with a high-protein low-sugar line scores on THAT line, not its dessert smoothies). ` +
         `Dessert-only/fried-only with no workaround = low. IGNORE popularity and review scores.` +
         ` User has ${proteinLeft}g protein and ${calLeft} calories remaining today.` + medLine + restrictLine +
@@ -500,9 +510,8 @@ export default function App() {
         `\nReturn ONLY minified JSON, no markdown: [{"id":"<id>","match":<int 0-100>,"why":"<max 6 words>"}] for every venue.`;
       const text = await callClaude(prompt);
       const arr = JSON.parse(text.replace(/```json|```/g, "").trim());
-      setVenues((cur) => cur
-        .map((v) => { const m = Array.isArray(arr) ? arr.find((x) => x.id === v.id) : null; return m && Number.isFinite(+m.match) ? { ...v, match: Math.max(0, Math.min(100, Math.round(+m.match))), why: m.why } : v; })
-        .sort((a, b) => (b.match ?? -1) - (a.match ?? -1)));
+      applyRank(vs, arr);
+      setSavedRank({ key, at: now, arr });
       setRankState("ranked");
     } catch (e) { setRankState((e && e.message) || "ranking failed"); }
   }
@@ -525,12 +534,12 @@ export default function App() {
       } catch {}
     }
     const prompt =
-      `You are a sharp, medication-aware nutrition coach. User is at ${r.name} right now.\n` +
+      `You are a sharp, medication-aware nutrition coach. User is at ${r.name} right now. Goal mode: ${MODES[mode] ? MODES[mode].label : mode}.\n` +
       `Remaining today: ${proteinLeft}g protein, ${calLeft} calories.` + medLine + restrictLine +
       `\nRank this menu to maximize remaining protein under remaining calories, favoring whole/grilled foods` +
       (nauseaRisk === "high" || nauseaRisk === "moderate" ? ` and low-fat, easy-on-the-stomach picks` : ``) + `.\n` +
       (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
-        : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively):\n"""${liveMenu.text}"""\n\n`
+        : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal"), prioritize those items:\n"""${liveMenu.text}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
       `Return ONLY minified JSON, no markdown:\n` +
       `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"why":"<max 9 words>"}],` +
@@ -583,6 +592,7 @@ export default function App() {
   }
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
   const [doseLogged, setDoseLogged] = useState(false);
+  const [presetSaved, setPresetSaved] = useState(false);
   function logInjection() {
     setGlp((g) => {
       const today = todayISO();
@@ -696,7 +706,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField("Carbs goal", targets.carbs, (v) => setTargets({ ...targets, carbs: +v }))}{numField("Fat goal", targets.fat, (v) => setTargets({ ...targets, fat: +v }))}</div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Water goal (${volU})`, fmtVol(targets.waterOz), (v) => setTargets({ ...targets, waterOz: isMetric ? +v / ML_PER_OZ : +v }))}{numField("Fiber goal (g)", targets.fiber, (v) => setTargets({ ...targets, fiber: +v }))}</div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField("Protein eaten", eaten.protein, (v) => setEaten({ ...eaten, protein: +v }))}{numField("Calories eaten", eaten.calories, (v) => setEaten({ ...eaten, calories: +v }))}</div>
-          <button onClick={() => { setPrefs({ ...prefs, customTargets: { ...targets } }); setMode("custom"); }} style={{ marginTop: 12, width: "100%", background: "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Save these as "My preset"</button>
+          <button onClick={() => { setPrefs({ ...prefs, customTargets: { ...targets } }); setMode("custom"); setPresetSaved(true); setTimeout(() => setPresetSaved(false), 2200); }} style={{ marginTop: 12, width: "100%", background: "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{presetSaved ? "Preset saved ✓" : "Save these as \"My preset\""}</button>
         </>, { marginTop: 10 })}
 
       {onMed && nauseaRisk !== "low" && (
@@ -1289,7 +1299,7 @@ export default function App() {
                       {row("Default zoom", num(P.mapZoom, set("mapZoom")))}
                       {row("Re-search after moving (mi)", num(P.requeryMi, set("requeryMi"), 64, 0.05))}
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "14px 0 2px" }}>AI</div>
-                      {row("Model", sel(P.aiModel, [["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
+                      {row("Model", sel(P.aiModel, [["claude-opus-4-8", "Opus (max accuracy)"], ["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
                       {row("Coach style", sel(P.coachStyle, [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"], ["tough-love", "Tough love"]], set("coachStyle")))}
                       <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
                     </div>
