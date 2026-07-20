@@ -1100,7 +1100,7 @@ function nextDow(dow) {
   const x = new Date(d); x.setDate(x.getDate() + add); return x;
 }
 function geoLabel(geo, timeStr) {
-  if (geo.status === "ok") return `${geo.manual && !geo.live ? "Pinned" : "Live GPS"} ${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)} · ${timeStr}`;
+  if (geo.status === "ok") return `${geo.manual && !geo.live ? (typeof window !== "undefined" && !window.isSecureContext ? "Pinned (GPS needs HTTPS)" : "Pinned · tap for GPS") : "Live GPS"} ${geo.lat.toFixed(2)}, ${geo.lng.toFixed(2)} · ${timeStr}`;
   if (geo.status === "locating") return `Locating… · ${timeStr}`;
   if (geo.status === "denied") return `GPS ${geo.code === 1 ? "denied by iOS — allow in Settings › Apps › ForkCaster (or Safari Websites) · tap for manual entry" : geo.code === 3 ? "timed out · tap to retry" : "unavailable · tap for manual entry"} · ${timeStr}`;
   if (geo.status === "unavailable") return `Downtown (sample) · ${timeStr}`;
@@ -1240,9 +1240,9 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
         style={{ position: "absolute", bottom: 12, right: 12, zIndex: 800, width: 40, height: 40, borderRadius: 99, border: "none", cursor: "pointer", background: follow ? C.go : pillBg, boxShadow: "0 2px 8px rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={follow ? "#fff" : pillInk} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22" /></svg>
       </button>
-      {insecure && geo.status !== "ok" && (
+      {insecure && !geo.live && (
         <div style={{ position: "absolute", bottom: 12, left: 10, right: 10, zIndex: 800, background: "rgba(200,140,20,0.92)", color: "#1a1200", borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 600, textAlign: "center" }}>
-          GPS is blocked over HTTP — open ForkCaster via your Tailscale HTTPS URL
+          Live GPS can’t work over HTTP — open ForkCaster from your Tailscale HTTPS URL (ts.net)
         </div>
       )}
     </div>
