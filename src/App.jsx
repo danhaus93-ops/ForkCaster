@@ -110,6 +110,39 @@ function violatesAllergy(text, allergies) {
   }
   return null;
 }
+/* Deterministic pick selection: AI only extracts items; code enforces goal rules. */
+function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
+  const glpTag = (it) => /glp/i.test(String(it.section || ""));
+  const queasy = nauseaRisk === "moderate" || nauseaRisk === "high";
+  const score = (it) => {
+    const p = +it.protein || 0, c = +it.cal || 400;
+    if (mode === "gain") return p * 3 + c * 0.1;
+    let s = p * 4 - Math.max(0, c - Math.max(300, calLeft * 0.4)) * 0.05;
+    if (mode === "glp1") s += (c <= 400 ? 20 : 0) + (glpTag(it) ? 60 : 0);
+    if (queasy && /smoothie|soup|yogurt|broth/i.test(it.item)) s += 5;
+    return s;
+  };
+  const sorted = [...items].sort((a, b) => score(b) - score(a));
+  let picks = sorted.slice(0, 3);
+  if (mode === "glp1") {
+    const glp = sorted.filter(glpTag);
+    if (glp.length >= 2) {
+      const rest = sorted.filter((i) => !glp.slice(0, 3).includes(i));
+      picks = [...glp.slice(0, 3), ...rest].slice(0, 3); // quota by construction: GLP-1 items fill first
+    }
+  }
+  const mkWhy = (it) => [
+    mode === "glp1" && glpTag(it) ? "GLP-1 section" : null,
+    +it.protein ? `${it.protein}g protein` : null,
+    queasy ? "gentle volume" : null,
+  ].filter(Boolean).join(" · ") || "good goal fit";
+  const avoid = sorted.slice(-2).reverse().map((it) => ({ item: it.item, reason: (+it.cal || 0) > 500 ? "calorie-heavy" : "low protein density" }));
+  const coach = mode === "glp1"
+    ? (queasy ? "Dose week: small-volume, protein-first — sip slowly." : "Protein-first, small volume — GLP-1 friendly picks up top.")
+    : mode === "gain" ? "Max protein first — upsize and add whey where offered."
+    : "Protein-dense picks under your remaining calories.";
+  return { coach, picks: picks.map((it) => ({ item: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0 })), avoid };
+}
 function sanitizePicks(parsed, allergies) {
   if (!parsed || !Array.isArray(parsed.picks) || !allergies.length) return parsed;
   const clean = [], moved = [];
@@ -584,6 +617,20 @@ export default function App() {
         if (mj && mj.ok && mj.text) liveMenu = mj;
       } catch {}
     }
+    let doneViaExtraction = false;
+    if (liveMenu) {
+      try {
+        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, estimated calories and protein grams. ` +
+          `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
+        const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600)).filter((i) => i && i.item);
+        if (items.length >= 3) {
+          const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);
+          const cleaned = sanitizePicks(composed, allergies);
+          cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method;
+          setResult(cleaned); doneViaExtraction = true;
+        }
+      } catch {}
+    }
     const prompt =
       `You are a sharp, medication-aware nutrition coach. User is at ${r.name} right now. Goal mode: ${MODES[mode] ? MODES[mode].label : mode}.\n` +
       `Remaining today: ${proteinLeft}g protein, ${calLeft} calories.` + medLine + restrictLine +
@@ -601,7 +648,7 @@ export default function App() {
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);
-    try { const text = await callClaude(prompt, null, null, 2000); const parsed = sanitizePicks(salvageJSONObject(text), allergies); parsed._menuSource = r.menu ? "demo" : liveMenu ? "live" : "ai"; parsed._menuMethod = liveMenu ? liveMenu.method : null; setResult(parsed); }
+    if (!doneViaExtraction) try { const text = await callClaude(prompt, null, null, 2000); const parsed = sanitizePicks(salvageJSONObject(text), allergies); parsed._menuSource = r.menu ? "demo" : liveMenu ? "live" : "ai"; parsed._menuMethod = liveMenu ? liveMenu.method : null; setResult(parsed); }
     catch (e) { setError((e && e.message) || "Couldn't reach the coach. Tap a venue to retry."); }
     setLoading(false);
   }

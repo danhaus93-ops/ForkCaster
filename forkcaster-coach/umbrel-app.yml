@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.34"
+version: "0.2.35"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.34: cheaper models get a fair fight - the JSON salvage parser now
-  extracts a balanced JSON object even when models wrap it in prose, menu
-  text is right-sized per model (Haiku gets a smaller digest than Fable),
-  and the output contract is stated unmistakably. Includes v0.2.33's
-  scraper fixes for the GLP-1 goal.
+  v0.2.35: goal rules are now enforced by code, not model obedience - the AI
+  only extracts menu items (an easy task every model handles); deterministic
+  selection then applies the goal, so GLP-1 mode fills picks from GLP-1
+  section items by construction, on every model. Falls back to the classic
+  single-prompt path when extraction comes up short.
 dependencies: []
 path: ""
 defaultUsername: ""
