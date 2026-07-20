@@ -4,6 +4,7 @@ COPY package.json ./
 RUN npm install --no-audit --no-fund
 COPY index.html ./
 COPY src ./src
+COPY sw.js ./
 COPY dist ./dist
 RUN npm run build
 
