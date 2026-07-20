@@ -474,19 +474,24 @@ app.get("/api/vphoto", async (req, res) => {
 });
 
 /* ── web push: self-hosted dose-day reminders ── */
-const webpush = require("web-push");
+let _webpush = null;
+function webpushLib() {
+  if (_webpush === null) { try { _webpush = require("web-push"); } catch { _webpush = false; } }
+  return _webpush;
+}
 const PUSH_FILE = path.join(DATA_DIR, "push.json");
 function pushStore() { try { return JSON.parse(fs.readFileSync(PUSH_FILE, "utf8")); } catch { return {}; } }
 function savePushStore(o) { fs.writeFileSync(PUSH_FILE, JSON.stringify(o)); }
 function vapid() {
   const st = pushStore();
-  if (!st.vapid) { st.vapid = webpush.generateVAPIDKeys(); savePushStore(st); }
-  webpush.setVapidDetails("mailto:forkcaster@selfhosted.local", st.vapid.publicKey, st.vapid.privateKey);
+  const wp = webpushLib(); if (!wp) throw new Error("web-push unavailable");
+  if (!st.vapid) { st.vapid = wp.generateVAPIDKeys(); savePushStore(st); }
+  wp.setVapidDetails("mailto:forkcaster@selfhosted.local", st.vapid.publicKey, st.vapid.privateKey);
   return st.vapid;
 }
-app.get("/api/push/pubkey", (_req, res) => res.json({ key: vapid().publicKey }));
+app.get("/api/push/pubkey", (_req, res) => { try { res.json({ key: vapid().publicKey }); } catch (e) { res.status(500).json({ error: String(e) }); } });
 app.post("/api/push/subscribe", (req, res) => {
-  const st = pushStore(); vapid();
+  const st = pushStore(); try { vapid(); } catch (e) { return res.status(500).json({ error: String(e) }); }
   st.sub = req.body && req.body.subscription ? req.body.subscription : null;
   savePushStore(st); res.json({ ok: !!st.sub });
 });
@@ -518,10 +523,11 @@ async function doseReminderTick() {
     const todayISO = now.toISOString().slice(0, 10);
     if (todayISO < due.toISOString().slice(0, 10)) return;
     if (st.lastSent === todayISO) return;
-    vapid();
+    try { vapid(); } catch { return; }
     const site = suggestedSite(glp, Math.max(1, Math.min(4, parseInt(prefs.sitePerCycle) || 1)));
     const medName = glp.med ? glp.med.charAt(0).toUpperCase() + glp.med.slice(1) : "your GLP-1";
-    await webpush.sendNotification(st.sub, JSON.stringify({ title: "\uD83D\uDC89 Dose day", body: `Time for ${medName} \u2014 suggested site: ${site} (back of arm sites)` }));
+    const wp2 = webpushLib(); if (!wp2) return;
+    await wp2.sendNotification(st.sub, JSON.stringify({ title: "\uD83D\uDC89 Dose day", body: `Time for ${medName} \u2014 suggested site: ${site} (back of arm sites)` }));
     st.lastSent = todayISO; savePushStore(st);
   } catch (e) { if (e && e.statusCode === 410) { const st = pushStore(); delete st.sub; savePushStore(st); } }
 }
