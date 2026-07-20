@@ -1016,9 +1016,9 @@ export default function App() {
               </div>
 
               {/* live camera scanner */}
+              <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
               {camOn ? (
                 <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", marginBottom: 14, background: "#000" }}>
-                  <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
                   <canvas ref={camCanvasRef} style={{ width: "100%", height: 240, objectFit: "cover", display: "block", background: "#000" }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
                     <div style={{ width: "72%", height: 90, border: "2.5px solid rgba(99,212,140,0.95)", borderRadius: 12, boxShadow: "0 0 0 2000px rgba(0,0,0,0.35)" }} />
@@ -1039,12 +1039,6 @@ export default function App() {
                 <input value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") lookupBarcode(barcode); }} placeholder="Barcode number" inputMode="numeric"
                   style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
                 <button onClick={() => lookupBarcode(barcode)} disabled={scan.status === "loading"} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "0 18px", fontFamily: BODY, fontWeight: 700, fontSize: 14, cursor: "pointer", opacity: scan.status === "loading" ? 0.6 : 1 }}>{scan.status === "loading" ? "…" : "Look up"}</button>
-              </div>
-              <div style={{ display: "flex", gap: 7, marginBottom: 14, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 11, color: C.faint }}>Try:</span>
-                {[["Nutella", "3017624010701"], ["Coca-Cola", "5449000000996"], ["Clif Bar", "722252100900"]].map(([lbl, code]) => (
-                  <button key={code} onClick={() => { setBarcode(code); lookupBarcode(code); }} style={{ ...chipBtn, padding: "4px 10px", fontSize: 11 }}>{lbl}</button>
-                ))}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 14px" }}>
