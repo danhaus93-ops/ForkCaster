@@ -1552,8 +1552,8 @@ export default function App() {
                       {row("Model", sel(P.aiModel, [["claude-fable-5", "Fable 5 (most capable)"], ["claude-opus-4-8", "Opus (max accuracy)"], ["claude-sonnet-4-6", "Sonnet (smart)"], ["claude-haiku-4-5-20251001", "Haiku (fast/cheap)"]], set("aiModel")))}
                       {row("Coach style", sel(P.coachStyle, [["concise", "Concise"], ["balanced", "Balanced"], ["detailed", "Detailed"], ["tough-love", "Tough love"]], set("coachStyle")))}
                       {row("Score refresh (hours)", num(P.rankCacheHours, set("rankCacheHours"), 64, 0.5))}
-                      {row("Injections per site per cycle", num(P.sitePerCycle || 1, set("sitePerCycle"), 4, 1))}
-                      {row("Reminder hour (0-23)", num(P.reminderHour == null ? 9 : P.reminderHour, set("reminderHour"), 23, 1))}
+                      {row("Injections per site per cycle", num(P.sitePerCycle || 1, set("sitePerCycle"), 64, 1))}
+                      {row("Reminder hour (0-23)", num(P.reminderHour == null ? 9 : P.reminderHour, set("reminderHour"), 64, 1))}
                       <div style={{ fontSize: 11, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
                     </div>
                   );
