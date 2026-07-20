@@ -402,10 +402,13 @@ app.get("/api/menu", async (req, res) => {
           else if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > 300) { const isGoal = goalWords.some((w) => link.toLowerCase().includes(w)); sections.push(`--- ${link} ---\n` + mt.slice(0, isGoal ? 4500 : 2000)); } }
         } catch {}
       }
-      if (sections.length) {
-        const joined = sections.join("\n\n").slice(0, 8000);
-        return res.json({ ok: true, method: anyPdf && sections.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
+      const foodSignal = (t) => (t.match(/\$\s?\d|calor|protein|smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|oz\b/gi) || []).length;
+      const good = sections.filter((sec) => foodSignal(sec) >= 6);
+      if (good.length) {
+        const joined = good.join("\n\n").slice(0, 8000);
+        return res.json({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
       }
+      // no section passed the food-signal gate: fall through to page text / headless render
       if (bestText.length > 700) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     }
     // Stage 3: headless render for JS-built menus
