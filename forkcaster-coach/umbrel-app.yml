@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.45"
+version: "0.2.46"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.45 REMINDERS + EXPORT: self-hosted dose-day push notifications - your
-  node fires a reminder at your chosen hour on dose day, naming the suggested
-  injection site (requires Add to Home Screen on iPhone). Export a clean,
-  organized PDF progress report (doses and sites, weight log, side effects,
-  daily nutrition) to email or AirDrop to your prescriber, plus one-tap JSON
-  backup and restore.
+  v0.2.46: working build of the reminders + export release. Fixes the server
+  crash-loop from v0.2.45 (missing web-push in the runtime image; now
+  installed AND lazy-loaded so a missing dependency can never take the app
+  down again). Includes: self-hosted dose-day push notifications with the
+  suggested injection site, PDF progress report for your prescriber, and
+  JSON backup/restore.
 dependencies: []
 path: ""
 defaultUsername: ""
