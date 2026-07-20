@@ -711,14 +711,16 @@ export default function App() {
   const [presetSaved, setPresetSaved] = useState(false);
   const [loggedPicks, setLoggedPicks] = useState([]);
   const [foodQuery, setFoodQuery] = useState("");
+  const [customAllergy, setCustomAllergy] = useState("");
+  const [pendingSite, setPendingSite] = useState(null);
   const [foodResults, setFoodResults] = useState(null);
   function logInjection() {
     setGlp((g) => {
       const today = todayISO();
       const log = (g.doseLog || []).filter((d) => d.date !== today);
-      return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, mg: g.dose || 0 }] };
+      return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, mg: g.dose || 0, site: pendingSite || undefined }] };
     });
-    setDoseLogged(true); setTimeout(() => setDoseLogged(false), 2500);
+    setDoseLogged(true); setPendingSite(null); setTimeout(() => setDoseLogged(false), 2500);
   }
 
   async function searchFood() {
@@ -992,6 +994,15 @@ export default function App() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Water</div><div style={{ fontFamily: DISPLAY, fontWeight: 700, color: C.blue }}>{fmtVol(eaten.waterOz)} / {fmtVol(targets.waterOz)} {volU}</div></div>
             <div style={{ height: 10, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 8 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
+      {mealLog.filter((m) => m.date === dayISOAt(prefs.rolloverHour)).length > 0 && <div style={{ marginTop: 14 }}>{card(<>
+        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Logged today — tap ✕ to undo a mistake</div>
+        {mealLog.filter((m) => m.date === dayISOAt(prefs.rolloverHour)).map((m) => (
+          <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
+            <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div><div style={{ fontSize: 11, color: C.faint }}>{m.protein}g protein · {m.calories} cal</div></div>
+            <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button>
+          </div>
+        ))}
+      </>)}</div>}
           </>)}</div>
 
         <div style={{ display: "flex", gap: 12, marginTop: 14 }}>
@@ -1020,6 +1031,12 @@ export default function App() {
             <div style={{ textAlign: "right" }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.go }}>−{lost.toFixed(1)} lbs</div><div style={{ fontSize: 11, color: C.faint }}>since start</div></div>
           </div>
           {weightLog.length > 1 ? lineChart(weightLog.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
+          {weightLog.length > 0 && <div style={{ marginTop: 8 }}>{[...weightLog].slice(-3).reverse().map((w, i) => (
+            <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
+              <span style={{ fontSize: 12.5, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
+              <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>
+            </div>
+          ))}</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
             <input type="number" value={newWeight} placeholder={`Log today's weight (${wtU})`} onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
             <button onClick={logWeight} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "0 20px", fontFamily: BODY, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Log</button>
@@ -1143,7 +1160,27 @@ export default function App() {
           ))}
         </div>
       </>)}</div>
-      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} doseLog={glp.doseLog || []} dueISO={dueISO} />)}</div>
+      <div style={{ marginBottom: 14 }}>{card(<>
+        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Injection site — rotate{pendingSite ? <span style={{ textTransform: "none", color: C.violet }}> · next dose: {pendingSite}</span> : null}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"].map((z) => {
+            const uses = (glp.doseLog || []).filter((d) => d.site === z);
+            const lastUse = uses.length ? uses.map((d) => d.date).sort().slice(-1)[0] : null;
+            const days = lastUse ? Math.floor((Date.now() - new Date(lastUse + "T12:00:00")) / 86400000) : null;
+            const allDays = ["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"].map((zz) => { const u = (glp.doseLog || []).filter((d) => d.site === zz); return u.length ? Math.floor((Date.now() - new Date(u.map((d) => d.date).sort().slice(-1)[0] + "T12:00:00")) / 86400000) : 9999; });
+            const rec = (days == null ? 9999 : days) === Math.max(...allDays) && !pendingSite;
+            const sel = pendingSite === z;
+            return (
+              <button key={z} onClick={() => setPendingSite(sel ? null : z)} style={{ padding: "10px 8px", borderRadius: 11, border: sel ? "none" : `1.5px solid ${rec ? C.go : C.hair}`, background: sel ? C.violet : "transparent", color: sel ? "#fff" : C.ink2, fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
+                {z}{rec && !sel ? <span style={{ color: C.go, fontSize: 10, fontWeight: 800 }}> · suggested</span> : null}
+                <div style={{ fontSize: 10, fontWeight: 500, color: sel ? "rgba(255,255,255,0.8)" : C.faint }}>{days == null ? "never used" : days === 0 ? "used today" : `${days}d ago`}</div>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 10, color: C.faint, marginTop: 8 }}>Pick a site before tapping Log dose — it saves with the dose and the grid tracks rotation.</div>
+      </>)}</div>
+      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} />)}</div>}
 
       <div style={{ marginBottom: 14 }}>{card(
@@ -1202,7 +1239,10 @@ export default function App() {
           {[...glp.sideEffects].reverse().map((s) => (
             <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${C.hair}` }}>
               <div><span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{s.symptom}</span><span style={{ fontSize: 12, color: C.faint, marginLeft: 8 }}>{fmtDate(s.date)}</span></div>
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: [C.go, C.caution, C.avoid][s.severity - 1], background: [C.goSoft, C.cautionSoft, C.avoidSoft][s.severity - 1], borderRadius: 20, padding: "3px 10px" }}>{["Mild", "Moderate", "Severe"][s.severity - 1]}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: [C.go, C.caution, C.avoid][s.severity - 1], background: [C.goSoft, C.cautionSoft, C.avoidSoft][s.severity - 1], borderRadius: 20, padding: "3px 10px" }}>{["Mild", "Moderate", "Severe"][s.severity - 1]}</span>
+                <button onClick={() => setGlp((g) => ({ ...g, sideEffects: g.sideEffects.filter((x) => x.id !== s.id) }))} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4 }}>✕</button>
+              </div>
             </div>
           ))}
           <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Not medical advice. Severe or persistent symptoms — contact your prescriber. This log is designed to export for clinic visits.</div>
@@ -1211,8 +1251,8 @@ export default function App() {
   );
 
   const renderCoach = () => (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 128px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))", overflow: "hidden" }}>
-      <div style={{ padding: "14px 18px 6px" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><div style={{ fontSize: 13, color: C.muted }}>Knows your macros, weight &amp; meds — live</div></div>
+    <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
+      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 12, cursor: "pointer", fontFamily: BODY }}>Clear</button></div><div style={{ fontSize: 13, color: C.muted }}>Knows your macros, weight &amp; meds — live</div></div>
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
         {coachMsgs.map((m, i) => (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
@@ -1407,6 +1447,16 @@ export default function App() {
                     </button>
                   );
                 })}
+                {allergies.filter((a) => !ALLERGENS.includes(a)).map((a) => (
+                  <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 20, cursor: "pointer", fontFamily: BODY, fontSize: 13, fontWeight: 600, border: `1.5px solid ${C.avoid}`, background: C.avoid, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 12 }}>✕</span>{a}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 20, marginTop: -10 }}>
+                <input value={customAllergy} onChange={(e) => setCustomAllergy(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} placeholder="Add another allergy (e.g. mustard, avocado)"
+                  style={{ flex: 1, fontFamily: BODY, fontSize: 13, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "10px 12px", outline: "none" }} />
+                <button onClick={() => { if (customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} style={{ background: C.avoid, color: "#fff", border: "none", borderRadius: 10, padding: "0 14px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
               </div>
 
               {sectionTitle("Diet")}
@@ -1537,7 +1587,7 @@ function MedLevelChart({ C, doseLog, med }) {
   );
 }
 /* Month calendar for dose adherence: syringe on logged days, DUE ring on the scheduled day */
-function DoseCalendar({ C, doseLog, dueISO }) {
+function DoseCalendar({ C, doseLog, dueISO, onRemove }) {
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const todayIso = new Date().toLocaleDateString("sv-SE");
   const first = new Date(ym.y, ym.m, 1);
@@ -1574,7 +1624,7 @@ function DoseCalendar({ C, doseLog, dueISO }) {
           if (d == null) return <div key={i} />;
           const di = iso(d), lg = logged(di), due = di === dueISO, today = di === todayIso;
           return (
-            <div key={i} style={{ height: 36, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, borderRadius: 9, margin: "0 2px", border: due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: lg ? C.goSoft : "transparent" }}>
+            <div key={i} onClick={() => { if (lg && onRemove) onRemove(di); }} style={{ height: 36, cursor: lg ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, borderRadius: 9, margin: "0 2px", border: due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: lg ? C.goSoft : "transparent" }}>
               <span style={{ fontSize: 10.5, fontWeight: today || due || lg ? 800 : 500, color: lg ? C.go : due ? C.violet : today ? C.ink : C.muted }}>{d}</span>
               {lg ? syr(C.go) : due ? <span style={{ fontSize: 7.5, color: C.violet, fontWeight: 800, letterSpacing: 0.5 }}>DUE</span> : <span style={{ height: 11 }} />}
             </div>
