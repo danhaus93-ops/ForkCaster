@@ -562,7 +562,11 @@ export default function App() {
     }
   }
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
-  function logInjection() { setGlp((g) => ({ ...g, lastInjection: todayISO(), weeksOn: g.weeksOn + 1 })); }
+  const [doseLogged, setDoseLogged] = useState(false);
+  function logInjection() {
+    setGlp((g) => ({ ...g, lastInjection: todayISO(), weeksOn: g.weeksOn + 1 }));
+    setDoseLogged(true); setTimeout(() => setDoseLogged(false), 2500);
+  }
 
   // Real Open Food Facts lookup (keyless, CORS-friendly). Camera decode is stubbed;
   // in production a scanner lib feeds the same barcode into this same call.
@@ -609,13 +613,7 @@ export default function App() {
 
   const card = (children, extra = {}) => (<div style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, padding: 16, ...extra }}>{children}</div>);
   const sectionTitle = (t, color = C.ink) => (<div style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 10 }}>{t}</div>);
-  const numField = (label, val, onChange) => (
-    <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{label}</div>
-      <input type="number" value={val} onChange={(e) => onChange(e.target.value)}
-        style={{ width: "100%", boxSizing: "border-box", fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 11px", outline: "none" }} />
-    </div>
-  );
+  const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
   const stat = (label, value, unit, color = C.ink) => (
     <div style={{ flex: 1 }}>
       <div style={{ fontSize: 10.5, color: C.muted, letterSpacing: 0.4, textTransform: "uppercase" }}>{label}</div>
@@ -961,8 +959,8 @@ export default function App() {
 
       <div style={{ marginBottom: 14 }}>{card(
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>Next injection</div><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div></div>
-          <button onClick={logInjection} style={{ background: C.violet, color: C.surface, border: "none", borderRadius: 11, padding: "12px 18px", fontFamily: BODY, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>Log dose</button>
+          <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>Next injection</div><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>Last dose: {fmtDate(glp.lastInjection)}{glp.dose ? ` · ${glp.dose} mg` : ""} · week {glp.weeksOn}</div></div>
+          <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.surface, border: "none", borderRadius: 11, padding: "12px 18px", fontFamily: BODY, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
         </div>)}</div>
 
       <div style={{ marginBottom: 14 }}>{card(
@@ -1229,9 +1227,7 @@ export default function App() {
                       {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   );
-                  const num = (val, on, w = 64, step = 1) => (
-                    <input type="number" value={val} step={step} onChange={(e) => on(parseFloat(e.target.value) || 0)} style={{ width: w, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "7px 9px", fontFamily: BODY, fontSize: 12.5, boxSizing: "border-box" }} />
-                  );
+                  const num = (val, on, w = 64, step = 1) => <NumFieldC value={val} onChange={on} C={C} w={w} step={step} bare />;
                   const P = prefs, set = (k) => (v) => setPrefs({ ...prefs, [k]: v });
                   return (
                     <div>
@@ -1288,6 +1284,23 @@ export default function App() {
   );
 }
 
+/* Number input that lets you clear it while typing; commits valid numbers, restores on blur */
+function NumFieldC({ label, value, onChange, C, DISPLAY, w, step, bare }) {
+  const [draft, setDraft] = useState(value == null || Number.isNaN(value) ? "" : String(value));
+  const [focus, setFocus] = useState(false);
+  useEffect(() => { if (!focus) setDraft(value == null || Number.isNaN(value) ? "" : String(value)); }, [value, focus]);
+  const input = (
+    <input type="text" inputMode="decimal" value={draft} step={step}
+      onFocus={() => setFocus(true)}
+      onBlur={() => { setFocus(false); if (draft === "" || isNaN(parseFloat(draft))) setDraft(value == null ? "" : String(value)); }}
+      onChange={(e) => { const r = e.target.value; setDraft(r); const n = parseFloat(r); if (r !== "" && !isNaN(n)) onChange(n); }}
+      style={bare
+        ? { width: w || 64, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "7px 9px", fontFamily: "inherit", fontSize: 12.5, boxSizing: "border-box" }
+        : { width: "100%", boxSizing: "border-box", fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 11px", outline: "none" }} />
+  );
+  if (bare) return input;
+  return (<div style={{ flex: 1 }}><div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{label}</div>{input}</div>);
+}
 /* ── pure helpers (no theme) ── */
 function bmiBand(b) { if (!b) return ""; if (b < 18.5) return "underweight"; if (b < 25) return "healthy"; if (b < 30) return "overweight"; return "obese"; }
 function calcBodyFat(body, weight) {

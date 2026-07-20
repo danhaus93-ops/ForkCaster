@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.3"
+version: "0.2.4"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.3 FULL MENU COVERAGE: PDF menus are now text-extracted, and JS-built
-  menus (Toast, Square, popmenu etc.) are captured by a headless Chromium
-  browser running on your node that renders the site like a phone and reads
-  the final page. Three-stage escalation (HTML then PDF then render) with the
-  method shown on the result badge. Image grows ~180MB for Chromium; first
-  build takes a few minutes longer.
+  v0.2.4: number fields are finally deletable - you can clear any numeric
+  input while typing (dose, targets, body stats, preferences) and it restores
+  sensibly on blur. Log dose now confirms visibly (button flashes Logged with
+  a checkmark) and a Last dose line shows date, mg, and week under Next
+  injection.
 dependencies: []
 path: ""
 defaultUsername: ""
