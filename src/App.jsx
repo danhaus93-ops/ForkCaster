@@ -208,6 +208,7 @@ export default function App() {
   const volU = isMetric ? "ml" : "oz";
   const fmtVol = (oz) => (isMetric ? Math.round(oz * ML_PER_OZ) : Math.round(oz));
   const [eaten, setEaten] = useState({ protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
+  const [savedRank, setSavedRank] = useState(null); // persisted rank cache — must precede stateBlob
   const [editing, setEditing] = useState(false);
 
   const [geo, setGeo] = useState({ status: "idle" });
@@ -591,7 +592,6 @@ export default function App() {
     }
   }
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
-  const [savedRank, setSavedRank] = useState(null); // persisted rank cache
   const [doseLogged, setDoseLogged] = useState(false);
   const [presetSaved, setPresetSaved] = useState(false);
   function logInjection() {
