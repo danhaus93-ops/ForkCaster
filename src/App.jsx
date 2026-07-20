@@ -1196,6 +1196,8 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
   const [pick, setPick] = useState("auto");
   const [moved, setMoved] = useState(false);
   const [follow, setFollow] = useState(true);
+  const [gmap, setGmap] = useState(null); // null=probing, true=Google tiles live, false=CARTO fallback
+  useEffect(() => { fetch("/api/gmap/tile/day/3/1/2").then((r) => setGmap(r.ok)).catch(() => setGmap(false)); }, []);
   const [, setTick] = useState(0);
   useEffect(() => { const t = setInterval(() => setTick((x) => x + 1), 3000); return () => clearInterval(t); }, []);
   const insecure = typeof window !== "undefined" && !window.isSecureContext;
@@ -1217,10 +1219,12 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea }) {
   }, []);
 
   useEffect(() => {
-    const m = mapRef.current; if (!m) return;
+    const m = mapRef.current; if (!m || gmap === null) return;
     if (layerRef.current) m.removeLayer(layerRef.current);
-    layerRef.current = L.tileLayer(S.tl, { attribution: S.attr, maxZoom: 19, subdomains: "abcd" }).addTo(m);
-  }, [styleKey]);
+    const url = gmap ? `/api/gmap/tile/${styleKey}/{z}/{x}/{y}` : S.tl;
+    const attr = gmap ? "&copy; Google" : S.attr;
+    layerRef.current = L.tileLayer(url, { attribution: attr, maxZoom: 19, subdomains: "abcd" }).addTo(m);
+  }, [styleKey, gmap]);
 
   useEffect(() => {
     const m = mapRef.current; if (!m || geo.status !== "ok" || !follow) return;

@@ -201,6 +201,53 @@ app.get("/api/nearby", async (req, res) => {
   } catch (e) { res.json({ venues: [], live: false, error: String(e) }); }
 });
 
+/* ── Google Map Tiles proxy (key stays server-side).
+   Requires in Google Cloud: (1) "Map Tiles API" enabled on the project,
+   (2) Map Tiles API added to the key's API restrictions. Falls back 404 → client uses CARTO. */
+const GMAP_DARK = [
+  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8a95a5" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+];
+const GMAP_STYLES = {
+  day: { mapType: "roadmap" },
+  night: { mapType: "roadmap", styles: GMAP_DARK },
+  sat: { mapType: "satellite" },
+};
+const gmapSessions = {};
+async function gmapSession(style) {
+  const PLACES_KEY = key("GOOGLE_PLACES_KEY");
+  if (!PLACES_KEY) throw new Error("no key");
+  const cached = gmapSessions[style];
+  if (cached && +cached.expiry > Date.now() / 1000 + 120) return cached.session;
+  const cfg = GMAP_STYLES[style] || GMAP_STYLES.day;
+  const r = await fetch(`https://tile.googleapis.com/v1/createSession?key=${PLACES_KEY}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mapType: cfg.mapType, language: "en-US", region: "US", scale: "scaleFactor2x", highDpi: true, ...(cfg.styles ? { styles: cfg.styles } : {}) }),
+  });
+  const d = await r.json();
+  if (!d.session) throw new Error((d.error && d.error.message) || "session failed");
+  gmapSessions[style] = d;
+  return d.session;
+}
+app.get("/api/gmap/tile/:style/:z/:x/:y", async (req, res) => {
+  try {
+    const PLACES_KEY = key("GOOGLE_PLACES_KEY");
+    const { style, z, x, y } = req.params;
+    const session = await gmapSession(style);
+    const r = await fetch(`https://tile.googleapis.com/v1/2dtiles/${z}/${x}/${y}?session=${session}&key=${PLACES_KEY}`);
+    if (!r.ok) return res.status(404).end();
+    res.set("Content-Type", r.headers.get("content-type") || "image/png");
+    res.set("Cache-Control", "public, max-age=604800");
+    res.send(Buffer.from(await r.arrayBuffer()));
+  } catch { res.status(404).end(); }
+});
+
 /* ── venue photo proxy (keeps the Places key server-side) ── */
 app.get("/api/vphoto", async (req, res) => {
   const PLACES_KEY = key("GOOGLE_PLACES_KEY");
