@@ -135,11 +135,11 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
       picks = [...glp.slice(0, 3), ...rest].slice(0, 3); // quota by construction: GLP-1 items fill first
     }
   }
+  // Macros (protein/cal/fat) are shown as numbers on the card — the why line must NOT restate them.
   const mkWhy = (it) => [
     mode === "glp1" && glpTag(it) ? "GLP-1 section" : null,
-    +it.protein ? `${it.protein}g protein` : null,
     queasy ? "gentle volume" : null,
-  ].filter(Boolean).join(" · ") || "good goal fit";
+  ].filter(Boolean).join(" · ") || (mode === "glp1" ? "protein-first pick" : mode === "gain" ? "high-protein pick" : "protein-dense pick");
   const avoid = sorted.slice(-2).reverse().map((it) => ({ item: it.item, reason: (+it.cal || 0) > 500 ? "calorie-heavy" : "low protein density" }));
   const coach = mode === "glp1"
     ? (queasy ? "Dose week: small-volume, protein-first — sip slowly." : "Protein-first, small volume — GLP-1 friendly picks up top.")
@@ -640,8 +640,8 @@ export default function App() {
     let doneViaExtraction = false;
     if (liveMenu) {
       try {
-        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a section labeled NUTRITION (official PDF) is present, it is the authoritative source: match menu items to it loosely by name and use ITS calorie and protein values instead of estimating; only estimate for items absent from it. ` +
-          `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
+        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a section labeled NUTRITION (official PDF) is present, it is the authoritative source: match menu items to it loosely by name and use ITS calorie, protein, AND fat values instead of estimating; only estimate for items absent from it. For any item whose numbers are not written in the text, ESTIMATE calories, protein, and fat from typical values for that item — do NOT return 0 for protein or fat unless the item genuinely has almost none (black coffee, diet soda, plain water). ` +
+          `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
           const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);
