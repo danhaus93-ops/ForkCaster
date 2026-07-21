@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.67"
+version: "0.2.68"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.67: the nutrition harvest no longer follows the site's Menu nav link
-  away from the nutrition page before collecting PDFs (it was sabotaging its
-  own harvest), and the app allows the full scrape-plus-harvest pipeline the
-  time it needs on first visit (cached afterward).
+  v0.2.68: the nutrition-PDF harvester now searches every iframe on the page
+  AND regex-scans the full rendered HTML for PDF URLs (catching links
+  embedded in script data with no visible anchor). Render diagnostics log
+  text size, frame count, and PDFs found per page.
 dependencies: []
 path: ""
 defaultUsername: ""

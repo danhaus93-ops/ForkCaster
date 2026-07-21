@@ -375,12 +375,18 @@ async function renderPage(startUrl, opts = {}) {
         if (t2.length > text.length) { text = t2; src = menuHref; }
       } catch {}
     }
-    const dataPdfs = await page.evaluate(() => {
-      const as = Array.from(document.querySelectorAll("a[href]"));
-      return as.map((a) => ({ href: a.href, label: (a.textContent || "").trim() }))
-        .filter((x) => /\.pdf(\?|$)/i.test(x.href) && /nutrit|allerg|calorie/i.test(x.href + " " + x.label))
-        .map((x) => x.href).slice(0, 4);
-    }).catch(() => []);
+    let dataPdfs = [];
+    try {
+      for (const f of page.frames()) {
+        const arr = await f.evaluate(() => Array.from(document.querySelectorAll("a[href]")).map((a) => ({ href: a.href, label: (a.textContent || "").trim() }))).catch(() => []);
+        for (const x of arr) if (/\.pdf(\?|$)/i.test(x.href) && /nutrit|allerg|calorie/i.test(x.href + " " + x.label)) dataPdfs.push(x.href);
+      }
+      const fullHtml = await page.content().catch(() => "");
+      const rawHits = fullHtml.match(/https?:\/\/[^\s"'<>\\]+?\.pdf(?:\?[^\s"'<>\\]*)?/gi) || [];
+      for (const u2 of rawHits) if (/nutrit|allerg|calorie/i.test(u2)) dataPdfs.push(u2);
+    } catch {}
+    dataPdfs = [...new Set(dataPdfs)].slice(0, 4);
+    console.log(`[render] ${src} -> ${text.length} chars, ${(typeof page.frames === "function" ? page.frames().length : 1)} frames, ${dataPdfs.length} data pdfs`);
     return { text: text.replace(/\s+/g, " ").trim(), source: src, dataPdfs };
   } finally { try { await browser.close(); } catch {} }
 }
