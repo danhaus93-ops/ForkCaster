@@ -350,9 +350,16 @@ async function renderPage(startUrl) {
     const page = await browser.newPage();
     await page.setUserAgent(MENU_UA["User-Agent"]);
     await page.setViewport({ width: 414, height: 896 });
+    await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+      Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });
+      Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3] });
+    });
     let src = startUrl;
-    await page.goto(src, { waitUntil: "networkidle2", timeout: 22000 });
-    await new Promise((r) => setTimeout(r, 1500));
+    try { await page.goto(src, { waitUntil: "networkidle2", timeout: 22000 }); }
+    catch { try { await page.goto(src, { waitUntil: "domcontentloaded", timeout: 15000 }); } catch {} }
+    await new Promise((r) => setTimeout(r, 2500));
     let text = await page.evaluate(() => (document.body ? document.body.innerText : ""));
     const menuHref = await page.evaluate(() => {
       const as = Array.from(document.querySelectorAll("a[href]"));
@@ -458,7 +465,15 @@ app.get("/api/menu", async (req, res) => {
       if (bestText.length > 700 && (priceCal(bestText) >= 2 || dishWords(bestText) >= 10)) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     }
     // Stage 3: headless render for JS-built menus
-    const rendered = await withRenderLock(() => renderPage(renderTarget));
+    const _origin = (() => { try { return new URL(url).origin; } catch { return null; } })();
+    const foodOK = (t) => t && t.length > 400 && ((t.match(/\$\s?\d|\b\d{2,4}\s?cal/gi) || []).length >= 2 || (t.match(/smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|protein|oz\b/gi) || []).length >= 10);
+    let rendered = null;
+    const rTargets = [...new Set([renderTarget !== url ? renderTarget : null, _origin ? _origin + "/menu" : null, url].filter(Boolean))].slice(0, 3);
+    for (const rt of rTargets) {
+      const r2 = await withRenderLock(() => renderPage(rt));
+      if (r2 && (r2.pdfUrl || foodOK(r2.text))) { rendered = r2; break; }
+      if (r2 && !rendered) rendered = r2;
+    }
     if (rendered && rendered.pdfUrl) {
       const b = await fetchAny(rendered.pdfUrl);
       if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }

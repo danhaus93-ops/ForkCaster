@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.61"
+version: "0.2.62"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.61 chain-menu fix (thanks Popeyes): sites that render their nav in
-  JavaScript hid their menu links from the crawler. The scraper now seeds
-  well-known paths (/menu, /food, /nutrition...) as candidates, points the
-  headless-render fallback at the best menu candidate instead of the
-  homepage, and no longer accepts homepage boilerplate as a menu unless it
-  actually smells like food.
+  v0.2.62 chain-menu fix round 2: the headless renderer now tries the /menu
+  page directly even when the homepage fetch is blocked, walks up to three
+  candidate pages with a food-signal check on each, masks headless
+  automation markers (bot walls were rejecting us), and survives slow
+  JS-heavy sites instead of timing out.
 dependencies: []
 path: ""
 defaultUsername: ""
