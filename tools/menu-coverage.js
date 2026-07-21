@@ -5,10 +5,11 @@
  * chains at once and prints a coverage table — so we can see what works, catch
  * regressions, and fix chains in batches WITHOUT visiting each restaurant.
  *
- * Run on the node (from repo root, container up):
- *   node tools/menu-coverage.js                # all chains
- *   node tools/menu-coverage.js sonic popeyes  # just these
- *   FC_BASE=http://localhost:3451 node tools/menu-coverage.js
+ * Run on the node — INSIDE the container (no host node needed; tools/ ships in the image):
+ *   sudo docker exec -e FC_BASE=http://localhost:3450 forkcaster-coach_web_1 node /app/tools/menu-coverage.js
+ *   sudo docker exec -e FC_BASE=http://localhost:3450 forkcaster-coach_web_1 node /app/tools/menu-coverage.js sonic popeyes
+ * Or from the host if node is installed:
+ *   node tools/menu-coverage.js                # talks to http://localhost:3451
  *
  * First run is SLOW (cold cache, ~60-90s/chain). Results cache 6h, so a re-run is fast.
  * Save a snapshot to compare later:  node tools/menu-coverage.js > coverage.txt
@@ -51,7 +52,8 @@ const CHAINS = [
 const pick = process.argv.slice(2).map((s) => s.toLowerCase());
 const list = pick.length ? CHAINS.filter(([n]) => pick.includes(n)) : CHAINS;
 
-const withFat = (t) => /\dg fat/.test(t || "");
+// fat evidence: structured items carry fat, or the text mentions fat inline OR as a PDF table header ("TOTAL FAT (G)")
+const withFat = (d) => (Array.isArray(d.items) && d.items.some((i) => i && i.fat != null)) || /\dg fat|total\s*fat/i.test(d.text || "");
 const src = (t) => (/NUTRITION \(official PDF\)/.test(t) ? "PDF" : /NUTRITION \(structured data\)/.test(t) ? "JSON" : "text/est");
 
 async function one([name, url]) {
@@ -63,7 +65,7 @@ async function one([name, url]) {
     if (!d || !d.ok) return { name, ok: false, secs, note: (d && d.reason) || `http ${r.status}` };
     const items = Array.isArray(d.items) ? d.items : [];
     const sample = items.slice(0, 2).map((i) => `${i.item}(${i.protein ?? "?"}p/${i.cal ?? "?"}c/${i.fat ?? "?"}f)`).join(", ");
-    return { name, ok: true, secs, method: d.method, items: items.length, fat: withFat(d.text), src: src(d.text), len: (d.text || "").length, sample };
+    return { name, ok: true, secs, method: d.method, items: items.length, fat: withFat(d), src: src(d.text), len: (d.text || "").length, sample };
   } catch (e) {
     return { name, ok: false, secs: ((Date.now() - t0) / 1000).toFixed(0), note: e.name === "TimeoutError" ? "timeout(150s)" : e.message };
   }

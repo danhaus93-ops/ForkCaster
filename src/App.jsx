@@ -663,7 +663,7 @@ export default function App() {
     if (liveMenu && !doneViaExtraction) {
       try {
         const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a NUTRITION section is present it is authoritative — match items to it loosely by name and use ITS calorie, protein, AND fat values instead of estimating. When BOTH an "official PDF" and a "structured data" NUTRITION section exist, PREFER the official PDF's numbers. EVERY item MUST include a fat value — use the section's fat, otherwise estimate fat from typical values; NEVER omit or null fat. Only fully estimate items absent from every NUTRITION section, and do NOT return 0 for protein or fat unless the item genuinely has almost none (black coffee, diet soda, plain water). ` +
-          `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
+          `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>}]\nTEXT:\n"""${liveMenu.text.slice(0, 9000)}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
           const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);

@@ -612,7 +612,7 @@ app.get("/api/menu", async (req, res) => {
       // chains often render nav client-side: raw HTML has no menu links. Seed well-known paths.
       try {
         const origin = new URL(a.url).origin;
-        for (const p of ["/menu", "/menus", "/food", "/our-menu", "/nutrition", "/nutritional-information", "/nutrition-information"]) {
+        for (const p of ["/menu", "/menus", "/food", "/our-menu", "/nutrition", "/nutrition-allergen", "/nutritional-information", "/nutrition-information"]) {
           const abs = origin + p;
           if (urlAllowed(abs) && !cands.has(abs)) cands.set(abs, 12);
         }

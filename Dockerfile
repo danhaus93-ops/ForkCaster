@@ -18,6 +18,7 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser PUPPETEER_SKIP_DOWNLOAD=
 RUN npm install express@4 pdf-parse@1.1.1 puppeteer-core --no-audit --no-fund web-push
 COPY package.json ./
 COPY server ./server
+COPY tools ./tools
 COPY --from=build /app/dist ./dist
 EXPOSE 3450
 VOLUME ["/data"]
