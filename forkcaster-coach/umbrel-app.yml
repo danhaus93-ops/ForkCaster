@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.81"
+version: "0.2.82"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.81: fixes garbage picks (bare "Bun"/"Tea"/"Coke" with no macros) that could
-  slip through on sites whose menu data mixes ingredients and drinks with real
-  items - only real food is used now, and menus that don't parse cleanly fall back
-  to the AI picks instead of showing fragments.
+  v0.2.82: Sonic (and chains like it) now harvest their official nutrition brochure
+  PDF the same way Popeyes does - the app checks the nutrition-allergen page, finds
+  the brochure even when it lives on a separate server, and reads exact calories,
+  protein, and fat from it instead of guessing from messy live menu data.
 dependencies: []
 path: ""
 defaultUsername: ""

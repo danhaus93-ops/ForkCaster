@@ -665,6 +665,8 @@ app.get("/api/menu", async (req, res) => {
       if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return _send({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
     }
     if (rendered && (rendered.text || rendered.html)) {
+      // a real orderable item has a non-trivial name and real macros (not a bare component/drink fragment)
+      const realItem = (r) => r.item && r.item.trim().length > 2 && ((+r.protein || 0) >= 3 || (+r.cal || 0) >= 50);
       // structured-nutrition harvest: embedded JSON (JSON-LD/__NEXT_DATA__/state), captured JSON responses, fetched endpoints
       let structured = [];
       try { structured = structuredNutrition(rendered.html || ""); } catch {}
@@ -684,8 +686,8 @@ app.get("/api/menu", async (req, res) => {
       if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu);
       pdfSources = [...new Set(pdfSources)];
       // if still missing a PDF or the structured set is thin, render the nutrition pages and mine BOTH their PDFs and their structured JSON
-      if (structured.length < 8 && !pdfSources.length && _origin) {
-        for (const probe of [_origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
+      if (structured.filter(realItem).length < 8 && !pdfSources.length && _origin) {
+        for (const probe of [_origin + "/nutrition-allergen", _origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
           try {
             console.log(`[menu] harvest-render: ${probe}`);
             const rh = await withRenderLock(() => renderPage(probe, { follow: false }));
@@ -695,13 +697,13 @@ app.get("/api/menu", async (req, res) => {
             if (Array.isArray(rh.jsonBlobs)) for (const blob of rh.jsonBlobs) { for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
             try { for (const r of structuredNutrition(rh.html || "")) structured.push(r); } catch {}
             pdfSources = [...new Set(pdfSources)];
-            if (pdfSources.length || structured.length >= 8) break; // official PDF or a full menu — stop probing
+            if (pdfSources.length || structured.filter(realItem).length >= 8) break; // official PDF or a full menu — stop probing
           } catch {}
         }
       }
       // keep only plausible real menu items — drop component/drink fragments with no real macros
       // (a bare "Bun"/"Tea"/"Coke" with 0 protein and no calories is not an orderable meal)
-      structured = dedupeRecords(structured).filter((r) => r.item && r.item.trim().length > 2 && ((+r.protein || 0) >= 3 || (+r.cal || 0) >= 50));
+      structured = dedupeRecords(structured).filter(realItem);
       // diagnostic: blobs present but parser under-extracted — log the real shape so it can be taught precisely
       if (structured.length < 5 && !pdfSources.length && Array.isArray(rendered.jsonBlobs) && rendered.jsonBlobs.length) {
         let shown = 0;
