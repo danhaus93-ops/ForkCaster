@@ -444,8 +444,18 @@ function jsonCandidatesFromHtml(html, baseUrl) {
   const src = String(html || ""), out = new Set();
   for (const u of src.match(/https?:\/\/[^\s"'<>\\]+?\.json(?:\?[^\s"'<>\\]*)?/gi) || []) out.add(u);
   for (const m of src.matchAll(/["'](\/[^"'\s]*?(?:menu|nutrition|product|item|catalog)[^"'\s]*?)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
-  for (const m of src.matchAll(/(?:fetch|axios\.get|\.get|\.load)\(\s*["']([^"']+)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
-  return [...out].filter((u) => urlAllowed(u) && /menu|nutrition|product|item|catalog|\.json/i.test(u) && !/\.(js|mjs|css|png|jpe?g|svg|webp|gif|ico|woff2?|ttf)(\?|$)/i.test(u)).slice(0, 6);
+  for (const m of src.matchAll(/(?:fetch|axios\.get|\.get|\.load)\(\s*["'](https?:\/\/[^"']+|\/[^"']+)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
+  return [...out].filter((u) => urlAllowed(u) && /menu|nutrition|product|item|catalog|allergen|page-data|\.json(\?|$)/i.test(u) && !/\.(js|mjs|css|png|jpe?g|svg|webp|gif|ico|woff2?|ttf)(\?|$)/i.test(u)).slice(0, 6);
+}
+// nutrition often hides behind a PAGE link inside a data blob ("url":"/allergens/") rather than a .pdf URL
+function nutriPageLinksFromBlobs(blobs, baseUrl) {
+  const out = new Set();
+  for (const blob of blobs || []) {
+    for (const m of String(blob.body || "").matchAll(/"(?:url|href|slug|link)"\s*:\s*"(\\?\/[^"]*?(?:allergen|nutrition)[^"]*?)"/gi)) {
+      try { const u = new URL(m[1].replace(/\\\//g, "/"), baseUrl).href; if (urlAllowed(u) && !/\.(png|jpe?g|svg|css|js)(\?|$)/i.test(u)) out.add(u); } catch {}
+    }
+  }
+  return [...out].slice(0, 2);
 }
 async function fetchJson(u) {
   try {
@@ -643,7 +653,8 @@ app.get("/api/menu", async (req, res) => {
       console.log(`[menu] sections passing food gate: ${good.length}`);
       // menu names alone aren't nutrition: only return early when the text carries MACRO evidence
       // (grams of protein/fat, or a nutrition-PDF table) — otherwise keep it as fallback and go deep
-      const hasMacros = (t) => /\d{1,3}\s?g\s*(of\s*)?(protein|fat)|total\s*fat|protein\s*\(g\)/i.test(t || "");
+      // one "20g protein" marketing blurb isn't nutrition data — a real table mentions macros many times
+      const hasMacros = (t) => ((t || "").match(/\d{1,3}\s?g\s*(of\s*)?(protein|fat)|total\s*fat|protein\s*\(g\)/gi) || []).length >= 3;
       if (good.length) {
         const joined = good.join("\n\n").slice(0, 8000);
         if (anyPdf || hasMacros(joined)) return _send({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
@@ -698,7 +709,9 @@ app.get("/api/menu", async (req, res) => {
       pdfSources = [...new Set(pdfSources)];
       // if still missing a PDF or the structured set is thin, render the nutrition pages and mine BOTH their PDFs and their structured JSON
       if (structured.filter(realItem).length < 8 && !pdfSources.length && _origin && Date.now() - _reqT0 < 90000) {
-        for (const probe of [_origin + "/nutrition-allergen", _origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
+        const blobPages = nutriPageLinksFromBlobs(rendered.jsonBlobs, rendered.source || url);
+        if (blobPages.length) console.log(`[menu] nutrition page links from blobs: ${blobPages.join(" | ")}`);
+        for (const probe of [...blobPages, _origin + "/nutrition-allergen", _origin + "/allergens", _origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
           try {
             if (Date.now() - _reqT0 > 90000) { console.log(`[menu] time budget hit — stop probing, return what we have`); break; }
             console.log(`[menu] harvest-render: ${probe}`);
