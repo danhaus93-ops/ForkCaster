@@ -564,6 +564,7 @@ const MENU_CACHE = new Map(); // url+goal -> { t, obj }
 const MENU_INFLIGHT = new Map(); // url+goal -> Promise: concurrent identical requests share one run
 app.get("/api/menu", async (req, res) => {
   const _reqT0 = Date.now(); // overall time budget — client aborts at 150s, so return SOMETHING by ~120s
+  let earlyFallback = null; // menu-shaped early-html text WITHOUT macro evidence — kept as fallback while we go deep
   const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
   const _hit = MENU_CACHE.get(_ckey);
   if (_hit && Date.now() - _hit.t < 6 * 3600 * 1000) { console.log(`[menu] cache hit ${_ckey.slice(0, 80)}`); return res.json(_hit.obj); }
@@ -640,12 +641,21 @@ app.get("/api/menu", async (req, res) => {
       console.log(`[menu] sections fetched: ${sections.length}, lens: ${sections.map((x) => x.length).join(",")}`);
       const good = sections.filter((sec) => priceCal(sec) >= 2 || dishWords(sec) >= 10);
       console.log(`[menu] sections passing food gate: ${good.length}`);
+      // menu names alone aren't nutrition: only return early when the text carries MACRO evidence
+      // (grams of protein/fat, or a nutrition-PDF table) — otherwise keep it as fallback and go deep
+      const hasMacros = (t) => /\d{1,3}\s?g\s*(of\s*)?(protein|fat)|total\s*fat|protein\s*\(g\)/i.test(t || "");
       if (good.length) {
         const joined = good.join("\n\n").slice(0, 8000);
-        return _send({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
+        if (anyPdf || hasMacros(joined)) return _send({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
+        earlyFallback = { text: joined, source: top.map(([l]) => l).join(" + ") };
+        console.log(`[menu] early html is menu-shaped but has NO macro evidence — going deep`);
       }
       // no section passed the food-signal gate: fall through to page text / headless render
-      if (bestText.length > 700 && (priceCal(bestText) >= 2 || dishWords(bestText) >= 10)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
+      else if (bestText.length > 700 && (priceCal(bestText) >= 2 || dishWords(bestText) >= 10)) {
+        if (hasMacros(bestText)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
+        earlyFallback = { text: bestText.slice(0, 6000), source: bestSrc };
+        console.log(`[menu] landing text is menu-shaped but has NO macro evidence — going deep`);
+      }
     }
     // Stage 3: headless render for JS-built menus
     const _origin = (() => { try { return new URL(url).origin; } catch { return null; } })();
@@ -716,7 +726,8 @@ app.get("/api/menu", async (req, res) => {
         }
       }
       console.log(`[menu] nutrition pdf candidates: ${pdfSources.join(" | ") || "none"}`);
-      const baseText = rendered.text && rendered.text.length > 100 ? rendered.text.slice(0, 6000) : "";
+      let baseText = rendered.text && rendered.text.length > 100 ? rendered.text.slice(0, 6000) : "";
+      if (baseText.length < 400 && earlyFallback) baseText = earlyFallback.text; // deep render came back thin — early menu text is better context
       if (baseText.length > 400 || structured.length >= 2 || pdfSources.length) {
       let jsText = baseText;
       if (structured.length) {
@@ -748,7 +759,8 @@ app.get("/api/menu", async (req, res) => {
       return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000), items: mealItems.length >= 3 ? mealItems : undefined });
       }
     }
-    // last resort: thin HTML is better than nothing
+    // last resort: the stashed early menu text (deep path found nothing better), then thin HTML, then give up
+    if (earlyFallback) return _send({ ok: true, method: "html", source: earlyFallback.source, text: earlyFallback.text });
     if (bestText.length > 400 && ((bestText.match(/\$\s?\d|\b\d{2,4}\s?cal/gi) || []).length >= 2 || (bestText.match(/smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|protein|oz\b/gi) || []).length >= 10)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     res.json({ ok: false });
   } catch (e) { console.error("menu extraction failed:", e.message); res.json({ ok: false }); }
