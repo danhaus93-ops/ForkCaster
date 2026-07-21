@@ -239,7 +239,7 @@ const MEDS = {
     note: "Typical: 0.25 mg/wk, escalate ~every 4 wks to 2.4 mg maintenance." },
   rybelsus: { label: "Semaglutide (oral)", brand: "Rybelsus", cadence: "daily", investigational: false,
     steps: [3, 7, 14], unit: "mg",
-    note: "Daily pill — empty stomach with ≤4 oz water, wait ≥30 min before food, drink, or other meds." },
+    note: "Take on an empty stomach with ≤4 oz water — wait ≥30 min before food, drink, or other meds." },
   orforglipron: { label: "Orforglipron", brand: "oral GLP-1", cadence: "daily", investigational: true,
     steps: [3, 12, 24, 36], unit: "mg",
     note: "Daily oral GLP-1 — follow your prescriber's titration guidance." },
@@ -521,7 +521,7 @@ export default function App() {
   const toGoal = curWeight - goalWeight;
   const phaseIdx = escalating && progress < 0.15 ? 0 : toGoal <= 3 ? (toGoal <= 0.5 ? 3 : 2) : 1;
   const PHASES = [
-    { key: "rampup", label: "Ramp-up", focus: "Build the habit while your dose climbs. Nausea is highest now — lighter, protein-first meals." },
+    { key: "rampup", label: "Ramp-up", focus: "Build the habit while your dose climbs. Nausea peaks during ramp-up — favor lighter, protein-first meals." },
     { key: "loss", label: "Active loss", focus: "Protein floor every meal to protect muscle while fat comes off. You're on pace." },
     { key: "approach", label: "Approaching goal", focus: "Shift to muscle preservation + resistance training. Ease the deficit as you close in." },
     { key: "maintain", label: "Maintenance / off-ramp", focus: "The hard part most apps ignore: hold the loss and plan life after the drug." },
@@ -1446,7 +1446,7 @@ export default function App() {
       {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>)}</div>}
-      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
+      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} />)}</div>}
 
       {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
@@ -2092,7 +2092,7 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
     </div>
   );
 }
-function DoseCalendar({ C, doseLog, dueISO, onRemove }) {
+function DoseCalendar({ C, pill, doseLog, dueISO, onRemove }) {
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const todayIso = new Date().toLocaleDateString("sv-SE");
   const first = new Date(ym.y, ym.m, 1);
@@ -2107,13 +2107,20 @@ function DoseCalendar({ C, doseLog, dueISO, onRemove }) {
   const syr = (color, s = 11) => (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg>
   );
+const pillIc = (color, s = 12) => (
+  <svg width={s} height={s} viewBox="0 0 20 20" style={{ display: "block" }}>
+    <rect x="3.5" y="7" width="13" height="6" rx="3" transform="rotate(-45 10 10)" fill="none" stroke={color} strokeWidth="2" />
+    <line x1="7.5" y1="12.5" x2="12.5" y2="7.5" stroke={color} strokeWidth="2" />
+  </svg>
+);
+
   const navB = { background: "none", border: `1px solid ${C.hair}`, borderRadius: 8, color: C.ink2, width: 28, height: 28, fontSize: 15, cursor: "pointer", lineHeight: 1 };
   return (
     <div>
       {dueISO === todayIso && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 10, padding: "9px 12px", marginBottom: 12 }}>
           {syr(C.violet, 15)}
-          <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 700, color: C.violet }}>Dose due today — log it once injected</span>
+          <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 700, color: C.violet }}>Dose due today — log it once taken</span>
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -2131,13 +2138,13 @@ function DoseCalendar({ C, doseLog, dueISO, onRemove }) {
           return (
             <div key={i} onClick={() => { if (lg && onRemove) onRemove(di); }} style={{ height: 36, cursor: lg ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, borderRadius: 9, margin: "0 2px", border: due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: lg ? C.goSoft : "transparent" }}>
               <span style={{ fontSize: 10.5, fontWeight: today || due || lg ? 800 : 500, color: lg ? C.go : due ? C.violet : today ? C.ink : C.muted }}>{d}</span>
-              {lg ? syr(C.go) : due ? <span style={{ fontSize: 7.5, color: C.violet, fontWeight: 800, letterSpacing: 0.5 }}>DUE</span> : <span style={{ height: 11 }} />}
+              {lg ? (pill ? pillIc(C.go) : syr(C.go)) : due ? <span style={{ fontSize: 7.5, color: C.violet, fontWeight: 800, letterSpacing: 0.5 }}>DUE</span> : <span style={{ height: 11 }} />}
             </div>
           );
         })}
       </div>
       <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 10, fontSize: 10, color: C.faint, alignItems: "center" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>{syr(C.go, 10)} dose logged</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>{pill ? pillIc(C.go, 10) : syr(C.go, 10)} dose logged</span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, border: `1.5px dashed ${C.violet}`, display: "inline-block" }} /> due</span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 3, border: `1.5px solid ${C.go}88`, display: "inline-block" }} /> today</span>
       </div>
