@@ -145,7 +145,7 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
     ? (queasy ? "Dose week: small-volume, protein-first — sip slowly." : "Protein-first, small volume — GLP-1 friendly picks up top.")
     : mode === "gain" ? "Max protein first — upsize and add whey where offered."
     : "Protein-dense picks under your remaining calories.";
-  return { coach, picks: picks.map((it) => ({ item: it.item, name: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0 })), avoid };
+  return { coach, picks: picks.map((it) => ({ item: it.item, name: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0, calories: +it.cal || 0 })), avoid };
 }
 function sanitizePicks(parsed, allergies) {
   if (!parsed || !Array.isArray(parsed.picks) || !allergies.length) return parsed;
@@ -1182,7 +1182,7 @@ export default function App() {
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 99, background: medalColor(i), color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{p.why}</div></div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{p.calories} cal</div></div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal</div></div>
                 <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: 0 }]); setLoggedPicks((l) => [...l, nm]); }}
                   style={{ marginLeft: 10, flexShrink: 0, alignSelf: "center", background: loggedPicks.includes(p.item || p.name) ? C.goSoft : "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 9, padding: "7px 10px", fontFamily: BODY, fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>{loggedPicks.includes(p.item || p.name) ? "✓" : "Log"}</button>
               </div>
