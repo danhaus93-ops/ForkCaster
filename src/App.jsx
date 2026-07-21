@@ -632,7 +632,7 @@ export default function App() {
     let liveMenu = null;
     if (!r.menu && r.website) {
       try {
-        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}`, { signal: AbortSignal.timeout(65000) });
+        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}`, { signal: AbortSignal.timeout(95000) });
         const mj = await mres.json();
         if (mj && mj.ok && mj.text) liveMenu = mj;
       } catch {}

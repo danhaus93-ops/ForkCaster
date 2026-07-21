@@ -339,7 +339,7 @@ async function pdfText(buf) {
 }
 let renderChain = Promise.resolve();
 function withRenderLock(fn) { const p = renderChain.then(fn, fn); renderChain = p.catch(() => {}); return p; }
-async function renderPage(startUrl) {
+async function renderPage(startUrl, opts = {}) {
   const puppeteer = require("puppeteer-core");
   const browser = await puppeteer.launch({
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
@@ -366,7 +366,7 @@ async function renderPage(startUrl) {
       const hit = as.find((a) => /menu/i.test(a.getAttribute("href") || "") || /^\s*(view\s+)?(our\s+)?(full\s+)?menu\s*$/i.test(a.textContent || ""));
       return hit ? hit.href : null;
     }).catch(() => null);
-    if (menuHref && menuHref !== src && urlAllowed(menuHref)) {
+    if (opts.follow !== false && menuHref && menuHref !== src && urlAllowed(menuHref)) {
       if (/\.pdf(\?|$)/i.test(menuHref)) { await browser.close(); return { pdfUrl: menuHref }; }
       try {
         await page.goto(menuHref, { waitUntil: "networkidle2", timeout: 22000 });
@@ -504,7 +504,7 @@ app.get("/api/menu", async (req, res) => {
         for (const probe of [_origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
           try {
             console.log(`[menu] harvest-render: ${probe}`);
-            const rh = await withRenderLock(() => renderPage(probe));
+            const rh = await withRenderLock(() => renderPage(probe, { follow: false }));
             if (rh && Array.isArray(rh.dataPdfs) && rh.dataPdfs.length) { pdfSources = rh.dataPdfs; break; }
             if (rh && rh.pdfUrl) { pdfSources = [rh.pdfUrl]; break; }
           } catch {}
