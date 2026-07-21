@@ -460,7 +460,12 @@ async function renderPage(startUrl, opts = {}) {
     for (const fsrc of frameSrcs) {
       try { const fu = new URL(fsrc, startUrl).href; const fr2 = await fetch(fu, { headers: { ...MENU_UA, "X-Fake-Render": "1" }, signal: AbortSignal.timeout(8000) }); html += "\n" + (await fr2.text()); } catch {}
     }
-    return { text: stripHtml(html), source: startUrl, dataPdfs: pdfCandidatesFromHtml(html), html, jsonBlobs: [] };
+    // stand-in for browser response capture: fetch referenced JSON endpoints into blobs
+    const jsonBlobs = [];
+    for (const ju of jsonCandidatesFromHtml(html, startUrl).slice(0, 6)) {
+      try { const jr = await fetch(ju, { headers: { ...MENU_UA, "X-Fake-Render": "1" }, signal: AbortSignal.timeout(8000) }); if (!jr.ok) continue; const ct = (jr.headers.get("content-type") || "").toLowerCase(); const body = await jr.text(); if (ct.includes("json") || /^\s*[[{]/.test(body)) jsonBlobs.push({ url: ju, body }); } catch {}
+    }
+    return { text: stripHtml(html), source: startUrl, dataPdfs: pdfCandidatesFromHtml(html), html, jsonBlobs };
   }
   const puppeteer = require("puppeteer-core");
   const browser = await puppeteer.launch({
@@ -650,7 +655,7 @@ app.get("/api/menu", async (req, res) => {
       if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return _send({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
     }
     if (rendered && (rendered.text || rendered.html)) {
-      // structured-nutrition harvest: embedded JSON (JSON-LD/__NEXT_DATA__/state), fetched JSON endpoints, captured responses
+      // structured-nutrition harvest: embedded JSON (JSON-LD/__NEXT_DATA__/state), captured JSON responses, fetched endpoints
       let structured = [];
       try { structured = structuredNutrition(rendered.html || ""); } catch {}
       if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) { try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
@@ -663,36 +668,45 @@ app.get("/api/menu", async (req, res) => {
           if (structured.length >= 6) break;
         }
       }
+      // Nutrition PDFs are often referenced INSIDE json blobs (e.g. Contentful asset links on assets.ctfassets.net),
+      // not in the page HTML — scan blob bodies too, unescaping \/ forms (pdfCandidatesFromHtml handles both).
+      let pdfSources = Array.isArray(rendered.dataPdfs) ? rendered.dataPdfs.slice() : [];
+      if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu);
+      pdfSources = [...new Set(pdfSources)];
+      // if still missing a PDF or the structured set is thin, render the nutrition pages and mine BOTH their PDFs and their structured JSON
+      if ((!pdfSources.length || structured.length < 5) && _origin) {
+        for (const probe of [_origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
+          try {
+            console.log(`[menu] harvest-render: ${probe}`);
+            const rh = await withRenderLock(() => renderPage(probe, { follow: false }));
+            if (!rh) continue;
+            if (Array.isArray(rh.dataPdfs)) for (const pu of rh.dataPdfs) pdfSources.push(pu);
+            if (rh.pdfUrl) pdfSources.push(rh.pdfUrl);
+            if (Array.isArray(rh.jsonBlobs)) for (const blob of rh.jsonBlobs) { for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
+            try { for (const r of structuredNutrition(rh.html || "")) structured.push(r); } catch {}
+            pdfSources = [...new Set(pdfSources)];
+            if (pdfSources.length) break; // official PDF is the best source — stop probing once found
+          } catch {}
+        }
+      }
       structured = dedupeRecords(structured);
-      // diagnostic: capture worked but parser found nothing — log the real shape so it can be taught
-      if (!structured.length && Array.isArray(rendered.jsonBlobs) && rendered.jsonBlobs.length) {
+      // diagnostic: blobs present but parser under-extracted — log the real shape so it can be taught precisely
+      if (structured.length < 5 && !pdfSources.length && Array.isArray(rendered.jsonBlobs) && rendered.jsonBlobs.length) {
         let shown = 0;
         for (const blob of rendered.jsonBlobs) {
-          if (shown >= 3) break;
+          if (shown >= 2) break;
           const idx = blob.body.search(/calorie|protein|nutrition/i);
-          if (idx >= 0) { console.log(`[menu] structured MISS — ${blob.url} :: ${blob.body.slice(Math.max(0, idx - 140), idx + 420).replace(/\s+/g, " ")}`); shown++; }
+          if (idx >= 0) { console.log(`[menu] structured LOW(${structured.length}) — ${blob.url} :: ${blob.body.slice(Math.max(0, idx - 140), idx + 420).replace(/\s+/g, " ")}`); shown++; }
         }
-        if (!shown) console.log(`[menu] structured MISS — ${rendered.jsonBlobs.length} json blobs, none contain calorie/protein/nutrition keywords`);
       }
+      console.log(`[menu] nutrition pdf candidates: ${pdfSources.join(" | ") || "none"}`);
       const baseText = rendered.text && rendered.text.length > 100 ? rendered.text.slice(0, 6000) : "";
-      if (baseText.length > 400 || structured.length >= 2) {
+      if (baseText.length > 400 || structured.length >= 2 || pdfSources.length) {
       let jsText = baseText;
       if (structured.length) {
         const stext = structuredNutritionText(structured);
         if (stext) { jsText += `\n--- NUTRITION (structured data): ${rendered.source || url} ---\n` + stext.slice(0, 3500); console.log(`[menu] structured nutrition: ${structured.length} items`); }
       }
-      let pdfSources = Array.isArray(rendered.dataPdfs) ? rendered.dataPdfs.slice() : [];
-      if (!pdfSources.length && _origin) {
-        for (const probe of [_origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
-          try {
-            console.log(`[menu] harvest-render: ${probe}`);
-            const rh = await withRenderLock(() => renderPage(probe, { follow: false }));
-            if (rh && Array.isArray(rh.dataPdfs) && rh.dataPdfs.length) { pdfSources = rh.dataPdfs; break; }
-            if (rh && rh.pdfUrl) { pdfSources = [rh.pdfUrl]; break; }
-          } catch {}
-        }
-      }
-      console.log(`[menu] nutrition pdf candidates: ${pdfSources.join(" | ") || "none"}`);
       if (pdfSources.length) {
         for (const pu of pdfSources.slice(0, 2)) {
           try {
@@ -702,7 +716,7 @@ app.get("/api/menu", async (req, res) => {
               if (pt.length <= 200) console.log(`[menu] pdf too short to use (${pt.length} chars): ${pu}`);
               if (pt.length > 200) {
                 const label = /allerg/i.test(pu) ? "ALLERGENS (official PDF)" : "NUTRITION (official PDF)";
-                jsText += `\n--- ${label}: ${pu} ---\n` + pt.slice(0, 3200);
+                jsText += `\n--- ${label}: ${pu} ---\n` + pt.slice(0, 7000);
                 console.log(`[menu] harvested ${label.split(" ")[0].toLowerCase()} pdf: ${pu} (${pt.length} chars)`);
               }
             }
