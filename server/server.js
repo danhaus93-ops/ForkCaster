@@ -436,11 +436,19 @@ app.get("/api/foodsearch", async (req, res) => {
 });
 
 const MENU_CACHE = new Map(); // url+goal -> { t, obj }
+const MENU_INFLIGHT = new Map(); // url+goal -> Promise: concurrent identical requests share one run
 app.get("/api/menu", async (req, res) => {
   const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
   const _hit = MENU_CACHE.get(_ckey);
   if (_hit && Date.now() - _hit.t < 6 * 3600 * 1000) { console.log(`[menu] cache hit ${_ckey.slice(0, 80)}`); return res.json(_hit.obj); }
-  const _send = (obj) => { if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj }); return res.json(obj); };
+  if (MENU_INFLIGHT.has(_ckey)) {
+    console.log(`[menu] joining in-flight run ${_ckey.slice(0, 80)}`);
+    try { return res.json(await MENU_INFLIGHT.get(_ckey)); } catch (e) { return res.status(500).json({ error: String(e) }); }
+  }
+  let _resolveInflight, _rejectInflight;
+  MENU_INFLIGHT.set(_ckey, new Promise((ok, no) => { _resolveInflight = ok; _rejectInflight = no; }));
+  res.on("finish", () => MENU_INFLIGHT.delete(_ckey));
+  const _send = (obj) => { if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj }); try { _resolveInflight(obj); } catch {} return res.json(obj); };
   const url = req.query.url;
   if (!url || !urlAllowed(url)) return res.json({ ok: false });
   try {

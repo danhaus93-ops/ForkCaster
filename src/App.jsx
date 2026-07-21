@@ -632,7 +632,7 @@ export default function App() {
     let liveMenu = null;
     if (!r.menu && r.website) {
       try {
-        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}`, { signal: AbortSignal.timeout(95000) });
+        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}`, { signal: AbortSignal.timeout(150000) });
         const mj = await mres.json();
         if (mj && mj.ok && mj.text) liveMenu = mj;
       } catch {}
@@ -640,7 +640,7 @@ export default function App() {
     let doneViaExtraction = false;
     if (liveMenu) {
       try {
-        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, estimated calories and protein grams. ` +
+        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories and protein grams. If a section labeled NUTRITION (official PDF) is present, it is the authoritative source: match menu items to it loosely by name and use ITS calorie and protein values instead of estimating; only estimate for items absent from it. ` +
           `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
