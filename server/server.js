@@ -737,7 +737,11 @@ app.get("/api/menu", async (req, res) => {
           } catch (e) { console.log(`[menu] pdf harvest failed ${pu}: ${e.message}`); }
         }
       }
-      return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000), items: structured.length >= 3 ? structured : undefined });
+      // direct-pick items must carry PROTEIN (FDA menu labeling mandates calories only, so many sites embed
+      // cal-only data — real macros live in the PDF). Cal-only entries stay in the text section for the AI to
+      // anchor names+calories and estimate the rest; sending them as items[] would headline 0g protein on cards.
+      const proteinItems = structured.filter((r) => (+r.protein || 0) >= 3);
+      return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000), items: proteinItems.length >= 3 ? proteinItems : undefined });
       }
     }
     // last resort: thin HTML is better than nothing
