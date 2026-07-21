@@ -846,6 +846,7 @@ export default function App() {
   const [foodQuery, setFoodQuery] = useState("");
   const [customAllergy, setCustomAllergy] = useState("");
   const [pendingSite, setPendingSite] = useState(null);
+  const [medFormSel, setMedFormSel] = useState(null); // null = follow current med
   const [pushOn, setPushOn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   useEffect(() => {
@@ -1200,7 +1201,7 @@ export default function App() {
                     <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 500 }}>{a.name}</span><span style={{ fontSize: 12.5, color: C.muted, textAlign: "right", maxWidth: "48%" }}>{a.reason}</span>
                   </div>
                 ))}
-                <div style={{ marginTop: 14 }}>
+                <div style={{ marginTop: 14, paddingBottom: 96 }}>
                   <div style={{ display: "flex", gap: 8 }}>
                     <input value={menuQ} onChange={(e) => setMenuQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askMenu(); }} placeholder="Ask about this menu… (swaps, carbs, drinks)"
                       style={{ flex: 1, fontFamily: BODY, fontSize: 13.5, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px", outline: "none" }} />
@@ -1382,7 +1383,20 @@ export default function App() {
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>{Object.entries(MEDS).map(([k, m]) => (<button key={k} onClick={() => setGlp({ ...glp, med: k })} style={{ flex: 1, padding: "9px 4px", borderRadius: 9, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet : C.surface, color: glp.med === k ? C.surface : C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{m.label}</button>))}</div>
+          {(() => {
+            const curForm = medObj && medObj.cadence === "daily" ? "oral" : "inj";
+            const form = medFormSel || curForm;
+            const pickMed = (k) => { const m = MEDS[k]; const steps = m.steps || []; const near = steps.length ? steps.reduce((a, b) => Math.abs(b - (glp.dose || 0)) < Math.abs(a - (glp.dose || 0)) ? b : a) : glp.dose; setGlp({ ...glp, med: k, dose: near }); };
+            const switchForm = (f) => { setMedFormSel(f); const list = Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === f); if (list.length && (MEDS[glp.med] && (MEDS[glp.med].cadence === "daily" ? "oral" : "inj")) !== f) pickMed(list[0][0]); };
+            return (<>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            {[["inj", "\uD83D\uDC89 Injections"], ["oral", "\uD83D\uDC8A Daily pill"]].map(([f, lbl]) => (
+              <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet : C.surface, color: form === f ? C.surface : C.muted, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", minWidth: 104, padding: "9px 10px", borderRadius: 9, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet : C.surface, color: glp.med === k ? C.surface : C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{m.label}</button>))}</div>
+            </>);
+          })()}
           {medObj.investigational ? (
             <div>
               <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
@@ -1417,10 +1431,10 @@ export default function App() {
 
       <div style={{ marginBottom: 14 }}>{card(
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>Next injection</div><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : "No dose logged yet — tap Log dose after your injection"}</div></div>
+          <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>{medObj && medObj.cadence === "daily" ? "Next dose" : "Next injection"}</div><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : (medObj && medObj.cadence === "daily" ? "No dose logged yet — tap Log dose after your pill" : "No dose logged yet — tap Log dose after your injection")}</div></div>
           <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.surface, border: "none", borderRadius: 11, padding: "12px 18px", fontFamily: BODY, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
         </div>)}</div>
-      <div style={{ marginBottom: 14 }}>{card(<>
+      {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>
         <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Dose day{(prefs.injIntervalDays || 7) !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {prefs.injIntervalDays} days)</span> : null}</div>
         <div style={{ display: "flex", gap: 6 }}>
           {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
@@ -1428,7 +1442,7 @@ export default function App() {
               style={{ flex: 1, height: 38, borderRadius: 10, border: glp.injectionDay === k ? "none" : `1.5px solid ${C.hair}`, background: glp.injectionDay === k ? C.violet : "transparent", color: glp.injectionDay === k ? "#fff" : C.muted, fontFamily: BODY, fontWeight: 800, fontSize: 12.5, cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
           ))}
         </div>
-      </>)}</div>
+      </>)}</div>}
       {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>)}</div>}
