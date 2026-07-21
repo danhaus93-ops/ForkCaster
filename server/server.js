@@ -379,18 +379,26 @@ function _macrosFrom(obj) {
     if (cal != null || protein != null || fat != null) return { cal, protein, fat };
   }
   const n = obj.nutrition || obj.nutritionInfo || obj.nutritionalInfo || obj.nutritionInformation || obj.nutrients || obj.macros || obj;
-  const cal = _snum(n.calories ?? n.calorie ?? n.cal ?? n.kcal ?? n.energy ?? n.Calories ?? n.calorieCount ?? n.totalCalories ?? n.caloriesPerServing);
-  const protein = _snum(n.proteinContent ?? n.protein ?? n.proteinG ?? n.Protein ?? n.protein_g ?? n.proteinGrams ?? n.proteinInGrams);
-  const fat = _snum(n.fatContent ?? n.fat ?? n.totalFat ?? n.fatG ?? n.Fat ?? n.fat_g ?? n.total_fat ?? n.fatGrams ?? n.fatInGrams ?? n.totalFatContent);
+  let cal = _snum(n.calories ?? n.calorie ?? n.cal ?? n.kcal ?? n.energy ?? n.Calories ?? n.calorieCount ?? n.totalCalories ?? n.caloriesPerServing);
+  let protein = _snum(n.proteinContent ?? n.protein ?? n.proteinG ?? n.Protein ?? n.protein_g ?? n.proteinGrams ?? n.proteinInGrams);
+  let fat = _snum(n.fatContent ?? n.fat ?? n.totalFat ?? n.fatG ?? n.Fat ?? n.fat_g ?? n.total_fat ?? n.fatGrams ?? n.fatInGrams ?? n.totalFatContent);
+  // nested "macroNutrients" shape (commerce platforms, e.g. Sonic api-idp): { protein:{weight:{value:N}}, totalFat:{weight:{value:N}} }
+  const mn = n.macroNutrients || obj.macroNutrients;
+  if (mn && typeof mn === "object") {
+    const mv = (o) => { if (o == null) return null; if (typeof o !== "object") return _snum(o); const w = o.weight != null ? o.weight : o; return _snum(w && typeof w === "object" ? (w.value ?? w.amount ?? w.grams ?? w.qty) : w); };
+    if (cal == null) cal = mv(mn.calories ?? mn.energy ?? mn.totalCalories);
+    if (protein == null) protein = mv(mn.protein);
+    if (fat == null) fat = mv(mn.totalFat ?? mn.fat);
+  }
   if (cal == null && protein == null && fat == null) return null;
   return { cal, protein, fat };
 }
 function _nameFrom(obj) {
-  const nm = obj && (obj.name || obj.itemName || obj.title || obj.displayName || obj.label || obj.productName);
+  const nm = obj && (obj.name || obj.itemName || obj.title || obj.displayName || obj.label || obj.productName || obj.description);
   return typeof nm === "string" && nm.trim() && nm.trim().length <= 80 ? nm.trim() : null;
 }
 function _walkNutrition(node, out, section, depth) {
-  if (!node || depth > 9 || out.length > 120) return;
+  if (!node || depth > 9 || out.length > 240) return;
   if (Array.isArray(node)) { for (const x of node) _walkNutrition(x, out, section, depth + 1); return; }
   if (typeof node !== "object") return;
   const type = String(node["@type"] || node.type || "");
@@ -398,7 +406,9 @@ function _walkNutrition(node, out, section, depth) {
   const isContainer = /menu|section|category|restaurant/i.test(type) || Array.isArray(node.hasMenuItem) || Array.isArray(node.hasMenuSection) || Array.isArray(node.items);
   const sect = nm && isContainer ? nm : section;
   const macros = _macrosFrom(node);
-  if (nm && macros && !/^(menu|menusection|restaurant|nutritioninformation|website|organization|itemlist|breadcrumblist|listitem)$/i.test(type)) {
+  // skip modifier/option entries (toppings, "Easy X", size upcharges) — not orderable menu items
+  const isModifier = (Array.isArray(node.groupIds) && node.groupIds.some((g) => /modifier|option|addon|add-on/i.test(String(g)))) || /modifier|option/i.test(type);
+  if (nm && macros && !isModifier && !/^(menu|menusection|restaurant|nutritioninformation|website|organization|itemlist|breadcrumblist|listitem)$/i.test(type)) {
     out.push({ item: nm, section: section || "", cal: macros.cal, protein: macros.protein, fat: macros.fat });
   }
   for (const k of Object.keys(node)) { const v = node[k]; if (v && typeof v === "object") _walkNutrition(v, out, sect, depth + 1); }
