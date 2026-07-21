@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.65"
+version: "0.2.66"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.65 OFFICIAL NUMBERS: when a rendered chain site links nutrition or
-  allergen PDFs (like Popeyes does), the scraper now harvests them, extracts
-  the text, and feeds the official calories, macros, and allergen data into
-  ranking alongside the menu - so picks carry real published numbers instead
-  of blanks, and the allergy filter gets manufacturer-grade data.
+  v0.2.66: nutrition PDFs actually get found now - if the rendered menu page
+  doesn't link them, the scraper renders the site's nutritional-information
+  page directly and harvests the official PDFs from there (they often live
+  on a separate CDN, which is fine).
 dependencies: []
 path: ""
 defaultUsername: ""

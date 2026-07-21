@@ -499,8 +499,20 @@ app.get("/api/menu", async (req, res) => {
     }
     if (rendered && rendered.text && rendered.text.length > 400) {
       let jsText = rendered.text.slice(0, 6000);
-      if (Array.isArray(rendered.dataPdfs) && rendered.dataPdfs.length) {
-        for (const pu of rendered.dataPdfs.slice(0, 2)) {
+      let pdfSources = Array.isArray(rendered.dataPdfs) ? rendered.dataPdfs.slice() : [];
+      if (!pdfSources.length && _origin) {
+        for (const probe of [_origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
+          try {
+            console.log(`[menu] harvest-render: ${probe}`);
+            const rh = await withRenderLock(() => renderPage(probe));
+            if (rh && Array.isArray(rh.dataPdfs) && rh.dataPdfs.length) { pdfSources = rh.dataPdfs; break; }
+            if (rh && rh.pdfUrl) { pdfSources = [rh.pdfUrl]; break; }
+          } catch {}
+        }
+      }
+      console.log(`[menu] nutrition pdf candidates: ${pdfSources.join(" | ") || "none"}`);
+      if (pdfSources.length) {
+        for (const pu of pdfSources.slice(0, 2)) {
           try {
             const pb = await fetchAny(pu);
             if (pb && pb.pdf) {
