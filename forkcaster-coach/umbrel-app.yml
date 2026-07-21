@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.80"
+version: "0.2.81"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.80: when a site exposes its real menu data, ForkCaster now feeds those
-  exact items straight to the picker instead of re-reading them through the AI -
-  so picks are the actual menu items with their real calories, protein, and fat,
-  not estimates. The AI estimate path stays as fallback for menus without data.
+  v0.2.81: fixes garbage picks (bare "Bun"/"Tea"/"Coke" with no macros) that could
+  slip through on sites whose menu data mixes ingredients and drinks with real
+  items - only real food is used now, and menus that don't parse cleanly fall back
+  to the AI picks instead of showing fragments.
 dependencies: []
 path: ""
 defaultUsername: ""

@@ -699,7 +699,9 @@ app.get("/api/menu", async (req, res) => {
           } catch {}
         }
       }
-      structured = dedupeRecords(structured);
+      // keep only plausible real menu items — drop component/drink fragments with no real macros
+      // (a bare "Bun"/"Tea"/"Coke" with 0 protein and no calories is not an orderable meal)
+      structured = dedupeRecords(structured).filter((r) => r.item && r.item.trim().length > 2 && ((+r.protein || 0) >= 3 || (+r.cal || 0) >= 50));
       // diagnostic: blobs present but parser under-extracted — log the real shape so it can be taught precisely
       if (structured.length < 5 && !pdfSources.length && Array.isArray(rendered.jsonBlobs) && rendered.jsonBlobs.length) {
         let shown = 0;
