@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.63"
+version: "0.2.64"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.63: menu-scrape diagnostics - the server now logs each stage of a
-  live-menu attempt (fetch result, candidate links, section gates, render
-  targets) so failures can be read from docker logs instead of guessed at.
+  v0.2.64 the race is over: the app was giving up on live-menu scrapes at 14
+  seconds while fortified chain sites (hi Popeyes) legitimately take 40-60s
+  to crack. Candidate pages now fetch in parallel, successful scrapes are
+  cached for six hours (retries and repeat visits are instant), and the app
+  now actually waits for the render to finish.
 dependencies: []
 path: ""
 defaultUsername: ""

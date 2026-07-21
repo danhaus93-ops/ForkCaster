@@ -397,7 +397,12 @@ app.get("/api/foodsearch", async (req, res) => {
   } catch { res.json({ results: [] }); }
 });
 
+const MENU_CACHE = new Map(); // url+goal -> { t, obj }
 app.get("/api/menu", async (req, res) => {
+  const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
+  const _hit = MENU_CACHE.get(_ckey);
+  if (_hit && Date.now() - _hit.t < 6 * 3600 * 1000) { console.log(`[menu] cache hit ${_ckey.slice(0, 80)}`); return res.json(_hit.obj); }
+  const _send = (obj) => { if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj }); return res.json(obj); };
   const url = req.query.url;
   if (!url || !urlAllowed(url)) return res.json({ ok: false });
   try {
@@ -406,7 +411,7 @@ app.get("/api/menu", async (req, res) => {
     console.log(`[menu] ${url} -> ${a ? (a.pdf ? "pdf" : a.html ? "html " + a.html.length + "b" : "empty") : "FETCH FAILED"}`);
     if (a && a.pdf) {
       const t = await pdfText(a.pdf);
-      if (t.length > 300) return res.json({ ok: true, method: "pdf", source: a.url, text: t.slice(0, 6000) });
+      if (t.length > 300) return _send({ ok: true, method: "pdf", source: a.url, text: t.slice(0, 6000) });
     }
     let bestText = "", bestSrc = url; let renderTarget = url;
     if (a && a.html) {
@@ -449,9 +454,11 @@ app.get("/api/menu", async (req, res) => {
       const top = [...goalTop, ...plainTop].filter(([l]) => !seen.has(l) && seen.add(l)).slice(0, 3);
       if (top.length) renderTarget = top[0][0];
       const sections = []; let anyPdf = false;
-      for (const [link] of top) {
+      const fetched = await Promise.allSettled(top.map(([link]) => fetchAny(link).then((b) => [link, b])));
+      for (const fr of fetched) {
         try {
-          const b = await fetchAny(link);
+          if (fr.status !== "fulfilled" || !fr.value) continue;
+          const [link, b] = fr.value;
           if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) { sections.push(`--- ${link} ---\n` + t.slice(0, 3000)); anyPdf = true; } }
           else if (b && b.html) { const mt = stripHtml(b.html); if (mt.length > 300) { const isGoal = goalWords.some((w) => link.toLowerCase().includes(w)); sections.push(`--- ${link} ---\n` + mt.slice(0, isGoal ? 4500 : 2000)); } }
         } catch {}
@@ -463,10 +470,10 @@ app.get("/api/menu", async (req, res) => {
       console.log(`[menu] sections passing food gate: ${good.length}`);
       if (good.length) {
         const joined = good.join("\n\n").slice(0, 8000);
-        return res.json({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
+        return _send({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
       }
       // no section passed the food-signal gate: fall through to page text / headless render
-      if (bestText.length > 700 && (priceCal(bestText) >= 2 || dishWords(bestText) >= 10)) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
+      if (bestText.length > 700 && (priceCal(bestText) >= 2 || dishWords(bestText) >= 10)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     }
     // Stage 3: headless render for JS-built menus
     const _origin = (() => { try { return new URL(url).origin; } catch { return null; } })();
@@ -482,13 +489,13 @@ app.get("/api/menu", async (req, res) => {
     }
     if (rendered && rendered.pdfUrl) {
       const b = await fetchAny(rendered.pdfUrl);
-      if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
+      if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return _send({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
     }
     if (rendered && rendered.text && rendered.text.length > 400) {
-      return res.json({ ok: true, method: "js", source: rendered.source, text: rendered.text.slice(0, 6000) });
+      return _send({ ok: true, method: "js", source: rendered.source, text: rendered.text.slice(0, 6000) });
     }
     // last resort: thin HTML is better than nothing
-    if (bestText.length > 400) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
+    if (bestText.length > 400) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     res.json({ ok: false });
   } catch (e) { console.error("menu extraction failed:", e.message); res.json({ ok: false }); }
 });
