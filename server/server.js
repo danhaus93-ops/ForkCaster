@@ -365,8 +365,8 @@ function pdfCandidatesFromHtml(html, baseUrl) {
   // unwrap viewer links (docs.google.com/viewer?url=<real>.pdf) — fetch the real PDF, not the viewer's HTML
   const unwrapped = out.map((u) => {
     const m = u.match(/[?&](?:url|file|src)=([^&]+)/i);
-    if (m) { try { const inner = decodeURIComponent(m[1]); if (/\.pdf/i.test(inner)) return inner; } catch {} }
-    return u;
+    if (m) { try { const inner = decodeURIComponent(m[1]); if (/\.pdf/i.test(inner)) return inner.split("#")[0]; } catch {} }
+    return u.split("#")[0]; // strip link-rot fragments ("...pdf?x=y#main")
   });
   return [...new Set(unwrapped)].slice(0, 4);
 }
@@ -812,7 +812,11 @@ app.get("/api/menu", async (req, res) => {
         if (_nonEs.length) pdfSources = _nonEs;
         // prefer english editions — spanish/localized PDFs sort last (Cane's publishes both)
         pdfSources.sort((a, b) => (/spanish|espanol|_es[._-]|-es\./i.test(a) ? 1 : 0) - (/spanish|espanol|_es[._-]|-es\./i.test(b) ? 1 : 0));
-        for (const pu of pdfSources.slice(0, 2)) {
+        // walk up to 4 candidates but count SUCCESSES, not attempts — two blocked hosts must not
+        // shadow a fetchable CDN copy sitting third in line (the Bojangles case)
+        let _pdfHarvested = 0;
+        for (const pu of pdfSources.slice(0, 4)) {
+          if (_pdfHarvested >= 2) break;
           try {
             const pb = await fetchAny(pu);
             if (!pb || !pb.pdf) console.log(`[menu] pdf fetch empty/rejected: ${pu}`);
@@ -823,6 +827,7 @@ app.get("/api/menu", async (req, res) => {
                 // files named "AllergenNutritionInfo" carry BOTH — nutrition-in-name or macro content wins the label
                 const label = (/nutrit/i.test(pu) || (/calorie/i.test(pt) && /protein/i.test(pt))) ? "NUTRITION (official PDF)" : "ALLERGENS (official PDF)";
                 jsText += `\n--- ${label}: ${pu} ---\n` + pt.slice(0, 7000);
+                _pdfHarvested++;
                 console.log(`[menu] harvested ${label.split(" ")[0].toLowerCase()} pdf: ${pu} (${pt.length} chars)`);
               }
             }
