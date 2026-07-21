@@ -762,16 +762,21 @@ app.get("/api/menu", async (req, res) => {
         if (stext) { jsText += `\n--- NUTRITION (structured data): ${rendered.source || url} ---\n` + stext.slice(0, 3500); console.log(`[menu] structured nutrition: ${structured.length} items`); }
       }
       if (pdfSources.length) {
+        // language twins: if any non-spanish candidate exists, drop the spanish ones entirely (they duplicate content and burn text budget)
+        const _nonEs = pdfSources.filter((u) => !/spanish|espanol|_es[._-]|-es\./i.test(u));
+        if (_nonEs.length) pdfSources = _nonEs;
         // prefer english editions — spanish/localized PDFs sort last (Cane's publishes both)
         pdfSources.sort((a, b) => (/spanish|espanol|_es[._-]|-es\./i.test(a) ? 1 : 0) - (/spanish|espanol|_es[._-]|-es\./i.test(b) ? 1 : 0));
         for (const pu of pdfSources.slice(0, 2)) {
           try {
             const pb = await fetchAny(pu);
+            if (!pb || !pb.pdf) console.log(`[menu] pdf fetch empty/rejected: ${pu}`);
             if (pb && pb.pdf) {
               const pt = await pdfText(pb.pdf);
               if (pt.length <= 200) console.log(`[menu] pdf too short to use (${pt.length} chars): ${pu}`);
               if (pt.length > 200) {
-                const label = /allerg/i.test(pu) ? "ALLERGENS (official PDF)" : "NUTRITION (official PDF)";
+                // files named "AllergenNutritionInfo" carry BOTH — nutrition-in-name or macro content wins the label
+                const label = (/nutrit/i.test(pu) || (/calorie/i.test(pt) && /protein/i.test(pt))) ? "NUTRITION (official PDF)" : "ALLERGENS (official PDF)";
                 jsText += `\n--- ${label}: ${pu} ---\n` + pt.slice(0, 7000);
                 console.log(`[menu] harvested ${label.split(" ")[0].toLowerCase()} pdf: ${pu} (${pt.length} chars)`);
               }
