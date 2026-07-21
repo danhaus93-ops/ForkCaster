@@ -1,6 +1,6 @@
 {
   "name": "forkcaster",
-  "version": "0.2.68",
+  "version": "0.2.69",
   "private": true,
   "description": "Self-hosted, medication-aware nutrition coach for Umbrel. GPS ordering, GLP-1 tracking, symptom-food forecasting.",
   "scripts": {
@@ -10,7 +10,7 @@
   "dependencies": {
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
-    "express": "^4.19.0",
+    "express": "^4.22.2",
     "leaflet": "^1.9.4",
     "pdf-parse": "^2.4.5",
     "puppeteer-core": "^25.3.0",

@@ -334,12 +334,39 @@ async function fetchAny(u) {
   return null;
 }
 async function pdfText(buf) {
-  try { const pdfParse = require("pdf-parse"); const d = await pdfParse(buf, { max: 25 }); return (d.text || "").replace(/\s+/g, " ").trim(); }
+  try {
+    const m = require("pdf-parse");
+    let d;
+    if (typeof m === "function") d = await m(buf, { max: 25 });
+    else if (typeof m.default === "function") d = await m.default(buf, { max: 25 });
+    else if (typeof m.pdf === "function") d = await m.pdf(buf, { max: 25 });
+    else if (m.PDFParse) { const p = new m.PDFParse({ data: new Uint8Array(buf) }); d = await p.getText(); }
+    else throw new Error("pdf-parse API unrecognized");
+    return ((d && d.text) || "").replace(/\s+/g, " ").trim();
+  }
   catch (e) { console.error("pdf parse failed:", e.message); return ""; }
 }
 let renderChain = Promise.resolve();
 function withRenderLock(fn) { const p = renderChain.then(fn, fn); renderChain = p.catch(() => {}); return p; }
+function pdfCandidatesFromHtml(html) {
+  const out = [];
+  for (const source of [html, String(html).replace(/\\\//g, "/")]) {
+    const hits = source.match(/https?:\/\/[^\s"'<>\\]+?\.pdf(?:\?[^\s"'<>\\]*)?/gi) || [];
+    for (const u of hits) if (/nutrit|allerg|calorie/i.test(u)) out.push(u);
+  }
+  return [...new Set(out)].slice(0, 4);
+}
 async function renderPage(startUrl, opts = {}) {
+  if (process.env.FORKCASTER_FAKE_RENDER) {
+    // test seam: emulate a JS render with plain fetches (browser unavailable in CI)
+    const r = await fetch(startUrl, { headers: { ...MENU_UA, "X-Fake-Render": "1" }, signal: AbortSignal.timeout(8000) });
+    let html = await r.text();
+    const frameSrcs = [...html.matchAll(/<iframe[^>]+src=["']([^"']+)["']/gi)].map((m) => m[1]).slice(0, 3);
+    for (const fsrc of frameSrcs) {
+      try { const fu = new URL(fsrc, startUrl).href; const fr2 = await fetch(fu, { headers: { ...MENU_UA, "X-Fake-Render": "1" }, signal: AbortSignal.timeout(8000) }); html += "\n" + (await fr2.text()); } catch {}
+    }
+    return { text: stripHtml(html), source: startUrl, dataPdfs: pdfCandidatesFromHtml(html) };
+  }
   const puppeteer = require("puppeteer-core");
   const browser = await puppeteer.launch({
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
@@ -382,8 +409,7 @@ async function renderPage(startUrl, opts = {}) {
         for (const x of arr) if (/\.pdf(\?|$)/i.test(x.href) && /nutrit|allerg|calorie/i.test(x.href + " " + x.label)) dataPdfs.push(x.href);
       }
       const fullHtml = await page.content().catch(() => "");
-      const rawHits = fullHtml.match(/https?:\/\/[^\s"'<>\\]+?\.pdf(?:\?[^\s"'<>\\]*)?/gi) || [];
-      for (const u2 of rawHits) if (/nutrit|allerg|calorie/i.test(u2)) dataPdfs.push(u2);
+      for (const u2 of pdfCandidatesFromHtml(fullHtml)) dataPdfs.push(u2);
     } catch {}
     dataPdfs = [...new Set(dataPdfs)].slice(0, 4);
     console.log(`[render] ${src} -> ${text.length} chars, ${(typeof page.frames === "function" ? page.frames().length : 1)} frames, ${dataPdfs.length} data pdfs`);
@@ -494,7 +520,9 @@ app.get("/api/menu", async (req, res) => {
     const rTargets = [...new Set([renderTarget !== url ? renderTarget : null, _origin ? _origin + "/menu" : null, url].filter(Boolean))].slice(0, 3);
     for (const rt of rTargets) {
       console.log(`[menu] rendering: ${rt}`);
-      const r2 = await withRenderLock(() => renderPage(rt));
+      let r2 = null;
+      try { r2 = await withRenderLock(() => renderPage(rt)); }
+      catch (e) { console.log(`[menu] render threw ${rt}: ${e.message}`); continue; }
       console.log(`[menu] rendered ${rt} -> ${r2 ? (r2.pdfUrl ? "pdf: " + r2.pdfUrl : (r2.text || "").length + " chars, foodOK=" + foodOK(r2.text)) : "RENDER FAILED"}`);
       if (r2 && (r2.pdfUrl || foodOK(r2.text))) { rendered = r2; break; }
       if (r2 && !rendered) rendered = r2;
@@ -523,6 +551,7 @@ app.get("/api/menu", async (req, res) => {
             const pb = await fetchAny(pu);
             if (pb && pb.pdf) {
               const pt = await pdfText(pb.pdf);
+              if (pt.length <= 200) console.log(`[menu] pdf too short to use (${pt.length} chars): ${pu}`);
               if (pt.length > 200) {
                 const label = /allerg/i.test(pu) ? "ALLERGENS (official PDF)" : "NUTRITION (official PDF)";
                 jsText += `\n--- ${label}: ${pu} ---\n` + pt.slice(0, 3200);
@@ -535,7 +564,7 @@ app.get("/api/menu", async (req, res) => {
       return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000) });
     }
     // last resort: thin HTML is better than nothing
-    if (bestText.length > 400) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
+    if (bestText.length > 400 && ((bestText.match(/\$\s?\d|\b\d{2,4}\s?cal/gi) || []).length >= 2 || (bestText.match(/smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|protein|oz\b/gi) || []).length >= 10)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     res.json({ ok: false });
   } catch (e) { console.error("menu extraction failed:", e.message); res.json({ ok: false }); }
 });
