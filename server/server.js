@@ -560,7 +560,7 @@ async function doseReminderTick() {
     const hour = Math.max(0, Math.min(23, parseInt(prefs.reminderHour) || 9));
     const now = new Date();
     if (now.getHours() !== hour) return;
-    const due = new Date(glp.lastInjection + "T00:00:00"); due.setDate(due.getDate() + 7);
+    const daily = ["rybelsus", "orforglipron"].includes(String(glp.med || "")); const due = new Date(glp.lastInjection + "T00:00:00"); due.setDate(due.getDate() + (daily ? 1 : 7));
     const todayISO = now.toISOString().slice(0, 10);
     if (todayISO < due.toISOString().slice(0, 10)) return;
     if (st.lastSent === todayISO) return;
@@ -568,7 +568,8 @@ async function doseReminderTick() {
     const site = suggestedSite(glp, Math.max(1, Math.min(4, parseInt(prefs.sitePerCycle) || 1)));
     const medName = glp.med ? glp.med.charAt(0).toUpperCase() + glp.med.slice(1) : "your GLP-1";
     const wp2 = webpushLib(); if (!wp2) return;
-    await wp2.sendNotification(st.sub, JSON.stringify({ title: "\uD83D\uDC89 Dose day", body: `Time for ${medName} \u2014 suggested site: ${site} (back of arm sites)` }));
+    const daily2 = ["rybelsus", "orforglipron"].includes(String(glp.med || ""));
+    await wp2.sendNotification(st.sub, JSON.stringify(daily2 ? { title: "\uD83D\uDC8A Pill time", body: `Daily ${medName} \u2014 empty stomach, wait 30 min before eating.` } : { title: "\uD83D\uDC89 Dose day", body: `Time for ${medName} \u2014 suggested site: ${site} (back of arm sites)` }));
     st.lastSent = todayISO; savePushStore(st);
   } catch (e) { if (e && e.statusCode === 410) { const st = pushStore(); delete st.sub; savePushStore(st); } }
 }
