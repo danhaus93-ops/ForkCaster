@@ -496,6 +496,20 @@ function rawNutritionSlices(blobs, budget) {
   }
   return out;
 }
+// item-detail links from a menu page — macros often live one click deeper (product pages carry JSON-LD)
+function itemLinksFromHtml(html, baseUrl) {
+  const out = new Set();
+  let origin = ""; try { origin = new URL(baseUrl).origin; } catch {}
+  for (const m of String(html || "").matchAll(/href=["']([^"'#]+)["']/gi)) {
+    let u; try { u = new URL(m[1], baseUrl).href; } catch { continue; }
+    if (origin && !u.startsWith(origin)) continue;
+    if (!/(\/products?\/|\/items?\/|[?&](?:id|productid|itemid)=\d|\/menu\/[a-z0-9][a-z0-9-]{5,})/i.test(u)) continue;
+    if (/(nutrition|allergen|category|menus?$|locations?|careers|about|contact|gift|catering|reward|\.(pdf|jpe?g|png|css|js))/i.test(u)) continue;
+    out.add(u);
+    if (out.size >= 3) break;
+  }
+  return [...out];
+}
 async function fetchJson(u) {
   try {
     const r = await fetch(u, { headers: MENU_UA, redirect: "follow", signal: AbortSignal.timeout(9000) });
@@ -561,6 +575,15 @@ async function renderPage(startUrl, opts = {}) {
     catch { try { await page.goto(src, { waitUntil: "domcontentloaded", timeout: 15000 }); } catch {} }
     await new Promise((r) => setTimeout(r, 2500));
     let text = await page.evaluate(() => (document.body ? document.body.innerText : ""));
+    // Cloudflare/anti-bot interstitials often auto-solve if the browser simply WAITS — detect and give it 7s
+    if (/__cf_chl|just a moment|checking your browser|challenge-platform|cf-turnstile/i.test(text) || text.length < 40) {
+      const _maybe = await page.content().catch(() => "");
+      if (/__cf_chl|challenge-platform|cf-turnstile/i.test(_maybe)) {
+        console.log(`[render] challenge detected — waiting 7s for auto-solve`);
+        await new Promise((r) => setTimeout(r, 7000));
+        try { text = await page.evaluate(() => (document.body ? document.body.innerText : "")); } catch {}
+      }
+    }
     const menuHref = await page.evaluate(() => {
       const as = Array.from(document.querySelectorAll("a[href]"));
       const hit = as.find((a) => /menu/i.test(a.getAttribute("href") || "") || /^\s*(view\s+)?(our\s+)?(full\s+)?menu\s*$/i.test(a.textContent || ""));
@@ -775,6 +798,30 @@ app.get("/api/menu", async (req, res) => {
       // (a bare "Bun"/"Tea"/"Coke" with 0 protein and no calories is not an orderable meal)
       structured = dedupeRecords(structured).filter(realItem);
       _diag.structured = structured.length; _diag.extraBlobs = _extraBlobs.length;
+      // item-page dive: still thin and no PDF — macros often live one click deeper on product pages
+      if (structured.length < 3 && !pdfSources.length && Date.now() - _reqT0 < 75000) {
+        const links = itemLinksFromHtml(rendered.html, rendered.source || url);
+        if (links.length) console.log(`[menu] item-dive: trying ${links.length} item pages`);
+        let dived = 0;
+        for (const link of links) {
+          if (Date.now() - _reqT0 > 90000) break;
+          try {
+            const rh2 = await withRenderLock(() => renderPage(link, { follow: false }));
+            if (!rh2) continue;
+            dived++;
+            try { for (const r of structuredNutrition(rh2.html || "")) structured.push(r); } catch {}
+            if (Array.isArray(rh2.dataPdfs)) for (const pu of rh2.dataPdfs) pdfSources.push(pu);
+            if (Array.isArray(rh2.jsonBlobs)) for (const blob of rh2.jsonBlobs) { _extraBlobs.push(blob); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
+            if (dedupeRecords(structured).filter(realItem).length >= 3 || pdfSources.length) break;
+          } catch {}
+        }
+        if (dived) {
+          structured = dedupeRecords(structured).filter(realItem);
+          pdfSources = [...new Set(pdfSources)];
+          _diag.dive = `${dived}p->${structured.length}i`;
+          console.log(`[menu] item-dive: ${dived} pages -> ${structured.length} items, ${pdfSources.length} pdfs`);
+        }
+      }
       // universal fallback: parsers found <3 real items and no PDF — ship raw nutrition-bearing JSON windows for the AI
       let rawSection = "";
       if (structured.length < 3 && !pdfSources.length) {
