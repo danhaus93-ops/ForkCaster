@@ -53,7 +53,7 @@ const pick = process.argv.slice(2).map((s) => s.toLowerCase());
 const list = pick.length ? CHAINS.filter(([n]) => pick.includes(n)) : CHAINS;
 
 // fat evidence: structured items carry fat, or the text mentions fat inline OR as a PDF table header ("TOTAL FAT (G)")
-const withFat = (d) => (Array.isArray(d.items) && d.items.some((i) => i && i.fat != null)) || /\dg fat|total\s*fat|fat\s*\(g\)/i.test(d.text || "");
+const withFat = (d) => (Array.isArray(d.items) && d.items.some((i) => i && i.fat != null)) || /\dg fat|total\s*fat|fat\s*\(g\)|"fat[_a-z]*"\s*:\s*\d|fat_?g\b/i.test(d.text || "");
 const src = (t) => (/NUTRITION \(official PDF\)/.test(t) ? "PDF" : /NUTRITION \(structured data\)/.test(t) ? "JSON" : /NUTRITION \(raw menu data/.test(t) ? "rawJSON" : "text/est");
 
 async function one([name, url]) {
@@ -62,10 +62,10 @@ async function one([name, url]) {
     const r = await fetch(`${BASE}/api/menu?url=${encodeURIComponent(url)}&goal=${GOAL}`, { signal: AbortSignal.timeout(150000) });
     const d = await r.json();
     const secs = ((Date.now() - t0) / 1000).toFixed(0);
-    if (!d || !d.ok) return { name, ok: false, secs, note: (d && d.reason) || `http ${r.status}` };
+    if (!d || !d.ok) return { name, ok: false, secs, note: (d && d.reason) || `http ${r.status}`, diag: d && d.diag };
     const items = Array.isArray(d.items) ? d.items : [];
     const sample = items.slice(0, 2).map((i) => `${i.item}(${i.protein ?? "?"}p/${i.cal ?? "?"}c/${i.fat ?? "?"}f)`).join(", ");
-    return { name, ok: true, secs, method: d.method, items: items.length, fat: withFat(d), src: src(d.text), len: (d.text || "").length, sample };
+    return { name, ok: true, secs, method: d.method, items: items.length, fat: withFat(d), src: src(d.text), len: (d.text || "").length, sample, diag: d.diag };
   } catch (e) {
     return { name, ok: false, secs: ((Date.now() - t0) / 1000).toFixed(0), note: e.name === "TimeoutError" ? "timeout(150s)" : e.message };
   }
@@ -75,20 +75,24 @@ async function one([name, url]) {
   console.log(`ForkCaster coverage · ${BASE} · goal=${GOAL} · ${list.length} chains · ${new Date().toISOString()}\n`);
   console.log("chain            ok  src       items  fat  method  secs  sample");
   console.log("---------------- --- --------- -----  ---  ------  ----  ------");
-  let good = 0, structured = 0, pdf = 0;
+  let good = 0, structured = 0, pdf = 0, raw = 0;
+  const why = (x) => { const g = x.diag; if (!g) return; console.log(`                 why: sect=${g.sections ?? "-"} rend=${g.rendered ?? "-"}ch blobs=${g.blobs ?? "-"}+${g.extraBlobs ?? 0} items=${g.structured ?? "-"} raw=${g.raw ?? 0} pdfs=${(g.pdfs || []).length ? g.pdfs.join(" ").slice(0, 110) : "none"}${g.early ? " early-fallthrough" : ""}${g.err ? " err=" + g.err : ""}`); };
   for (const c of list) {           // sequential: renders are lock-serialized on the node anyway
     const x = await one(c);
     if (x.ok) {
       good++;
       if (x.src === "JSON") structured++;
       if (x.src === "PDF") pdf++;
+      if (x.src === "rawJSON") raw++;
       console.log(
         `${x.name.padEnd(16)} ok  ${String(x.src).padEnd(9)} ${String(x.items).padStart(5)}  ${x.fat ? "yes" : "no "}  ${String(x.method).padEnd(6)}  ${String(x.secs).padStart(4)}  ${x.sample || ""}`
       );
+      if (x.src === "text/est") why(x);
     } else {
       console.log(`${x.name.padEnd(16)} --                              ${String(x.secs).padStart(4)}  ${x.note}`);
+      why(x);
     }
   }
-  console.log(`\nSUMMARY: ${good}/${list.length} returned a menu · ${pdf} via official PDF · ${structured} via structured JSON · ${good - pdf - structured} text/estimate`);
+  console.log(`\nSUMMARY: ${good}/${list.length} returned a menu · ${pdf} official PDF · ${structured} structured JSON · ${raw} rawJSON · ${good - pdf - structured - raw} text/estimate`);
   console.log("Re-run after changes to catch regressions. 'ok' + real items/fat = working; '--' or text/est = needs work.");
 })();

@@ -614,6 +614,7 @@ const MENU_INFLIGHT = new Map(); // url+goal -> Promise: concurrent identical re
 app.get("/api/menu", async (req, res) => {
   const _reqT0 = Date.now(); // overall time budget — client aborts at 150s, so return SOMETHING by ~120s
   let earlyFallback = null; // menu-shaped early-html text WITHOUT macro evidence — kept as fallback while we go deep
+  const _diag = {}; // per-request pipeline diagnosis, attached to every response so coverage sweeps self-explain
   const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
   const _hit = MENU_CACHE.get(_ckey);
   if (_hit && Date.now() - _hit.t < 6 * 3600 * 1000) { console.log(`[menu] cache hit ${_ckey.slice(0, 80)}`); return res.json(_hit.obj); }
@@ -624,7 +625,7 @@ app.get("/api/menu", async (req, res) => {
   let _resolveInflight, _rejectInflight;
   MENU_INFLIGHT.set(_ckey, new Promise((ok, no) => { _resolveInflight = ok; _rejectInflight = no; }));
   res.on("finish", () => MENU_INFLIGHT.delete(_ckey));
-  const _send = (obj) => { if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj }); try { _resolveInflight(obj); } catch {} return res.json(obj); };
+  const _send = (obj) => { if (obj) obj.diag = _diag; if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj }); try { _resolveInflight(obj); } catch {} return res.json(obj); };
   const url = req.query.url;
   if (!url || !urlAllowed(url)) return res.json({ ok: false });
   try {
@@ -690,6 +691,7 @@ app.get("/api/menu", async (req, res) => {
       console.log(`[menu] sections fetched: ${sections.length}, lens: ${sections.map((x) => x.length).join(",")}`);
       const good = sections.filter((sec) => priceCal(sec) >= 2 || dishWords(sec) >= 10);
       console.log(`[menu] sections passing food gate: ${good.length}`);
+      _diag.sections = good.length;
       // menu names alone aren't nutrition: only return early when the text carries MACRO evidence
       // (grams of protein/fat, or a nutrition-PDF table) — otherwise keep it as fallback and go deep
       // one "20g protein" marketing blurb isn't nutrition data — a real table mentions macros many times
@@ -699,12 +701,14 @@ app.get("/api/menu", async (req, res) => {
         if (anyPdf || hasMacros(joined)) return _send({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
         earlyFallback = { text: joined, source: top.map(([l]) => l).join(" + ") };
         console.log(`[menu] early html is menu-shaped but has NO macro evidence — going deep`);
+        _diag.early = 1;
       }
       // no section passed the food-signal gate: fall through to page text / headless render
       else if (bestText.length > 700 && (priceCal(bestText) >= 2 || dishWords(bestText) >= 10)) {
         if (hasMacros(bestText)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
         earlyFallback = { text: bestText.slice(0, 6000), source: bestSrc };
         console.log(`[menu] landing text is menu-shaped but has NO macro evidence — going deep`);
+        _diag.early = 1;
       }
     }
     // Stage 3: headless render for JS-built menus
@@ -728,6 +732,7 @@ app.get("/api/menu", async (req, res) => {
     if (rendered && (rendered.text || rendered.html)) {
       // a real orderable item has a non-trivial name and real macros (not a bare component/drink fragment)
       const realItem = (r) => r.item && r.item.trim().length > 2 && ((+r.protein || 0) >= 3 || (+r.cal || 0) >= 50);
+      _diag.rendered = (rendered.text || "").length; _diag.blobs = (rendered.jsonBlobs || []).length;
       // structured-nutrition harvest: embedded JSON (JSON-LD/__NEXT_DATA__/state), captured JSON responses, fetched endpoints
       let structured = [];
       try { structured = structuredNutrition(rendered.html || ""); } catch {}
@@ -769,6 +774,7 @@ app.get("/api/menu", async (req, res) => {
       // keep only plausible real menu items — drop component/drink fragments with no real macros
       // (a bare "Bun"/"Tea"/"Coke" with 0 protein and no calories is not an orderable meal)
       structured = dedupeRecords(structured).filter(realItem);
+      _diag.structured = structured.length; _diag.extraBlobs = _extraBlobs.length;
       // universal fallback: parsers found <3 real items and no PDF — ship raw nutrition-bearing JSON windows for the AI
       let rawSection = "";
       if (structured.length < 3 && !pdfSources.length) {
@@ -776,6 +782,7 @@ app.get("/api/menu", async (req, res) => {
         if (slices.length) {
           rawSection = `\n--- NUTRITION (raw menu data — unparsed site JSON; read item names and calories/protein/fat out of whatever shape it uses): ${rendered.source || url} ---\n` + slices.join("\n---\n");
           console.log(`[menu] raw nutrition slices: ${slices.length} (${rawSection.length} chars)`);
+          _diag.raw = rawSection.length;
         }
       }
       // diagnostic: blobs present but parser under-extracted — log the real shape so it can be taught precisely
@@ -788,6 +795,7 @@ app.get("/api/menu", async (req, res) => {
         }
       }
       console.log(`[menu] nutrition pdf candidates: ${pdfSources.join(" | ") || "none"}`);
+      _diag.pdfs = pdfSources.slice(0, 2);
       let baseText = rendered.text && rendered.text.length > 100 ? rendered.text.slice(0, 6000) : "";
       if (baseText.length < 400 && earlyFallback) baseText = earlyFallback.text; // deep render came back thin — early menu text is better context
       if (baseText.length > 400 || structured.length >= 2 || pdfSources.length || rawSection) {
@@ -833,8 +841,8 @@ app.get("/api/menu", async (req, res) => {
     // last resort: the stashed early menu text (deep path found nothing better), then thin HTML, then give up
     if (earlyFallback) return _send({ ok: true, method: "html", source: earlyFallback.source, text: earlyFallback.text });
     if (bestText.length > 400 && ((bestText.match(/\$\s?\d|\b\d{2,4}\s?cal/gi) || []).length >= 2 || (bestText.match(/smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|protein|oz\b/gi) || []).length >= 10)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
-    res.json({ ok: false });
-  } catch (e) { console.error("menu extraction failed:", e.message); res.json({ ok: false }); }
+    _send({ ok: false });
+  } catch (e) { console.error("menu extraction failed:", e.message); _diag.err = e.message; _send({ ok: false }); }
 });
 
 /* ── venue photo proxy (keeps the Places key server-side) ── */
