@@ -375,7 +375,13 @@ async function renderPage(startUrl) {
         if (t2.length > text.length) { text = t2; src = menuHref; }
       } catch {}
     }
-    return { text: text.replace(/\s+/g, " ").trim(), source: src };
+    const dataPdfs = await page.evaluate(() => {
+      const as = Array.from(document.querySelectorAll("a[href]"));
+      return as.map((a) => ({ href: a.href, label: (a.textContent || "").trim() }))
+        .filter((x) => /\.pdf(\?|$)/i.test(x.href) && /nutrit|allerg|calorie/i.test(x.href + " " + x.label))
+        .map((x) => x.href).slice(0, 4);
+    }).catch(() => []);
+    return { text: text.replace(/\s+/g, " ").trim(), source: src, dataPdfs };
   } finally { try { await browser.close(); } catch {} }
 }
 app.get("/api/foodsearch", async (req, res) => {
@@ -441,7 +447,7 @@ app.get("/api/menu", async (req, res) => {
       // chains often render nav client-side: raw HTML has no menu links. Seed well-known paths.
       try {
         const origin = new URL(a.url).origin;
-        for (const p of ["/menu", "/menus", "/food", "/our-menu", "/nutrition"]) {
+        for (const p of ["/menu", "/menus", "/food", "/our-menu", "/nutrition", "/nutritional-information", "/nutrition-information"]) {
           const abs = origin + p;
           if (urlAllowed(abs) && !cands.has(abs)) cands.set(abs, 12);
         }
@@ -492,7 +498,23 @@ app.get("/api/menu", async (req, res) => {
       if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return _send({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
     }
     if (rendered && rendered.text && rendered.text.length > 400) {
-      return _send({ ok: true, method: "js", source: rendered.source, text: rendered.text.slice(0, 6000) });
+      let jsText = rendered.text.slice(0, 6000);
+      if (Array.isArray(rendered.dataPdfs) && rendered.dataPdfs.length) {
+        for (const pu of rendered.dataPdfs.slice(0, 2)) {
+          try {
+            const pb = await fetchAny(pu);
+            if (pb && pb.pdf) {
+              const pt = await pdfText(pb.pdf);
+              if (pt.length > 200) {
+                const label = /allerg/i.test(pu) ? "ALLERGENS (official PDF)" : "NUTRITION (official PDF)";
+                jsText += `\n--- ${label}: ${pu} ---\n` + pt.slice(0, 3200);
+                console.log(`[menu] harvested ${label.split(" ")[0].toLowerCase()} pdf: ${pu} (${pt.length} chars)`);
+              }
+            }
+          } catch (e) { console.log(`[menu] pdf harvest failed ${pu}: ${e.message}`); }
+        }
+      }
+      return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000) });
     }
     // last resort: thin HTML is better than nothing
     if (bestText.length > 400) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
