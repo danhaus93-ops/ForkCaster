@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.58"
+version: "0.2.59"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.58 pill-mode polish: titration note reads naturally (Take on an empty
-  stomach...), the dose calendar shows a capsule icon instead of a syringe
-  for daily pills (day markers, legend, and due banner), and the Ramp-up
-  journey copy reads properly.
+  v0.2.59: orforglipron updated to reflect its April 2026 FDA approval as
+  Foundayo - investigational banner removed, brand shown, and the pill
+  reminder now correctly says it can be taken any time of day with no food
+  or water restrictions (empty-stomach rules remain Rybelsus-only).
 dependencies: []
 path: ""
 defaultUsername: ""

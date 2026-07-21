@@ -569,7 +569,8 @@ async function doseReminderTick() {
     const medName = glp.med ? glp.med.charAt(0).toUpperCase() + glp.med.slice(1) : "your GLP-1";
     const wp2 = webpushLib(); if (!wp2) return;
     const daily2 = ["rybelsus", "orforglipron"].includes(String(glp.med || ""));
-    await wp2.sendNotification(st.sub, JSON.stringify(daily2 ? { title: "\uD83D\uDC8A Pill time", body: `Daily ${medName} \u2014 empty stomach, wait 30 min before eating.` } : { title: "\uD83D\uDC89 Dose day", body: `Time for ${medName} \u2014 suggested site: ${site} (back of arm sites)` }));
+    const pillNote = String(glp.med) === "rybelsus" ? "empty stomach, wait 30 min before eating" : "any time of day \u2014 no food/water restrictions";
+    await wp2.sendNotification(st.sub, JSON.stringify(daily2 ? { title: "\uD83D\uDC8A Pill time", body: `Daily ${medName} \u2014 ${pillNote}.` } : { title: "\uD83D\uDC89 Dose day", body: `Time for ${medName} \u2014 suggested site: ${site} (back of arm sites)` }));
     st.lastSent = todayISO; savePushStore(st);
   } catch (e) { if (e && e.statusCode === 410) { const st = pushStore(); delete st.sub; savePushStore(st); } }
 }
