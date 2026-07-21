@@ -403,6 +403,7 @@ app.get("/api/menu", async (req, res) => {
   try {
     // Stage 1: plain fetch
     const a = await fetchAny(url);
+    console.log(`[menu] ${url} -> ${a ? (a.pdf ? "pdf" : a.html ? "html " + a.html.length + "b" : "empty") : "FETCH FAILED"}`);
     if (a && a.pdf) {
       const t = await pdfText(a.pdf);
       if (t.length > 300) return res.json({ ok: true, method: "pdf", source: a.url, text: t.slice(0, 6000) });
@@ -440,6 +441,7 @@ app.get("/api/menu", async (req, res) => {
           if (urlAllowed(abs) && !cands.has(abs)) cands.set(abs, 12);
         }
       } catch {}
+      console.log(`[menu] candidates: ${[...cands.entries()].map(([l, sc]) => sc + ":" + l).slice(0, 6).join(" | ")}`);
       const sorted = [...cands.entries()].sort((x, y) => y[1] - x[1]);
       const goalTop = sorted.filter(([, sc]) => sc >= 50).slice(0, 2);
       const plainTop = sorted.filter(([, sc]) => sc < 50).slice(0, 2);
@@ -456,7 +458,9 @@ app.get("/api/menu", async (req, res) => {
       }
       const priceCal = (t) => (t.match(/\$\s?\d|\b\d{2,4}\s?cal/gi) || []).length;
       const dishWords = (t) => (t.match(/smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|protein|oz\b/gi) || []).length;
+      console.log(`[menu] sections fetched: ${sections.length}, lens: ${sections.map((x) => x.length).join(",")}`);
       const good = sections.filter((sec) => priceCal(sec) >= 2 || dishWords(sec) >= 10);
+      console.log(`[menu] sections passing food gate: ${good.length}`);
       if (good.length) {
         const joined = good.join("\n\n").slice(0, 8000);
         return res.json({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
@@ -470,7 +474,9 @@ app.get("/api/menu", async (req, res) => {
     let rendered = null;
     const rTargets = [...new Set([renderTarget !== url ? renderTarget : null, _origin ? _origin + "/menu" : null, url].filter(Boolean))].slice(0, 3);
     for (const rt of rTargets) {
+      console.log(`[menu] rendering: ${rt}`);
       const r2 = await withRenderLock(() => renderPage(rt));
+      console.log(`[menu] rendered ${rt} -> ${r2 ? (r2.pdfUrl ? "pdf: " + r2.pdfUrl : (r2.text || "").length + " chars, foodOK=" + foodOK(r2.text)) : "RENDER FAILED"}`);
       if (r2 && (r2.pdfUrl || foodOK(r2.text))) { rendered = r2; break; }
       if (r2 && !rendered) rendered = r2;
     }
