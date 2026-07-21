@@ -400,7 +400,7 @@ app.get("/api/menu", async (req, res) => {
       const t = await pdfText(a.pdf);
       if (t.length > 300) return res.json({ ok: true, method: "pdf", source: a.url, text: t.slice(0, 6000) });
     }
-    let bestText = "", bestSrc = url;
+    let bestText = "", bestSrc = url; let renderTarget = url;
     if (a && a.html) {
       bestText = stripHtml(a.html);
       // gather ALL menu-ish links, score them against the user's goal, fetch the top few
@@ -425,11 +425,20 @@ app.get("/api/menu", async (req, res) => {
           if (sc >= 10) cands.set(abs, Math.max(cands.get(abs) || 0, sc));
         } catch {}
       }
+      // chains often render nav client-side: raw HTML has no menu links. Seed well-known paths.
+      try {
+        const origin = new URL(a.url).origin;
+        for (const p of ["/menu", "/menus", "/food", "/our-menu", "/nutrition"]) {
+          const abs = origin + p;
+          if (urlAllowed(abs) && !cands.has(abs)) cands.set(abs, 12);
+        }
+      } catch {}
       const sorted = [...cands.entries()].sort((x, y) => y[1] - x[1]);
       const goalTop = sorted.filter(([, sc]) => sc >= 50).slice(0, 2);
       const plainTop = sorted.filter(([, sc]) => sc < 50).slice(0, 2);
       const seen = new Set();
       const top = [...goalTop, ...plainTop].filter(([l]) => !seen.has(l) && seen.add(l)).slice(0, 3);
+      if (top.length) renderTarget = top[0][0];
       const sections = []; let anyPdf = false;
       for (const [link] of top) {
         try {
@@ -446,10 +455,10 @@ app.get("/api/menu", async (req, res) => {
         return res.json({ ok: true, method: anyPdf && good.length === 1 ? "pdf" : "html", source: top.map(([l]) => l).join(" + "), text: joined });
       }
       // no section passed the food-signal gate: fall through to page text / headless render
-      if (bestText.length > 700) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
+      if (bestText.length > 700 && (priceCal(bestText) >= 2 || dishWords(bestText) >= 10)) return res.json({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });
     }
     // Stage 3: headless render for JS-built menus
-    const rendered = await withRenderLock(() => renderPage(url));
+    const rendered = await withRenderLock(() => renderPage(renderTarget));
     if (rendered && rendered.pdfUrl) {
       const b = await fetchAny(rendered.pdfUrl);
       if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return res.json({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
