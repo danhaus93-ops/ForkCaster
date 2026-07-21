@@ -54,7 +54,7 @@ const list = pick.length ? CHAINS.filter(([n]) => pick.includes(n)) : CHAINS;
 
 // fat evidence: structured items carry fat, or the text mentions fat inline OR as a PDF table header ("TOTAL FAT (G)")
 const withFat = (d) => (Array.isArray(d.items) && d.items.some((i) => i && i.fat != null)) || /\dg fat|total\s*fat|fat\s*\(g\)/i.test(d.text || "");
-const src = (t) => (/NUTRITION \(official PDF\)/.test(t) ? "PDF" : /NUTRITION \(structured data\)/.test(t) ? "JSON" : "text/est");
+const src = (t) => (/NUTRITION \(official PDF\)/.test(t) ? "PDF" : /NUTRITION \(structured data\)/.test(t) ? "JSON" : /NUTRITION \(raw menu data/.test(t) ? "rawJSON" : "text/est");
 
 async function one([name, url]) {
   const t0 = Date.now();

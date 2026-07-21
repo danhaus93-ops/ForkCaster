@@ -8,7 +8,7 @@ services:
 
   web:
     # pin the digest here:
-    image: 127.0.0.1:5000/forkcaster:v0.2.90
+    image: 127.0.0.1:5000/forkcaster:v0.2.91
     restart: on-failure
     stop_grace_period: 30s
     ports:

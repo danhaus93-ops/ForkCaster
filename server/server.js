@@ -471,6 +471,31 @@ function nutriPageLinksFromBlobs(blobs, baseUrl) {
   }
   return [...out].slice(0, 2);
 }
+// universal fallback: when deterministic parsers strike out, cut the nutrition-bearing WINDOWS out of raw
+// captured JSON and ship them for the client AI to read — any shape, no per-site parser required
+function rawNutritionSlices(blobs, budget) {
+  const out = [];
+  let used = 0;
+  for (const blob of blobs || []) {
+    const body = String((blob && blob.body) || "");
+    if (body.length < 80) continue;
+    const re = /calorie|protein|nutrition|kcal|"fat"|total_?fat/gi;
+    let m; const windows = [];
+    while ((m = re.exec(body)) && windows.length < 6) {
+      const a = Math.max(0, m.index - 300), b = Math.min(body.length, m.index + 700);
+      if (windows.length && a <= windows[windows.length - 1][1]) windows[windows.length - 1][1] = Math.max(windows[windows.length - 1][1], b);
+      else windows.push([a, b]);
+    }
+    let taken = 0;
+    for (const [a, b] of windows) {
+      const slice = body.slice(a, b).replace(/\s+/g, " ");
+      if (used + slice.length > budget) return out;
+      out.push(slice); used += slice.length;
+      if (++taken >= 3) break;
+    }
+  }
+  return out;
+}
 async function fetchJson(u) {
   try {
     const r = await fetch(u, { headers: MENU_UA, redirect: "follow", signal: AbortSignal.timeout(9000) });
@@ -722,6 +747,7 @@ app.get("/api/menu", async (req, res) => {
       if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) for (const pu of pdfCandidatesFromHtml(blob.body, rendered.source || url)) pdfSources.push(pu);
       pdfSources = [...new Set(pdfSources)];
       // if still missing a PDF or the structured set is thin, render the nutrition pages and mine BOTH their PDFs and their structured JSON
+      const _extraBlobs = [];
       if (structured.filter(realItem).length < 8 && !pdfSources.length && _origin && Date.now() - _reqT0 < 90000) {
         const blobPages = nutriPageLinksFromBlobs(rendered.jsonBlobs, rendered.source || url);
         if (blobPages.length) console.log(`[menu] nutrition page links from blobs: ${blobPages.join(" | ")}`);
@@ -733,7 +759,7 @@ app.get("/api/menu", async (req, res) => {
             if (!rh) continue;
             if (Array.isArray(rh.dataPdfs)) for (const pu of rh.dataPdfs) pdfSources.push(pu);
             if (rh.pdfUrl) pdfSources.push(rh.pdfUrl);
-            if (Array.isArray(rh.jsonBlobs)) for (const blob of rh.jsonBlobs) { for (const pu of pdfCandidatesFromHtml(blob.body, probe)) pdfSources.push(pu); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
+            if (Array.isArray(rh.jsonBlobs)) for (const blob of rh.jsonBlobs) { _extraBlobs.push(blob); for (const pu of pdfCandidatesFromHtml(blob.body, probe)) pdfSources.push(pu); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
             try { for (const r of structuredNutrition(rh.html || "")) structured.push(r); } catch {}
             pdfSources = [...new Set(pdfSources)];
             if (pdfSources.length || structured.filter(realItem).length >= 8) break; // official PDF or a full menu — stop probing
@@ -743,6 +769,15 @@ app.get("/api/menu", async (req, res) => {
       // keep only plausible real menu items — drop component/drink fragments with no real macros
       // (a bare "Bun"/"Tea"/"Coke" with 0 protein and no calories is not an orderable meal)
       structured = dedupeRecords(structured).filter(realItem);
+      // universal fallback: parsers found <3 real items and no PDF — ship raw nutrition-bearing JSON windows for the AI
+      let rawSection = "";
+      if (structured.length < 3 && !pdfSources.length) {
+        const slices = rawNutritionSlices([...(rendered.jsonBlobs || []), ..._extraBlobs], 3500);
+        if (slices.length) {
+          rawSection = `\n--- NUTRITION (raw menu data — unparsed site JSON; read item names and calories/protein/fat out of whatever shape it uses): ${rendered.source || url} ---\n` + slices.join("\n---\n");
+          console.log(`[menu] raw nutrition slices: ${slices.length} (${rawSection.length} chars)`);
+        }
+      }
       // diagnostic: blobs present but parser under-extracted — log the real shape so it can be taught precisely
       if (structured.length < 5 && !pdfSources.length && Array.isArray(rendered.jsonBlobs) && rendered.jsonBlobs.length) {
         let shown = 0;
@@ -755,8 +790,10 @@ app.get("/api/menu", async (req, res) => {
       console.log(`[menu] nutrition pdf candidates: ${pdfSources.join(" | ") || "none"}`);
       let baseText = rendered.text && rendered.text.length > 100 ? rendered.text.slice(0, 6000) : "";
       if (baseText.length < 400 && earlyFallback) baseText = earlyFallback.text; // deep render came back thin — early menu text is better context
-      if (baseText.length > 400 || structured.length >= 2 || pdfSources.length) {
+      if (baseText.length > 400 || structured.length >= 2 || pdfSources.length || rawSection) {
+      if (rawSection && baseText.length > 3000) baseText = baseText.slice(0, 3000); // keep raw inside the client's 9k window
       let jsText = baseText;
+      jsText += rawSection;
       if (structured.length) {
         const stext = structuredNutritionText(structured);
         if (stext) { jsText += `\n--- NUTRITION (structured data): ${rendered.source || url} ---\n` + stext.slice(0, 3500); console.log(`[menu] structured nutrition: ${structured.length} items`); }
