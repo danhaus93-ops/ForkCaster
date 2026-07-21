@@ -363,10 +363,25 @@ function pdfCandidatesFromHtml(html) {
 function _snum(v) { if (v == null) return null; const m = String(v).match(/-?\d+(?:\.\d+)?/); return m ? Math.round(parseFloat(m[0])) : null; }
 function _macrosFrom(obj) {
   if (!obj || typeof obj !== "object") return null;
+  // nutrient-array shape: [{name/label:"Protein", value/amount:30}, ...]
+  const arr = Array.isArray(obj.nutrition) ? obj.nutrition : Array.isArray(obj.nutrients) ? obj.nutrients : Array.isArray(obj.nutritionFacts) ? obj.nutritionFacts : null;
+  if (arr) {
+    let cal = null, protein = null, fat = null;
+    for (const e of arr) {
+      if (!e || typeof e !== "object") continue;
+      const label = String(e.name || e.label || e.nutrient || e.type || e.key || "").toLowerCase();
+      const val = _snum(e.value ?? e.amount ?? e.quantity ?? e.grams ?? e.qty);
+      if (val == null) continue;
+      if (/calor|energy|kcal/.test(label)) cal = cal ?? val;
+      else if (/protein/.test(label)) protein = protein ?? val;
+      else if (/(^|\b)(total\s*)?fat\b/.test(label) && !/satur|trans|unsat/.test(label)) fat = fat ?? val;
+    }
+    if (cal != null || protein != null || fat != null) return { cal, protein, fat };
+  }
   const n = obj.nutrition || obj.nutritionInfo || obj.nutritionalInfo || obj.nutritionInformation || obj.nutrients || obj.macros || obj;
-  const cal = _snum(n.calories ?? n.calorie ?? n.cal ?? n.kcal ?? n.energy ?? n.Calories ?? n.calorieCount);
-  const protein = _snum(n.proteinContent ?? n.protein ?? n.proteinG ?? n.Protein ?? n.protein_g ?? n.proteinGrams);
-  const fat = _snum(n.fatContent ?? n.fat ?? n.totalFat ?? n.fatG ?? n.Fat ?? n.fat_g ?? n.total_fat ?? n.fatGrams);
+  const cal = _snum(n.calories ?? n.calorie ?? n.cal ?? n.kcal ?? n.energy ?? n.Calories ?? n.calorieCount ?? n.totalCalories ?? n.caloriesPerServing);
+  const protein = _snum(n.proteinContent ?? n.protein ?? n.proteinG ?? n.Protein ?? n.protein_g ?? n.proteinGrams ?? n.proteinInGrams);
+  const fat = _snum(n.fatContent ?? n.fat ?? n.totalFat ?? n.fatG ?? n.Fat ?? n.fat_g ?? n.total_fat ?? n.fatGrams ?? n.fatInGrams ?? n.totalFatContent);
   if (cal == null && protein == null && fat == null) return null;
   return { cal, protein, fat };
 }
@@ -420,7 +435,7 @@ function jsonCandidatesFromHtml(html, baseUrl) {
   for (const u of src.match(/https?:\/\/[^\s"'<>\\]+?\.json(?:\?[^\s"'<>\\]*)?/gi) || []) out.add(u);
   for (const m of src.matchAll(/["'](\/[^"'\s]*?(?:menu|nutrition|product|item|catalog)[^"'\s]*?)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
   for (const m of src.matchAll(/(?:fetch|axios\.get|\.get|\.load)\(\s*["']([^"']+)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
-  return [...out].filter((u) => urlAllowed(u) && /menu|nutrition|product|item|catalog|\.json/i.test(u)).slice(0, 6);
+  return [...out].filter((u) => urlAllowed(u) && /menu|nutrition|product|item|catalog|\.json/i.test(u) && !/\.(js|mjs|css|png|jpe?g|svg|webp|gif|ico|woff2?|ttf)(\?|$)/i.test(u)).slice(0, 6);
 }
 async function fetchJson(u) {
   try {
@@ -458,13 +473,15 @@ async function renderPage(startUrl, opts = {}) {
     const jsonBlobs = [];
     page.on("response", async (resp) => {
       try {
-        if (jsonBlobs.length >= 8) return;
+        if (jsonBlobs.length >= 24) return;
         const ct = (resp.headers()["content-type"] || "").toLowerCase();
         if (!ct.includes("json")) return;
-        const ru = resp.url();
-        if (!/menu|nutrition|product|item|catalog|api/i.test(ru)) return;
         const buf = await resp.buffer().catch(() => null);
-        if (buf && buf.length > 200 && buf.length < 3e6) jsonBlobs.push(buf.toString("utf8"));
+        if (!buf || buf.length <= 200 || buf.length >= 3e6) return;
+        const body = buf.toString("utf8");
+        const ru = resp.url();
+        // capture if the URL looks menu-ish OR the body actually carries nutrition-ish keys (Contentful/GraphQL/etc.)
+        if (/menu|nutrition|product|item|catalog|api|entries|graphql|content|dish/i.test(ru) || /calorie|protein|"fat"|nutrition/i.test(body)) jsonBlobs.push({ url: ru, body });
       } catch {}
     });
     await page.setUserAgent(MENU_UA["User-Agent"]);
@@ -636,7 +653,7 @@ app.get("/api/menu", async (req, res) => {
       // structured-nutrition harvest: embedded JSON (JSON-LD/__NEXT_DATA__/state), fetched JSON endpoints, captured responses
       let structured = [];
       try { structured = structuredNutrition(rendered.html || ""); } catch {}
-      if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) { try { nutritionFromJson(JSON.parse(blob), structured); } catch {} }
+      if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) { try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
       if (structured.length < 3 && rendered.html && !(Array.isArray(rendered.dataPdfs) && rendered.dataPdfs.length)) {
         const jcands = jsonCandidatesFromHtml(rendered.html, rendered.source || url);
         console.log(`[menu] json candidates: ${jcands.join(" | ") || "none"}`);
@@ -647,6 +664,16 @@ app.get("/api/menu", async (req, res) => {
         }
       }
       structured = dedupeRecords(structured);
+      // diagnostic: capture worked but parser found nothing — log the real shape so it can be taught
+      if (!structured.length && Array.isArray(rendered.jsonBlobs) && rendered.jsonBlobs.length) {
+        let shown = 0;
+        for (const blob of rendered.jsonBlobs) {
+          if (shown >= 3) break;
+          const idx = blob.body.search(/calorie|protein|nutrition/i);
+          if (idx >= 0) { console.log(`[menu] structured MISS — ${blob.url} :: ${blob.body.slice(Math.max(0, idx - 140), idx + 420).replace(/\s+/g, " ")}`); shown++; }
+        }
+        if (!shown) console.log(`[menu] structured MISS — ${rendered.jsonBlobs.length} json blobs, none contain calorie/protein/nutrition keywords`);
+      }
       const baseText = rendered.text && rendered.text.length > 100 ? rendered.text.slice(0, 6000) : "";
       if (baseText.length > 400 || structured.length >= 2) {
       let jsText = baseText;
