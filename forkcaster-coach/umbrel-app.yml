@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.71"
+version: "0.2.72"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.71: calories display on live-menu and photo-scanned picks. The
-  extraction pipeline stored calories in a field the pick card never read -
-  a one-word mismatch hiding behind everything. With the official-PDF
-  harvest from the last releases, those numbers are now Popeyes' own.
+  v0.2.72: fat grams on live-menu and photo-scanned picks (pulled from the
+  official nutrition PDF when harvested), shown next to calories and
+  recorded into the day's macros when you log a pick. High-fat meals are a
+  classic GLP-1 nausea trigger - now you can see it before you order.
 dependencies: []
 path: ""
 defaultUsername: ""

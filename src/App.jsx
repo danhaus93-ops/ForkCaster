@@ -111,7 +111,7 @@ function violatesAllergy(text, allergies) {
   return null;
 }
 const RANK_SCHEMA = { type: "array", items: { type: "object", properties: { id: { type: "string" }, match: { type: "integer" }, why: { type: "string" } }, required: ["id", "match", "why"] } };
-const EXTRACT_SCHEMA = { type: "array", items: { type: "object", properties: { item: { type: "string" }, section: { type: "string" }, cal: { type: "integer" }, protein: { type: "integer" } }, required: ["item", "section", "cal", "protein"] } };
+const EXTRACT_SCHEMA = { type: "array", items: { type: "object", properties: { item: { type: "string" }, section: { type: "string" }, cal: { type: "integer" }, protein: { type: "integer" }, fat: { type: "integer" } }, required: ["item", "section", "cal", "protein", "fat"] } };
 const NL_SCHEMA = { type: "object", properties: { name: { type: "string" }, calories: { type: "integer" }, protein: { type: "integer" }, carbs: { type: "integer" }, fat: { type: "integer" }, fiber: { type: "integer" } }, required: ["name", "calories", "protein", "carbs", "fat", "fiber"] };
 const POLISH_SCHEMA = { type: "object", properties: { coach: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { item: { type: "string" }, why: { type: "string" } }, required: ["item", "why"] } } }, required: ["coach", "notes"] };
 /* Deterministic pick selection: AI only extracts items; code enforces goal rules. */
@@ -145,7 +145,7 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
     ? (queasy ? "Dose week: small-volume, protein-first — sip slowly." : "Protein-first, small volume — GLP-1 friendly picks up top.")
     : mode === "gain" ? "Max protein first — upsize and add whey where offered."
     : "Protein-dense picks under your remaining calories.";
-  return { coach, picks: picks.map((it) => ({ item: it.item, name: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0, calories: +it.cal || 0 })), avoid };
+  return { coach, picks: picks.map((it) => ({ item: it.item, name: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0, calories: +it.cal || 0, fat: it.fat == null ? null : +it.fat || 0 })), avoid };
 }
 function sanitizePicks(parsed, allergies) {
   if (!parsed || !Array.isArray(parsed.picks) || !allergies.length) return parsed;
@@ -640,7 +640,7 @@ export default function App() {
     let doneViaExtraction = false;
     if (liveMenu) {
       try {
-        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories and protein grams. If a section labeled NUTRITION (official PDF) is present, it is the authoritative source: match menu items to it loosely by name and use ITS calorie and protein values instead of estimating; only estimate for items absent from it. ` +
+        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a section labeled NUTRITION (official PDF) is present, it is the authoritative source: match menu items to it loosely by name and use ITS calorie and protein values instead of estimating; only estimate for items absent from it. ` +
           `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
@@ -945,7 +945,7 @@ export default function App() {
         img.onerror = no; img.src = URL.createObjectURL(file);
       });
       const items = salvageJSONArray(await callClaude(
-        `List the distinct orderable menu items visible in this photographed menu (max 14). For each: item name, section (menu heading if visible, else "menu"), estimated calories and protein grams. Your ENTIRE response must be one JSON array.`,
+        `List the distinct orderable menu items visible in this photographed menu (max 14). For each: item name, section (menu heading if visible, else "menu"), estimated calories, protein grams, and fat grams. Your ENTIRE response must be one JSON array.`,
         null, { data: b64, media_type: "image/jpeg" }, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
       if (items.length < 2) throw new Error("couldn't read items off that photo \u2014 try closer/straighter");
       const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);
@@ -1182,8 +1182,8 @@ export default function App() {
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 99, background: medalColor(i), color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{p.why}</div></div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal</div></div>
-                <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: 0 }]); setLoggedPicks((l) => [...l, nm]); }}
+                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal{p.fat != null ? ` · ${p.fat}g fat` : ""}</div></div>
+                <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0, fa = p.fat == null ? 0 : +p.fat || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca, fat: (e.fat || 0) + fa })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: fa }]); setLoggedPicks((l) => [...l, nm]); }}
                   style={{ marginLeft: 10, flexShrink: 0, alignSelf: "center", background: loggedPicks.includes(p.item || p.name) ? C.goSoft : "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 9, padding: "7px 10px", fontFamily: BODY, fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>{loggedPicks.includes(p.item || p.name) ? "✓" : "Log"}</button>
               </div>
             ))}
