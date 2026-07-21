@@ -420,8 +420,8 @@ export default function App() {
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog);
-        if (s.photos) { const real = s.photos.filter((p) => !p.sim); const legacySims = s.photos.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
-        if (Array.isArray(s.simShots) && s.simShots.length) setSimShots((x) => [...x.filter((p) => !s.simShots.find((q) => q.id === p.id)), ...s.simShots]);
+        if (s.photos) { const alive = s.photos.filter((p) => p && p.url && !p.url.startsWith("blob:")); const real = alive.filter((p) => !p.sim); const legacySims = alive.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
+        if (Array.isArray(s.simShots) && s.simShots.length) { const aliveSims = s.simShots.filter((p) => p && p.url && !p.url.startsWith("blob:")); setSimShots((x) => [...x.filter((p) => !aliveSims.find((q) => q.id === p.id)), ...aliveSims]); }
         if (s.savedRank) setSavedRank(s.savedRank);
         if (Array.isArray(s.coachMsgs) && s.coachMsgs.length) setCoachMsgs(s.coachMsgs);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
@@ -704,14 +704,25 @@ export default function App() {
     const files = Array.from(e.target.files || []);
     for (const f of files) {
       try {
-        const b64 = await toBase64(f);
-        const res = await fetch("/api/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: b64, media: f.type || "image/jpeg" }) });
+        // downscale on-device: fixes oversized uploads and converts HEIC to JPEG
+        const b64 = await new Promise((ok, no) => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX = 1600, s = Math.min(1, MAX / Math.max(img.width, img.height));
+            const cv = document.createElement("canvas");
+            cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+            cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+            ok(cv.toDataURL("image/jpeg", 0.85).split(",")[1]);
+          };
+          img.onerror = no;
+          img.src = URL.createObjectURL(f);
+        });
+        const res = await fetch("/api/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: b64, media: "image/jpeg" }) });
         const j = await res.json();
-        const entry = j && j.url ? { id: j.id, url: j.url, date: todayISO() } : { id: uid(), url: URL.createObjectURL(f), date: todayISO() };
-        setPhotos((p) => { const all = [...p, entry]; setCompareB(all.length - 1); return all; });
-      } catch {
-        const entry = { id: uid(), url: URL.createObjectURL(f), date: todayISO() };
-        setPhotos((p) => { const all = [...p, entry]; setCompareB(all.length - 1); return all; });
+        if (!res.ok || !j.url) throw new Error(j.error || "node rejected the photo");
+        setPhotos((p) => { const all = [...p, { id: j.id, url: j.url, date: todayISO() }]; setCompareB(all.length - 1); return all; });
+      } catch (e) {
+        alert("Couldn't save that photo to your node — it was NOT kept. (" + (e && e.message ? e.message : e) + ")");
       }
     }
   }
