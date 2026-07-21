@@ -766,7 +766,7 @@ export default function App() {
   }
   async function deleteSim(idx) {
     const p = simShots[idx]; if (!p) return;
-    if (!window.confirm("Delete this simulation?")) return;
+    if (!window.confirm("Delete this forecast?")) return;
     try { const f = (p.url || "").split("/").pop(); if (f) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {}
     setSimShots((all) => all.filter((_, i) => i !== idx));
   }
@@ -1695,12 +1695,12 @@ export default function App() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 11, color: C.violet, marginBottom: 5, fontWeight: 600 }}>At goal · AI preview</div>
                         <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${C.violet}66` }}>
-                          {latest ? <img src={latest.url} alt="Goal" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 11, padding: 12, textAlign: "center" }}>{simBusy ? "Rendering… ≈15s" : "No simulation yet for this photo"}</div>}
+                          {latest ? <img src={latest.url} alt="Goal" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 11, padding: 12, textAlign: "center" }}>{simBusy ? "Forecasting… ≈15s" : "No forecast yet for this photo"}</div>}
                           {latest && <button onClick={() => deleteSim(simShots.indexOf(latest))} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
                         </div>
                       </div>
                     </div>
-                    <button onClick={simulateGoal} disabled={simBusy || !srcP} style={{ width: "100%", marginTop: 12, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: simBusy ? 0.6 : 1 }}>{simBusy ? "Simulating…" : latest ? "✨ Re-simulate" : "✨ Simulate at goal"}</button>
+                    <button onClick={simulateGoal} disabled={simBusy || !srcP} style={{ width: "100%", marginTop: 12, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: simBusy ? 0.6 : 1 }}>{simBusy ? "Forecasting…" : latest ? "✨ Re-forecast" : "✨ Forecast at goal"}</button>
                     {latest && srcP && <button onClick={() => shareSim(srcP, latest)} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share Now vs Goal →</button>}
                     <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Same person, same clothing — only body composition changes, computed from your logged weight vs goal. A visualization, not a prediction. Gemini key required · ~7¢ per render.</div>
                   </div>
