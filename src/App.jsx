@@ -647,7 +647,20 @@ export default function App() {
       } catch {}
     }
     let doneViaExtraction = false;
-    if (liveMenu) {
+    // Use the server's already-parsed structured items directly — deterministic, no fragile AI re-extraction round-trip
+    if (liveMenu && Array.isArray(liveMenu.items) && liveMenu.items.length >= 3) {
+      try {
+        const cleaned = sanitizePicks(composePicks(liveMenu.items, mode, nauseaRisk, proteinLeft, calLeft), allergies);
+        cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method; cleaned._menuText = (liveMenu.text || "").slice(0, 6000);
+        try {
+          const polishPrompt = `User goal: ${MODES[mode] ? MODES[mode].label : mode}. Med context: ${nauseaRisk} nausea risk. Remaining: ${proteinLeft}g protein, ${calLeft} cal. These items were selected (do NOT change them): ${JSON.stringify(cleaned.picks.map((p) => ({ item: p.item, protein: p.protein, cal: p.cal, fat: p.fat })))}. Write one sharp coach line and, for each item, a short why (max 12 words) with a smart tip. On GLP-1 or any nausea risk, fat is the main trigger: never call a 30g+ fat item gentle or light; suggest a lower-fat tweak. If the venue serves alcohol, fold ONE drink line into coach (lower-sugar; alcohol hits harder on GLP-1 — pace slow).`;
+          const pol = salvageJSONObject(await callClaude(polishPrompt, null, null, 900, POLISH_SCHEMA));
+          if (pol && Array.isArray(pol.notes)) { cleaned.picks = cleaned.picks.map((p) => { const n = pol.notes.find((x) => x.item && p.item && x.item.toLowerCase().slice(0, 12) === p.item.toLowerCase().slice(0, 12)); return n && n.why ? { ...p, why: n.why } : p; }); if (pol.coach) cleaned.coach = pol.coach; }
+        } catch {}
+        setResult(cleaned); doneViaExtraction = true;
+      } catch {}
+    }
+    if (liveMenu && !doneViaExtraction) {
       try {
         const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a NUTRITION section is present it is authoritative — match items to it loosely by name and use ITS calorie, protein, AND fat values instead of estimating. When BOTH an "official PDF" and a "structured data" NUTRITION section exist, PREFER the official PDF's numbers. EVERY item MUST include a fat value — use the section's fat, otherwise estimate fat from typical values; NEVER omit or null fat. Only fully estimate items absent from every NUTRITION section, and do NOT return 0 for protein or fat unless the item genuinely has almost none (black coffee, diet soda, plain water). ` +
           `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;

@@ -733,7 +733,7 @@ app.get("/api/menu", async (req, res) => {
           } catch (e) { console.log(`[menu] pdf harvest failed ${pu}: ${e.message}`); }
         }
       }
-      return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000) });
+      return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000), items: structured.length >= 3 ? structured : undefined });
       }
     }
     // last resort: thin HTML is better than nothing
