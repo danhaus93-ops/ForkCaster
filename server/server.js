@@ -563,6 +563,7 @@ app.get("/api/foodsearch", async (req, res) => {
 const MENU_CACHE = new Map(); // url+goal -> { t, obj }
 const MENU_INFLIGHT = new Map(); // url+goal -> Promise: concurrent identical requests share one run
 app.get("/api/menu", async (req, res) => {
+  const _reqT0 = Date.now(); // overall time budget — client aborts at 150s, so return SOMETHING by ~120s
   const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
   const _hit = MENU_CACHE.get(_ckey);
   if (_hit && Date.now() - _hit.t < 6 * 3600 * 1000) { console.log(`[menu] cache hit ${_ckey.slice(0, 80)}`); return res.json(_hit.obj); }
@@ -686,9 +687,10 @@ app.get("/api/menu", async (req, res) => {
       if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu);
       pdfSources = [...new Set(pdfSources)];
       // if still missing a PDF or the structured set is thin, render the nutrition pages and mine BOTH their PDFs and their structured JSON
-      if (structured.filter(realItem).length < 8 && !pdfSources.length && _origin) {
+      if (structured.filter(realItem).length < 8 && !pdfSources.length && _origin && Date.now() - _reqT0 < 90000) {
         for (const probe of [_origin + "/nutrition-allergen", _origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
           try {
+            if (Date.now() - _reqT0 > 90000) { console.log(`[menu] time budget hit — stop probing, return what we have`); break; }
             console.log(`[menu] harvest-render: ${probe}`);
             const rh = await withRenderLock(() => renderPage(probe, { follow: false }));
             if (!rh) continue;
@@ -740,8 +742,10 @@ app.get("/api/menu", async (req, res) => {
       // direct-pick items must carry PROTEIN (FDA menu labeling mandates calories only, so many sites embed
       // cal-only data — real macros live in the PDF). Cal-only entries stay in the text section for the AI to
       // anchor names+calories and estimate the rest; sending them as items[] would headline 0g protein on cards.
-      const proteinItems = structured.filter((r) => (+r.protein || 0) >= 3);
-      return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000), items: proteinItems.length >= 3 ? proteinItems : undefined });
+      // meal-grade only: components with real macros (Bacon 6p/70c, Sub Roll 6p/200c) pass a bare protein
+      // gate — real entrees run >=15g protein AND >=200 cal. Anything less stays text context for the AI.
+      const mealItems = structured.filter((r) => (+r.protein || 0) >= 15 && (+r.cal || 0) >= 200);
+      return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000), items: mealItems.length >= 3 ? mealItems : undefined });
       }
     }
     // last resort: thin HTML is better than nothing
