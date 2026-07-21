@@ -1,0 +1,35 @@
+ForkCaster coverage · http://localhost:3450 · goal=glp1 · 28 chains · 2026-07-21T15:21:07.255Z
+
+chain            ok  src       items  fat  method  secs  sample
+---------------- --- --------- -----  ---  ------  ----  ------
+popeyes          ok  PDF           0  yes  js        47  
+sonic            ok  JSON          0  no   js        10  
+chick-fil-a      ok  text/est      0  no   js        52  
+mcdonalds        ok  text/est      0  no   js        31  
+wendys           ok  text/est      0  no   js        37  
+burgerking       ok  text/est      0  no   js        28  
+tacobell         ok  JSON          0  no   js        13  
+chipotle         ok  text/est      0  no   js        52  
+subway           ok  text/est      0  no   js        36  
+panera           ok  JSON          0  no   js        19  
+fiveguys         ok  text/est      0  yes  js        31  
+raisingcanes     ok  text/est      0  no   js        18  
+culvers          ok  text/est      0  yes  js        43  
+jimmyjohns       ok  text/est      0  no   js        44  
+pandaexpress     --                                34  http 200
+kfc              ok  text/est      0  no   js        62  
+arbys            ok  JSON          0  no   js        10  
+jackinthebox     ok  text/est      0  no   js        53  
+whataburger      ok  PDF           0  no   js        29  
+dairyqueen       ok  text/est      0  no   js        57  
+zaxbys           --                               101  http 200
+bojangles        ok  text/est      0  no   js        14  
+deltaco          ok  text/est      0  no   js        51  
+firehousesubs    ok  text/est      0  no   js        64  
+jerseymikes      ok  text/est      0  no   js        58  
+firstwatch       ok  JSON          0  yes  js        57  
+huntbrothers     ok  PDF           0  yes  js        16  
+scooters         ok  text/est      0  no   js        33  
+
+SUMMARY: 26/28 returned a menu · 3 via official PDF · 5 via structured JSON · 18 text/estimate
+Re-run after changes to catch regressions. 'ok' + real items/fat = working; '--' or text/est = needs work.

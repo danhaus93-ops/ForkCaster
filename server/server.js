@@ -335,6 +335,7 @@ async function fetchAny(u) {
 }
 async function pdfText(buf) {
   try {
+    if (!buf || buf.length < 5 || buf.slice(0, 5).toString("latin1") !== "%PDF-") { console.log("pdf skipped: no %PDF magic (got HTML or junk)"); return ""; }
     const m = require("pdf-parse");
     let d;
     if (typeof m === "function") d = await m(buf, { max: 25 });
@@ -348,13 +349,26 @@ async function pdfText(buf) {
 }
 let renderChain = Promise.resolve();
 function withRenderLock(fn) { const p = renderChain.then(fn, fn); renderChain = p.catch(() => {}); return p; }
-function pdfCandidatesFromHtml(html) {
+function pdfCandidatesFromHtml(html, baseUrl) {
   const out = [];
   for (const source of [html, String(html).replace(/\\\//g, "/")]) {
     const hits = source.match(/https?:\/\/[^\s"'<>\\]+?\.pdf(?:\?[^\s"'<>\\]*)?/gi) || [];
     for (const u of hits) if (/nutrit|allerg|calorie/i.test(u)) out.push(u);
+    if (baseUrl) {
+      // site-RELATIVE pdf paths ("_path":"/content/dam/.../Nutrition-Facts.pdf") — invisible to the absolute matcher
+      for (const m of source.match(/\/[^\s"'<>\\:]+?\.pdf(?:\?[^\s"'<>\\]*)?/gi) || []) {
+        if (!/nutrit|allerg|calorie/i.test(m)) continue;
+        try { out.push(new URL(m, baseUrl).href); } catch {}
+      }
+    }
   }
-  return [...new Set(out)].slice(0, 4);
+  // unwrap viewer links (docs.google.com/viewer?url=<real>.pdf) — fetch the real PDF, not the viewer's HTML
+  const unwrapped = out.map((u) => {
+    const m = u.match(/[?&](?:url|file|src)=([^&]+)/i);
+    if (m) { try { const inner = decodeURIComponent(m[1]); if (/\.pdf/i.test(inner)) return inner; } catch {} }
+    return u;
+  });
+  return [...new Set(unwrapped)].slice(0, 4);
 }
 
 /* ── structured-nutrition harvest: pull macros out of embedded/fetched JSON, no per-chain code ──
@@ -445,7 +459,7 @@ function jsonCandidatesFromHtml(html, baseUrl) {
   for (const u of src.match(/https?:\/\/[^\s"'<>\\]+?\.json(?:\?[^\s"'<>\\]*)?/gi) || []) out.add(u);
   for (const m of src.matchAll(/["'](\/[^"'\s]*?(?:menu|nutrition|product|item|catalog)[^"'\s]*?)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
   for (const m of src.matchAll(/(?:fetch|axios\.get|\.get|\.load)\(\s*["'](https?:\/\/[^"']+|\/[^"']+)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
-  return [...out].filter((u) => urlAllowed(u) && /menu|nutrition|product|item|catalog|allergen|page-data|\.json(\?|$)/i.test(u) && !/\.(js|mjs|css|png|jpe?g|svg|webp|gif|ico|woff2?|ttf)(\?|$)/i.test(u)).slice(0, 6);
+  return [...out].filter((u) => urlAllowed(u) && /menu|nutrition|product|item|catalog|allergen|page-data|\.json(\?|$)/i.test(u) && !/\.(js|mjs|css|png|jpe?g|svg|webp|gif|ico|woff2?|ttf|mp4|mov|webm|avif)(\?|$)/i.test(u)).slice(0, 6);
 }
 // nutrition often hides behind a PAGE link inside a data blob ("url":"/allergens/") rather than a .pdf URL
 function nutriPageLinksFromBlobs(blobs, baseUrl) {
@@ -485,7 +499,7 @@ async function renderPage(startUrl, opts = {}) {
     for (const ju of jsonCandidatesFromHtml(html, startUrl).slice(0, 6)) {
       try { const jr = await fetch(ju, { headers: { ...MENU_UA, "X-Fake-Render": "1" }, signal: AbortSignal.timeout(8000) }); if (!jr.ok) continue; const ct = (jr.headers.get("content-type") || "").toLowerCase(); const body = await jr.text(); if (ct.includes("json") || /^\s*[[{]/.test(body)) jsonBlobs.push({ url: ju, body }); } catch {}
     }
-    return { text: stripHtml(html), source: startUrl, dataPdfs: pdfCandidatesFromHtml(html), html, jsonBlobs };
+    return { text: stripHtml(html), source: startUrl, dataPdfs: pdfCandidatesFromHtml(html, startUrl), html, jsonBlobs };
   }
   const puppeteer = require("puppeteer-core");
   const browser = await puppeteer.launch({
@@ -543,7 +557,7 @@ async function renderPage(startUrl, opts = {}) {
         for (const x of arr) if (/\.pdf(\?|$)/i.test(x.href) && /nutrit|allerg|calorie/i.test(x.href + " " + x.label)) dataPdfs.push(x.href);
       }
       const fullHtml = await page.content().catch(() => "");
-      for (const u2 of pdfCandidatesFromHtml(fullHtml)) dataPdfs.push(u2);
+      for (const u2 of pdfCandidatesFromHtml(fullHtml, src)) dataPdfs.push(u2);
     } catch {}
     dataPdfs = [...new Set(dataPdfs)].slice(0, 4);
     const fullHtml2 = await page.content().catch(() => "");
@@ -705,7 +719,7 @@ app.get("/api/menu", async (req, res) => {
       // Nutrition PDFs are often referenced INSIDE json blobs (e.g. Contentful asset links on assets.ctfassets.net),
       // not in the page HTML — scan blob bodies too, unescaping \/ forms (pdfCandidatesFromHtml handles both).
       let pdfSources = Array.isArray(rendered.dataPdfs) ? rendered.dataPdfs.slice() : [];
-      if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu);
+      if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) for (const pu of pdfCandidatesFromHtml(blob.body, rendered.source || url)) pdfSources.push(pu);
       pdfSources = [...new Set(pdfSources)];
       // if still missing a PDF or the structured set is thin, render the nutrition pages and mine BOTH their PDFs and their structured JSON
       if (structured.filter(realItem).length < 8 && !pdfSources.length && _origin && Date.now() - _reqT0 < 90000) {
@@ -719,7 +733,7 @@ app.get("/api/menu", async (req, res) => {
             if (!rh) continue;
             if (Array.isArray(rh.dataPdfs)) for (const pu of rh.dataPdfs) pdfSources.push(pu);
             if (rh.pdfUrl) pdfSources.push(rh.pdfUrl);
-            if (Array.isArray(rh.jsonBlobs)) for (const blob of rh.jsonBlobs) { for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
+            if (Array.isArray(rh.jsonBlobs)) for (const blob of rh.jsonBlobs) { for (const pu of pdfCandidatesFromHtml(blob.body, probe)) pdfSources.push(pu); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
             try { for (const r of structuredNutrition(rh.html || "")) structured.push(r); } catch {}
             pdfSources = [...new Set(pdfSources)];
             if (pdfSources.length || structured.filter(realItem).length >= 8) break; // official PDF or a full menu — stop probing
@@ -748,6 +762,8 @@ app.get("/api/menu", async (req, res) => {
         if (stext) { jsText += `\n--- NUTRITION (structured data): ${rendered.source || url} ---\n` + stext.slice(0, 3500); console.log(`[menu] structured nutrition: ${structured.length} items`); }
       }
       if (pdfSources.length) {
+        // prefer english editions — spanish/localized PDFs sort last (Cane's publishes both)
+        pdfSources.sort((a, b) => (/spanish|espanol|_es[._-]|-es\./i.test(a) ? 1 : 0) - (/spanish|espanol|_es[._-]|-es\./i.test(b) ? 1 : 0));
         for (const pu of pdfSources.slice(0, 2)) {
           try {
             const pb = await fetchAny(pu);
