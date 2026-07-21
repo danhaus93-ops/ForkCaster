@@ -684,7 +684,7 @@ app.get("/api/menu", async (req, res) => {
       if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu);
       pdfSources = [...new Set(pdfSources)];
       // if still missing a PDF or the structured set is thin, render the nutrition pages and mine BOTH their PDFs and their structured JSON
-      if ((!pdfSources.length || structured.length < 5) && _origin) {
+      if (structured.length < 8 && !pdfSources.length && _origin) {
         for (const probe of [_origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
           try {
             console.log(`[menu] harvest-render: ${probe}`);
@@ -695,7 +695,7 @@ app.get("/api/menu", async (req, res) => {
             if (Array.isArray(rh.jsonBlobs)) for (const blob of rh.jsonBlobs) { for (const pu of pdfCandidatesFromHtml(blob.body)) pdfSources.push(pu); try { nutritionFromJson(JSON.parse(blob.body), structured); } catch {} }
             try { for (const r of structuredNutrition(rh.html || "")) structured.push(r); } catch {}
             pdfSources = [...new Set(pdfSources)];
-            if (pdfSources.length) break; // official PDF is the best source — stop probing once found
+            if (pdfSources.length || structured.length >= 8) break; // official PDF or a full menu — stop probing
           } catch {}
         }
       }

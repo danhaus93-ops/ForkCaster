@@ -649,7 +649,7 @@ export default function App() {
     let doneViaExtraction = false;
     if (liveMenu) {
       try {
-        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a section labeled NUTRITION (official PDF or structured data) is present, it is the authoritative source: match menu items to it loosely by name and use ITS calorie, protein, AND fat values instead of estimating; only estimate for items absent from it. For any item whose numbers are not written in the text, ESTIMATE calories, protein, and fat from typical values for that item — do NOT return 0 for protein or fat unless the item genuinely has almost none (black coffee, diet soda, plain water). ` +
+        const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a NUTRITION section is present it is authoritative — match items to it loosely by name and use ITS calorie, protein, AND fat values instead of estimating. When BOTH an "official PDF" and a "structured data" NUTRITION section exist, PREFER the official PDF's numbers. EVERY item MUST include a fat value — use the section's fat, otherwise estimate fat from typical values; NEVER omit or null fat. Only fully estimate items absent from every NUTRITION section, and do NOT return 0 for protein or fat unless the item genuinely has almost none (black coffee, diet soda, plain water). ` +
           `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>}]\nTEXT:\n"""${liveMenu.text}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
@@ -682,8 +682,8 @@ export default function App() {
       (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
         : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section. If the text turns out to be boilerplate with no actual menu items, DISREGARD it and propose well-known typical orders for this chain instead — NEVER refuse and NEVER return zero picks:\n"""${liveMenu.text.slice(0, prefs.aiModel && prefs.aiModel.includes("haiku") ? 3500 : prefs.aiModel && prefs.aiModel.includes("sonnet") ? 6000 : 8000)}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
-      `Keep all strings short (under 12 words). Your ENTIRE response must be exactly one JSON object — the first character { and the last character } — no prose, no markdown, nothing else. Format:\n` +
-      `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"why":"<max 9 words>"}],` +
+      `Keep all strings short (under 12 words). Include fat grams for EVERY pick (estimate conservatively from typical values if not printed; never omit fat). Your ENTIRE response must be exactly one JSON object — the first character { and the last character } — no prose, no markdown, nothing else. Format:\n` +
+      `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"fat":<int>,"why":"<max 9 words>"}],` +
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);

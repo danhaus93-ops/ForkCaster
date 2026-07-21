@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.78"
+version: "0.2.79"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.78: reads the deeply-nested nutrition format some chains (like Sonic) use
-  in their menu data feeds, and filters out topping/modifier options so only real
-  menu items show up. More places now return real calories, protein, and fat.
+  v0.2.79: fixes fat grams disappearing from picks (the estimate fallback path
+  never included fat) - every pick now shows fat again, official-PDF numbers are
+  preferred over other sources, and menus that already return a full item list
+  skip redundant page loads so results come back faster.
 dependencies: []
 path: ""
 defaultUsername: ""
