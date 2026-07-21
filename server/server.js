@@ -356,6 +356,86 @@ function pdfCandidatesFromHtml(html) {
   }
   return [...new Set(out)].slice(0, 4);
 }
+
+/* ── structured-nutrition harvest: pull macros out of embedded/fetched JSON, no per-chain code ──
+   Handles JSON-LD (schema.org NutritionInformation), Next.js __NEXT_DATA__, and framework state
+   blobs (__NUXT__/__APOLLO_STATE__/__INITIAL_STATE__), plus JSON the page fetches from a backend. */
+function _snum(v) { if (v == null) return null; const m = String(v).match(/-?\d+(?:\.\d+)?/); return m ? Math.round(parseFloat(m[0])) : null; }
+function _macrosFrom(obj) {
+  if (!obj || typeof obj !== "object") return null;
+  const n = obj.nutrition || obj.nutritionInfo || obj.nutritionalInfo || obj.nutritionInformation || obj.nutrients || obj.macros || obj;
+  const cal = _snum(n.calories ?? n.calorie ?? n.cal ?? n.kcal ?? n.energy ?? n.Calories ?? n.calorieCount);
+  const protein = _snum(n.proteinContent ?? n.protein ?? n.proteinG ?? n.Protein ?? n.protein_g ?? n.proteinGrams);
+  const fat = _snum(n.fatContent ?? n.fat ?? n.totalFat ?? n.fatG ?? n.Fat ?? n.fat_g ?? n.total_fat ?? n.fatGrams);
+  if (cal == null && protein == null && fat == null) return null;
+  return { cal, protein, fat };
+}
+function _nameFrom(obj) {
+  const nm = obj && (obj.name || obj.itemName || obj.title || obj.displayName || obj.label || obj.productName);
+  return typeof nm === "string" && nm.trim() && nm.trim().length <= 80 ? nm.trim() : null;
+}
+function _walkNutrition(node, out, section, depth) {
+  if (!node || depth > 9 || out.length > 120) return;
+  if (Array.isArray(node)) { for (const x of node) _walkNutrition(x, out, section, depth + 1); return; }
+  if (typeof node !== "object") return;
+  const type = String(node["@type"] || node.type || "");
+  const nm = _nameFrom(node);
+  const isContainer = /menu|section|category|restaurant/i.test(type) || Array.isArray(node.hasMenuItem) || Array.isArray(node.hasMenuSection) || Array.isArray(node.items);
+  const sect = nm && isContainer ? nm : section;
+  const macros = _macrosFrom(node);
+  if (nm && macros && !/^(menu|menusection|restaurant|nutritioninformation|website|organization|itemlist|breadcrumblist|listitem)$/i.test(type)) {
+    out.push({ item: nm, section: section || "", cal: macros.cal, protein: macros.protein, fat: macros.fat });
+  }
+  for (const k of Object.keys(node)) { const v = node[k]; if (v && typeof v === "object") _walkNutrition(v, out, sect, depth + 1); }
+}
+function nutritionFromJson(parsed, out) { try { _walkNutrition(parsed, out, "", 0); } catch {} }
+function dedupeRecords(records) {
+  const seen = new Map();
+  for (const r of records || []) {
+    if (!r || !r.item) continue;
+    const k = r.item.toLowerCase();
+    const s = (r.cal != null) + (r.protein != null) + (r.fat != null);
+    if (!seen.has(k) || s > seen.get(k)._s) seen.set(k, { ...r, _s: s });
+  }
+  return [...seen.values()].map(({ _s, ...r }) => r).slice(0, 40);
+}
+function structuredNutrition(html) {
+  const src = String(html || ""), out = [];
+  for (const m of src.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) { try { nutritionFromJson(JSON.parse(m[1].trim()), out); } catch {} }
+  for (const m of src.matchAll(/<script[^>]+(?:id=["']__NEXT_DATA__["']|type=["']application\/json["'])[^>]*>([\s\S]*?)<\/script>/gi)) { try { nutritionFromJson(JSON.parse(m[1].trim()), out); } catch {} }
+  for (const m of src.matchAll(/window\.(?:__NUXT__|__APOLLO_STATE__|__INITIAL_STATE__|__PRELOADED_STATE__)\s*=\s*(\{[\s\S]*?\})\s*;?\s*(?:<\/script>|window\.)/gi)) { try { nutritionFromJson(JSON.parse(m[1]), out); } catch {} }
+  return dedupeRecords(out);
+}
+function structuredNutritionText(records) {
+  return (records || []).map((r) => {
+    const parts = [];
+    if (r.cal != null) parts.push(`${r.cal} cal`);
+    if (r.protein != null) parts.push(`${r.protein}g protein`);
+    if (r.fat != null) parts.push(`${r.fat}g fat`);
+    return parts.length ? `${r.item}${r.section ? ` [${r.section}]` : ""} — ${parts.join(", ")}` : null;
+  }).filter(Boolean).join("\n");
+}
+function jsonCandidatesFromHtml(html, baseUrl) {
+  const src = String(html || ""), out = new Set();
+  for (const u of src.match(/https?:\/\/[^\s"'<>\\]+?\.json(?:\?[^\s"'<>\\]*)?/gi) || []) out.add(u);
+  for (const m of src.matchAll(/["'](\/[^"'\s]*?(?:menu|nutrition|product|item|catalog)[^"'\s]*?)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
+  for (const m of src.matchAll(/(?:fetch|axios\.get|\.get|\.load)\(\s*["']([^"']+)["']/gi)) { try { out.add(new URL(m[1], baseUrl).href); } catch {} }
+  return [...out].filter((u) => urlAllowed(u) && /menu|nutrition|product|item|catalog|\.json/i.test(u)).slice(0, 6);
+}
+async function fetchJson(u) {
+  try {
+    const r = await fetch(u, { headers: MENU_UA, redirect: "follow", signal: AbortSignal.timeout(9000) });
+    if (!r.ok) return null;
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    const len = parseInt(r.headers.get("content-length") || "0");
+    if (len > 4e6) return null;
+    const body = await r.text();
+    if (body.length > 4e6) return null;
+    if (!ct.includes("json") && !/^\s*[[{]/.test(body)) return null;
+    return JSON.parse(body);
+  } catch { return null; }
+}
+
 async function renderPage(startUrl, opts = {}) {
   if (process.env.FORKCASTER_FAKE_RENDER) {
     // test seam: emulate a JS render with plain fetches (browser unavailable in CI)
@@ -365,7 +445,7 @@ async function renderPage(startUrl, opts = {}) {
     for (const fsrc of frameSrcs) {
       try { const fu = new URL(fsrc, startUrl).href; const fr2 = await fetch(fu, { headers: { ...MENU_UA, "X-Fake-Render": "1" }, signal: AbortSignal.timeout(8000) }); html += "\n" + (await fr2.text()); } catch {}
     }
-    return { text: stripHtml(html), source: startUrl, dataPdfs: pdfCandidatesFromHtml(html) };
+    return { text: stripHtml(html), source: startUrl, dataPdfs: pdfCandidatesFromHtml(html), html, jsonBlobs: [] };
   }
   const puppeteer = require("puppeteer-core");
   const browser = await puppeteer.launch({
@@ -375,6 +455,18 @@ async function renderPage(startUrl, opts = {}) {
   });
   try {
     const page = await browser.newPage();
+    const jsonBlobs = [];
+    page.on("response", async (resp) => {
+      try {
+        if (jsonBlobs.length >= 8) return;
+        const ct = (resp.headers()["content-type"] || "").toLowerCase();
+        if (!ct.includes("json")) return;
+        const ru = resp.url();
+        if (!/menu|nutrition|product|item|catalog|api/i.test(ru)) return;
+        const buf = await resp.buffer().catch(() => null);
+        if (buf && buf.length > 200 && buf.length < 3e6) jsonBlobs.push(buf.toString("utf8"));
+      } catch {}
+    });
     await page.setUserAgent(MENU_UA["User-Agent"]);
     await page.setViewport({ width: 414, height: 896 });
     await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
@@ -412,8 +504,9 @@ async function renderPage(startUrl, opts = {}) {
       for (const u2 of pdfCandidatesFromHtml(fullHtml)) dataPdfs.push(u2);
     } catch {}
     dataPdfs = [...new Set(dataPdfs)].slice(0, 4);
-    console.log(`[render] ${src} -> ${text.length} chars, ${(typeof page.frames === "function" ? page.frames().length : 1)} frames, ${dataPdfs.length} data pdfs`);
-    return { text: text.replace(/\s+/g, " ").trim(), source: src, dataPdfs };
+    const fullHtml2 = await page.content().catch(() => "");
+    console.log(`[render] ${src} -> ${text.length} chars, ${(typeof page.frames === "function" ? page.frames().length : 1)} frames, ${dataPdfs.length} data pdfs, ${jsonBlobs.length} json blobs`);
+    return { text: text.replace(/\s+/g, " ").trim(), source: src, dataPdfs, html: fullHtml2, jsonBlobs };
   } finally { try { await browser.close(); } catch {} }
 }
 app.get("/api/foodsearch", async (req, res) => {
@@ -539,8 +632,28 @@ app.get("/api/menu", async (req, res) => {
       const b = await fetchAny(rendered.pdfUrl);
       if (b && b.pdf) { const t = await pdfText(b.pdf); if (t.length > 300) return _send({ ok: true, method: "pdf", source: rendered.pdfUrl, text: t.slice(0, 6000) }); }
     }
-    if (rendered && rendered.text && rendered.text.length > 400) {
-      let jsText = rendered.text.slice(0, 6000);
+    if (rendered && (rendered.text || rendered.html)) {
+      // structured-nutrition harvest: embedded JSON (JSON-LD/__NEXT_DATA__/state), fetched JSON endpoints, captured responses
+      let structured = [];
+      try { structured = structuredNutrition(rendered.html || ""); } catch {}
+      if (Array.isArray(rendered.jsonBlobs)) for (const blob of rendered.jsonBlobs) { try { nutritionFromJson(JSON.parse(blob), structured); } catch {} }
+      if (structured.length < 3 && rendered.html && !(Array.isArray(rendered.dataPdfs) && rendered.dataPdfs.length)) {
+        const jcands = jsonCandidatesFromHtml(rendered.html, rendered.source || url);
+        console.log(`[menu] json candidates: ${jcands.join(" | ") || "none"}`);
+        for (const ju of jcands.slice(0, 3)) {
+          const j = await fetchJson(ju);
+          if (j) { const before = structured.length; nutritionFromJson(j, structured); if (structured.length > before) console.log(`[menu] json harvested ${structured.length - before} items from ${ju}`); }
+          if (structured.length >= 6) break;
+        }
+      }
+      structured = dedupeRecords(structured);
+      const baseText = rendered.text && rendered.text.length > 100 ? rendered.text.slice(0, 6000) : "";
+      if (baseText.length > 400 || structured.length >= 2) {
+      let jsText = baseText;
+      if (structured.length) {
+        const stext = structuredNutritionText(structured);
+        if (stext) { jsText += `\n--- NUTRITION (structured data): ${rendered.source || url} ---\n` + stext.slice(0, 3500); console.log(`[menu] structured nutrition: ${structured.length} items`); }
+      }
       let pdfSources = Array.isArray(rendered.dataPdfs) ? rendered.dataPdfs.slice() : [];
       if (!pdfSources.length && _origin) {
         for (const probe of [_origin + "/nutritional-information", _origin + "/nutrition-information", _origin + "/nutrition"]) {
@@ -570,6 +683,7 @@ app.get("/api/menu", async (req, res) => {
         }
       }
       return _send({ ok: true, method: "js", source: rendered.source, text: jsText.slice(0, 12000) });
+      }
     }
     // last resort: thin HTML is better than nothing
     if (bestText.length > 400 && ((bestText.match(/\$\s?\d|\b\d{2,4}\s?cal/gi) || []).length >= 2 || (bestText.match(/smoothie|bowl|salad|sandwich|wrap|grill|burger|chicken|egg|toast|protein|oz\b/gi) || []).length >= 10)) return _send({ ok: true, method: "html", source: bestSrc, text: bestText.slice(0, 6000) });

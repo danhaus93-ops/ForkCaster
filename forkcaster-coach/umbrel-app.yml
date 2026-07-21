@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.74"
+version: "0.2.75"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.74: "gentle volume" now only appears on genuinely low-fat picks -
-  fat, not just calories, is the main GLP-1 nausea trigger, so high-fat items
-  are flagged "higher fat - go slow" instead. Pick ranking now penalizes fat
-  during dose/nausea weeks, keeping greasy options off the top three.
+  v0.2.75: the live-menu scraper now reads nutrition straight from the
+  structured data modern chains embed in their pages (JSON-LD, Next.js data,
+  app state) and from the JSON their menus fetch behind the scenes - so places
+  that hide macros in JavaScript (not just PDFs) now return real calories,
+  protein, and fat. Official cross-server nutrition PDFs still harvest as before.
 dependencies: []
 path: ""
 defaultUsername: ""
