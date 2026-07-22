@@ -693,8 +693,8 @@ app.get("/api/recipes/search", async (req, res) => {
     const q = new URLSearchParams({ apiKey: SPN, addRecipeNutrition: "true", number: String(Math.min(12, +req.query.number || 8)), sort: "max-used-ingredients" });
     for (const k of ["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type"]) if (req.query[k]) q.set(k, String(req.query[k]));
     q.delete("sort"); // default relevance
-    const r = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${q}`, { signal: AbortSignal.timeout(12000) });
-    if (!r.ok) return res.json({ ok: false, reason: `spoonacular ${r.status}` });
+    const r = await fetch(`${SPN_BASE}/recipes/complexSearch?${q}`, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) { console.log(`[recipes] search -> HTTP ${r.status}`); return res.json({ ok: false, reason: `spoonacular ${r.status}` }); }
     const d = await r.json();
     const pull = (rec, want) => { const n = ((rec.nutrition || {}).nutrients || []).find((x) => x.name === want); return n ? Math.round(n.amount) : null; };
     res.json({ ok: true, results: (d.results || []).map((rec) => ({
@@ -704,7 +704,11 @@ app.get("/api/recipes/search", async (req, res) => {
     })) });
   } catch (e) { res.json({ ok: false, reason: e.message }); }
 });
-const _photoCache = new Map(); // name -> image url|null; survives regenerations, dies with the container (fine)
+const SPN_BASE = process.env.SPOONACULAR_BASE || "https://api.spoonacular.com"; // rig overrides this to a fixture
+const _PHOTO_CACHE_FILE = path.join(DATA_DIR, "photo-cache.json");
+const _photoCache = new Map(); // name -> image url|null — PERSISTED so container updates never re-burn API quota
+try { for (const [k, v] of Object.entries(JSON.parse(fs.readFileSync(_PHOTO_CACHE_FILE, "utf8")))) _photoCache.set(k, v); } catch {}
+const _savePhotoCache = () => { try { fs.writeFileSync(_PHOTO_CACHE_FILE, JSON.stringify(Object.fromEntries(_photoCache))); } catch {} };
 app.get("/api/recipes/photo", async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80);
   if (!q) return res.json({ ok: false, reason: "no-query" });
@@ -712,11 +716,12 @@ app.get("/api/recipes/photo", async (req, res) => {
   const SPN = key("SPOONACULAR_KEY");
   if (!SPN) return res.json({ ok: false, reason: "no-key" });
   try {
-    const r = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${new URLSearchParams({ apiKey: SPN, query: q, number: "1" })}`, { signal: AbortSignal.timeout(9000) });
-    if (!r.ok) return res.json({ ok: false, reason: `spoonacular ${r.status}` });
+    const r = await fetch(`${SPN_BASE}/recipes/complexSearch?${new URLSearchParams({ apiKey: SPN, query: q, number: "1" })}`, { signal: AbortSignal.timeout(9000) });
+    if (!r.ok) { console.log(`[recipes] photo "${q}" -> HTTP ${r.status}`); return res.json({ ok: false, reason: `spoonacular ${r.status}` }); }
     const d = await r.json();
     const img = (((d.results || [])[0] || {}).image) || null;
-    _photoCache.set(q, img);
+    _photoCache.set(q, img); _savePhotoCache();
+    console.log(`[recipes] photo "${q}" -> ${img ? "found" : "no match"}`);
     res.json({ ok: !!img, image: img });
   } catch (e) { res.json({ ok: false, reason: e.message }); }
 });

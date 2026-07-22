@@ -1178,17 +1178,19 @@ export default function App() {
     try { seedById = Object.fromEntries((await fetchSeedBook()).map((r) => [r.id, r])); } catch {}
     const queries = new Map(); // slot name -> query
     for (const d of pl.days) for (const x of d.slots) if (needs(x) && !queries.has(x.name)) queries.set(x.name, _photoQueryFor(x, seedById));
-    const found = {};
+    const found = {}; const reasons = new Set();
     await Promise.all([...queries.entries()].map(async ([n, q]) => {
       try {
         let r = await fetch(`/api/recipes/photo?q=${encodeURIComponent(q)}`).then((x) => x.json());
         if (!(r.ok && r.image)) { const q2 = q.split(/\s+/).slice(0, 2).join(" "); if (q2 && q2 !== q) r = await fetch(`/api/recipes/photo?q=${encodeURIComponent(q2)}`).then((x) => x.json()); }
-        if (r.ok && r.image) found[n] = r.image;
+        if (r.ok && r.image) found[n] = r.image; else if (r.reason) reasons.add(r.reason);
       } catch {}
     }));
+    setPlanPhotoNote(Object.keys(found).length === 0 && reasons.size ? [...reasons][0] : "");
     if (!Object.keys(found).length) return pl;
     return { ...pl, days: pl.days.map((d) => ({ ...d, slots: d.slots.map((x) => (needs(x) && found[x.name]) ? { ...x, image: found[x.name], stockImg: true } : x) })) };
   }
+  const [planPhotoNote, setPlanPhotoNote] = useState("");
   const photoBackfillTried = useRef(false);
   useEffect(() => {
     if (!mealPlan || photoBackfillTried.current) return;
@@ -1838,6 +1840,7 @@ export default function App() {
           </div>
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6 }}><div style={{ height: 6, width: `${Math.min(100, (tot.p / day.target.protein) * 100)}%`, background: hit ? C.go : C.caution, borderRadius: 6 }} /></div>
         </div>, { marginBottom: 12 })}
+        {planPhotoNote && day.slots.some((x) => !x.photo && !x.image) && <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Dish photos unavailable right now ({/402/.test(planPhotoNote) ? "Spoonacular daily quota used up — they'll fill in automatically tomorrow" : /401|unauthor/i.test(planPhotoNote) ? "key rejected — check Settings" : planPhotoNote}).</div>}
         {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()} · TARGET EASED TO {day.target.protein}G</div><div style={{ fontSize: 13, color: C.ink, marginTop: 3, lineHeight: 1.45 }}>Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal.</div></div>}
         {day.slots.map((slot, si) => (
           <div key={si} onClick={() => { setPlanMealRef([Math.min(planSel, mealPlan.days.length - 1), si]); setPlanView("meal"); }} style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", marginBottom: 10, cursor: "pointer" }}>
