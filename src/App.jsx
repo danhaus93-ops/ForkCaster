@@ -358,6 +358,12 @@ export default function App() {
   const [planBusy, setPlanBusy] = useState(null);
   const [planErr, setPlanErr] = useState("");
   const seedRef = useRef(null);
+  /* Shop Mode (Phase 2) — declared early: stateBlob below references priceLog/shopStore */
+  const [shopScan, setShopScan] = useState({ status: "idle" });
+  const [shopBc, setShopBc] = useState("");
+  const [shopPrice, setShopPrice] = useState("");
+  const [shopStore, setShopStore] = useState("");
+  const [priceLog, setPriceLog] = useState([]);
   const [seSeverity, setSeSeverity] = useState(2);
 
   // meal history (fat matters for GLP-1 nausea correlation). Scans/photos/orders append here.
@@ -1210,12 +1216,6 @@ export default function App() {
     return { ...pl, days: pl.days.map((d) => ({ ...d, slots: d.slots.map((x) => (needs(x) && found[x.name]) ? { ...x, image: found[x.name], stockImg: true } : x) })) };
   }
   const [planPhotoNote, setPlanPhotoNote] = useState("");
-  /* Shop Mode (Phase 2): scan at the shelf, verify against the plan, remember prices */
-  const [shopScan, setShopScan] = useState({ status: "idle" });
-  const [shopBc, setShopBc] = useState("");
-  const [shopPrice, setShopPrice] = useState("");
-  const [shopStore, setShopStore] = useState("");
-  const [priceLog, setPriceLog] = useState([]);
   const photoBackfillTried = useRef(false);
   useEffect(() => {
     if (!mealPlan || photoBackfillTried.current) return;
