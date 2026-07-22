@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.3.13"
+version: "0.3.14"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.3.13: carbs become a full citizen. Every place that shows macros now
-  shows carbohydrates too - Plan targets (with your goal's recommended
-  intake), meal cards and details, day totals, Shop Mode checks, and
-  restaurant picks. Ordering picks now count carbs toward your daily ring,
-  and the menu scraper reads carbohydrate data wherever chains publish it.
-  Restaurant carbs show only when the data actually provides them - never
-  invented. Protein stays the star; carbs stop being invisible.
+  v0.3.14: finishes the carbs rollout. "Order for me" picks now always show
+  carbs - estimated with the same care as the other macros when menu data
+  doesn't provide them. The Now tab's dashboard grows to show everything left
+  today: carbs to go and your fat budget remaining join water and fiber, with
+  the fat bar filling toward its ceiling as a visual caution.
 dependencies: []
 path: ""
 defaultUsername: ""

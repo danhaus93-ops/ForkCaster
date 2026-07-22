@@ -720,7 +720,7 @@ export default function App() {
         : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section. If the text turns out to be boilerplate with no actual menu items, DISREGARD it and propose well-known typical orders for this chain instead — NEVER refuse and NEVER return zero picks:\n"""${liveMenu.text.slice(0, prefs.aiModel && prefs.aiModel.includes("haiku") ? 3500 : prefs.aiModel && prefs.aiModel.includes("sonnet") ? 6000 : 8000)}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
       `Keep all strings short (under 12 words). Include fat grams for EVERY pick (estimate conservatively from typical values if not printed; never omit fat). Your ENTIRE response must be exactly one JSON object — the first character { and the last character } — no prose, no markdown, nothing else. Format:\n` +
-      `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"fat":<int>,"carbs":<int or null - only when known from menu data>,"why":"<max 9 words>"}],` +
+      `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"fat":<int>,"carbs":<int - from NUTRITION data when available, otherwise estimate conservatively exactly like the other macros; never null>,"why":"<max 9 words>"}],` +
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);
@@ -1335,13 +1335,15 @@ export default function App() {
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: C.muted, fontVariantNumeric: "tabular-nums" }}><span>{eaten.protein}g eaten</span><span>{targets.protein}g goal</span></div>
       </div>
 
-      {/* Hydration + fiber remaining — mirrors the protein readout */}
-      <div style={{ display: "flex", gap: 12, marginTop: 14 }}>
+      {/* Remaining today — carbs, fat budget, hydration, fiber */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
         {[
+          { label: "carbs to go", left: Math.max(0, (targets.carbs || 0) - (eaten.carbs || 0)), unit: "g", pct: Math.min(100, ((eaten.carbs || 0) / Math.max(1, targets.carbs || 1)) * 100), col: C.ink },
+          { label: "fat budget left", left: Math.max(0, (targets.fat || 0) - (eaten.fat || 0)), unit: "g", pct: Math.min(100, ((eaten.fat || 0) / Math.max(1, targets.fat || 1)) * 100), col: C.avoid },
           { label: "water to go", left: waterLeft, unit: "oz", pct: waterPct, col: C.blue },
           { label: "fiber to go", left: fiberLeft, unit: "g", pct: fiberPct, col: C.caution },
         ].map((m) => (
-          <div key={m.label} style={{ flex: 1, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 14, padding: "12px 14px" }}>
+          <div key={m.label} style={{ flex: "1 1 45%", background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 14, padding: "12px 14px" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
               <span style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{Math.round(m.left)}</span>
               <span style={{ fontSize: 13, color: C.muted }}>{m.unit}</span>
