@@ -154,7 +154,7 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
     ? (queasy ? "Dose week: small-volume, protein-first — sip slowly." : "Protein-first, small volume — GLP-1 friendly picks up top.")
     : mode === "gain" ? "Max protein first — upsize and add whey where offered."
     : "Protein-dense picks under your remaining calories.";
-  return { coach, picks: picks.map((it) => ({ item: it.item, name: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0, calories: +it.cal || 0, fat: it.fat == null ? null : +it.fat || 0, carbs: it.carbs == null ? null : +it.carbs || 0 })), avoid };
+  return { coach, picks: picks.map((it) => ({ item: it.item, name: it.item, why: mkWhy(it), protein: +it.protein || 0, cal: +it.cal || 0, calories: +it.cal || 0, fat: it.fat == null ? null : +it.fat || 0, carbs: it.carbs != null ? +it.carbs || 0 : ((+it.cal > 0 && it.fat != null) ? Math.min(Math.round(+it.cal / 4), Math.max(0, Math.round((+it.cal - 4 * (+it.protein || 0) - 9 * (+it.fat || 0)) / 4))) : null) })), avoid };
 }
 function sanitizePicks(parsed, allergies) {
   if (!parsed || !Array.isArray(parsed.picks) || !allergies.length) return parsed;

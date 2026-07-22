@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.3.15"
+version: "0.3.16"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.3.15: carbs actually reach every pick this time. A field filter deep in
-  the pick-building code was silently stripping carbohydrates from
-  live-menu-ranked suggestions even after they were added everywhere else.
-  Fixed, with a permanent test standing guard so it can't regress.
+  v0.3.16: carbs on every pick, guaranteed by arithmetic. When a menu doesn't
+  publish carbohydrates, the app now derives them from the calorie identity
+  (calories minus protein and fat calories, divided by four) - so any
+  suggestion that knows its calories and fat necessarily shows carbs too. No
+  more blank fourth macro anywhere.
 dependencies: []
 path: ""
 defaultUsername: ""
