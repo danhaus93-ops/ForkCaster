@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.3.6"
+version: "0.3.7"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.3.6: a much bigger cookbook and a smarter API budget. The built-in
-  cookbook grows from 25 to 60 original recipes - more variety everywhere,
-  and nearly double the gentle dose-day options. Recipe searches are now
-  remembered, so regenerating your week costs no API quota; a new "Fresh
-  ideas" button re-searches on demand when you want brand-new candidates.
-  The free Spoonacular tier now comfortably covers normal use.
+  v0.3.7: Shop Mode arrives. In the grocery list, type any product barcode to
+  check it at the shelf - protein density verdict, one-tap check-off when it
+  matches your list, and a price + store field that quietly builds your own
+  per-store price book. The grocery list itself now shows purchase quantities
+  (like "~3.5 lb - family pack") instead of recipe measurements. Also fixes
+  the "Fresh ideas" button being unreachable below the screen.
 dependencies: []
 path: ""
 defaultUsername: ""

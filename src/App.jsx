@@ -442,7 +442,7 @@ export default function App() {
     fetch("/api/state").then((r) => r.json()).then((s) => {
       if (s && s.saved) {
         if (s.theme) setTheme(s.theme); if (s.mode) { setMode(s.mode); }
-        if (s.targets) setTargets(s.targets); if (s.mealPlan) { setMealPlan(s.mealPlan); setPlanView("week"); }
+        if (s.targets) setTargets(s.targets); if (s.mealPlan) { setMealPlan(s.mealPlan); setPlanView("week"); } if (s.priceLog) setPriceLog(s.priceLog); if (s.lastStore) setShopStore(s.lastStore);
         const roll = (s.prefs && s.prefs.rolloverHour) || 0;
         if (s.prefs) setPrefs({ ...DEFAULT_PREFS, ...s.prefs });
         if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
@@ -461,7 +461,7 @@ export default function App() {
   }, []);
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -1151,14 +1151,31 @@ export default function App() {
       setPlanBusy("balancing");
       repairDays(built);
       setPlanBusy("grocery list");
+      const groupIngredients = () => { // name -> [{amt, servings}] with prep words stripped
+        const m = new Map();
+        for (const d of built) for (const x of d.slots) for (const ing of (x.ingredients || [])) {
+          const [nm, amt] = ing.split("—").map((t) => (t || "").trim());
+          const key = (nm || ing).trim(); if (!key) continue;
+          if (!m.has(key)) m.set(key, []);
+          m.get(key).push({ amt: (amt || "").split(",")[0].trim(), servings: x.servings });
+        }
+        return m;
+      };
+      const fallbackGrocery = () => [...groupIngredients().entries()].map(([name, uses]) => {
+        let oz = 0, allOz = uses.length > 0;
+        for (const u of uses) { const mm = u.amt.match(/^([\d.]+)\s*oz/i); if (mm) oz += +mm[1] * u.servings; else allOz = false; }
+        const qty = allOz && oz > 0 ? (oz >= 16 ? `~${(Math.ceil((oz / 16) * 4) / 4).toFixed(2).replace(/\.?0+$/, "")} lb total` : `~${Math.ceil(oz)} oz total`) : `for ${uses.length} meal${uses.length > 1 ? "s" : ""}`;
+        return { section: "List", item: name, qty, checked: false };
+      });
       let grocery = [];
       try {
-        const lines = built.flatMap((d) => d.slots.flatMap((x) => (x.ingredients || []).map((ing) => `${ing} (x${x.servings} servings)`)));
+        const lines = [...groupIngredients().entries()].map(([name, uses]) => `${name}: ${uses.map((u) => u.servings === 1 ? u.amt || "1" : `${u.amt || "1"} ×${u.servings}`).join(" + ")}`);
         if (lines.length) {
-          const graw = await callClaude(`Consolidate this week's ingredient lines into one grocery list. Combine duplicates and sum quantities sensibly. Sections: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON: {"items":[{"section":"Produce","item":"Green beans","qty":"1 lb"}]}\n\nLINES:\n${lines.join("\n").slice(0, 7000)}`, "You consolidate grocery lists. Terse, practical quantities.", null, 1400, null);
+          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. Sum each ingredient's amounts into a TOTAL PURCHASE quantity — what to actually buy at the store, rounded UP to common package sizes (meat by the lb or family pack, canned goods by the can, produce by count or bag, dairy by the tub/carton). Example: chicken amounts totaling 54 oz → "~3.5 lb (one family pack)". Sections: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Purchase quantities, common package sizes, terse.", null, 2400, null);
           grocery = (extractJson(graw).items || []).map((g) => ({ ...g, checked: false }));
         }
-      } catch { grocery = [...new Set(built.flatMap((d) => d.slots.flatMap((x) => x.ingredients || [])))].map((item) => ({ section: "List", item, qty: "", checked: false })); }
+      } catch { grocery = fallbackGrocery(); }
+      if (!grocery.length) grocery = fallbackGrocery();
       setPlanBusy("photos");
       let planOut = { createdAt: Date.now(), days: built, grocery };
       try { planOut = await enrichPlanPhotos(planOut); } catch {}
@@ -1193,6 +1210,12 @@ export default function App() {
     return { ...pl, days: pl.days.map((d) => ({ ...d, slots: d.slots.map((x) => (needs(x) && found[x.name]) ? { ...x, image: found[x.name], stockImg: true } : x) })) };
   }
   const [planPhotoNote, setPlanPhotoNote] = useState("");
+  /* Shop Mode (Phase 2): scan at the shelf, verify against the plan, remember prices */
+  const [shopScan, setShopScan] = useState({ status: "idle" });
+  const [shopBc, setShopBc] = useState("");
+  const [shopPrice, setShopPrice] = useState("");
+  const [shopStore, setShopStore] = useState("");
+  const [priceLog, setPriceLog] = useState([]);
   const photoBackfillTried = useRef(false);
   useEffect(() => {
     if (!mealPlan || photoBackfillTried.current) return;
@@ -1207,6 +1230,24 @@ export default function App() {
     setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat }));
     setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: slot.name, fat: f.fat, protein: f.protein, calories: f.calories }]);
     setMealPlan((pl) => { const d = pl.days.map((day, i) => i !== di ? day : { ...day, slots: day.slots.map((x, j) => j !== si ? x : { ...x, logged: true }) }); return { ...pl, days: d }; });
+  }
+  async function shopLookup() {
+    const bc = shopBc.replace(/\D/g, ""); if (!bc) return;
+    setShopScan({ status: "loading" });
+    try { const d = await fetch(`/api/food/${bc}`).then((r) => r.json()); setShopScan(d.found ? { status: "found", food: d, bc } : { status: "miss" }); }
+    catch { setShopScan({ status: "miss" }); }
+  }
+  function shopListMatch() {
+    if (shopScan.status !== "found" || !mealPlan) return -1;
+    const toks = (shopScan.food.name + " " + (shopScan.food.brand || "")).toLowerCase().split(/\W+/).filter((t) => t.length >= 4);
+    let best = -1, bestN = 0;
+    mealPlan.grocery.forEach((g, i) => { const it = g.item.toLowerCase(); const n = toks.filter((t) => it.includes(t)).length; if (n > bestN) { bestN = n; best = i; } });
+    return best;
+  }
+  function rememberShopPrice() {
+    const pr = parseFloat(shopPrice); if (!Number.isFinite(pr) || shopScan.status !== "found") return;
+    setPriceLog((l) => [...l.slice(-499), { bc: shopScan.bc, name: shopScan.food.name, price: Math.round(pr * 100) / 100, store: shopStore.trim() || "unknown", d: todayISO() }]);
+    setShopScan({ status: "idle" }); setShopBc(""); setShopPrice("");
   }
   function toggleGroceryItem(idx) {
     setMealPlan((pl) => ({ ...pl, grocery: pl.grocery.map((g, i) => i !== idx ? g : { ...g, checked: !g.checked }) }));
@@ -1797,7 +1838,29 @@ export default function App() {
             </div>
           ))}
         </div>, { marginBottom: 12 }))}
-        <div style={{ fontSize: 12.5, color: C.muted, background: C.surfaceAlt, borderRadius: 12, padding: "11px 14px", lineHeight: 1.45 }}><b style={{ color: C.ink }}>Shop Mode · coming next</b><br />Scan barcodes at the shelf to verify items fit the plan and quietly remember prices per store.</div>
+        {card(<div>
+          {sectionTitle("Shop Mode · scan at the shelf")}
+          {shopScan.status !== "found" && <div style={{ display: "flex", gap: 8 }}>
+            <input value={shopBc} onChange={(e) => setShopBc(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") shopLookup(); }} placeholder="Barcode number" inputMode="numeric" style={{ flex: 1, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 14, outline: "none" }} />
+            <button onClick={shopLookup} disabled={shopScan.status === "loading"} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "0 16px", fontFamily: BODY, fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: shopScan.status === "loading" ? 0.6 : 1 }}>{shopScan.status === "loading" ? "…" : "Check"}</button>
+          </div>}
+          {shopScan.status === "miss" && <div style={{ fontSize: 12.5, color: C.avoid, marginTop: 8 }}>Not found in Open Food Facts / USDA — log it by name from Today instead.</div>}
+          {shopScan.status === "found" && (() => { const f = shopScan.food; const dense = f.calories > 0 && f.protein * 4 >= f.calories * 0.22; const mi = shopListMatch(); return (
+            <div>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>{f.name}{f.brand ? <span style={{ color: C.muted, fontWeight: 500 }}> · {f.brand}</span> : null}</div>
+              <div style={{ fontSize: 12.5, color: C.muted, margin: "3px 0 7px" }}>per {f.basis}: <b style={{ color: C.go }}>{f.protein}g protein</b> · {f.calories} cal · {f.fat}g fat</div>
+              {dense ? <div style={{ fontSize: 12.5, color: C.go, fontWeight: 700 }}>✓ Protein-dense — fits the plan</div> : <div style={{ fontSize: 12.5, color: C.caution, fontWeight: 700 }}>Light on protein for its calories{f.fat >= 15 ? " · higher fat — go slow" : ""}</div>}
+              {mi >= 0 && !mealPlan.grocery[mi].checked && <button onClick={() => toggleGroceryItem(mi)} style={{ marginTop: 9, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✓ Check off "{mealPlan.grocery[mi].item}"</button>}
+              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <input value={shopPrice} onChange={(e) => setShopPrice(e.target.value)} placeholder="$ price" inputMode="decimal" style={{ width: 90, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "10px 11px", color: C.ink, fontFamily: BODY, fontSize: 13.5, outline: "none" }} />
+                <input value={shopStore} onChange={(e) => setShopStore(e.target.value)} placeholder="Store" style={{ flex: 1, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "10px 11px", color: C.ink, fontFamily: BODY, fontSize: 13.5, outline: "none" }} />
+                <button onClick={rememberShopPrice} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "0 13px", fontFamily: BODY, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>Save</button>
+              </div>
+              <button onClick={() => { setShopScan({ status: "idle" }); setShopBc(""); }} style={{ marginTop: 8, background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 }}>Scan another</button>
+            </div>
+          ); })()}
+          <div style={{ fontSize: 11.5, color: C.faint, marginTop: 9 }}>{priceLog.length > 0 ? `${priceLog.length} price${priceLog.length > 1 ? "s" : ""} remembered — your per-store price book grows with every trip.` : "Type the numbers under any barcode. Prices you save build your per-store price book."}</div>
+        </div>, { marginBottom: 12 })}
       </div>
     ); }
     if (planView === "meal") { const [di, si] = planMealRef; const day = mealPlan.days[di]; const slot = day && day.slots[si]; if (!slot) { setPlanView("week"); return null; } const img = slot.photo || slot.image; return (
@@ -1859,11 +1922,11 @@ export default function App() {
             </div>
           </div>
         ))}
-        <div style={{ display: "flex", gap: 9, marginTop: 4 }}>
+        {!planBusy && <button onClick={() => generatePlan(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12.5, margin: "2px 0 10px", cursor: "pointer", textDecoration: "underline" }}>↻ Fresh ideas — re-search recipes (uses API quota)</button>}
+        <div style={{ display: "flex", gap: 9 }}>
           <button onClick={() => setPlanView("setup")} style={{ flex: 1, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, color: C.ink, cursor: "pointer" }}>Plan settings</button>
           <button onClick={() => setPlanView("grocery")} style={{ flex: 1.3, background: C.go, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 800, color: C.surface, cursor: "pointer" }}>Grocery list →</button>
         </div>
-        {!planBusy && <button onClick={() => generatePlan(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12.5, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>↻ Fresh ideas — re-search recipes (uses API quota)</button>}
       </div>
     );
   }
