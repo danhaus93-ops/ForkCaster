@@ -400,7 +400,10 @@ export default function App() {
     }
     if (camOnRef.current) requestAnimationFrame(paintLoop);
   }
-  async function startCam() {
+  const [camFor, setCamFor] = useState("log");
+  async function startCam(target) {
+    const dest = target === "shop" ? "shop" : "log";
+    setCamFor(dest);
     setCamErr("");
     if (typeof navigator === "undefined" || !navigator.mediaDevices) { setCamErr("Camera needs HTTPS — open ForkCaster from your ts.net URL."); return; }
     setCamOn(true);
@@ -416,8 +419,8 @@ export default function App() {
           try { controls.stop(); } catch {}
           setCamOn(false);
           const code = result.getText();
-          setBarcode(code);
-          lookupBarcode(code);
+          if (dest === "shop") { setShopBc(code); shopLookup(code); }
+          else { setBarcode(code); lookupBarcode(code); }
           if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
         }
       });
@@ -1042,12 +1045,13 @@ export default function App() {
     setScan({ status: "loading" });
     try {
       const b64 = await shrinkToJpeg(file);
-      const prompt = "Identify the food in this photo and estimate the macros for the full portion shown. " +
-        "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"calories\":<int>,\"protein\":<int>,\"carbs\":<int>,\"fat\":<int>,\"fiber\":<int>}. Best estimate if unsure.";
+      const prompt = "FIRST: if a Nutrition Facts label is readable ANYWHERE in this photo, TRANSCRIBE its per-serving numbers exactly — do not estimate — and set src to label. " +
+        "OTHERWISE identify the food and estimate macros for the full portion shown: state your assumed portion weight in grams, and be CONSERVATIVE about size — packaged single-serve bakery/deli items are typically 60–100 g, not restaurant portions; use the container for scale. " +
+        "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"calories\":<int>,\"protein\":<int>,\"carbs\":<int>,\"fat\":<int>,\"fiber\":<int>,\"grams\":<int or 0>,\"src\":\"label\" or \"estimate\"}.";
       const text = await callClaude(prompt, null, { data: b64, media_type: "image/jpeg" });
-      const f = JSON.parse(text.replace(/```json|```/g, "").trim());
+      const f = extractJson(text);
       setScan({ status: "found", food: {
-        name: f.name || "Photo estimate", brand: "", basis: "portion shown", source: "AI photo estimate",
+        name: f.name || "Photo estimate", brand: "", basis: f.src === "label" ? "1 serving (from label)" : (f.grams ? `~${Math.round(f.grams)} g portion` : "portion shown"), source: f.src === "label" ? "nutrition label read from photo" : "AI photo estimate",
         calories: Math.round(f.calories || 0), protein: Math.round(f.protein || 0), carbs: Math.round(f.carbs || 0), fat: Math.round(f.fat || 0), fiber: Math.round(f.fiber || 0) } });
     } catch { setScan({ status: "error" }); }
   }
@@ -1203,7 +1207,7 @@ export default function App() {
       try {
         const lines = [...groupIngredients().entries()].map(([name, uses]) => `${name}: ${uses.map((u) => u.servings === 1 ? u.amt || "1" : `${u.amt || "1"} ×${u.servings}`).join(" + ")}`);
         if (lines.length) {
-          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, 3500, null);
+          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections — use EXACTLY these five and never invent others: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, 3500, null);
           grocery = (extractJson(graw).items || []).map((g) => ({ ...g, checked: false }));
         }
         setGroceryNote("");
@@ -1259,8 +1263,8 @@ export default function App() {
     setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: slot.name, fat: f.fat, protein: f.protein, calories: f.calories }]);
     setMealPlan((pl) => { const d = pl.days.map((day, i) => i !== di ? day : { ...day, slots: day.slots.map((x, j) => j !== si ? x : { ...x, logged: true }) }); return { ...pl, days: d }; });
   }
-  async function shopLookup() {
-    const bc = shopBc.replace(/\D/g, ""); if (!bc) return;
+  async function shopLookup(codeArg) {
+    const bc = String(typeof codeArg === "string" ? codeArg : shopBc).replace(/\D/g, ""); if (!bc) return;
     setShopScan({ status: "loading" });
     try { const d = await fetch(`/api/food/${bc}`).then((r) => r.json()); setShopScan(d.found ? { status: "found", food: d, bc } : { status: "miss" }); }
     catch { setShopScan({ status: "miss" }); }
@@ -1795,6 +1799,7 @@ export default function App() {
   const renderCoach = () => (
     <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
       <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 12, cursor: "pointer", fontFamily: BODY }}>Clear</button></div><div style={{ fontSize: 13, color: C.muted }}>Knows your macros, weight &amp; meds — live</div></div>
+      <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
         {coachMsgs.map((m, i) => (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
@@ -1869,6 +1874,19 @@ export default function App() {
         </div>, { marginBottom: 12 }))}
         {card(<div>
           {sectionTitle("Shop Mode · scan at the shelf")}
+          {shopScan.status !== "found" && (camOn && camFor === "shop" ? (
+            <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", marginBottom: 10, background: "#000" }}>
+              <canvas ref={camCanvasRef} style={{ width: "100%", height: 200, objectFit: "cover", display: "block", background: "#000" }} />
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}><div style={{ width: "72%", height: 80, border: "2.5px solid rgba(99,212,140,0.95)", borderRadius: 12, boxShadow: "0 0 0 2000px rgba(0,0,0,0.35)" }} /></div>
+              <button onClick={stopCam} style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: 20, padding: "6px 13px", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>Stop</button>
+              <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 600, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>Center the shelf item's barcode in the box</div>
+            </div>
+          ) : (
+            <button onClick={() => startCam("shop")} style={{ width: "100%", borderRadius: 14, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "16px 14px", textAlign: "center", marginBottom: 10, cursor: "pointer" }}>
+              <div style={{ fontFamily: BODY, fontSize: 14, fontWeight: 700, color: C.go }}>📷 Scan with camera</div>
+              <div style={{ fontFamily: BODY, fontSize: 11.5, color: C.muted, marginTop: 2 }}>Point at the shelf item's barcode — or type it below</div>
+            </button>
+          ))}
           {shopScan.status !== "found" && <div style={{ display: "flex", gap: 8 }}>
             <input value={shopBc} onChange={(e) => setShopBc(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") shopLookup(); }} placeholder="Barcode number" inputMode="numeric" style={{ flex: 1, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 14, outline: "none" }} />
             <button onClick={shopLookup} disabled={shopScan.status === "loading"} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "0 16px", fontFamily: BODY, fontWeight: 700, fontSize: 13.5, cursor: "pointer", opacity: shopScan.status === "loading" ? 0.6 : 1 }}>{shopScan.status === "loading" ? "…" : "Check"}</button>
@@ -2010,9 +2028,8 @@ export default function App() {
                 <button onClick={() => { stopCam(); setLogOpen(false); }} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 99, color: C.muted, fontSize: 15, cursor: "pointer" }}>✕</button>
               </div>
 
-              {/* live camera scanner */}
-              <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
-              {camOn ? (
+              {/* live camera scanner (video element lives at app root — shared with Shop Mode) */}
+              {camOn && camFor === "log" ? (
                 <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", marginBottom: 14, background: "#000" }}>
                   <canvas ref={camCanvasRef} style={{ width: "100%", height: 240, objectFit: "cover", display: "block", background: "#000" }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
