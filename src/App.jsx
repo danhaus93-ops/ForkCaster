@@ -687,7 +687,7 @@ export default function App() {
     if (liveMenu && !doneViaExtraction) {
       try {
         const exPrompt = `List the distinct orderable menu items in this text (max 14). For each: name, which page/section it came from, calories, protein grams, and fat grams. If a NUTRITION section is present it is authoritative — match items to it loosely by name and use ITS calorie, protein, AND fat values instead of estimating. When BOTH an "official PDF" and a "structured data" NUTRITION section exist, PREFER the official PDF's numbers. A "raw menu data" NUTRITION section contains unparsed site JSON — read item names and calories/protein/fat out of whatever shape it uses; those numbers are real data, not estimates. EVERY item MUST include a fat value — use the section's fat, otherwise estimate fat from typical values; NEVER omit or null fat. Only fully estimate items absent from every NUTRITION section, and do NOT return 0 for protein or fat unless the item genuinely has almost none (black coffee, diet soda, plain water). ` +
-          `Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>}]\nTEXT:\n"""${liveMenu.text.slice(0, 9000)}"""`;
+          `Include "carbs" ONLY when a NUTRITION section provides carbohydrate grams — never estimate carbs; omit the key when unknown. Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>,"carbs":<int, optional>}]\nTEXT:\n"""${liveMenu.text.slice(0, 9000)}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
           const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);
@@ -720,7 +720,7 @@ export default function App() {
         : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section. If the text turns out to be boilerplate with no actual menu items, DISREGARD it and propose well-known typical orders for this chain instead — NEVER refuse and NEVER return zero picks:\n"""${liveMenu.text.slice(0, prefs.aiModel && prefs.aiModel.includes("haiku") ? 3500 : prefs.aiModel && prefs.aiModel.includes("sonnet") ? 6000 : 8000)}"""\n\n`
         : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
       `Keep all strings short (under 12 words). Include fat grams for EVERY pick (estimate conservatively from typical values if not printed; never omit fat). Your ENTIRE response must be exactly one JSON object — the first character { and the last character } — no prose, no markdown, nothing else. Format:\n` +
-      `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"fat":<int>,"why":"<max 9 words>"}],` +
+      `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"fat":<int>,"carbs":<int or null - only when known from menu data>,"why":"<max 9 words>"}],` +
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
       `Exactly 3 picks best-first, up to 3 avoid.` +
       (nauseaRisk !== "low" && onMed ? ` The coachLine should reference the nausea/dose-week reasoning.` : ``);
@@ -1119,7 +1119,8 @@ export default function App() {
   function planTotals(day) {
     const p = day.slots.reduce((n, x) => n + Math.round(x.perServing.protein * x.servings), 0);
     const cal = day.slots.reduce((n, x) => n + Math.round(x.perServing.calories * x.servings), 0);
-    return { p, cal };
+    const carbs = day.slots.reduce((n, x) => n + Math.round((x.perServing.carbs || 0) * x.servings), 0);
+    return { p, cal, carbs };
   }
   function repairDays(days) {
     for (const day of days) {
@@ -1462,8 +1463,8 @@ export default function App() {
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 99, background: medalColor(i), color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{p.why}</div></div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal{p.fat != null ? ` · ${p.fat}g fat` : ""}</div></div>
-                <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0, fa = p.fat == null ? 0 : +p.fat || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca, fat: (e.fat || 0) + fa })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: fa }]); setLoggedPicks((l) => [...l, nm]); }}
+                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal{p.carbs != null ? ` · ${p.carbs}g carb` : ""}{p.fat != null ? ` · ${p.fat}g fat` : ""}</div></div>
+                <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0, fa = p.fat == null ? 0 : +p.fat || 0, cb = p.carbs == null ? 0 : +p.carbs || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca, carbs: (e.carbs || 0) + cb, fat: (e.fat || 0) + fa })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: fa, carbs: cb }]); setLoggedPicks((l) => [...l, nm]); }}
                   style={{ marginLeft: 10, flexShrink: 0, alignSelf: "center", background: loggedPicks.includes(p.item || p.name) ? C.goSoft : "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 9, padding: "7px 10px", fontFamily: BODY, fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>{loggedPicks.includes(p.item || p.name) ? "✓" : "Log"}</button>
               </div>
             ))}
@@ -1833,7 +1834,8 @@ export default function App() {
           <div style={{ display: "flex", gap: 16 }}>
             <div><span style={{ fontSize: 20, fontWeight: 800, color: C.go }}>{targets.calories.toLocaleString()}</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>cal</span></div>
             <div><span style={{ fontSize: 20, fontWeight: 800, color: C.go }}>{targets.protein}g</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>protein</span></div>
-            <div><span style={{ fontSize: 20, fontWeight: 800, color: C.go }}>≤{targets.fat}g</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>fat</span></div>
+            <div><span style={{ fontSize: 20, fontWeight: 800, color: C.ink }}>~{targets.carbs}g</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>carbs</span></div>
+            <div><span style={{ fontSize: 20, fontWeight: 800, color: C.ink }}>≤{targets.fat}g</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>fat</span></div>
           </div>
         </div>, { marginBottom: 12 })}
         {card(<div>
@@ -1895,7 +1897,7 @@ export default function App() {
           {shopScan.status === "found" && (() => { const f = shopScan.food; const dense = f.calories > 0 && f.protein * 4 >= f.calories * 0.22; const mi = shopListMatch(); return (
             <div>
               <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink }}>{f.name}{f.brand ? <span style={{ color: C.muted, fontWeight: 500 }}> · {f.brand}</span> : null}</div>
-              <div style={{ fontSize: 12.5, color: C.muted, margin: "3px 0 7px" }}>per {f.basis}: <b style={{ color: C.go }}>{f.protein}g protein</b> · {f.calories} cal · {f.fat}g fat</div>
+              <div style={{ fontSize: 12.5, color: C.muted, margin: "3px 0 7px" }}>per {f.basis}: <b style={{ color: C.go }}>{f.protein}g protein</b> · {f.calories} cal · {f.carbs}g carb · {f.fat}g fat</div>
               {dense ? <div style={{ fontSize: 12.5, color: C.go, fontWeight: 700 }}>✓ Protein-dense — fits the plan</div> : <div style={{ fontSize: 12.5, color: C.caution, fontWeight: 700 }}>Light on protein for its calories{f.fat >= 15 ? " · higher fat — go slow" : ""}</div>}
               {mi >= 0 && !mealPlan.grocery[mi].checked && <button onClick={() => toggleGroceryItem(mi)} style={{ marginTop: 9, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>✓ Check off "{mealPlan.grocery[mi].item}"</button>}
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -1922,7 +1924,7 @@ export default function App() {
         </div>
         <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{day.label} {slot.slot === "snack2" ? "snack" : slot.slot}{(day.dose || day.after) ? " · gentle menu" : ""}</div>
         <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 800, color: C.ink, margin: "4px 0 5px", lineHeight: 1.2 }}>{slot.name}</div>
-        <div style={{ fontSize: 14, color: C.go, fontWeight: 800, marginBottom: 12 }}>{Math.round(slot.perServing.protein * slot.servings)}g protein <span style={{ color: C.muted, fontWeight: 500 }}>· {Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat · {slot.servings}× serving</span></div>
+        <div style={{ fontSize: 14, color: C.go, fontWeight: 800, marginBottom: 12 }}>{Math.round(slot.perServing.protein * slot.servings)}g protein <span style={{ color: C.muted, fontWeight: 500 }}>· {Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.carbs || 0) * slot.servings)}g carbs · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat · {slot.servings}× serving</span></div>
         {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12, fontSize: 13, color: C.ink, lineHeight: 1.45 }}><b style={{ color: C.violet }}>Why this meal today:</b> post-shot, warm bland low-fat food is easiest to keep down. Eat slowly — stop at comfortable, not full.</div>}
         {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 13.5, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, { marginBottom: 12 })}
         {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 9, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 13 }}>{i + 1}</b><span style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, { marginBottom: 12 })}
@@ -1948,7 +1950,7 @@ export default function App() {
         {card(<div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
             <b style={{ fontSize: 14, color: hit ? C.go : C.caution }}>{tot.p}g of {day.target.protein}g protein {hit ? "✓" : ""}</b>
-            <span style={{ fontSize: 12, color: C.muted }}>{tot.cal.toLocaleString()} cal{(day.dose || day.after) ? " · dose-adjusted target" : ""}</span>
+            <span style={{ fontSize: 12, color: C.muted }}>{tot.cal.toLocaleString()} cal · {tot.carbs}g carb{(day.dose || day.after) ? " · dose-adjusted" : ""}</span>
           </div>
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6 }}><div style={{ height: 6, width: `${Math.min(100, (tot.p / day.target.protein) * 100)}%`, background: hit ? C.go : C.caution, borderRadius: 6 }} /></div>
         </div>, { marginBottom: 12 })}
@@ -1964,7 +1966,7 @@ export default function App() {
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: 19, fontWeight: 800, color: C.go, lineHeight: 1 }}>{Math.round(slot.perServing.protein * slot.servings)}g</div>
-              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat</div>
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.carbs || 0) * slot.servings)}g carb · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat</div>
               <button onClick={(e) => { e.stopPropagation(); logPlannedMeal(Math.min(planSel, mealPlan.days.length - 1), si); }} style={{ marginTop: 5, background: slot.logged ? C.go : "none", color: slot.logged ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 20, padding: "3px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>{slot.logged ? "✓" : "Log"}</button>
             </div>
           </div>

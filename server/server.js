@@ -381,7 +381,7 @@ function _macrosFrom(obj) {
   // nutrient-array shape: [{name/label:"Protein", value/amount:30}, ...]
   const arr = Array.isArray(obj.nutrition) ? obj.nutrition : Array.isArray(obj.nutrients) ? obj.nutrients : Array.isArray(obj.nutritionFacts) ? obj.nutritionFacts : null;
   if (arr) {
-    let cal = null, protein = null, fat = null;
+    let cal = null, protein = null, fat = null, carbs = null;
     for (const e of arr) {
       if (!e || typeof e !== "object") continue;
       const label = String(e.name || e.label || e.nutrient || e.type || e.key || "").toLowerCase();
@@ -390,13 +390,15 @@ function _macrosFrom(obj) {
       if (/calor|energy|kcal/.test(label)) cal = cal ?? val;
       else if (/protein/.test(label)) protein = protein ?? val;
       else if (/(^|\b)(total\s*)?fat\b/.test(label) && !/satur|trans|unsat/.test(label)) fat = fat ?? val;
+      else if (/carb/.test(label) && !/fiber|sugar|net/.test(label)) carbs = carbs ?? val;
     }
-    if (cal != null || protein != null || fat != null) return { cal, protein, fat };
+    if (cal != null || protein != null || fat != null) return { cal, protein, fat, carbs };
   }
   const n = obj.nutrition || obj.nutritionInfo || obj.nutritionalInfo || obj.nutritionInformation || obj.nutrients || obj.macros || obj;
   let cal = _snum(n.calories ?? n.calorie ?? n.cal ?? n.kcal ?? n.energy ?? n.Calories ?? n.calorieCount ?? n.totalCalories ?? n.caloriesPerServing);
   let protein = _snum(n.proteinContent ?? n.protein ?? n.proteinG ?? n.Protein ?? n.protein_g ?? n.proteinGrams ?? n.proteinInGrams);
   let fat = _snum(n.fatContent ?? n.fat ?? n.totalFat ?? n.fatG ?? n.Fat ?? n.fat_g ?? n.total_fat ?? n.fatGrams ?? n.fatInGrams ?? n.totalFatContent);
+  let carbs = _snum(n.carbohydrateContent ?? n.carbohydrates ?? n.carbs ?? n.totalCarbs ?? n.carbohydrate ?? n.Carbohydrates ?? n.carbs_g ?? n.carb_g ?? n.totalCarbohydrates ?? n.carbohydrateGrams);
   // nested "macroNutrients" shape (commerce platforms, e.g. Sonic api-idp): { protein:{weight:{value:N}}, totalFat:{weight:{value:N}} }
   const mn = n.macroNutrients || obj.macroNutrients;
   if (mn && typeof mn === "object") {
@@ -404,9 +406,10 @@ function _macrosFrom(obj) {
     if (cal == null) cal = mv(mn.calories ?? mn.energy ?? mn.totalCalories);
     if (protein == null) protein = mv(mn.protein);
     if (fat == null) fat = mv(mn.totalFat ?? mn.fat);
+    if (carbs == null) carbs = mv(mn.totalCarbohydrates ?? mn.carbohydrates ?? mn.carbs);
   }
   if (cal == null && protein == null && fat == null) return null;
-  return { cal, protein, fat };
+  return { cal, protein, fat, carbs };
 }
 function _nameFrom(obj) {
   const nm = obj && (obj.name || obj.itemName || obj.title || obj.displayName || obj.label || obj.productName || obj.description);
@@ -424,7 +427,7 @@ function _walkNutrition(node, out, section, depth) {
   // skip modifier/option entries (toppings, "Easy X", size upcharges) — not orderable menu items
   const isModifier = (Array.isArray(node.groupIds) && node.groupIds.some((g) => /modifier|option|addon|add-on/i.test(String(g)))) || /modifier|option/i.test(type);
   if (nm && macros && !isModifier && !/^(menu|menusection|restaurant|nutritioninformation|website|organization|itemlist|breadcrumblist|listitem)$/i.test(type)) {
-    out.push({ item: nm, section: section || "", cal: macros.cal, protein: macros.protein, fat: macros.fat });
+    out.push({ item: nm, section: section || "", cal: macros.cal, protein: macros.protein, fat: macros.fat, carbs: macros.carbs ?? null });
   }
   for (const k of Object.keys(node)) { const v = node[k]; if (v && typeof v === "object") _walkNutrition(v, out, sect, depth + 1); }
 }
