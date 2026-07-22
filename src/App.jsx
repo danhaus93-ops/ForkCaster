@@ -1789,7 +1789,7 @@ export default function App() {
     const doseDayName = { SU: "Sunday", MO: "Monday", TU: "Tuesday", WE: "Wednesday", TH: "Thursday", FR: "Friday", SA: "Saturday" }[glp.injectionDay] || "your shot day";
     const busyLabel = planBusy ? { cookbook: "Opening the cookbook…", searching: "Searching recipes for your macros…", curating: "Composing your week…", balancing: "Balancing protein targets…", "grocery list": "Writing the grocery list…", photos: "Finding dish photos…" }[planBusy] : null;
     if (planView === "setup" || !mealPlan) return (
-      <div>
+      <div style={{ paddingBottom: 96 }}>
         {sectionTitle("Plan your week")}
         {onMed && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.5, marginBottom: 3 }}>DOSE-SYNCED PREP</div>
@@ -1822,7 +1822,7 @@ export default function App() {
       </div>
     );
     if (planView === "grocery") { const done = mealPlan.grocery.filter((g) => g.checked).length; const sections = [...new Set(mealPlan.grocery.map((g) => g.section))]; return (
-      <div>
+      <div style={{ paddingBottom: 96 }}>
         <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Your week</button>
         {sectionTitle(`Grocery · ${mealPlan.days.length} days`)}
         {card(<div>
@@ -1864,7 +1864,7 @@ export default function App() {
       </div>
     ); }
     if (planView === "meal") { const [di, si] = planMealRef; const day = mealPlan.days[di]; const slot = day && day.slots[si]; if (!slot) { setPlanView("week"); return null; } const img = slot.photo || slot.image; return (
-      <div>
+      <div style={{ paddingBottom: 96 }}>
         <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← {day.label} · Your week</button>
         <div style={{ borderRadius: 16, overflow: "hidden", position: "relative", height: 170, marginBottom: 12, background: C.surfaceAlt }}>
           {img ? <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 13, fontFamily: BODY }}>No photo yet — yours goes here</div>}
@@ -1887,7 +1887,7 @@ export default function App() {
     const day = mealPlan.days[Math.min(planSel, mealPlan.days.length - 1)];
     const tot = planTotals(day); const hit = tot.p >= day.target.protein;
     return (
-      <div>
+      <div style={{ paddingBottom: 96 }}>
         {sectionTitle("Your week")}
         {onMed && <div style={{ fontSize: 12.5, fontWeight: 700, color: C.go, marginBottom: 10 }}>✓ Synced to your dose calendar — shot {doseDayName}</div>}
         <div style={{ display: "flex", gap: 5, marginBottom: 12 }}>
