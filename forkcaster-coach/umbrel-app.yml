@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.2.95"
+version: "0.3.0"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.2.95: fixes the "Ranking hiccup (temperature is deprecated)" error - the
-  app no longer sends a retired AI setting that newer models reject, so venue
-  ranking works reliably again. Error messages now say exactly what went wrong
-  instead of guessing.
+  v0.3.0: the Plan tab - dose-synced meal prep. ForkCaster now plans your week
+  of home meals around your shot calendar: gentle, smaller meals land on shot
+  day and the day after with honestly eased targets, and every day shows its
+  protein math. Generate 3, 5, or 7 days, get one consolidated grocery list,
+  log any planned meal with one tap, and snap your own plate photo after
+  cooking. Ships with a built-in starter cookbook that needs no accounts; add
+  a free Spoonacular key in Settings to discover new recipes matched to your
+  exact macros.
 dependencies: []
 path: ""
 defaultUsername: ""

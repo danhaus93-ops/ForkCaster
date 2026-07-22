@@ -75,12 +75,13 @@ app.get("/api/keys/status", (_req, res) => {
     usda: !!get("USDA_FDC_KEY"),
     fatsecret: !!(get("FATSECRET_CLIENT_ID") && get("FATSECRET_CLIENT_SECRET")),
     gemini: !!get("GEMINI_API_KEY"), geminiTail: tail(get("GEMINI_API_KEY")),
+    spoonacular: !!get("SPOONACULAR_KEY"), spoonacularTail: tail(get("SPOONACULAR_KEY")),
   });
 });
 app.post("/api/keys", (req, res) => {
   try {
     const cur = readSecrets(); const b = req.body || {};
-    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY", "FATSECRET_CLIENT_ID", "FATSECRET_CLIENT_SECRET", "GEMINI_API_KEY"]) {
+    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY", "FATSECRET_CLIENT_ID", "FATSECRET_CLIENT_SECRET", "GEMINI_API_KEY", "SPOONACULAR_KEY"]) {
       if (typeof b[k] === "string" && b[k].trim()) cur[k] = b[k].trim();
     }
     fs.writeFileSync(path.join(DATA_DIR, "secrets.json"), JSON.stringify(cur, null, 2));
@@ -634,6 +635,80 @@ app.get("/api/foodsearch", async (req, res) => {
 
 const MENU_CACHE = new Map(); // url+goal -> { t, obj }
 const MENU_INFLIGHT = new Map(); // url+goal -> Promise: concurrent identical requests share one run
+/* ── Recipe engine (Plan tab): schema.org importer, Spoonacular search, seed cookbook ── */
+const _num = (v) => { const m = String(v ?? "").match(/[\d.]+/); return m ? +m[0] : null; };
+function recipeFromJsonLd(html, srcUrl) {
+  const blocks = [...String(html).matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]);
+  const found = [];
+  const walk = (n) => {
+    if (!n || typeof n !== "object") return;
+    if (Array.isArray(n)) return n.forEach(walk);
+    const t = n["@type"]; const ts = Array.isArray(t) ? t : [t];
+    if (ts.some((x) => String(x).toLowerCase() === "recipe")) found.push(n);
+    for (const k of ["@graph", "mainEntity", "itemListElement", "hasPart"]) if (n[k]) walk(n[k]);
+  };
+  for (const b of blocks) { try { walk(JSON.parse(b.trim())); } catch {} }
+  const r = found[0];
+  if (!r) return null;
+  const ins = [];
+  const insWalk = (x) => {
+    if (!x) return;
+    if (typeof x === "string") return void ins.push(x.trim());
+    if (Array.isArray(x)) return x.forEach(insWalk);
+    if (x.text) return void ins.push(String(x.text).trim());
+    if (x.itemListElement) return insWalk(x.itemListElement);
+  };
+  insWalk(r.recipeInstructions);
+  const img = Array.isArray(r.image) ? r.image[0] : (r.image && r.image.url) || r.image || null;
+  const yieldN = _num(Array.isArray(r.recipeYield) ? r.recipeYield[0] : r.recipeYield) || 1;
+  const nu = r.nutrition || {};
+  return {
+    ok: true, source: "import", url: srcUrl, name: r.name || "Imported recipe",
+    image: typeof img === "string" ? img : null,
+    servings: yieldN,
+    ingredients: (r.recipeIngredient || []).map((x) => String(x).trim()).filter(Boolean),
+    steps: ins.filter(Boolean).slice(0, 30),
+    perServing: { calories: _num(nu.calories), protein: _num(nu.proteinContent), fat: _num(nu.fatContent), carbs: _num(nu.carbohydrateContent) },
+  };
+}
+app.get("/api/recipe", async (req, res) => {
+  const u = String(req.query.url || "");
+  if (!/^https?:\/\//i.test(u)) return res.json({ ok: false, reason: "bad-url" });
+  try {
+    let html = null;
+    const first = await fetchAny(u);
+    if (first && first.html) html = first.html;
+    let rec = html && recipeFromJsonLd(html, u);
+    if (!rec) { // JS-rendered recipe sites: fall back to the browser
+      try { const rd = await withRenderLock(() => renderPage(u, { follow: false })); if (rd && rd.html) rec = recipeFromJsonLd(rd.html, u); } catch {}
+    }
+    if (!rec) return res.json({ ok: false, reason: "no-recipe-markup" });
+    res.json(rec);
+  } catch (e) { res.json({ ok: false, reason: e.message }); }
+});
+app.get("/api/recipes/search", async (req, res) => {
+  const SPN = key("SPOONACULAR_KEY");
+  if (!SPN) return res.json({ ok: false, reason: "no-key" });
+  try {
+    const q = new URLSearchParams({ apiKey: SPN, addRecipeNutrition: "true", number: String(Math.min(12, +req.query.number || 8)), sort: "max-used-ingredients" });
+    for (const k of ["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type"]) if (req.query[k]) q.set(k, String(req.query[k]));
+    q.delete("sort"); // default relevance
+    const r = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${q}`, { signal: AbortSignal.timeout(12000) });
+    if (!r.ok) return res.json({ ok: false, reason: `spoonacular ${r.status}` });
+    const d = await r.json();
+    const pull = (rec, want) => { const n = ((rec.nutrition || {}).nutrients || []).find((x) => x.name === want); return n ? Math.round(n.amount) : null; };
+    res.json({ ok: true, results: (d.results || []).map((rec) => ({
+      id: "spn:" + rec.id, name: rec.title, image: rec.image || null, source: "spoonacular",
+      url: rec.sourceUrl || null, servings: rec.servings || 1, readyMin: rec.readyInMinutes || null,
+      perServing: { calories: pull(rec, "Calories"), protein: pull(rec, "Protein"), fat: pull(rec, "Fat"), carbs: pull(rec, "Carbohydrates") },
+    })) });
+  } catch (e) { res.json({ ok: false, reason: e.message }); }
+});
+app.get("/api/recipes/seed", (_req, res) => {
+  try { res.json(JSON.parse(fs.readFileSync(path.join(__dirname, "seed-recipes.json"), "utf8"))); }
+  catch (e) { res.json({ ok: false, reason: e.message }); }
+});
+
 app.get("/api/menu", async (req, res) => {
   const _reqT0 = Date.now(); // overall time budget — client aborts at 150s, so return SOMETHING by ~120s
   let earlyFallback = null; // menu-shaped early-html text WITHOUT macro evidence — kept as fallback while we go deep

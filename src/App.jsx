@@ -275,20 +275,20 @@ export default function App() {
   const [appVer, setAppVer] = useState("");
   useEffect(() => { fetch("/api/version").then((r) => r.json()).then((j) => j && j.version && setAppVer(j.version)).catch(() => {}); }, []);
   const [keyStatus, setKeyStatus] = useState(null);
-  const [keyIn, setKeyIn] = useState({ a: "", g: "", fi: "", fs: "", gm: "" });
+  const [keyIn, setKeyIn] = useState({ a: "", g: "", fi: "", fs: "", gm: "", sp: "" });
   const [keyMsg, setKeyMsg] = useState("");
   useEffect(() => { if (settingsOpen) fetch("/api/keys/status").then((r) => r.json()).then(setKeyStatus).catch(() => {}); }, [settingsOpen]);
   async function saveKeys() {
     setKeyMsg("Saving…");
     const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
-    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim();
+    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim(); if (keyIn.sp.trim()) body.SPOONACULAR_KEY = keyIn.sp.trim();
     try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       setKeyIn({ a: "", g: "", fi: "", fs: "", gm: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
       if (venues.length && !venues[0].menu) rankVenues(venues); }
     catch { setKeyMsg("Save failed — is the node reachable?"); }
   }
   async function testAiKey() {
-    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim() || keyIn.gm.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
+    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim() || keyIn.gm.trim() || keyIn.sp.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
     setKeyMsg("Testing AI key…");
     try { const t = await callClaude("Reply with exactly: ok");
       const good = t.toLowerCase().includes("ok");
@@ -344,6 +344,17 @@ export default function App() {
     sideEffects: [],
   });
   const [seSymptom, setSeSymptom] = useState("Nausea");
+
+  /* ── Plan tab (meal prep) state ── */
+  const [mealPlan, setMealPlan] = useState(null);
+  const [planView, setPlanView] = useState("setup");   // setup | week | grocery | meal
+  const [planSel, setPlanSel] = useState(0);
+  const [planMealRef, setPlanMealRef] = useState([0, 0]);
+  const [planDaysN, setPlanDaysN] = useState(7);
+  const [planMealsOn, setPlanMealsOn] = useState(["breakfast", "lunch", "dinner", "snack"]);
+  const [planBusy, setPlanBusy] = useState(null);
+  const [planErr, setPlanErr] = useState("");
+  const seedRef = useRef(null);
   const [seSeverity, setSeSeverity] = useState(2);
 
   // meal history (fat matters for GLP-1 nausea correlation). Scans/photos/orders append here.
@@ -428,7 +439,7 @@ export default function App() {
     fetch("/api/state").then((r) => r.json()).then((s) => {
       if (s && s.saved) {
         if (s.theme) setTheme(s.theme); if (s.mode) { setMode(s.mode); }
-        if (s.targets) setTargets(s.targets);
+        if (s.targets) setTargets(s.targets); if (s.mealPlan) { setMealPlan(s.mealPlan); setPlanView("week"); }
         const roll = (s.prefs && s.prefs.rolloverHour) || 0;
         if (s.prefs) setPrefs({ ...DEFAULT_PREFS, ...s.prefs });
         if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
@@ -447,7 +458,7 @@ export default function App() {
   }, []);
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -1039,6 +1050,124 @@ export default function App() {
     setScan({ status: "idle" }); setBarcode(""); setLogOpen(false);
   }
 
+  /* ── Plan engine: dose-synced meal prep ── */
+  const DOW = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+  function planDates(n) {
+    const out = [];
+    const doseIdx = DOW[glp.injectionDay] ?? 0;
+    for (let i = 0; i < n; i++) {
+      const dt = new Date(); dt.setDate(dt.getDate() + i);
+      const dow = dt.getDay();
+      const dose = onMed && dow === doseIdx;
+      const after = onMed && dow === (doseIdx + 1) % 7;
+      const pT = Math.round((dose ? targets.protein * 0.78 : after ? targets.protein * 0.82 : targets.protein) / 5) * 5;
+      const cT = Math.round((dose ? targets.calories * 0.75 : after ? targets.calories * 0.85 : targets.calories) / 25) * 25;
+      out.push({ iso: dt.toISOString().slice(0, 10), label: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dow], dose, after, doseLabel: dose ? "Shot day" : after ? "Day after shot" : null, target: { protein: pT, calories: cT } });
+    }
+    return out;
+  }
+  function slotEnvelopes(day) {
+    const share = { breakfast: [0.24, 0.26], lunch: [0.30, 0.30], dinner: [0.32, 0.32], snack: [0.14, 0.12] };
+    const on = planMealsOn.filter((m) => share[m]);
+    const pSum = on.reduce((n, m) => n + share[m][0], 0), cSum = on.reduce((n, m) => n + share[m][1], 0);
+    const env = {};
+    for (const m of on) env[m] = { protein: Math.round((share[m][0] / pSum) * day.target.protein), calories: Math.round((share[m][1] / cSum) * day.target.calories) };
+    return env;
+  }
+  async function fetchSeedBook() {
+    if (seedRef.current) return seedRef.current;
+    const d = await fetch("/api/recipes/seed").then((r) => r.json());
+    seedRef.current = (d.recipes || []).map((r) => ({ ...r, p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat }));
+    return seedRef.current;
+  }
+  async function searchSpoon(slot, env) {
+    try {
+      const q = new URLSearchParams({ number: "6", minProtein: String(Math.max(5, Math.round(env.protein * 0.8))), maxCalories: String(Math.round(env.calories * 1.25)), type: slot === "breakfast" ? "breakfast" : slot === "snack" ? "snack" : "main course" });
+      if (allergies.length) q.set("excludeIngredients", allergies.join(","));
+      const d = await fetch(`/api/recipes/search?${q}`).then((r) => r.json());
+      if (!d.ok) return [];
+      return (d.results || []).filter((r) => r.perServing.protein != null).map((r) => ({ id: r.id, name: r.name, slot, gentle: false, image: r.image, url: r.url, servings: 1, perServing: r.perServing, ingredients: [], steps: [], p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat ?? 0 }));
+    } catch { return []; }
+  }
+  function planTotals(day) {
+    const p = day.slots.reduce((n, x) => n + Math.round(x.perServing.protein * x.servings), 0);
+    const cal = day.slots.reduce((n, x) => n + Math.round(x.perServing.calories * x.servings), 0);
+    return { p, cal };
+  }
+  function repairDays(days) {
+    for (const day of days) {
+      let guard = 0;
+      while (planTotals(day).p < day.target.protein && guard++ < 40) {
+        const order = ["snack", "dinner", "lunch", "breakfast"];
+        const cand = order.map((sl) => day.slots.find((x) => x.slot === sl && x.servings < 2.5 && planTotals(day).cal + x.perServing.calories * 0.25 <= day.target.calories * 1.15)).find(Boolean);
+        if (!cand) break;
+        cand.servings = Math.round((cand.servings + 0.25) * 100) / 100;
+      }
+    }
+    return days;
+  }
+  async function generatePlan() {
+    setPlanErr(""); setPlanBusy("cookbook");
+    try {
+      const seed = await fetchSeedBook();
+      const days = planDates(planDaysN);
+      const pool = new Map(seed.filter((r) => planMealsOn.includes(r.slot)).map((r) => [r.id, r]));
+      setPlanBusy("searching");
+      const normalDay = days.find((d) => !d.dose && !d.after) || days[0];
+      const env0 = slotEnvelopes(normalDay);
+      for (const slot of planMealsOn) if (env0[slot]) for (const r of await searchSpoon(slot, env0[slot])) if (!pool.has(r.id)) pool.set(r.id, r);
+      setPlanBusy("curating");
+      const cand = [...pool.values()].map((r) => `${r.id} | ${r.slot} | ${r.gentle ? "GENTLE" : "normal"} | ${r.p}g protein, ${r.cal} cal, ${r.f}g fat | ${r.name}`).join("\n");
+      const dayLines = days.map((d, i) => { const e = slotEnvelopes(d); return `Day ${i} (${d.label}${d.dose ? ", SHOT DAY — GENTLE ONLY" : d.after ? ", day after shot — GENTLE ONLY" : ""}): protein target ${d.target.protein}g, calorie budget ${d.target.calories} · slots: ${planMealsOn.map((m) => `${m}(~${e[m].protein}g/${e[m].calories}cal)`).join(", ")}`; }).join("\n");
+      const raw = await callClaude(
+        `CANDIDATE RECIPES (id | slot | gentle | per-serving macros | name):\n${cand}\n\nDAYS:\n${dayLines}\n\nAssign one candidate per slot per day. Rules: on GENTLE ONLY days use only GENTLE candidates. servings between 1 and 2 in steps of 0.25 — use servings to reach each day's protein target without exceeding its calorie budget by more than 10%. Prefer variety (avoid using the same recipe more than twice across the week). Return ONLY JSON, no prose: {"days":[{"slots":[{"slot":"breakfast","id":"seed:x","servings":1}]}]}`,
+        "You are ForkCaster's meal-prep curator. You never invent recipes or nutrition — you only assign the provided candidates and scale servings.",
+        null, 1800, null);
+      const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+      const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
+      for (const d of built) for (const m of planMealsOn) if (!d.slots.find((x) => x.slot === m)) { // curator skipped a slot — fill from pool deterministically
+        const fill = [...pool.values()].filter((r) => r.slot === m && (!d.dose && !d.after || r.gentle)).sort((a, b) => b.p - a.p)[0];
+        if (fill) d.slots.push({ slot: m, id: fill.id, name: fill.name, gentle: !!fill.gentle, image: fill.image || null, photo: null, url: fill.url || null, perServing: fill.perServing, ingredients: fill.ingredients || [], steps: fill.steps || [], servings: 1, logged: false });
+      }
+      setPlanBusy("balancing");
+      repairDays(built);
+      setPlanBusy("grocery list");
+      let grocery = [];
+      try {
+        const lines = built.flatMap((d) => d.slots.flatMap((x) => (x.ingredients || []).map((ing) => `${ing} (x${x.servings} servings)`)));
+        if (lines.length) {
+          const graw = await callClaude(`Consolidate this week's ingredient lines into one grocery list. Combine duplicates and sum quantities sensibly. Sections: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON: {"items":[{"section":"Produce","item":"Green beans","qty":"1 lb"}]}\n\nLINES:\n${lines.join("\n").slice(0, 7000)}`, "You consolidate grocery lists. Terse, practical quantities.", null, 1400, null);
+          grocery = (JSON.parse(graw.replace(/```json|```/g, "").trim()).items || []).map((g) => ({ ...g, checked: false }));
+        }
+      } catch { grocery = [...new Set(built.flatMap((d) => d.slots.flatMap((x) => x.ingredients || [])))].map((item) => ({ section: "List", item, qty: "", checked: false })); }
+      setMealPlan({ createdAt: Date.now(), days: built, grocery });
+      setPlanSel(Math.max(0, built.findIndex((d) => d.dose)));
+      setPlanView("week"); setPlanBusy(null);
+    } catch (e) { setPlanBusy(null); setPlanErr(String(e.message || e)); }
+  }
+  function logPlannedMeal(di, si) {
+    const slot = mealPlan.days[di].slots[si];
+    if (slot.logged) return;
+    const f = { protein: Math.round(slot.perServing.protein * slot.servings), calories: Math.round(slot.perServing.calories * slot.servings), fat: Math.round((slot.perServing.fat || 0) * slot.servings), carbs: Math.round((slot.perServing.carbs || 0) * slot.servings) };
+    setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat }));
+    setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: slot.name, fat: f.fat, protein: f.protein, calories: f.calories }]);
+    setMealPlan((pl) => { const d = pl.days.map((day, i) => i !== di ? day : { ...day, slots: day.slots.map((x, j) => j !== si ? x : { ...x, logged: true }) }); return { ...pl, days: d }; });
+  }
+  function toggleGroceryItem(idx) {
+    setMealPlan((pl) => ({ ...pl, grocery: pl.grocery.map((g, i) => i !== idx ? g : { ...g, checked: !g.checked }) }));
+  }
+  function snapMealPhoto(di, si, file) {
+    const rd = new FileReader();
+    rd.onload = async () => {
+      try {
+        const b64 = String(rd.result).split(",")[1];
+        const r = await fetch("/api/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: b64, media: file.type }) }).then((x) => x.json());
+        if (r.url) setMealPlan((pl) => ({ ...pl, days: pl.days.map((day, i) => i !== di ? day : { ...day, slots: day.slots.map((x, j) => j !== si ? x : { ...x, photo: r.url }) }) }));
+      } catch {}
+    };
+    rd.readAsDataURL(file);
+  }
+
   // theme-aware style helpers
   const linkBtn = { marginTop: 12, background: "none", border: "none", color: C.muted, fontSize: 12.5, fontFamily: BODY, cursor: "pointer", textDecoration: "underline", padding: 0 };
   const chipBtn = { background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 20, padding: "7px 13px", fontSize: 12.5, fontWeight: 600, color: C.ink, cursor: "pointer", fontFamily: BODY };
@@ -1560,8 +1689,131 @@ export default function App() {
     </div>
   );
 
+  function renderPlan() {
+    const doseDayName = { SU: "Sunday", MO: "Monday", TU: "Tuesday", WE: "Wednesday", TH: "Thursday", FR: "Friday", SA: "Saturday" }[glp.injectionDay] || "your shot day";
+    const busyLabel = planBusy ? { cookbook: "Opening the cookbook…", searching: "Searching recipes for your macros…", curating: "Composing your week…", balancing: "Balancing protein targets…", "grocery list": "Writing the grocery list…" }[planBusy] : null;
+    if (planView === "setup" || !mealPlan) return (
+      <div>
+        {sectionTitle("Plan your week")}
+        {onMed && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.5, marginBottom: 3 }}>DOSE-SYNCED PREP</div>
+          <div style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.45 }}><b>Shot {doseDayName}</b> — that day and the next run lean, bland, small-volume with eased targets. The week still averages your goal.{escalating ? " Dose-increase weeks ease further." : ""}</div>
+        </div>}
+        {card(<div>
+          {sectionTitle("Your daily targets · from Body")}
+          <div style={{ display: "flex", gap: 16 }}>
+            <div><span style={{ fontSize: 20, fontWeight: 800, color: C.go }}>{targets.calories.toLocaleString()}</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>cal</span></div>
+            <div><span style={{ fontSize: 20, fontWeight: 800, color: C.go }}>{targets.protein}g</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>protein</span></div>
+            <div><span style={{ fontSize: 20, fontWeight: 800, color: C.go }}>≤{targets.fat}g</span><span style={{ fontSize: 12.5, color: C.muted, marginLeft: 4 }}>fat</span></div>
+          </div>
+        </div>, { marginBottom: 12 })}
+        {card(<div>
+          {sectionTitle("Prep length")}
+          <div style={{ display: "flex", background: C.surfaceAlt, borderRadius: 11, padding: 3, marginBottom: 14 }}>
+            {[3, 5, 7].map((n) => (<button key={n} onClick={() => setPlanDaysN(n)} style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 9, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, background: planDaysN === n ? C.surface : "transparent", color: planDaysN === n ? C.ink : C.muted }}>{n} days</button>))}
+          </div>
+          {sectionTitle("Meals to plan")}
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+            {["breakfast", "lunch", "dinner", "snack"].map((m) => { const on = planMealsOn.includes(m); return (<button key={m} onClick={() => setPlanMealsOn(on ? planMealsOn.filter((x) => x !== m) : [...planMealsOn, m])} style={{ ...chipBtn, borderColor: on ? C.go : C.hair, color: on ? C.go : C.muted, textTransform: "capitalize" }}>{m}</button>); })}
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 10, lineHeight: 1.45 }}>Snacks carry ~20% of your protein — on GLP-1, four smaller feedings beat three big plates.</div>
+        </div>, { marginBottom: 12 })}
+        {allergies.length > 0 && <div style={{ fontSize: 12.5, color: C.avoid, marginBottom: 12 }}><b>Filtering out:</b> {allergies.join(", ")} — hidden from every meal, same as ordering.</div>}
+        <button onClick={generatePlan} disabled={!!planBusy || planMealsOn.length === 0} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: planBusy || planMealsOn.length === 0 ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
+        {mealPlan && !planBusy && <button onClick={() => setPlanView("week")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 13, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>Back to current plan</button>}
+        {planErr && <div style={{ fontSize: 12.5, color: C.avoid, marginTop: 10 }}>Plan hiccup: {planErr} — tap generate to retry.</div>}
+        <div style={{ textAlign: "center", fontSize: 12, color: C.faint, marginTop: 12 }}>Runs on your own node · nothing leaves your server</div>
+      </div>
+    );
+    if (planView === "grocery") { const done = mealPlan.grocery.filter((g) => g.checked).length; const sections = [...new Set(mealPlan.grocery.map((g) => g.section))]; return (
+      <div>
+        <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Your week</button>
+        {sectionTitle(`Grocery · ${mealPlan.days.length} days`)}
+        {card(<div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}><b style={{ color: C.ink }}>{done} of {mealPlan.grocery.length} gathered</b><span style={{ color: C.muted }}>consolidated across all meals</span></div>
+          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6 }}><div style={{ height: 6, width: `${mealPlan.grocery.length ? (done / mealPlan.grocery.length) * 100 : 0}%`, background: C.go, borderRadius: 6, transition: "width .25s" }} /></div>
+        </div>, { marginBottom: 12 })}
+        {sections.map((sec) => card(<div key={sec}>
+          {sectionTitle(sec, C.muted)}
+          {mealPlan.grocery.map((g, i) => g.section !== sec ? null : (
+            <div key={i} onClick={() => toggleGroceryItem(i)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0", borderTop: `1px solid ${C.hair}`, cursor: "pointer" }}>
+              <div style={{ width: 21, height: 21, borderRadius: 6, flexShrink: 0, border: `2px solid ${g.checked ? C.go : C.hair}`, background: g.checked ? C.go : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: C.surface, fontSize: 13, fontWeight: 800 }}>{g.checked ? "✓" : ""}</div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600, color: g.checked ? C.faint : C.ink, textDecoration: g.checked ? "line-through" : "none" }}>{g.item}</div>{g.qty ? <div style={{ fontSize: 12, color: C.muted }}>{g.qty}</div> : null}</div>
+            </div>
+          ))}
+        </div>, { marginBottom: 12 }))}
+        <div style={{ fontSize: 12.5, color: C.muted, background: C.surfaceAlt, borderRadius: 12, padding: "11px 14px", lineHeight: 1.45 }}><b style={{ color: C.ink }}>Shop Mode · coming next</b><br />Scan barcodes at the shelf to verify items fit the plan and quietly remember prices per store.</div>
+      </div>
+    ); }
+    if (planView === "meal") { const [di, si] = planMealRef; const day = mealPlan.days[di]; const slot = day && day.slots[si]; if (!slot) { setPlanView("week"); return null; } const img = slot.photo || slot.image; return (
+      <div>
+        <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← {day.label} · Your week</button>
+        <div style={{ borderRadius: 16, overflow: "hidden", position: "relative", height: 170, marginBottom: 12, background: C.surfaceAlt }}>
+          {img ? <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 13, fontFamily: BODY }}>No photo yet — yours goes here</div>}
+          <label style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "linear-gradient(transparent, rgba(0,0,0,.55))", color: "#fff", fontSize: 12.5, fontWeight: 700, fontFamily: BODY, padding: "20px 12px 9px", cursor: "pointer" }}>
+            📷 {slot.photo ? "Retake your plate photo" : "Cooked it? Snap your plate"}
+            <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => e.target.files[0] && snapMealPhoto(di, si, e.target.files[0])} />
+          </label>
+        </div>
+        <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{day.label} {slot.slot}{(day.dose || day.after) ? " · gentle menu" : ""}</div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 800, color: C.ink, margin: "4px 0 5px", lineHeight: 1.2 }}>{slot.name}</div>
+        <div style={{ fontSize: 14, color: C.go, fontWeight: 800, marginBottom: 12 }}>{Math.round(slot.perServing.protein * slot.servings)}g protein <span style={{ color: C.muted, fontWeight: 500 }}>· {Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat · {slot.servings}× serving</span></div>
+        {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12, fontSize: 13, color: C.ink, lineHeight: 1.45 }}><b style={{ color: C.violet }}>Why this meal today:</b> post-shot, warm bland low-fat food is easiest to keep down. Eat slowly — stop at comfortable, not full.</div>}
+        {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 13.5, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, { marginBottom: 12 })}
+        {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 9, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 13 }}>{i + 1}</b><span style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, { marginBottom: 12 })}
+        {slot.url && <a href={slot.url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 12.5, color: C.muted, marginBottom: 12, textDecoration: "underline" }}>Full recipe at the source ↗</a>}
+        <button onClick={() => logPlannedMeal(di, si)} style={{ width: "100%", background: slot.logged ? C.surfaceAlt : C.go, color: slot.logged ? C.go : C.surface, border: slot.logged ? `1.5px solid ${C.go}` : "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{slot.logged ? "Logged ✓" : "Log this meal ✓"}</button>
+      </div>
+    ); }
+    // week view
+    const day = mealPlan.days[Math.min(planSel, mealPlan.days.length - 1)];
+    const tot = planTotals(day); const hit = tot.p >= day.target.protein;
+    return (
+      <div>
+        {sectionTitle("Your week")}
+        {onMed && <div style={{ fontSize: 12.5, fontWeight: 700, color: C.go, marginBottom: 10 }}>✓ Synced to your dose calendar — shot {doseDayName}</div>}
+        <div style={{ display: "flex", gap: 5, marginBottom: 12 }}>
+          {mealPlan.days.map((w, i) => { const on = i === Math.min(planSel, mealPlan.days.length - 1); const dd = w.dose || w.after; return (
+            <button key={i} onClick={() => setPlanSel(i)} style={{ flex: 1, border: `1.5px solid ${on ? "transparent" : dd ? C.violet + "55" : C.hair}`, cursor: "pointer", borderRadius: 12, padding: "8px 0 6px", fontFamily: BODY, background: on ? (dd ? C.violet : C.go) : dd ? C.violet + "14" : C.surface }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: on ? C.surface : dd ? C.violet : C.ink }}>{w.label}</div>
+              <div style={{ fontSize: 9.5, marginTop: 2, color: on ? C.surface : dd ? C.violet : C.faint }}>{w.dose ? "💉" : w.after ? "·💉" : "·"}</div>
+            </button>
+          ); })}
+        </div>
+        {card(<div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+            <b style={{ fontSize: 14, color: hit ? C.go : C.caution }}>{tot.p}g of {day.target.protein}g protein {hit ? "✓" : ""}</b>
+            <span style={{ fontSize: 12, color: C.muted }}>{tot.cal.toLocaleString()} cal{(day.dose || day.after) ? " · dose-adjusted target" : ""}</span>
+          </div>
+          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6 }}><div style={{ height: 6, width: `${Math.min(100, (tot.p / day.target.protein) * 100)}%`, background: hit ? C.go : C.caution, borderRadius: 6 }} /></div>
+        </div>, { marginBottom: 12 })}
+        {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()} · TARGET EASED TO {day.target.protein}G</div><div style={{ fontSize: 13, color: C.ink, marginTop: 3, lineHeight: 1.45 }}>Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal.</div></div>}
+        {day.slots.map((slot, si) => (
+          <div key={si} onClick={() => { setPlanMealRef([Math.min(planSel, mealPlan.days.length - 1), si]); setPlanView("meal"); }} style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", marginBottom: 10, cursor: "pointer" }}>
+            <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: (day.dose || day.after) ? C.violet : medalColor(si) }} />
+            <div style={{ width: 46, height: 46, borderRadius: 11, flexShrink: 0, background: C.surfaceAlt, overflow: "hidden" }}>{(slot.photo || slot.image) ? <img src={slot.photo || slot.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{slot.slot}</div>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{slot.name}</div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 19, fontWeight: 800, color: C.go, lineHeight: 1 }}>{Math.round(slot.perServing.protein * slot.servings)}g</div>
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat</div>
+              <button onClick={(e) => { e.stopPropagation(); logPlannedMeal(Math.min(planSel, mealPlan.days.length - 1), si); }} style={{ marginTop: 5, background: slot.logged ? C.go : "none", color: slot.logged ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 20, padding: "3px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>{slot.logged ? "✓" : "Log"}</button>
+            </div>
+          </div>
+        ))}
+        <div style={{ display: "flex", gap: 9, marginTop: 4 }}>
+          <button onClick={() => setPlanView("setup")} style={{ flex: 1, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, color: C.ink, cursor: "pointer" }}>Plan settings</button>
+          <button onClick={() => setPlanView("grocery")} style={{ flex: 1.3, background: C.go, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 800, color: C.surface, cursor: "pointer" }}>Grocery list →</button>
+        </div>
+      </div>
+    );
+  }
+
   const TABS = [
     { id: "now", label: "Now", icon: iconNow }, { id: "today", label: "Today", icon: iconToday },
+    { id: "plan", label: "Plan", icon: iconPlan },
     { id: "body", label: "Body", icon: iconBody }, { id: "glp", label: "GLP-1", icon: iconMed },
     { id: "coach", label: "Coach", icon: iconCoach },
   ];
@@ -1591,6 +1843,7 @@ export default function App() {
           {tab === "today" && renderToday()}
           {tab === "body" && renderBody()}
           {tab === "glp" && renderGlp()}
+          {tab === "plan" && renderPlan()}
           {tab === "coach" && <div style={{ height: "calc(100vh - 128px)" }}>{renderCoach()}</div>}
         </div>
 
@@ -1857,8 +2110,9 @@ export default function App() {
                 <input value={keyIn.fi} onChange={(e) => setKeyIn({ ...keyIn, fi: e.target.value })} placeholder="FatSecret Client ID — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.fs} onChange={(e) => setKeyIn({ ...keyIn, fs: e.target.value })} placeholder="FatSecret Client Secret — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
                 <input value={keyIn.gm} onChange={(e) => setKeyIn({ ...keyIn, gm: e.target.value })} placeholder="Google AI (Gemini) key — for goal body simulation" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginTop: 8, marginBottom: 8 }} />
+                <input value={keyIn.sp} onChange={(e) => setKeyIn({ ...keyIn, sp: e.target.value })} placeholder="Spoonacular key (optional) — recipe discovery for the Plan tab" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() ? 0.5 : 1 }}>Save keys</button>
+                  <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !keyIn.gm.trim() && !keyIn.sp.trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !keyIn.gm.trim() && !keyIn.sp.trim() ? 0.5 : 1 }}>Save keys</button>
                   <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Test AI key</button>
                 </div>
                 {keyMsg && <div style={{ fontSize: 12, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}
@@ -2391,6 +2645,7 @@ function foodGlyph(kind, c, s = 52) {
 /* ── nav icons ── */
 const iconNow = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.2-7-10a7 7 0 0114 0c0 4.8-7 10-7 10z" stroke={c} strokeWidth="2" strokeLinejoin="round" /><circle cx="12" cy="11" r="2.5" stroke={c} strokeWidth="2" /></svg>);
 const iconToday = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={c} strokeWidth="2" /><path d="M12 7v5l3 2" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>);
+const iconPlan = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15.5" rx="3" stroke={c} strokeWidth="2" /><path d="M3.5 10h17M8 3.5V7M16 3.5V7" stroke={c} strokeWidth="2" strokeLinecap="round" /><circle cx="15.5" cy="15" r="1.6" fill={c} /></svg>);
 const iconBody = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 20l4-9 4 2 4-2 4 9" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="5" r="2.5" stroke={c} strokeWidth="2" /></svg>);
 const iconMed = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg>);
 const iconCoach = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H9l-4 3v-3H4z" stroke={c} strokeWidth="2" strokeLinejoin="round" /></svg>);
