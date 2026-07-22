@@ -406,6 +406,7 @@ export default function App() {
     setCamFor(dest);
     setCamErr("");
     if (typeof navigator === "undefined" || !navigator.mediaDevices) { setCamErr("Camera needs HTTPS — open ForkCaster from your ts.net URL."); return; }
+    if (!camVideoRef.current) { setCamErr("Camera view not ready — close and reopen, then try again."); return; }
     setCamOn(true);
     setCamHint(false);
     try {
@@ -1799,7 +1800,6 @@ export default function App() {
   const renderCoach = () => (
     <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
       <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 12, cursor: "pointer", fontFamily: BODY }}>Clear</button></div><div style={{ fontSize: 13, color: C.muted }}>Knows your macros, weight &amp; meds — live</div></div>
-      <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
         {coachMsgs.map((m, i) => (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
@@ -2011,6 +2011,7 @@ export default function App() {
           {tab === "body" && renderBody()}
           {tab === "glp" && renderGlp()}
           {tab === "plan" && renderPlan()}
+          <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
           {tab === "coach" && <div style={{ height: "calc(100vh - 128px)" }}>{renderCoach()}</div>}
         </div>
 

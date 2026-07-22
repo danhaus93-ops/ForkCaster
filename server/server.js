@@ -718,22 +718,38 @@ app.get("/api/recipes/search", async (req, res) => {
 });
 const SPN_BASE = process.env.SPOONACULAR_BASE || "https://api.spoonacular.com"; // rig overrides this to a fixture
 const _PHOTO_CACHE_FILE = path.join(DATA_DIR, "photo-cache.json");
-const _photoCache = new Map(); // name -> image url|null — PERSISTED so container updates never re-burn API quota
-try { for (const [k, v] of Object.entries(JSON.parse(fs.readFileSync(_PHOTO_CACHE_FILE, "utf8")))) _photoCache.set(k, v); } catch {}
-const _savePhotoCache = () => { try { fs.writeFileSync(_PHOTO_CACHE_FILE, JSON.stringify(Object.fromEntries(_photoCache))); } catch {} };
+const _photoCache = new Map(); // q -> {v: url|null, t} — PERSISTED; nulls retry after 24h, images live forever
+try {
+  const raw = JSON.parse(fs.readFileSync(_PHOTO_CACHE_FILE, "utf8"));
+  if (raw && raw._v === 2) for (const [k, e] of Object.entries(raw)) { if (k !== "_v") _photoCache.set(k, e); }
+  // legacy (v1, pre-title-scoring) caches are discarded — their matches are untrusted
+} catch {}
+const _savePhotoCache = () => { try { fs.writeFileSync(_PHOTO_CACHE_FILE, JSON.stringify({ _v: 2, ...Object.fromEntries(_photoCache) })); } catch {} };
+const _STOP = new Set(["a","an","the","with","and","of","on","in","style","fresh","easy","best","homemade"]);
+const _toks = (t) => String(t).toLowerCase().split(/\W+/).filter((x) => x.length >= 3 && !_STOP.has(x));
 app.get("/api/recipes/photo", async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 80);
   if (!q) return res.json({ ok: false, reason: "no-query" });
-  if (_photoCache.has(q)) return res.json({ ok: !!_photoCache.get(q), image: _photoCache.get(q) });
+  const hit = _photoCache.get(q);
+  if (hit && (hit.v || Date.now() - hit.t < 24 * 3600 * 1000)) return res.json({ ok: !!hit.v, image: hit.v });
   const SPN = key("SPOONACULAR_KEY");
   if (!SPN) return res.json({ ok: false, reason: "no-key" });
   try {
-    const r = await fetch(`${SPN_BASE}/recipes/complexSearch?${new URLSearchParams({ apiKey: SPN, query: q, number: "1" })}`, { signal: AbortSignal.timeout(9000) });
+    const r = await fetch(`${SPN_BASE}/recipes/complexSearch?${new URLSearchParams({ apiKey: SPN, query: q, number: "5" })}`, { signal: AbortSignal.timeout(9000) });
     if (!r.ok) { console.log(`[recipes] photo "${q}" -> HTTP ${r.status}`); return res.json({ ok: false, reason: `spoonacular ${r.status}` }); }
     const d = await r.json();
-    const img = (((d.results || [])[0] || {}).image) || null;
-    _photoCache.set(q, img); _savePhotoCache();
-    console.log(`[recipes] photo "${q}" -> ${img ? "found" : "no match"}`);
+    // pick the candidate whose TITLE actually matches the dish — zero-overlap results are junk, reject them
+    const qt = _toks(q);
+    let best = null, bestScore = 0;
+    for (const rec of (d.results || [])) {
+      if (!rec.image) continue;
+      const tt = new Set(_toks(rec.title));
+      const score = qt.filter((t) => tt.has(t)).length;
+      if (score > bestScore) { bestScore = score; best = rec; }
+    }
+    const img = bestScore >= 1 ? best.image : null;
+    _photoCache.set(q, { v: img, t: Date.now() }); _savePhotoCache();
+    console.log(`[recipes] photo "${q}" -> ${img ? `matched "${best.title}" (score ${bestScore})` : `no title match among ${(d.results || []).length}`}`);
     res.json({ ok: !!img, image: img });
   } catch (e) { res.json({ ok: false, reason: e.message }); }
 });
