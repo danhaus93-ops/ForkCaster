@@ -281,14 +281,14 @@ export default function App() {
   async function saveKeys() {
     setKeyMsg("Saving…");
     const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
-    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim(); if (keyIn.sp.trim()) body.SPOONACULAR_KEY = keyIn.sp.trim();
+    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim(); if ((keyIn.sp || "").trim()) body.SPOONACULAR_KEY = keyIn.sp.trim();
     try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      setKeyIn({ a: "", g: "", fi: "", fs: "", gm: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
+      setKeyIn({ a: "", g: "", fi: "", fs: "", gm: "", sp: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
       if (venues.length && !venues[0].menu) rankVenues(venues); }
     catch { setKeyMsg("Save failed — is the node reachable?"); }
   }
   async function testAiKey() {
-    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim() || keyIn.gm.trim() || keyIn.sp.trim()) { await saveKeys(); }  // test what you pasted, not a stale save
+    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim() || (keyIn.gm || "").trim() || (keyIn.sp || "").trim()) { await saveKeys(); }  // test what you pasted, not a stale save
     setKeyMsg("Testing AI key…");
     try { const t = await callClaude("Reply with exactly: ok");
       const good = t.toLowerCase().includes("ok");
@@ -2110,9 +2110,9 @@ export default function App() {
                 <input value={keyIn.fi} onChange={(e) => setKeyIn({ ...keyIn, fi: e.target.value })} placeholder="FatSecret Client ID — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.fs} onChange={(e) => setKeyIn({ ...keyIn, fs: e.target.value })} placeholder="FatSecret Client Secret — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
                 <input value={keyIn.gm} onChange={(e) => setKeyIn({ ...keyIn, gm: e.target.value })} placeholder="Google AI (Gemini) key — for goal body simulation" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginTop: 8, marginBottom: 8 }} />
-                <input value={keyIn.sp} onChange={(e) => setKeyIn({ ...keyIn, sp: e.target.value })} placeholder="Spoonacular key (optional) — recipe discovery for the Plan tab" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
+                <input value={keyIn.sp || ""} onChange={(e) => setKeyIn({ ...keyIn, sp: e.target.value })} placeholder="Spoonacular key (optional) — recipe discovery for the Plan tab" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !keyIn.gm.trim() && !keyIn.sp.trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !keyIn.gm.trim() && !keyIn.sp.trim() ? 0.5 : 1 }}>Save keys</button>
+                  <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !(keyIn.gm || "").trim() && !(keyIn.sp || "").trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !(keyIn.gm || "").trim() && !(keyIn.sp || "").trim() ? 0.5 : 1 }}>Save keys</button>
                   <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Test AI key</button>
                 </div>
                 {keyMsg && <div style={{ fontSize: 12, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}
