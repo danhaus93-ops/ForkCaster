@@ -1097,6 +1097,13 @@ export default function App() {
       return (d.results || []).filter((r) => r.perServing.protein != null).map((r) => ({ id: r.id, name: r.name, slot, gentle: false, image: r.image, url: r.url, servings: 1, perServing: r.perServing, ingredients: [], steps: [], p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat ?? 0 }));
     } catch { return []; }
   }
+  function extractJson(raw) {
+    const t = String(raw).replace(/```json|```/gi, "").trim();
+    try { return JSON.parse(t); } catch {}
+    const a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch {} }
+    throw new Error("AI reply wasn't valid JSON — tap generate to retry");
+  }
   function planTotals(day) {
     const p = day.slots.reduce((n, x) => n + Math.round(x.perServing.protein * x.servings), 0);
     const cal = day.slots.reduce((n, x) => n + Math.round(x.perServing.calories * x.servings), 0);
@@ -1129,10 +1136,10 @@ export default function App() {
       const cand = [...pool.values()].map((r) => `${r.id} | ${r.slot} | ${r.gentle ? "GENTLE" : "normal"} | ${r.p}g protein, ${r.cal} cal, ${r.f}g fat | ${r.name}`).join("\n");
       const dayLines = days.map((d, i) => { const e = slotEnvelopes(d); return `Day ${i} (${d.label}${d.dose ? ", SHOT DAY — GENTLE ONLY" : d.after ? ", day after shot — GENTLE ONLY" : ""}): protein target ${d.target.protein}g, calorie budget ${d.target.calories} · slots: ${planMealsOn.map((m) => `${m}(~${e[m].protein}g/${e[m].calories}cal)`).join(", ")}`; }).join("\n");
       const raw = await callClaude(
-        `CANDIDATE RECIPES (id | slot | gentle | per-serving macros | name):\n${cand}\n\nDAYS:\n${dayLines}\n\nAssign one candidate per slot per day (slot names include snack and snack2 — both take snack-type candidates, and they MUST be two different recipes on the same day). Rules: on GENTLE ONLY days use only GENTLE candidates. servings between 1 and 2 in steps of 0.25 — use servings to reach each day's protein target without exceeding its calorie budget by more than 10%.${planMealsOn.length === 3 ? " NO SNACKS THIS WEEK: only three plates per day, so choose the HIGHEST-PROTEIN candidate available for every slot and lean on larger servings — every plate must pull maximum protein." : ""} Prefer variety (avoid using the same recipe more than twice across the week). Return ONLY JSON, no prose: {"days":[{"slots":[{"slot":"breakfast","id":"seed:x","servings":1}]}]}`,
+        `CANDIDATE RECIPES (id | slot | gentle | per-serving macros | name):\n${cand}\n\nDAYS:\n${dayLines}\n\nAssign one candidate per slot per day (slot names include snack and snack2 — both take snack-type candidates, and they MUST be two different recipes on the same day). Rules: on GENTLE ONLY days use only GENTLE candidates. servings between 1 and 2 in steps of 0.25 — use servings to reach each day's protein target without exceeding its calorie budget by more than 10%.${planMealsOn.length === 3 ? " NO SNACKS THIS WEEK: only three plates per day, so choose the HIGHEST-PROTEIN candidate available for every slot and lean on larger servings — every plate must pull maximum protein." : ""} Prefer variety (avoid using the same recipe more than twice across the week). Return ONLY JSON — no prose, no notes, no explanation before or after; the FIRST character of your reply must be {. Shape: {"days":[{"slots":[{"slot":"breakfast","id":"seed:x","servings":1}]}]}`,
         "You are ForkCaster's meal-prep curator. You never invent recipes or nutrition — you only assign the provided candidates and scale servings.",
         null, 1800, null);
-      const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+      const parsed = extractJson(raw);
       const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot) && pool.get(x.id).slot === _slotType(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, photoQuery: r.photoQuery || null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
       for (const d of built) for (const m of planMealsOn) if (!d.slots.find((x) => x.slot === m)) { // curator skipped a slot — fill from pool deterministically
         const used = new Set(d.slots.map((x) => x.id));
@@ -1147,7 +1154,7 @@ export default function App() {
         const lines = built.flatMap((d) => d.slots.flatMap((x) => (x.ingredients || []).map((ing) => `${ing} (x${x.servings} servings)`)));
         if (lines.length) {
           const graw = await callClaude(`Consolidate this week's ingredient lines into one grocery list. Combine duplicates and sum quantities sensibly. Sections: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON: {"items":[{"section":"Produce","item":"Green beans","qty":"1 lb"}]}\n\nLINES:\n${lines.join("\n").slice(0, 7000)}`, "You consolidate grocery lists. Terse, practical quantities.", null, 1400, null);
-          grocery = (JSON.parse(graw.replace(/```json|```/g, "").trim()).items || []).map((g) => ({ ...g, checked: false }));
+          grocery = (extractJson(graw).items || []).map((g) => ({ ...g, checked: false }));
         }
       } catch { grocery = [...new Set(built.flatMap((d) => d.slots.flatMap((x) => x.ingredients || [])))].map((item) => ({ section: "List", item, qty: "", checked: false })); }
       setPlanBusy("photos");
