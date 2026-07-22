@@ -1134,7 +1134,7 @@ export default function App() {
         )}
         {rankState !== "idle" && rankState !== "ranking" && rankState !== "ranked" && (
           <div style={{ fontSize: 12, color: C.avoid, marginTop: -4, marginBottom: 10, lineHeight: 1.4 }}>
-            Ranking hiccup ({rankState}) — usually a cut-off AI response, not your key.{" "}
+            Ranking hiccup ({rankState}) — {/deprecat|unsupported|invalid/i.test(String(rankState)) ? "the AI API rejected a request parameter (fixed in newer ForkCaster builds)" : "usually a cut-off AI response, not your key"}.{" "}
             <span onClick={() => rankVenues(venues, true)} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>tap to retry</span>.
           </div>
         )}

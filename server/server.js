@@ -98,7 +98,7 @@ app.post("/api/ai", async (req, res) => {
       ? [{ type: "image", source: { type: "base64", media_type: image.media_type || "image/jpeg", data: image.data } }, { type: "text", text: prompt }]
       : prompt;
     const body = { model: (["claude-fable-5", "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"].includes(req.body && req.body.model) ? req.body.model : "claude-sonnet-4-6"), max_tokens: Math.max(256, Math.min(3000, parseInt(req.body && req.body.max_tokens) || 1000)), messages: [{ role: "user", content }] };
-    if (req.body && req.body.temperature != null) body.temperature = Math.max(0, Math.min(1, +req.body.temperature));
+    // `temperature` is deprecated on current Anthropic models and hard-fails the request — never forward it
     if (req.body && req.body.schema) body.output_config = { format: { type: "json_schema", schema: req.body.schema } };
     if (system) body.system = system;
     let r = await fetch("https://api.anthropic.com/v1/messages", {
