@@ -1167,20 +1167,47 @@ export default function App() {
         }
         return m;
       };
-      const fallbackGrocery = () => [...groupIngredients().entries()].map(([name, uses]) => {
-        let oz = 0, allOz = uses.length > 0;
-        for (const u of uses) { const mm = u.amt.match(/^([\d.]+)\s*oz/i); if (mm) oz += +mm[1] * u.servings; else allOz = false; }
-        const qty = allOz && oz > 0 ? (oz >= 16 ? `~${(Math.ceil((oz / 16) * 4) / 4).toFixed(2).replace(/\.?0+$/, "")} lb total` : `~${Math.ceil(oz)} oz total`) : `for ${uses.length} meal${uses.length > 1 ? "s" : ""}`;
-        return { section: "List", item: name, qty, checked: false };
-      });
+      const _pkgPhrase = (name, uses) => { // smallest-package heuristics — store language, not kitchen language
+        const n = name.toLowerCase();
+        let oz = 0, allOz = uses.length > 0, count = 0, cups = 0;
+        for (const u of uses) {
+          const mo = u.amt.match(/^([\d.]+)\s*oz/i); if (mo) oz += +mo[1] * u.servings; else allOz = false;
+          const mc = u.amt.match(/^([\d.\/]+)\s*cups?/i); if (mc) { const f = mc[1].split("/"); cups += (f.length === 2 ? +f[0] / +f[1] : +mc[1]) * u.servings; }
+          const mn = u.amt.match(/^(\d+)(?:\s|,|$)/); if (mn) count += +mn[1] * u.servings;
+        }
+        if (/chicken|turkey|beef|sirloin|steak|pork|salmon|cod|tilapia|shrimp|tenderloin|flank|jerky|deli/.test(n) && allOz && oz > 0) {
+          const lb = Math.ceil((oz / 16) * 4) / 4;
+          return lb <= 1.25 ? "one 1-lb pack" : lb <= 2.75 ? `~${lb} lb — one large pack` : `~${lb} lb — family pack`;
+        }
+        if (/egg white/.test(n)) return "1 carton liquid whites";
+        if (/^eggs?\b|hard-boiled/.test(n)) return count > 12 ? "2 dozen" : "1 dozen";
+        if (/yogurt|skyr|cottage/.test(n)) return cups > 4 || uses.length > 4 ? "2 tubs" : "1 tub (32 oz)";
+        if (/broth/.test(n)) return `${Math.max(1, Math.ceil(cups / 4))} carton${cups > 4 ? "s" : ""}`;
+        if (/milk/.test(n)) return "1 half-gallon";
+        if (/kidney beans|black beans|white beans|chickpea/.test(n)) return `${Math.max(1, Math.ceil((cups || uses.length * 0.5) / 1.5))} can(s)`;
+        if (/bread|toast/.test(n)) return "1 loaf";
+        if (/tortilla|wrap|pita|bun/.test(n)) return "1 pack";
+        if (/protein bar/.test(n)) return "1 box";
+        if (/whey|protein powder/.test(n)) return "1 tub — lasts weeks";
+        if (/honey|mayo|mustard|dijon|soy|sriracha|salsa|marinara|vinaigrette|dressing|oil\b|paste|capers|chiles|tzatziki/.test(n)) return "smallest jar/bottle";
+        if (/seasoning|cinnamon|paprika|cumin|oregano|chili powder|salt|pepper|flakes|rosemary|garlic powder|baking powder/.test(n)) return "1 small jar — pantry staple";
+        if (/oats|rice|quinoa|panko|granola|noodle|pasta|spaghetti|linguine|crackers|croutons|almonds|chia|lentil/.test(n)) return "1 bag/box";
+        if (/berries|blueberr|strawberr|pineapple|edamame|green beans|broccoli|brussels|snap peas|spinach|greens|slaw|lettuce/.test(n)) return "1 bag";
+        if (/cheese|mozzarella|feta|cheddar|parmesan/.test(n)) return "1 pack";
+        if (/banana|lemon|lime|apple|avocado|potato|onion|cucumber|zucchini|carrot|tomato|scallion|celery|ginger|garlic\b|bell pepper/.test(n)) return count > 0 ? `${Math.ceil(count)} ct` : "1 bag";
+        if (allOz && oz > 0) return oz >= 16 ? `~${Math.ceil((oz / 16) * 4) / 4} lb` : `~${Math.ceil(oz)} oz`;
+        return "1 pack";
+      };
+      const fallbackGrocery = () => [...groupIngredients().entries()].map(([name, uses]) => ({ section: "List", item: name, qty: _pkgPhrase(name, uses), checked: false }));
       let grocery = [];
       try {
         const lines = [...groupIngredients().entries()].map(([name, uses]) => `${name}: ${uses.map((u) => u.servings === 1 ? u.amt || "1" : `${u.amt || "1"} ×${u.servings}`).join(" + ")}`);
         if (lines.length) {
-          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. Sum each ingredient's amounts into a TOTAL PURCHASE quantity — what to actually buy at the store, rounded UP to common package sizes (meat by the lb or family pack, canned goods by the can, produce by count or bag, dairy by the tub/carton). Example: chicken amounts totaling 54 oz → "~3.5 lb (one family pack)". Sections: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Purchase quantities, common package sizes, terse.", null, 2400, null);
+          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, 3500, null);
           grocery = (extractJson(graw).items || []).map((g) => ({ ...g, checked: false }));
         }
-      } catch { grocery = fallbackGrocery(); }
+        setGroceryNote("");
+      } catch (ge) { grocery = fallbackGrocery(); setGroceryNote(String(ge.message || ge).slice(0, 120)); }
       if (!grocery.length) grocery = fallbackGrocery();
       setPlanBusy("photos");
       let planOut = { createdAt: Date.now(), days: built, grocery };
@@ -1216,6 +1243,7 @@ export default function App() {
     return { ...pl, days: pl.days.map((d) => ({ ...d, slots: d.slots.map((x) => (needs(x) && found[x.name]) ? { ...x, image: found[x.name], stockImg: true } : x) })) };
   }
   const [planPhotoNote, setPlanPhotoNote] = useState("");
+  const [groceryNote, setGroceryNote] = useState("");
   const photoBackfillTried = useRef(false);
   useEffect(() => {
     if (!mealPlan || photoBackfillTried.current) return;
@@ -1828,6 +1856,7 @@ export default function App() {
         {card(<div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}><b style={{ color: C.ink }}>{done} of {mealPlan.grocery.length} gathered</b><span style={{ color: C.muted }}>consolidated across all meals</span></div>
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6 }}><div style={{ height: 6, width: `${mealPlan.grocery.length ? (done / mealPlan.grocery.length) * 100 : 0}%`, background: C.go, borderRadius: 6, transition: "width .25s" }} /></div>
+          {groceryNote && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 7 }}>Built-in package math shown — AI consolidation hiccup: {groceryNote}</div>}
         </div>, { marginBottom: 12 })}
         {sections.map((sec) => card(<div key={sec}>
           {sectionTitle(sec, C.muted)}
