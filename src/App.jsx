@@ -1085,7 +1085,7 @@ export default function App() {
   async function fetchSeedBook() {
     if (seedRef.current) return seedRef.current;
     const d = await fetch("/api/recipes/seed").then((r) => r.json());
-    seedRef.current = (d.recipes || []).map((r) => ({ ...r, p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat }));
+    seedRef.current = (d.recipes || []).map((r) => ({ ...r, p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat, photoQuery: r.photoQuery || null }));
     return seedRef.current;
   }
   async function searchSpoon(slot, env) {
@@ -1133,11 +1133,11 @@ export default function App() {
         "You are ForkCaster's meal-prep curator. You never invent recipes or nutrition — you only assign the provided candidates and scale servings.",
         null, 1800, null);
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-      const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot) && pool.get(x.id).slot === _slotType(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
+      const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot) && pool.get(x.id).slot === _slotType(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, photoQuery: r.photoQuery || null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
       for (const d of built) for (const m of planMealsOn) if (!d.slots.find((x) => x.slot === m)) { // curator skipped a slot — fill from pool deterministically
         const used = new Set(d.slots.map((x) => x.id));
         const fill = [...pool.values()].filter((r) => r.slot === _slotType(m) && !used.has(r.id) && (!d.dose && !d.after || r.gentle)).sort((a, b) => b.p - a.p)[0];
-        if (fill) d.slots.push({ slot: m, id: fill.id, name: fill.name, gentle: !!fill.gentle, image: fill.image || null, photo: null, url: fill.url || null, perServing: fill.perServing, ingredients: fill.ingredients || [], steps: fill.steps || [], servings: 1, logged: false });
+        if (fill) d.slots.push({ slot: m, id: fill.id, name: fill.name, gentle: !!fill.gentle, image: fill.image || null, photo: null, photoQuery: fill.photoQuery || null, url: fill.url || null, perServing: fill.perServing, ingredients: fill.ingredients || [], steps: fill.steps || [], servings: 1, logged: false });
       }
       setPlanBusy("balancing");
       repairDays(built);
@@ -1158,18 +1158,34 @@ export default function App() {
       setPlanView("week"); setPlanBusy(null);
     } catch (e) { setPlanBusy(null); setPlanErr(String(e.message || e)); }
   }
+  function _photoQueryFor(slot, seedById) {
+    if (slot.photoQuery) return slot.photoQuery;
+    const fromSeed = seedById && seedById[slot.id];
+    if (fromSeed && fromSeed.photoQuery) return fromSeed.photoQuery;
+    return slot.name.split(/[,(]/)[0].replace(/\b(mild|light|gentle|extra|sipped slowly|plain)\b/gi, " ").replace(/\s+/g, " ").trim();
+  }
   async function enrichPlanPhotos(pl) {
-    const names = [...new Set(pl.days.flatMap((d) => d.slots.filter((x) => !x.image && !x.photo).map((x) => x.name)))];
-    if (!names.length) return pl;
+    const needs = (x) => !x.photo && (!x.image || x.stockImg); // fills blanks AND replaces earlier stock guesses
+    if (!pl.days.some((d) => d.slots.some(needs))) return pl;
+    let seedById = null;
+    try { seedById = Object.fromEntries((await fetchSeedBook()).map((r) => [r.id, r])); } catch {}
+    const queries = new Map(); // slot name -> query
+    for (const d of pl.days) for (const x of d.slots) if (needs(x) && !queries.has(x.name)) queries.set(x.name, _photoQueryFor(x, seedById));
     const found = {};
-    await Promise.all(names.map(async (n) => { try { const r = await fetch(`/api/recipes/photo?q=${encodeURIComponent(n)}`).then((x) => x.json()); if (r.ok && r.image) found[n] = r.image; } catch {} }));
+    await Promise.all([...queries.entries()].map(async ([n, q]) => {
+      try {
+        let r = await fetch(`/api/recipes/photo?q=${encodeURIComponent(q)}`).then((x) => x.json());
+        if (!(r.ok && r.image)) { const q2 = q.split(/\s+/).slice(0, 2).join(" "); if (q2 && q2 !== q) r = await fetch(`/api/recipes/photo?q=${encodeURIComponent(q2)}`).then((x) => x.json()); }
+        if (r.ok && r.image) found[n] = r.image;
+      } catch {}
+    }));
     if (!Object.keys(found).length) return pl;
-    return { ...pl, days: pl.days.map((d) => ({ ...d, slots: d.slots.map((x) => (!x.image && !x.photo && found[x.name]) ? { ...x, image: found[x.name], stockImg: true } : x) })) };
+    return { ...pl, days: pl.days.map((d) => ({ ...d, slots: d.slots.map((x) => (needs(x) && found[x.name]) ? { ...x, image: found[x.name], stockImg: true } : x) })) };
   }
   const photoBackfillTried = useRef(false);
   useEffect(() => {
     if (!mealPlan || photoBackfillTried.current) return;
-    if (!mealPlan.days.some((d) => d.slots.some((x) => !x.image && !x.photo))) return;
+    if (!mealPlan.days.some((d) => d.slots.some((x) => !x.photo && (!x.image || x.stockImg)))) return;
     photoBackfillTried.current = true;
     enrichPlanPhotos(mealPlan).then((pl) => { if (pl !== mealPlan) setMealPlan(pl); });
   }, [mealPlan]);
