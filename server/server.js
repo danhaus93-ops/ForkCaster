@@ -704,6 +704,22 @@ app.get("/api/recipes/search", async (req, res) => {
     })) });
   } catch (e) { res.json({ ok: false, reason: e.message }); }
 });
+const _photoCache = new Map(); // name -> image url|null; survives regenerations, dies with the container (fine)
+app.get("/api/recipes/photo", async (req, res) => {
+  const q = String(req.query.q || "").trim().slice(0, 80);
+  if (!q) return res.json({ ok: false, reason: "no-query" });
+  if (_photoCache.has(q)) return res.json({ ok: !!_photoCache.get(q), image: _photoCache.get(q) });
+  const SPN = key("SPOONACULAR_KEY");
+  if (!SPN) return res.json({ ok: false, reason: "no-key" });
+  try {
+    const r = await fetch(`https://api.spoonacular.com/recipes/complexSearch?${new URLSearchParams({ apiKey: SPN, query: q, number: "1" })}`, { signal: AbortSignal.timeout(9000) });
+    if (!r.ok) return res.json({ ok: false, reason: `spoonacular ${r.status}` });
+    const d = await r.json();
+    const img = (((d.results || [])[0] || {}).image) || null;
+    _photoCache.set(q, img);
+    res.json({ ok: !!img, image: img });
+  } catch (e) { res.json({ ok: false, reason: e.message }); }
+});
 app.get("/api/recipes/seed", (_req, res) => {
   try { res.json(JSON.parse(fs.readFileSync(path.join(__dirname, "seed-recipes.json"), "utf8"))); }
   catch (e) { res.json({ ok: false, reason: e.message }); }

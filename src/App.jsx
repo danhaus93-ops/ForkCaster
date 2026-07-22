@@ -351,7 +351,10 @@ export default function App() {
   const [planSel, setPlanSel] = useState(0);
   const [planMealRef, setPlanMealRef] = useState([0, 0]);
   const [planDaysN, setPlanDaysN] = useState(7);
-  const [planMealsOn, setPlanMealsOn] = useState(["breakfast", "lunch", "dinner", "snack"]);
+  const [planMealCount, setPlanMealCount] = useState(4);
+  const _slotsFor = (n) => (n === 3 ? ["breakfast", "lunch", "dinner"] : n === 5 ? ["breakfast", "lunch", "dinner", "snack", "snack2"] : ["breakfast", "lunch", "dinner", "snack"]);
+  const _slotType = (k) => (k.startsWith("snack") ? "snack" : k);
+  const [planMealsOn, setPlanMealsOn] = useState(_slotsFor(4));
   const [planBusy, setPlanBusy] = useState(null);
   const [planErr, setPlanErr] = useState("");
   const seedRef = useRef(null);
@@ -1067,7 +1070,12 @@ export default function App() {
     return out;
   }
   function slotEnvelopes(day) {
-    const share = { breakfast: [0.24, 0.26], lunch: [0.30, 0.30], dinner: [0.32, 0.32], snack: [0.14, 0.12] };
+    const SHARES = {
+      3: { breakfast: [0.30, 0.32], lunch: [0.34, 0.34], dinner: [0.36, 0.34] },
+      4: { breakfast: [0.24, 0.26], lunch: [0.30, 0.30], dinner: [0.32, 0.32], snack: [0.14, 0.12] },
+      5: { breakfast: [0.22, 0.24], lunch: [0.27, 0.28], dinner: [0.29, 0.30], snack: [0.11, 0.09], snack2: [0.11, 0.09] },
+    };
+    const share = SHARES[planMealsOn.length] || SHARES[4];
     const on = planMealsOn.filter((m) => share[m]);
     const pSum = on.reduce((n, m) => n + share[m][0], 0), cSum = on.reduce((n, m) => n + share[m][1], 0);
     const env = {};
@@ -1098,7 +1106,7 @@ export default function App() {
     for (const day of days) {
       let guard = 0;
       while (planTotals(day).p < day.target.protein && guard++ < 40) {
-        const order = ["snack", "dinner", "lunch", "breakfast"];
+        const order = ["snack2", "snack", "dinner", "lunch", "breakfast"];
         const cand = order.map((sl) => day.slots.find((x) => x.slot === sl && x.servings < 2.5 && planTotals(day).cal + x.perServing.calories * 0.25 <= day.target.calories * 1.15)).find(Boolean);
         if (!cand) break;
         cand.servings = Math.round((cand.servings + 0.25) * 100) / 100;
@@ -1115,18 +1123,20 @@ export default function App() {
       setPlanBusy("searching");
       const normalDay = days.find((d) => !d.dose && !d.after) || days[0];
       const env0 = slotEnvelopes(normalDay);
-      for (const slot of planMealsOn) if (env0[slot]) for (const r of await searchSpoon(slot, env0[slot])) if (!pool.has(r.id)) pool.set(r.id, r);
+      const seenTypes = new Set();
+      for (const slot of planMealsOn) { const ty = _slotType(slot); if (env0[slot] && !seenTypes.has(ty)) { seenTypes.add(ty); for (const r of await searchSpoon(ty, env0[slot])) if (!pool.has(r.id)) pool.set(r.id, r); } }
       setPlanBusy("curating");
       const cand = [...pool.values()].map((r) => `${r.id} | ${r.slot} | ${r.gentle ? "GENTLE" : "normal"} | ${r.p}g protein, ${r.cal} cal, ${r.f}g fat | ${r.name}`).join("\n");
       const dayLines = days.map((d, i) => { const e = slotEnvelopes(d); return `Day ${i} (${d.label}${d.dose ? ", SHOT DAY — GENTLE ONLY" : d.after ? ", day after shot — GENTLE ONLY" : ""}): protein target ${d.target.protein}g, calorie budget ${d.target.calories} · slots: ${planMealsOn.map((m) => `${m}(~${e[m].protein}g/${e[m].calories}cal)`).join(", ")}`; }).join("\n");
       const raw = await callClaude(
-        `CANDIDATE RECIPES (id | slot | gentle | per-serving macros | name):\n${cand}\n\nDAYS:\n${dayLines}\n\nAssign one candidate per slot per day. Rules: on GENTLE ONLY days use only GENTLE candidates. servings between 1 and 2 in steps of 0.25 — use servings to reach each day's protein target without exceeding its calorie budget by more than 10%. Prefer variety (avoid using the same recipe more than twice across the week). Return ONLY JSON, no prose: {"days":[{"slots":[{"slot":"breakfast","id":"seed:x","servings":1}]}]}`,
+        `CANDIDATE RECIPES (id | slot | gentle | per-serving macros | name):\n${cand}\n\nDAYS:\n${dayLines}\n\nAssign one candidate per slot per day (slot names include snack and snack2 — both take snack-type candidates, and they MUST be two different recipes on the same day). Rules: on GENTLE ONLY days use only GENTLE candidates. servings between 1 and 2 in steps of 0.25 — use servings to reach each day's protein target without exceeding its calorie budget by more than 10%.${planMealsOn.length === 3 ? " NO SNACKS THIS WEEK: only three plates per day, so choose the HIGHEST-PROTEIN candidate available for every slot and lean on larger servings — every plate must pull maximum protein." : ""} Prefer variety (avoid using the same recipe more than twice across the week). Return ONLY JSON, no prose: {"days":[{"slots":[{"slot":"breakfast","id":"seed:x","servings":1}]}]}`,
         "You are ForkCaster's meal-prep curator. You never invent recipes or nutrition — you only assign the provided candidates and scale servings.",
         null, 1800, null);
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-      const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
+      const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot) && pool.get(x.id).slot === _slotType(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
       for (const d of built) for (const m of planMealsOn) if (!d.slots.find((x) => x.slot === m)) { // curator skipped a slot — fill from pool deterministically
-        const fill = [...pool.values()].filter((r) => r.slot === m && (!d.dose && !d.after || r.gentle)).sort((a, b) => b.p - a.p)[0];
+        const used = new Set(d.slots.map((x) => x.id));
+        const fill = [...pool.values()].filter((r) => r.slot === _slotType(m) && !used.has(r.id) && (!d.dose && !d.after || r.gentle)).sort((a, b) => b.p - a.p)[0];
         if (fill) d.slots.push({ slot: m, id: fill.id, name: fill.name, gentle: !!fill.gentle, image: fill.image || null, photo: null, url: fill.url || null, perServing: fill.perServing, ingredients: fill.ingredients || [], steps: fill.steps || [], servings: 1, logged: false });
       }
       setPlanBusy("balancing");
@@ -1140,11 +1150,29 @@ export default function App() {
           grocery = (JSON.parse(graw.replace(/```json|```/g, "").trim()).items || []).map((g) => ({ ...g, checked: false }));
         }
       } catch { grocery = [...new Set(built.flatMap((d) => d.slots.flatMap((x) => x.ingredients || [])))].map((item) => ({ section: "List", item, qty: "", checked: false })); }
-      setMealPlan({ createdAt: Date.now(), days: built, grocery });
+      setPlanBusy("photos");
+      let planOut = { createdAt: Date.now(), days: built, grocery };
+      try { planOut = await enrichPlanPhotos(planOut); } catch {}
+      setMealPlan(planOut);
       setPlanSel(Math.max(0, built.findIndex((d) => d.dose)));
       setPlanView("week"); setPlanBusy(null);
     } catch (e) { setPlanBusy(null); setPlanErr(String(e.message || e)); }
   }
+  async function enrichPlanPhotos(pl) {
+    const names = [...new Set(pl.days.flatMap((d) => d.slots.filter((x) => !x.image && !x.photo).map((x) => x.name)))];
+    if (!names.length) return pl;
+    const found = {};
+    await Promise.all(names.map(async (n) => { try { const r = await fetch(`/api/recipes/photo?q=${encodeURIComponent(n)}`).then((x) => x.json()); if (r.ok && r.image) found[n] = r.image; } catch {} }));
+    if (!Object.keys(found).length) return pl;
+    return { ...pl, days: pl.days.map((d) => ({ ...d, slots: d.slots.map((x) => (!x.image && !x.photo && found[x.name]) ? { ...x, image: found[x.name], stockImg: true } : x) })) };
+  }
+  const photoBackfillTried = useRef(false);
+  useEffect(() => {
+    if (!mealPlan || photoBackfillTried.current) return;
+    if (!mealPlan.days.some((d) => d.slots.some((x) => !x.image && !x.photo))) return;
+    photoBackfillTried.current = true;
+    enrichPlanPhotos(mealPlan).then((pl) => { if (pl !== mealPlan) setMealPlan(pl); });
+  }, [mealPlan]);
   function logPlannedMeal(di, si) {
     const slot = mealPlan.days[di].slots[si];
     if (slot.logged) return;
@@ -1691,7 +1719,7 @@ export default function App() {
 
   function renderPlan() {
     const doseDayName = { SU: "Sunday", MO: "Monday", TU: "Tuesday", WE: "Wednesday", TH: "Thursday", FR: "Friday", SA: "Saturday" }[glp.injectionDay] || "your shot day";
-    const busyLabel = planBusy ? { cookbook: "Opening the cookbook…", searching: "Searching recipes for your macros…", curating: "Composing your week…", balancing: "Balancing protein targets…", "grocery list": "Writing the grocery list…" }[planBusy] : null;
+    const busyLabel = planBusy ? { cookbook: "Opening the cookbook…", searching: "Searching recipes for your macros…", curating: "Composing your week…", balancing: "Balancing protein targets…", "grocery list": "Writing the grocery list…", photos: "Finding dish photos…" }[planBusy] : null;
     if (planView === "setup" || !mealPlan) return (
       <div>
         {sectionTitle("Plan your week")}
@@ -1712,14 +1740,14 @@ export default function App() {
           <div style={{ display: "flex", background: C.surfaceAlt, borderRadius: 11, padding: 3, marginBottom: 14 }}>
             {[3, 5, 7].map((n) => (<button key={n} onClick={() => setPlanDaysN(n)} style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 9, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, background: planDaysN === n ? C.surface : "transparent", color: planDaysN === n ? C.ink : C.muted }}>{n} days</button>))}
           </div>
-          {sectionTitle("Meals to plan")}
-          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-            {["breakfast", "lunch", "dinner", "snack"].map((m) => { const on = planMealsOn.includes(m); return (<button key={m} onClick={() => setPlanMealsOn(on ? planMealsOn.filter((x) => x !== m) : [...planMealsOn, m])} style={{ ...chipBtn, borderColor: on ? C.go : C.hair, color: on ? C.go : C.muted, textTransform: "capitalize" }}>{m}</button>); })}
+          {sectionTitle("Meals per day")}
+          <div style={{ display: "flex", background: C.surfaceAlt, borderRadius: 11, padding: 3 }}>
+            {[3, 4, 5].map((n) => (<button key={n} onClick={() => { setPlanMealCount(n); setPlanMealsOn(_slotsFor(n)); }} style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 9, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, background: planMealCount === n ? C.surface : "transparent", color: planMealCount === n ? C.ink : C.muted }}>{n} meals</button>))}
           </div>
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 10, lineHeight: 1.45 }}>Snacks carry ~20% of your protein — on GLP-1, four smaller feedings beat three big plates.</div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 10, lineHeight: 1.45 }}>{planMealCount === 3 ? `Three big plates, no snacks — every meal runs maximum protein (~${Math.round(targets.protein / 3)}g each).` : planMealCount === 5 ? "Breakfast, lunch, dinner + two snacks — five small feedings, the kindest mode for a GLP-1 appetite." : "Three meals + one snack — the snack carries ~15% of your protein."}</div>
         </div>, { marginBottom: 12 })}
         {allergies.length > 0 && <div style={{ fontSize: 12.5, color: C.avoid, marginBottom: 12 }}><b>Filtering out:</b> {allergies.join(", ")} — hidden from every meal, same as ordering.</div>}
-        <button onClick={generatePlan} disabled={!!planBusy || planMealsOn.length === 0} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: planBusy || planMealsOn.length === 0 ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
+        <button onClick={generatePlan} disabled={!!planBusy} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: planBusy ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
         {mealPlan && !planBusy && <button onClick={() => setPlanView("week")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 13, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>Back to current plan</button>}
         {planErr && <div style={{ fontSize: 12.5, color: C.avoid, marginTop: 10 }}>Plan hiccup: {planErr} — tap generate to retry.</div>}
         <div style={{ textAlign: "center", fontSize: 12, color: C.faint, marginTop: 12 }}>Runs on your own node · nothing leaves your server</div>
@@ -1751,11 +1779,11 @@ export default function App() {
         <div style={{ borderRadius: 16, overflow: "hidden", position: "relative", height: 170, marginBottom: 12, background: C.surfaceAlt }}>
           {img ? <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 13, fontFamily: BODY }}>No photo yet — yours goes here</div>}
           <label style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "linear-gradient(transparent, rgba(0,0,0,.55))", color: "#fff", fontSize: 12.5, fontWeight: 700, fontFamily: BODY, padding: "20px 12px 9px", cursor: "pointer" }}>
-            📷 {slot.photo ? "Retake your plate photo" : "Cooked it? Snap your plate"}
+            📷 {slot.photo ? "Retake your plate photo" : slot.stockImg ? "Similar dish photo — snap YOUR plate to replace it" : "Cooked it? Snap your plate"}
             <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => e.target.files[0] && snapMealPhoto(di, si, e.target.files[0])} />
           </label>
         </div>
-        <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{day.label} {slot.slot}{(day.dose || day.after) ? " · gentle menu" : ""}</div>
+        <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{day.label} {slot.slot === "snack2" ? "snack" : slot.slot}{(day.dose || day.after) ? " · gentle menu" : ""}</div>
         <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 800, color: C.ink, margin: "4px 0 5px", lineHeight: 1.2 }}>{slot.name}</div>
         <div style={{ fontSize: 14, color: C.go, fontWeight: 800, marginBottom: 12 }}>{Math.round(slot.perServing.protein * slot.servings)}g protein <span style={{ color: C.muted, fontWeight: 500 }}>· {Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat · {slot.servings}× serving</span></div>
         {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12, fontSize: 13, color: C.ink, lineHeight: 1.45 }}><b style={{ color: C.violet }}>Why this meal today:</b> post-shot, warm bland low-fat food is easiest to keep down. Eat slowly — stop at comfortable, not full.</div>}
@@ -1793,7 +1821,7 @@ export default function App() {
             <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: (day.dose || day.after) ? C.violet : medalColor(si) }} />
             <div style={{ width: 46, height: 46, borderRadius: 11, flexShrink: 0, background: C.surfaceAlt, overflow: "hidden" }}>{(slot.photo || slot.image) ? <img src={slot.photo || slot.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{slot.slot}</div>
+              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{slot.slot === "snack2" ? "snack" : slot.slot}</div>
               <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{slot.name}</div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
