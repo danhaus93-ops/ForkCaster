@@ -1088,9 +1088,10 @@ export default function App() {
     seedRef.current = (d.recipes || []).map((r) => ({ ...r, p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat, photoQuery: r.photoQuery || null }));
     return seedRef.current;
   }
-  async function searchSpoon(slot, env) {
+  async function searchSpoon(slot, env, fresh) {
     try {
       const q = new URLSearchParams({ number: "6", minProtein: String(Math.max(5, Math.round(env.protein * 0.8))), maxCalories: String(Math.round(env.calories * 1.25)), type: slot === "breakfast" ? "breakfast" : slot === "snack" ? "snack" : "main course" });
+      if (fresh) q.set("fresh", "1");
       if (allergies.length) q.set("excludeIngredients", allergies.join(","));
       const d = await fetch(`/api/recipes/search?${q}`).then((r) => r.json());
       if (!d.ok) return [];
@@ -1121,7 +1122,8 @@ export default function App() {
     }
     return days;
   }
-  async function generatePlan() {
+  async function generatePlan(fresh) {
+    fresh = fresh === true; // guard against click-event args
     setPlanErr(""); setPlanBusy("cookbook");
     try {
       const seed = await fetchSeedBook();
@@ -1131,7 +1133,7 @@ export default function App() {
       const normalDay = days.find((d) => !d.dose && !d.after) || days[0];
       const env0 = slotEnvelopes(normalDay);
       const seenTypes = new Set();
-      for (const slot of planMealsOn) { const ty = _slotType(slot); if (env0[slot] && !seenTypes.has(ty)) { seenTypes.add(ty); for (const r of await searchSpoon(ty, env0[slot])) if (!pool.has(r.id)) pool.set(r.id, r); } }
+      for (const slot of planMealsOn) { const ty = _slotType(slot); if (env0[slot] && !seenTypes.has(ty)) { seenTypes.add(ty); for (const r of await searchSpoon(ty, env0[slot], fresh)) if (!pool.has(r.id)) pool.set(r.id, r); } }
       setPlanBusy("curating");
       const cand = [...pool.values()].map((r) => `${r.id} | ${r.slot} | ${r.gentle ? "GENTLE" : "normal"} | ${r.p}g protein, ${r.cal} cal, ${r.f}g fat | ${r.name}`).join("\n");
       const dayLines = days.map((d, i) => { const e = slotEnvelopes(d); return `Day ${i} (${d.label}${d.dose ? ", SHOT DAY — GENTLE ONLY" : d.after ? ", day after shot — GENTLE ONLY" : ""}): protein target ${d.target.protein}g, calorie budget ${d.target.calories} · slots: ${planMealsOn.map((m) => `${m}(~${e[m].protein}g/${e[m].calories}cal)`).join(", ")}`; }).join("\n");
@@ -1772,7 +1774,7 @@ export default function App() {
           <div style={{ fontSize: 12, color: C.muted, marginTop: 10, lineHeight: 1.45 }}>{planMealCount === 3 ? `Three big plates, no snacks — every meal runs maximum protein (~${Math.round(targets.protein / 3)}g each).` : planMealCount === 5 ? "Breakfast, lunch, dinner + two snacks — five small feedings, the kindest mode for a GLP-1 appetite." : "Three meals + one snack — the snack carries ~15% of your protein."}</div>
         </div>, { marginBottom: 12 })}
         {allergies.length > 0 && <div style={{ fontSize: 12.5, color: C.avoid, marginBottom: 12 }}><b>Filtering out:</b> {allergies.join(", ")} — hidden from every meal, same as ordering.</div>}
-        <button onClick={generatePlan} disabled={!!planBusy} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: planBusy ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
+        <button onClick={() => generatePlan(false)} disabled={!!planBusy} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: planBusy ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
         {mealPlan && !planBusy && <button onClick={() => setPlanView("week")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 13, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>Back to current plan</button>}
         {planErr && <div style={{ fontSize: 12.5, color: C.avoid, marginTop: 10 }}>Plan hiccup: {planErr} — tap generate to retry.</div>}
         <div style={{ textAlign: "center", fontSize: 12, color: C.faint, marginTop: 12 }}>Runs on your own node · nothing leaves your server</div>
@@ -1861,6 +1863,7 @@ export default function App() {
           <button onClick={() => setPlanView("setup")} style={{ flex: 1, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, color: C.ink, cursor: "pointer" }}>Plan settings</button>
           <button onClick={() => setPlanView("grocery")} style={{ flex: 1.3, background: C.go, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 800, color: C.surface, cursor: "pointer" }}>Grocery list →</button>
         </div>
+        {!planBusy && <button onClick={() => generatePlan(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12.5, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>↻ Fresh ideas — re-search recipes (uses API quota)</button>}
       </div>
     );
   }

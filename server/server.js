@@ -686,9 +686,19 @@ app.get("/api/recipe", async (req, res) => {
     res.json(rec);
   } catch (e) { res.json({ ok: false, reason: e.message }); }
 });
+const _SEARCH_CACHE_FILE = path.join(DATA_DIR, "search-cache.json");
+const _searchCache = new Map(); // param-key -> {t, data} — persisted; identical questions are never paid for twice
+try { for (const [k, v] of Object.entries(JSON.parse(fs.readFileSync(_SEARCH_CACHE_FILE, "utf8")))) _searchCache.set(k, v); } catch {}
+const _saveSearchCache = () => { try { fs.writeFileSync(_SEARCH_CACHE_FILE, JSON.stringify(Object.fromEntries(_searchCache))); } catch {} };
+const SEARCH_TTL = 7 * 24 * 3600 * 1000;
 app.get("/api/recipes/search", async (req, res) => {
   const SPN = key("SPOONACULAR_KEY");
   if (!SPN) return res.json({ ok: false, reason: "no-key" });
+  const ck = JSON.stringify(["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type", "number"].map((k) => String(req.query[k] || "")));
+  if (!req.query.fresh) {
+    const hit = _searchCache.get(ck);
+    if (hit && Date.now() - hit.t < SEARCH_TTL) { console.log(`[recipes] search (cached)`); return res.json({ ...hit.data, cached: true }); }
+  }
   try {
     const q = new URLSearchParams({ apiKey: SPN, addRecipeNutrition: "true", number: String(Math.min(12, +req.query.number || 8)), sort: "max-used-ingredients" });
     for (const k of ["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type"]) if (req.query[k]) q.set(k, String(req.query[k]));
@@ -697,11 +707,13 @@ app.get("/api/recipes/search", async (req, res) => {
     if (!r.ok) { console.log(`[recipes] search -> HTTP ${r.status}`); return res.json({ ok: false, reason: `spoonacular ${r.status}` }); }
     const d = await r.json();
     const pull = (rec, want) => { const n = ((rec.nutrition || {}).nutrients || []).find((x) => x.name === want); return n ? Math.round(n.amount) : null; };
-    res.json({ ok: true, results: (d.results || []).map((rec) => ({
+    const payload = { ok: true, results: (d.results || []).map((rec) => ({
       id: "spn:" + rec.id, name: rec.title, image: rec.image || null, source: "spoonacular",
       url: rec.sourceUrl || null, servings: rec.servings || 1, readyMin: rec.readyInMinutes || null,
       perServing: { calories: pull(rec, "Calories"), protein: pull(rec, "Protein"), fat: pull(rec, "Fat"), carbs: pull(rec, "Carbohydrates") },
-    })) });
+    })) };
+    _searchCache.set(ck, { t: Date.now(), data: payload }); _saveSearchCache();
+    res.json({ ...payload, cached: false });
   } catch (e) { res.json({ ok: false, reason: e.message }); }
 });
 const SPN_BASE = process.env.SPOONACULAR_BASE || "https://api.spoonacular.com"; // rig overrides this to a fixture
