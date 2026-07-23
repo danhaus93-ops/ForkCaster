@@ -260,6 +260,35 @@ const MEDS = {
 const uid = () => Math.random().toString(36).slice(2, 9);
 const log10 = (x) => Math.log(x) / Math.LN10;
 const todayISO = () => new Date().toISOString().slice(0, 10);
+/* ── Adaptive targets: read the real weight trend against dose context (v0.4.1) ── */
+function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
+  const byDate = new Map();
+  for (const d of (healthDays || [])) if (d.weightLbs) byDate.set(d.date, d.weightLbs);
+  for (const w of (weightLog || [])) if (w.lbs) byDate.set(w.date, w.lbs); // manual weigh-ins overwrite synced
+  const all = [...byDate.entries()].map(([date, lbs]) => ({ date, lbs })).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const t = (d) => new Date(d + "T12:00:00").getTime();
+  const endT = all.length ? t(all[all.length - 1].date) : 0;
+  const pts = all.filter((p) => endT - t(p.date) <= 21 * 86400000); // trailing 3 weeks
+  const spanDays = pts.length ? Math.round((t(pts[pts.length - 1].date) - t(pts[0].date)) / 86400000) : 0;
+  if (pts.length < 4 || spanDays < 12) return { status: "collecting", pts: pts.length, spanDays };
+  const head = pts.slice(0, 3), tail = pts.slice(-3);
+  const avg = (a) => a.reduce((n, p) => n + p.lbs, 0) / a.length;
+  const ct = (a) => a.reduce((n, p) => n + t(p.date), 0) / a.length;
+  const dDays = Math.max(5, (ct(tail) - ct(head)) / 86400000); // centroid-to-centroid — endpoint spans halve the rate
+  const ratePctWk = ((avg(head) - avg(tail)) / avg(head)) * (7 / dDays) * 100;
+  const mgs = ((glp && glp.doseLog) || []).slice(-6).map((d) => +d.mg || 0);
+  const titration = (mgs.length >= 2 && mgs[mgs.length - 1] > Math.min(...mgs.slice(0, -1))) || (glp && glp.lastDoseChangeWk != null && glp.lastDoseChangeWk <= 2);
+  let flag, detail, suggestion = null;
+  if (ratePctWk > 1.0) {
+    flag = "lean-mass";
+    detail = `Losing ${ratePctWk.toFixed(1)}%/week — above the ~1%/week line where lean-mass loss accelerates on GLP-1 medication.`;
+    suggestion = { proteinDelta: 15, label: "Raise protein +15g/day", extra: strengthWk === 0 ? "Synced workouts show no resistance training this week — 2 sessions/week is the other half of muscle protection." : null };
+  } else if (ratePctWk < 0.2) {
+    if (titration) { flag = "titration-patience"; detail = `Trend is flat (${ratePctWk.toFixed(1)}%/wk) but your dose just moved — appetite typically drops over the next 1–2 weeks. Patience beats cutting here.`; }
+    else { flag = "plateau"; detail = `Flat trend (${ratePctWk.toFixed(1)}%/wk) at a stable dose across this window.`; suggestion = { calDelta: -125, label: "Trim calories −125/day" }; }
+  } else { flag = "on-track"; detail = `Losing ${ratePctWk.toFixed(1)}%/week — inside the healthy 0.2–1%/week band. No target changes needed.`; }
+  return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays };
+}
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const fmtDate = (d) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" });
 const daysAgo = (iso) => Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
@@ -2045,6 +2074,26 @@ export default function App() {
                     ))}
                   </div>
                   <div style={{ fontSize: 11, color: C.faint, marginTop: 7 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines (coming next)</div>
+                </div>
+              )}
+            </div>, { marginBottom: 12 });
+          })()}{(() => {
+            const hd = healthSync && healthSync.days ? healthSync.days : [];
+            const strengthWk = hd.slice(-7).reduce((n, d) => n + (d.strength || 0), 0);
+            const ar = adaptiveRead(weightLog, hd, glp, strengthWk);
+            const applied = prefs.adaptiveAppliedOn === todayISO();
+            const col = ar.flag === "lean-mass" ? C.avoid : ar.flag === "on-track" ? C.go : C.caution;
+            return card(<div>
+              {sectionTitle("Adaptive targets · learned from your trend")}
+              {ar.status === "collecting" ? (
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>Watching quietly — {ar.pts}/4 weigh-ins across {ar.spanDays}/12 days so far. Log weight every few days (or sync a scale) and this wakes up with a verdict on your real loss rate, dose-aware.</div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 13, color: col, fontWeight: 700, lineHeight: 1.45 }}>{ar.detail}</div>
+                  {ar.suggestion && ar.suggestion.extra && <div style={{ fontSize: 12, color: C.muted, marginTop: 5, lineHeight: 1.45 }}>{ar.suggestion.extra}</div>}
+                  {ar.suggestion && !applied && <button onClick={() => { const sg = ar.suggestion; setTargets({ ...targets, ...(sg.proteinDelta ? { protein: targets.protein + sg.proteinDelta } : {}), ...(sg.calDelta ? { calories: Math.max(1000, targets.calories + sg.calDelta) } : {}) }); setPrefs({ ...prefs, adaptiveAppliedOn: todayISO() }); }} style={{ marginTop: 9, width: "100%", background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Apply: {ar.suggestion.label}</button>}
+                  {applied && <div style={{ fontSize: 11.5, color: C.go, marginTop: 7, fontWeight: 700 }}>✓ Applied today — adjust anytime in Plan settings.</div>}
+                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 7 }}>{ar.pts} weigh-ins over {ar.spanDays} days · a suggestion, not a prescription — your prescriber owns your targets</div>
                 </div>
               )}
             </div>, { marginBottom: 12 });

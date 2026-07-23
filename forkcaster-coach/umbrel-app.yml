@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.4.0"
+version: "0.4.1"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.4.0: the learning arc begins - Apple Health now flows to your node. Using
-  the Health Auto Export iOS app (one-time, two-minute setup shown on the Body
-  tab), your steps, weight, active energy, and strength workouts sync to your
-  own server on a schedule - token-guarded, no cloud in between. This is the
-  data foundation for what's coming next: adaptive targets learned from your
-  real trend, a personal dose-response engine, and a one-tap report for your
-  prescriber. Start syncing now so the engines wake up with history.
+  v0.4.1: the first learning engine wakes up. Adaptive Targets (Body tab)
+  reads your real weight trend - manual weigh-ins plus synced scale data -
+  against your dose history and renders a verdict: losing faster than 1% per
+  week flags lean-mass risk with a one-tap protein raise (and calls out
+  missing resistance training from your synced workouts); a flat trend at a
+  stable dose offers a modest calorie trim; a flat trend right after a dose
+  change counsels patience instead. Needs about two weeks of weigh-ins before
+  it speaks - it says so honestly while collecting. A suggestion engine, not
+  a prescription: your prescriber owns your targets.
 dependencies: []
 path: ""
 defaultUsername: ""
