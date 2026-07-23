@@ -378,6 +378,8 @@ export default function App() {
   // food logging / barcode scan
   const [logOpen, setLogOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [healthSync, setHealthSync] = useState(null); // {token, days:[...]} from the node
+  useEffect(() => { (async () => { try { const su = await fetch("/api/health/setup").then((r) => r.json()); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ token: su.token, days: sm.days || [] }); } catch {} })(); }, []);
   const [barcode, setBarcode] = useState("");
   const [camOn, setCamOn] = useState(false);
   const [camErr, setCamErr] = useState("");
@@ -2014,7 +2016,39 @@ export default function App() {
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: 76 }}>
           {tab === "now" && renderNow()}
           {tab === "today" && renderToday()}
-          {tab === "body" && renderBody()}
+          {tab === "body" && <div>{(() => {
+            const hd = healthSync && healthSync.days ? healthSync.days : [];
+            const last = hd[hd.length - 1];
+            const wk = hd.slice(-7);
+            const avgSteps = wk.length ? Math.round(wk.reduce((n, d) => n + (d.steps || 0), 0) / wk.length) : 0;
+            const strengthWk = wk.reduce((n, d) => n + (d.strength || 0), 0);
+            const lastW = [...hd].reverse().find((d) => d.weightLbs);
+            return card(<div>
+              {sectionTitle("Apple Health · feeds the learning engines")}
+              {hd.length === 0 ? (
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>
+                  Steps, weight, and workouts from your iPhone can flow to your own node — no cloud in between. One-time setup:
+                  <div style={{ marginTop: 7 }}>1. Install the <b style={{ color: C.ink }}>Health Auto Export</b> app (App Store).</div>
+                  <div>2. Create an automation → type <b style={{ color: C.ink }}>REST API</b> → URL:</div>
+                  <div style={{ background: C.surfaceAlt, borderRadius: 8, padding: "8px 10px", margin: "6px 0", fontSize: 11, wordBreak: "break-all", color: C.ink }}>{`${window.location.origin}/api/health/sync?token=${healthSync ? healthSync.token : "…"}`}</div>
+                  <div>3. Metrics: body mass, steps, active energy, exercise time + workouts. Schedule: daily.</div>
+                  <div style={{ marginTop: 6, color: C.faint, fontSize: 11.5 }}>Manual weigh-ins here stay authoritative — synced data trains the trend and dose-response engines arriving in the next updates.</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    {[["7-day steps", avgSteps ? avgSteps.toLocaleString() : "—"], ["strength this wk", `${strengthWk}×`], ["last synced weight", lastW ? `${lastW.weightLbs} lb` : "—"]].map(([l, v]) => (
+                      <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 10, padding: "9px 10px" }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{v}</div>
+                        <div style={{ fontSize: 10.5, color: C.muted }}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.faint, marginTop: 7 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines (coming next)</div>
+                </div>
+              )}
+            </div>, { marginBottom: 12 });
+          })()}{renderBody()}</div>}
           {tab === "glp" && renderGlp()}
           {tab === "plan" && renderPlan()}
           <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />

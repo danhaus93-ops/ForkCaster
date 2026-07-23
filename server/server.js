@@ -78,6 +78,47 @@ app.get("/api/keys/status", (_req, res) => {
     spoonacular: !!get("SPOONACULAR_KEY"), spoonacularTail: tail(get("SPOONACULAR_KEY")),
   });
 });
+/* ── Apple Health ingest (via the Health Auto Export iOS app posting to this node) ── */
+const HEALTH_FILE = path.join(DATA_DIR, "health.json");
+const _loadHealth = () => { try { return JSON.parse(fs.readFileSync(HEALTH_FILE, "utf8")); } catch { return { token: null, days: {} } } };
+const _saveHealth = (h) => { try { fs.writeFileSync(HEALTH_FILE, JSON.stringify(h)); } catch {} };
+app.get("/api/health/setup", (req, res) => {
+  const h = _loadHealth();
+  if (!h.token) { h.token = require("crypto").randomBytes(12).toString("hex"); _saveHealth(h); }
+  res.json({ token: h.token, days: Object.keys(h.days || {}).length });
+});
+app.post("/api/health/sync", (req, res) => {
+  const h = _loadHealth();
+  if (!h.token || String(req.query.token || "") !== h.token) return res.status(403).json({ ok: false, error: "bad token" });
+  const metrics = (req.body && req.body.data && req.body.data.metrics) || [];
+  const workouts = (req.body && req.body.data && req.body.data.workouts) || [];
+  h.days = h.days || {}; let touched = new Set();
+  const day = (dstr) => { const d = String(dstr || "").slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null; h.days[d] = h.days[d] || {}; touched.add(d); return h.days[d]; };
+  for (const m of metrics) {
+    const nm = String(m.name || "").toLowerCase(), unit = String(m.units || "").toLowerCase();
+    for (const pt of (m.data || [])) {
+      const rec = day(pt.date); if (!rec) continue;
+      const q = +pt.qty; if (!Number.isFinite(q)) continue;
+      if (nm === "body_mass" || nm === "weight_body_mass") rec.weightLbs = Math.round((unit.startsWith("kg") ? q * 2.20462 : q) * 10) / 10;
+      else if (nm === "step_count") rec.steps = (rec.steps || 0) + Math.round(q);
+      else if (nm === "active_energy") rec.activeKcal = (rec.activeKcal || 0) + Math.round(q);
+      else if (nm === "apple_exercise_time") rec.exerciseMin = (rec.exerciseMin || 0) + Math.round(q);
+    }
+  }
+  for (const w of workouts) {
+    const rec = day(w.start || w.date); if (!rec) continue;
+    if (/strength|weight|functional|core|resistance/i.test(String(w.name || ""))) rec.strength = (rec.strength || 0) + 1;
+  }
+  const keys = Object.keys(h.days).sort(); while (keys.length > 400) delete h.days[keys.shift()]; // cap history
+  _saveHealth(h);
+  console.log(`[health] sync: ${touched.size} day(s) updated`);
+  res.json({ ok: true, daysUpdated: touched.size });
+});
+app.get("/api/health/summary", (req, res) => {
+  const h = _loadHealth();
+  const days = Object.entries(h.days || {}).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-60).map(([date, v]) => ({ date, ...v }));
+  res.json({ ok: true, days });
+});
 app.post("/api/keys", (req, res) => {
   try {
     const cur = readSecrets(); const b = req.body || {};
