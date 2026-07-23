@@ -130,8 +130,10 @@ app.get("/api/off/:barcode", async (req, res) => {
 });
 
 /* ── FatSecret OAuth2 (client credentials; cached ~23h) ── */
+const FS_PLATFORM = process.env.FATSECRET_BASE || "https://platform.fatsecret.com";
 let fsTok = null;
 async function fatsecretToken() {
+  if (process.env.FATSECRET_BASE) return "rig-token"; // test mode: fixture stub needs no OAuth
   const id = key("FATSECRET_CLIENT_ID"), sec = key("FATSECRET_CLIENT_SECRET");
   if (!id || !sec) throw new Error("fatsecret not configured");
   if (fsTok && fsTok.exp > Date.now() + 60000) return fsTok.t;
@@ -196,11 +198,11 @@ app.get("/api/food/:barcode", async (req, res) => {
   try {
     const tok = await fatsecretToken();
     const gtin = bc.padStart(13, "0");
-    const r1 = await fetch(`https://platform.fatsecret.com/rest/server.api?method=food.find_id_for_barcode&barcode=${gtin}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
+    const r1 = await fetch(`${FS_PLATFORM}/rest/server.api?method=food.find_id_for_barcode&barcode=${gtin}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
     const d1 = await r1.json();
     const fid = d1 && d1.food_id && d1.food_id.value;
     if (fid && fid !== "0") {
-      const r2 = await fetch(`https://platform.fatsecret.com/rest/server.api?method=food.get.v4&food_id=${fid}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
+      const r2 = await fetch(`${FS_PLATFORM}/rest/server.api?method=food.get.v4&food_id=${fid}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
       const d2 = await r2.json();
       const f = d2 && d2.food;
       const servs = f && f.servings && f.servings.serving;
@@ -787,6 +789,23 @@ app.get("/api/recipes/seed", (_req, res) => {
   catch (e) { res.json({ ok: false, reason: e.message }); }
 });
 
+const _normBrand = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+async function fatsecretBrandItems(brand) { // published chain nutrition in one call — the fast tier
+  const tok = await fatsecretToken();
+  const r = await fetch(`${FS_PLATFORM}/rest/server.api?method=foods.search&search_expression=${encodeURIComponent(brand)}&max_results=50&format=json`, { headers: { Authorization: `Bearer ${tok}` }, signal: AbortSignal.timeout(6000) });
+  const d = await r.json();
+  let foods = d && d.foods && d.foods.food; if (!foods) return [];
+  if (!Array.isArray(foods)) foods = [foods];
+  const nb = _normBrand(brand), out = [];
+  for (const f of foods) {
+    const bn = _normBrand(f.brand_name);
+    if (!bn || !(bn.includes(nb) || nb.includes(bn))) continue; // strict brand match — no lookalike brands
+    const m = String(f.food_description || "").match(/Calories:\s*([\d.]+)kcal.*?Fat:\s*([\d.]+)g.*?Carbs:\s*([\d.]+)g.*?Protein:\s*([\d.]+)g/i);
+    if (!m) continue;
+    out.push({ item: f.food_name, section: "PUBLISHED NUTRITION (FatSecret)", cal: Math.round(+m[1]), fat: Math.round(+m[2]), carbs: Math.round(+m[3]), protein: Math.round(+m[4]) });
+  }
+  return out;
+}
 app.get("/api/menu", async (req, res) => {
   const _reqT0 = Date.now(); // overall time budget — client aborts at 150s, so return SOMETHING by ~120s
   let earlyFallback = null; // menu-shaped early-html text WITHOUT macro evidence — kept as fallback while we go deep
@@ -802,6 +821,22 @@ app.get("/api/menu", async (req, res) => {
   MENU_INFLIGHT.set(_ckey, new Promise((ok, no) => { _resolveInflight = ok; _rejectInflight = no; }));
   res.on("finish", () => MENU_INFLIGHT.delete(_ckey));
   const _send = (obj) => { if (obj) obj.diag = _diag; if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj }); try { _resolveInflight(obj); } catch {} return res.json(obj); };
+  /* Stage 0 — FatSecret published nutrition: a half-second brand lookup beats a 90-second render. Cached scrapes still win (cache check above). */
+  try {
+    if (key("FATSECRET_CLIENT_ID") && key("FATSECRET_CLIENT_SECRET")) {
+      const rawName = String(req.query.name || "").trim() || (() => { try { return new URL(String(req.query.url)).hostname.replace(/^www\./, "").split(".")[0]; } catch { return ""; } })();
+      const brand = rawName.split(/\s+at\s+/i)[0].replace(/grill|bar|express|restaurant|cafe|kitchen|\+/gi, " ").replace(/\s+/g, " ").trim();
+      if (brand.length >= 3) {
+        const fsItems = await fatsecretBrandItems(brand);
+        const mg = fsItems.filter((i) => i.protein >= 15 && i.cal >= 200).length;
+        _diag.fatsecret = `${fsItems.length} brand items, ${mg} meal-grade`;
+        if (mg >= 3) {
+          console.log(`[menu] fatsecret tier: ${fsItems.length} items for "${brand}" (${mg} meal-grade)`);
+          return _send({ ok: true, method: "fatsecret", source: "FatSecret published nutrition", text: fsItems.map((i) => `${i.item} — ${i.cal} cal, ${i.protein}g protein, ${i.fat}g fat, ${i.carbs}g carbs`).join("\n").slice(0, 6000), items: fsItems });
+        }
+      } else _diag.fatsecret = "no usable brand name";
+    } else _diag.fatsecret = "not configured";
+  } catch (e) { _diag.fatsecret = `error: ${String(e).slice(0, 80)}`; }
   const url = req.query.url;
   if (!url || !urlAllowed(url)) return res.json({ ok: false });
   try {
