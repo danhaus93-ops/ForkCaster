@@ -724,10 +724,29 @@ const _PHOTO_CACHE_FILE = path.join(DATA_DIR, "photo-cache.json");
 const _photoCache = new Map(); // q -> {v: url|null, t} — PERSISTED; nulls retry after 24h, images live forever
 try {
   const raw = JSON.parse(fs.readFileSync(_PHOTO_CACHE_FILE, "utf8"));
-  if (raw && raw._v === 2) for (const [k, e] of Object.entries(raw)) { if (k !== "_v") _photoCache.set(k, e); }
-  // legacy (v1, pre-title-scoring) caches are discarded — their matches are untrusted
+  if (raw && raw._v === 3) for (const [k, e] of Object.entries(raw)) { if (k !== "_v") _photoCache.set(k, e); }
+  // older caches (title-only matching) are discarded — vision-unverified matches are untrusted
 } catch {}
-const _savePhotoCache = () => { try { fs.writeFileSync(_PHOTO_CACHE_FILE, JSON.stringify({ _v: 2, ...Object.fromEntries(_photoCache) })); } catch {} };
+const _savePhotoCache = () => { try { fs.writeFileSync(_PHOTO_CACHE_FILE, JSON.stringify({ _v: 3, ...Object.fromEntries(_photoCache) })); } catch {} };
+async function _visionOk(anthKey, imgUrl, q) { // one cheap haiku look: does the photo actually show the dish?
+  try {
+    const ir = await fetch(imgUrl, { signal: AbortSignal.timeout(8000) });
+    if (!ir.ok) return false;
+    const buf = Buffer.from(await ir.arrayBuffer());
+    if (buf.length > 3_500_000 || buf.length < 500) return false;
+    const mt = /\.png(\?|$)/i.test(imgUrl) ? "image/png" : "image/jpeg";
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", headers: { "Content-Type": "application/json", "x-api-key": anthKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 10, messages: [{ role: "user", content: [
+        { type: "image", source: { type: "base64", media_type: mt, data: buf.toString("base64") } },
+        { type: "text", text: `Does this photo plausibly show: "${q}"? Reply only YES or NO.` },
+      ] }] }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const d = await r.json();
+    return /yes/i.test(((d.content || []).find((x) => x.type === "text") || {}).text || "");
+  } catch { return false; }
+}
 const _STOP = new Set(["a","an","the","with","and","of","on","in","style","fresh","easy","best","homemade"]);
 const _toks = (t) => String(t).toLowerCase().split(/\W+/).filter((x) => x.length >= 3 && !_STOP.has(x));
 app.get("/api/recipes/photo", async (req, res) => {
@@ -743,16 +762,17 @@ app.get("/api/recipes/photo", async (req, res) => {
     const d = await r.json();
     // pick the candidate whose TITLE actually matches the dish — zero-overlap results are junk, reject them
     const qt = _toks(q);
-    let best = null, bestScore = 0;
-    for (const rec of (d.results || [])) {
-      if (!rec.image) continue;
-      const tt = new Set(_toks(rec.title));
-      const score = qt.filter((t) => tt.has(t)).length;
-      if (score > bestScore) { bestScore = score; best = rec; }
-    }
-    const img = bestScore >= 1 ? best.image : null;
+    const scored = (d.results || []).filter((rec) => rec.image).map((rec) => ({ rec, score: qt.filter((t) => new Set(_toks(rec.title)).has(t)).length })).filter((x) => x.score >= 1).sort((a, b) => b.score - a.score).slice(0, 3);
+    let img = null, picked = null;
+    const anthKey = key("ANTHROPIC_API_KEY");
+    if (scored.length && anthKey) {
+      for (const cand of scored) { // words got it shortlisted; the picture has to pass the eye test
+        if (await _visionOk(anthKey, cand.rec.image, q)) { img = cand.rec.image; picked = cand; break; }
+        console.log(`[recipes] photo "${q}" vision REJECTED "${cand.rec.title}"`);
+      }
+    } else if (scored.length) { img = scored[0].rec.image; picked = scored[0]; } // no key: best title match, unverified
     _photoCache.set(q, { v: img, t: Date.now() }); _savePhotoCache();
-    console.log(`[recipes] photo "${q}" -> ${img ? `matched "${best.title}" (score ${bestScore})` : `no title match among ${(d.results || []).length}`}`);
+    console.log(`[recipes] photo "${q}" -> ${img ? `${anthKey ? "vision-approved" : "title-matched"} "${picked.rec.title}" (score ${picked.score})` : `no ${anthKey ? "vision-approved" : "title"} match among ${(d.results || []).length}`}`);
     res.json({ ok: !!img, image: img });
   } catch (e) { res.json({ ok: false, reason: e.message }); }
 });

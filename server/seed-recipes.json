@@ -1,1681 +1,1681 @@
 {
- "version": 1,
- "note": "ForkCaster starter cookbook \u2014 built-in, works with no API keys. 'gentle' = dose-day safe (low fat, bland, small volume).",
- "recipes": [
-  {
-   "id": "seed:yogurt-power-bowl",
-   "name": "Greek yogurt power bowl + whey",
-   "slot": "breakfast",
-   "tags": [
-    "no-cook",
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 390,
-    "protein": 38,
-    "fat": 9,
-    "carbs": 38
-   },
-   "ingredients": [
-    "Nonfat Greek yogurt \u2014 1 cup",
-    "Vanilla whey protein \u2014 1/2 scoop",
-    "Mixed berries \u2014 3/4 cup",
-    "Chia seeds \u2014 1 tbsp",
-    "Honey \u2014 1 tsp"
-   ],
-   "steps": [
-    "Stir the whey into the yogurt until smooth.",
-    "Top with berries, chia, and honey."
-   ],
-   "photoQuery": "greek yogurt bowl berries"
-  },
-  {
-   "id": "seed:egg-white-scramble",
-   "name": "Egg & egg-white scramble",
-   "slot": "breakfast",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 360,
-    "protein": 34,
-    "fat": 12,
-    "carbs": 26
-   },
-   "ingredients": [
-    "Eggs \u2014 2",
-    "Egg whites \u2014 3",
-    "Feta \u2014 2 tbsp, crumbled",
-    "Bell pepper \u2014 1/2, diced",
-    "Whole-wheat toast \u2014 1 slice",
-    "Olive oil spray"
-   ],
-   "steps": [
-    "Soften the pepper in a sprayed nonstick pan, 2 min.",
-    "Add eggs and whites; scramble low and slow.",
-    "Fold in feta off heat; serve with toast."
-   ],
-   "photoQuery": "scrambled eggs feta toast"
-  },
-  {
-   "id": "seed:overnight-oats-whey",
-   "name": "Overnight oats + whey",
-   "slot": "breakfast",
-   "tags": [
-    "no-cook",
-    "make-ahead"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 430,
-    "protein": 34,
-    "fat": 13,
-    "carbs": 46
-   },
-   "ingredients": [
-    "Rolled oats \u2014 1/2 cup",
-    "Milk (1%) \u2014 3/4 cup",
-    "Vanilla whey protein \u2014 1 scoop",
-    "Peanut butter \u2014 1 tbsp",
-    "Banana \u2014 1/2, sliced",
-    "Cinnamon \u2014 a shake"
-   ],
-   "steps": [
-    "Whisk milk and whey until smooth.",
-    "Stir in oats, peanut butter, cinnamon.",
-    "Refrigerate overnight; top with banana."
-   ],
-   "photoQuery": "overnight oats peanut butter banana"
-  },
-  {
-   "id": "seed:cottage-banana",
-   "name": "Cottage cheese & banana",
-   "slot": "breakfast",
-   "tags": [
-    "no-cook",
-    "quick"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 250,
-    "protein": 20,
-    "fat": 4,
-    "carbs": 33
-   },
-   "ingredients": [
-    "Low-fat cottage cheese \u2014 3/4 cup",
-    "Banana \u2014 1, sliced",
-    "Cinnamon \u2014 a shake"
-   ],
-   "steps": [
-    "Bowl, slice, sprinkle. Eat slowly."
-   ],
-   "photoQuery": "cottage cheese banana bowl"
-  },
-  {
-   "id": "seed:protein-pancakes",
-   "name": "Protein pancakes",
-   "slot": "breakfast",
-   "tags": [
-    "weekend"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 420,
-    "protein": 36,
-    "fat": 10,
-    "carbs": 44
-   },
-   "ingredients": [
-    "Rolled oats \u2014 1/2 cup",
-    "Vanilla whey protein \u2014 1 scoop",
-    "Egg \u2014 1",
-    "Banana \u2014 1/2",
-    "Baking powder \u2014 1/2 tsp",
-    "Strawberries \u2014 1/2 cup"
-   ],
-   "steps": [
-    "Blend everything but the berries into a batter.",
-    "Cook 3 small pancakes on a nonstick pan.",
-    "Top with strawberries."
-   ],
-   "photoQuery": "protein pancakes strawberries"
-  },
-  {
-   "id": "seed:toast-eggs-gentle",
-   "name": "Toast, eggs & extra whites",
-   "slot": "breakfast",
-   "tags": [
-    "quick"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 280,
-    "protein": 22,
-    "fat": 8,
-    "carbs": 28
-   },
-   "ingredients": [
-    "White toast \u2014 1 slice",
-    "Egg \u2014 1",
-    "Egg whites \u2014 3",
-    "Salt \u2014 small pinch"
-   ],
-   "steps": [
-    "Scramble the egg and whites gently, no butter needed in nonstick.",
-    "Serve on dry or lightly buttered toast. Small plate on purpose."
-   ],
-   "photoQuery": "scrambled eggs on toast"
-  },
-  {
-   "id": "seed:burrito-bowl",
-   "name": "Chicken burrito bowl",
-   "slot": "lunch",
-   "tags": [
-    "meal-prep"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 560,
-    "protein": 52,
-    "fat": 14,
-    "carbs": 55
-   },
-   "ingredients": [
-    "Chicken breast \u2014 8 oz, grilled & sliced",
-    "Brown rice \u2014 3/4 cup cooked",
-    "Black beans \u2014 1/2 cup",
-    "Salsa \u2014 1/4 cup",
-    "Shredded lettuce \u2014 1 cup",
-    "Lime \u2014 1/2"
-   ],
-   "steps": [
-    "Layer rice, beans, chicken, lettuce.",
-    "Top with salsa and a squeeze of lime."
-   ],
-   "photoQuery": "chicken burrito bowl"
-  },
-  {
-   "id": "seed:turkey-wrap",
-   "name": "Turkey & avocado wrap",
-   "slot": "lunch",
-   "tags": [
-    "no-cook",
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 510,
-    "protein": 42,
-    "fat": 16,
-    "carbs": 46
-   },
-   "ingredients": [
-    "High-protein wrap \u2014 1",
-    "Deli turkey \u2014 7 oz",
-    "Avocado \u2014 1/3, mashed",
-    "Spinach \u2014 a handful",
-    "Tomato \u2014 3 slices",
-    "Mustard"
-   ],
-   "steps": [
-    "Spread avocado and mustard on the wrap.",
-    "Layer turkey, spinach, tomato; roll tight and halve."
-   ],
-   "photoQuery": "turkey avocado wrap"
-  },
-  {
-   "id": "seed:tuna-greens",
-   "name": "Tuna salad on greens",
-   "slot": "lunch",
-   "tags": [
-    "no-cook",
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 440,
-    "protein": 44,
-    "fat": 14,
-    "carbs": 30
-   },
-   "ingredients": [
-    "Tuna pouches \u2014 2 (5 oz total drained)",
-    "Light mayo \u2014 1 tbsp",
-    "Dijon \u2014 1 tsp",
-    "Mixed greens \u2014 3 cups",
-    "Olive-oil vinaigrette \u2014 1 tbsp",
-    "Whole-grain crackers \u2014 8"
-   ],
-   "steps": [
-    "Mix tuna with mayo and Dijon.",
-    "Pile onto dressed greens; crackers on the side."
-   ],
-   "photoQuery": "tuna salad greens"
-  },
-  {
-   "id": "seed:ginger-congee",
-   "name": "Ginger chicken congee, extra chicken",
-   "slot": "lunch",
-   "tags": [
-    "make-ahead",
-    "warm"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 360,
-    "protein": 34,
-    "fat": 6,
-    "carbs": 42
-   },
-   "ingredients": [
-    "Jasmine rice \u2014 1/2 cup dry",
-    "Low-sodium chicken broth \u2014 3 cups",
-    "Chicken breast \u2014 7 oz, shredded",
-    "Fresh ginger \u2014 1 inch, sliced",
-    "Scallion \u2014 1, thin-sliced",
-    "Salt \u2014 a pinch at the end"
-   ],
-   "steps": [
-    "Simmer rice, broth, and ginger 35\u201345 min, stirring now and then, until porridge-thick.",
-    "Stir in shredded chicken to warm through.",
-    "Finish with scallion and a small pinch of salt. Eat warm and slow."
-   ],
-   "photoQuery": "chicken congee"
-  },
-  {
-   "id": "seed:chicken-noodle-soup",
-   "name": "Chicken noodle soup, extra chicken",
-   "slot": "lunch",
-   "tags": [
-    "warm"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 390,
-    "protein": 34,
-    "fat": 8,
-    "carbs": 42
-   },
-   "ingredients": [
-    "Low-sodium chicken broth \u2014 2.5 cups",
-    "Chicken breast \u2014 6 oz, shredded",
-    "Egg noodles \u2014 1 cup cooked",
-    "Carrot \u2014 1, thin coins",
-    "Celery \u2014 1 rib, sliced",
-    "Saltines \u2014 6"
-   ],
-   "steps": [
-    "Simmer carrot and celery in broth until tender.",
-    "Add noodles and chicken; warm through.",
-    "Saltines on the side."
-   ],
-   "photoQuery": "chicken noodle soup"
-  },
-  {
-   "id": "seed:caesar-light",
-   "name": "Grilled chicken Caesar (light)",
-   "slot": "lunch",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 520,
-    "protein": 48,
-    "fat": 18,
-    "carbs": 34
-   },
-   "ingredients": [
-    "Chicken breast \u2014 8 oz, grilled",
-    "Romaine \u2014 3 cups, chopped",
-    "Light Caesar dressing \u2014 1.5 tbsp, on the side",
-    "Parmesan \u2014 1 tbsp",
-    "Croutons \u2014 1/2 cup"
-   ],
-   "steps": [
-    "Slice the grilled chicken over the romaine.",
-    "Top with parmesan and croutons; dip, don't pour, the dressing."
-   ],
-   "photoQuery": "grilled chicken caesar salad"
-  },
-  {
-   "id": "seed:sheetpan-salmon",
-   "name": "Sheet-pan salmon & green beans",
-   "slot": "dinner",
-   "tags": [
-    "sheet-pan"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 580,
-    "protein": 45,
-    "fat": 24,
-    "carbs": 40
-   },
-   "ingredients": [
-    "Salmon fillet \u2014 8 oz",
-    "Green beans \u2014 2 cups",
-    "Baby potatoes \u2014 5, halved",
-    "Olive oil \u2014 2 tsp",
-    "Lemon \u2014 1/2",
-    "Garlic powder, salt, pepper"
-   ],
-   "steps": [
-    "Roast oiled potatoes at 425\u00b0F for 15 min.",
-    "Add salmon and green beans; season; roast 12\u201314 min more.",
-    "Finish with lemon."
-   ],
-   "photoQuery": "sheet pan salmon green beans"
-  },
-  {
-   "id": "seed:sirloin-stirfry",
-   "name": "Sirloin & broccoli stir-fry",
-   "slot": "dinner",
-   "tags": [
-    "one-pan"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 560,
-    "protein": 42,
-    "fat": 18,
-    "carbs": 52
-   },
-   "ingredients": [
-    "Sirloin \u2014 7 oz, thin-sliced",
-    "Broccoli florets \u2014 2 cups",
-    "Jasmine rice \u2014 3/4 cup cooked",
-    "Low-sodium soy sauce \u2014 1.5 tbsp",
-    "Garlic \u2014 2 cloves",
-    "Sesame oil \u2014 1 tsp"
-   ],
-   "steps": [
-    "Sear beef hard in a hot pan; set aside.",
-    "Stir-fry broccoli and garlic with a splash of water, lidded, 3 min.",
-    "Return beef with soy and sesame; serve over rice."
-   ],
-   "photoQuery": "beef broccoli stir fry rice"
-  },
-  {
-   "id": "seed:chicken-parm-light",
-   "name": "Baked chicken parm (light)",
-   "slot": "dinner",
-   "tags": [
-    "oven"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 540,
-    "protein": 52,
-    "fat": 16,
-    "carbs": 42
-   },
-   "ingredients": [
-    "Chicken breast \u2014 8 oz, butterflied",
-    "Panko \u2014 1/3 cup",
-    "Egg white \u2014 1",
-    "Marinara \u2014 1/2 cup",
-    "Part-skim mozzarella \u2014 1/4 cup",
-    "Zucchini \u2014 2, spiralized"
-   ],
-   "steps": [
-    "Dip chicken in egg white, press into panko; bake at 425\u00b0F ~18 min.",
-    "Top with marinara and mozzarella; bake until melted.",
-    "Serve over quickly saut\u00e9ed zucchini noodles."
-   ],
-   "photoQuery": "baked chicken parmesan zucchini noodles"
-  },
-  {
-   "id": "seed:poached-cod",
-   "name": "Poached cod & white rice",
-   "slot": "dinner",
-   "tags": [
-    "quick",
-    "warm"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 380,
-    "protein": 40,
-    "fat": 5,
-    "carbs": 44
-   },
-   "ingredients": [
-    "Cod fillet \u2014 8 oz",
-    "White rice \u2014 3/4 cup cooked",
-    "Carrots \u2014 1 cup, steamed",
-    "Lemon \u2014 2 slices",
-    "Salt \u2014 small pinch"
-   ],
-   "steps": [
-    "Slide cod into barely simmering salted water with lemon; poach 7\u20139 min.",
-    "Serve over rice with steamed carrots. No sauce on purpose."
-   ],
-   "photoQuery": "poached cod rice"
-  },
-  {
-   "id": "seed:turkey-rice-mild",
-   "name": "Turkey rice bowl, mild",
-   "slot": "dinner",
-   "tags": [
-    "one-pan"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 470,
-    "protein": 44,
-    "fat": 10,
-    "carbs": 50
-   },
-   "ingredients": [
-    "93/7 ground turkey \u2014 8 oz",
-    "Jasmine rice \u2014 3/4 cup cooked",
-    "Zucchini \u2014 1, half-moons, steamed",
-    "Low-sodium soy \u2014 2 tsp",
-    "Salt, no heat"
-   ],
-   "steps": [
-    "Brown the turkey; drain if needed; season mild.",
-    "Bowl over rice with steamed zucchini."
-   ],
-   "photoQuery": "ground turkey rice bowl"
-  },
-  {
-   "id": "seed:pork-tenderloin",
-   "name": "Pork tenderloin & sweet potato",
-   "slot": "dinner",
-   "tags": [
-    "oven",
-    "meal-prep"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 560,
-    "protein": 44,
-    "fat": 16,
-    "carbs": 54
-   },
-   "ingredients": [
-    "Pork tenderloin \u2014 7 oz",
-    "Sweet potato \u2014 1 large",
-    "Asparagus \u2014 8 spears",
-    "Olive oil \u2014 2 tsp",
-    "Smoked paprika, salt, pepper"
-   ],
-   "steps": [
-    "Roast the rubbed tenderloin and halved sweet potato at 425\u00b0F ~20 min.",
-    "Add oiled asparagus for the last 8 min.",
-    "Rest the pork 5 min before slicing."
-   ],
-   "photoQuery": "pork tenderloin sweet potato"
-  },
-  {
-   "id": "seed:shrimp-tacos",
-   "name": "Shrimp tacos (3)",
-   "slot": "dinner",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 540,
-    "protein": 42,
-    "fat": 16,
-    "carbs": 54
-   },
-   "ingredients": [
-    "Shrimp \u2014 8 oz, peeled",
-    "Corn tortillas \u2014 3",
-    "Cabbage slaw \u2014 1 cup",
-    "Greek yogurt \u2014 2 tbsp",
-    "Lime \u2014 1",
-    "Chili powder"
-   ],
-   "steps": [
-    "Sear chili-dusted shrimp 2 min per side.",
-    "Warm tortillas; fill with slaw and shrimp.",
-    "Lime-spiked yogurt on top."
-   ],
-   "photoQuery": "shrimp tacos slaw"
-  },
-  {
-   "id": "seed:cottage-pineapple",
-   "name": "Cottage cheese & pineapple",
-   "slot": "snack",
-   "tags": [
-    "no-cook"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 160,
-    "protein": 17,
-    "fat": 2,
-    "carbs": 18
-   },
-   "ingredients": [
-    "Low-fat cottage cheese \u2014 3/4 cup",
-    "Pineapple chunks \u2014 1/2 cup"
-   ],
-   "steps": [
-    "Combine. Done."
-   ],
-   "photoQuery": "cottage cheese pineapple"
-  },
-  {
-   "id": "seed:skyr-cup",
-   "name": "Skyr cup",
-   "slot": "snack",
-   "tags": [
-    "no-cook",
-    "grab"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 120,
-    "protein": 15,
-    "fat": 0,
-    "carbs": 14
-   },
-   "ingredients": [
-    "Plain skyr \u2014 1 single-serve cup"
-   ],
-   "steps": [
-    "Peel lid."
-   ],
-   "photoQuery": "skyr yogurt cup"
-  },
-  {
-   "id": "seed:whey-shake",
-   "name": "Vanilla whey, sipped slowly",
-   "slot": "snack",
-   "tags": [
-    "no-cook",
-    "liquid"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 160,
-    "protein": 25,
-    "fat": 2,
-    "carbs": 8
-   },
-   "ingredients": [
-    "Vanilla whey protein \u2014 1 scoop",
-    "Cold water or milk \u2014 10 oz",
-    "Ice"
-   ],
-   "steps": [
-    "Shake hard. Sip slowly \u2014 liquid protein for days solids are hard."
-   ],
-   "photoQuery": "vanilla protein shake"
-  },
-  {
-   "id": "seed:greek-yogurt-plain",
-   "name": "Greek yogurt, plain",
-   "slot": "snack",
-   "tags": [
-    "no-cook"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 140,
-    "protein": 17,
-    "fat": 0,
-    "carbs": 9
-   },
-   "ingredients": [
-    "Nonfat Greek yogurt \u2014 3/4 cup"
-   ],
-   "steps": [
-    "Cold and simple."
-   ],
-   "photoQuery": "greek yogurt bowl"
-  },
-  {
-   "id": "seed:jerky-apple",
-   "name": "Beef jerky & an apple",
-   "slot": "snack",
-   "tags": [
-    "grab",
-    "no-cook"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 150,
-    "protein": 14,
-    "fat": 2,
-    "carbs": 20
-   },
-   "ingredients": [
-    "Beef jerky \u2014 1 oz",
-    "Apple \u2014 1"
-   ],
-   "steps": [
-    "Glovebox-proof."
-   ],
-   "photoQuery": "beef jerky apple"
-  },
-  {
-   "id": "seed:cheese-almonds",
-   "name": "String cheese & almonds",
-   "slot": "snack",
-   "tags": [
-    "grab",
-    "no-cook"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 170,
-    "protein": 12,
-    "fat": 12,
-    "carbs": 5
-   },
-   "ingredients": [
-    "String cheese \u2014 1",
-    "Almonds \u2014 small handful (10)"
-   ],
-   "steps": [
-    "Pocket snack."
-   ],
-   "photoQuery": "string cheese almonds"
-  },
-  {
-   "id": "seed:veggie-egg-bites",
-   "name": "Veggie egg bites (4)",
-   "slot": "breakfast",
-   "tags": [
-    "make-ahead"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 280,
-    "protein": 24,
-    "fat": 12,
-    "carbs": 16
-   },
-   "ingredients": [
-    "Eggs \u2014 2",
-    "Egg whites \u2014 3",
-    "Bell pepper \u2014 1/3 cup, diced",
-    "Spinach \u2014 handful, chopped",
-    "Cheddar \u2014 3 tbsp",
-    "Milk \u2014 splash"
-   ],
-   "steps": [
-    "Whisk everything; pour into 4 greased muffin cups.",
-    "Bake 350\u00b0F ~18 min until set.",
-    "Fridge 4 days \u2014 grab and reheat."
-   ],
-   "photoQuery": "egg bites vegetables"
-  },
-  {
-   "id": "seed:salmon-toast",
-   "name": "Smoked salmon toast",
-   "slot": "breakfast",
-   "tags": [
-    "no-cook",
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 340,
-    "protein": 29,
-    "fat": 12,
-    "carbs": 30
-   },
-   "ingredients": [
-    "Whole-grain toast \u2014 2 slices",
-    "Smoked salmon \u2014 4 oz",
-    "Light cream cheese \u2014 2 tbsp",
-    "Capers \u2014 1 tsp",
-    "Red onion \u2014 a few slivers"
-   ],
-   "steps": [
-    "Spread, layer, done."
-   ],
-   "photoQuery": "smoked salmon toast"
-  },
-  {
-   "id": "seed:banana-whey-smoothie",
-   "name": "Banana oat whey smoothie",
-   "slot": "breakfast",
-   "tags": [
-    "no-cook",
-    "liquid",
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 380,
-    "protein": 32,
-    "fat": 7,
-    "carbs": 50
-   },
-   "ingredients": [
-    "Vanilla whey \u2014 1 scoop",
-    "Banana \u2014 1",
-    "Rolled oats \u2014 1/3 cup",
-    "Milk (1%) \u2014 1 cup",
-    "Ice"
-   ],
-   "steps": [
-    "Blend until smooth."
-   ],
-   "photoQuery": "banana oat protein smoothie"
-  },
-  {
-   "id": "seed:turkey-sausage-eggs",
-   "name": "Turkey sausage & eggs",
-   "slot": "breakfast",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 340,
-    "protein": 33,
-    "fat": 14,
-    "carbs": 18
-   },
-   "ingredients": [
-    "Turkey breakfast sausage \u2014 3 links",
-    "Eggs \u2014 2",
-    "Whole-wheat toast \u2014 1 slice"
-   ],
-   "steps": [
-    "Brown sausage; scramble eggs alongside.",
-    "Plate with toast."
-   ],
-   "photoQuery": "turkey sausage scrambled eggs breakfast"
-  },
-  {
-   "id": "seed:skyr-parfait",
-   "name": "Skyr granola parfait",
-   "slot": "breakfast",
-   "tags": [
-    "no-cook",
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 330,
-    "protein": 28,
-    "fat": 6,
-    "carbs": 42
-   },
-   "ingredients": [
-    "Plain skyr \u2014 1 cup",
-    "Low-sugar granola \u2014 1/3 cup",
-    "Blueberries \u2014 1/2 cup",
-    "Honey \u2014 1 tsp"
-   ],
-   "steps": [
-    "Layer in a glass; eat with a long spoon."
-   ],
-   "photoQuery": "yogurt granola berry parfait"
-  },
-  {
-   "id": "seed:rice-porridge-egg",
-   "name": "Rice porridge with soft egg",
-   "slot": "breakfast",
-   "tags": [
-    "warm"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 280,
-    "protein": 18,
-    "fat": 6,
-    "carbs": 40
-   },
-   "ingredients": [
-    "White rice \u2014 1/3 cup dry",
-    "Water or broth \u2014 2.5 cups",
-    "Egg \u2014 1, soft-cooked",
-    "Salt \u2014 pinch"
-   ],
-   "steps": [
-    "Simmer rice loose and soupy, ~30 min.",
-    "Slide the soft egg on top; season lightly.",
-    "Warm, mild, easy \u2014 dose-morning food."
-   ],
-   "photoQuery": "rice porridge soft egg"
-  },
-  {
-   "id": "seed:applesauce-oats",
-   "name": "Applesauce oats + whey",
-   "slot": "breakfast",
-   "tags": [
-    "warm"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 310,
-    "protein": 26,
-    "fat": 5,
-    "carbs": 44
-   },
-   "ingredients": [
-    "Rolled oats \u2014 1/2 cup",
-    "Unsweetened applesauce \u2014 1/2 cup",
-    "Vanilla whey \u2014 3/4 scoop",
-    "Cinnamon \u2014 a shake",
-    "Water"
-   ],
-   "steps": [
-    "Cook oats in water; stir in applesauce and cinnamon.",
-    "Cool 2 min, stir in whey (off heat so it stays smooth)."
-   ],
-   "photoQuery": "cinnamon apple oatmeal bowl"
-  },
-  {
-   "id": "seed:breakfast-burrito",
-   "name": "Turkey breakfast burrito",
-   "slot": "breakfast",
-   "tags": [
-    "hand-held"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 420,
-    "protein": 34,
-    "fat": 14,
-    "carbs": 40
-   },
-   "ingredients": [
-    "High-protein tortilla \u2014 1",
-    "Eggs \u2014 2",
-    "Egg whites \u2014 2",
-    "Turkey sausage crumbles \u2014 2 oz",
-    "Salsa \u2014 2 tbsp",
-    "Cheddar \u2014 2 tbsp"
-   ],
-   "steps": [
-    "Scramble eggs, whites, and sausage together.",
-    "Roll with cheese and salsa; toast seam-side down 1 min."
-   ],
-   "photoQuery": "breakfast burrito eggs"
-  },
-  {
-   "id": "seed:chicken-quinoa-bowl",
-   "name": "Chicken quinoa power bowl",
-   "slot": "lunch",
-   "tags": [
-    "meal-prep"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 520,
-    "protein": 44,
-    "fat": 14,
-    "carbs": 52
-   },
-   "ingredients": [
-    "Chicken breast \u2014 7 oz, grilled",
-    "Quinoa \u2014 3/4 cup cooked",
-    "Cucumber & tomato \u2014 1 cup, chopped",
-    "Feta \u2014 2 tbsp",
-    "Lemon vinaigrette \u2014 1 tbsp"
-   ],
-   "steps": [
-    "Bowl the quinoa and vegetables.",
-    "Top with sliced chicken, feta, vinaigrette."
-   ],
-   "photoQuery": "chicken quinoa bowl"
-  },
-  {
-   "id": "seed:turkey-chili",
-   "name": "Turkey chili (big cup)",
-   "slot": "lunch",
-   "tags": [
-    "make-ahead",
-    "warm"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 380,
-    "protein": 36,
-    "fat": 10,
-    "carbs": 38
-   },
-   "ingredients": [
-    "93/7 ground turkey \u2014 6 oz",
-    "Kidney beans \u2014 1/2 cup",
-    "Crushed tomatoes \u2014 3/4 cup",
-    "Onion \u2014 1/4, diced",
-    "Chili powder & cumin"
-   ],
-   "steps": [
-    "Brown turkey with onion.",
-    "Add beans, tomatoes, spices; simmer 20 min.",
-    "Freezes beautifully \u2014 make triple."
-   ],
-   "photoQuery": "turkey chili bowl"
-  },
-  {
-   "id": "seed:egg-salad-sandwich",
-   "name": "Egg salad sandwich (light)",
-   "slot": "lunch",
-   "tags": [
-    "no-cook-ish",
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 400,
-    "protein": 26,
-    "fat": 14,
-    "carbs": 40
-   },
-   "ingredients": [
-    "Hard-boiled eggs \u2014 2 + 2 whites",
-    "Light mayo \u2014 1 tbsp",
-    "Dijon \u2014 1 tsp",
-    "Whole-grain bread \u2014 2 slices",
-    "Lettuce"
-   ],
-   "steps": [
-    "Mash eggs with mayo and Dijon.",
-    "Sandwich with lettuce."
-   ],
-   "photoQuery": "egg salad sandwich"
-  },
-  {
-   "id": "seed:lentil-chicken-soup",
-   "name": "Lentil soup with chicken",
-   "slot": "lunch",
-   "tags": [
-    "warm",
-    "make-ahead"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 420,
-    "protein": 34,
-    "fat": 8,
-    "carbs": 52
-   },
-   "ingredients": [
-    "Cooked lentils \u2014 3/4 cup",
-    "Chicken breast \u2014 4 oz, shredded",
-    "Carrot & celery \u2014 3/4 cup",
-    "Low-sodium broth \u2014 2 cups",
-    "Cumin"
-   ],
-   "steps": [
-    "Simmer vegetables in broth until tender.",
-    "Add lentils and chicken; warm through."
-   ],
-   "photoQuery": "lentil soup chicken"
-  },
-  {
-   "id": "seed:steak-salad",
-   "name": "Sirloin steak salad",
-   "slot": "lunch",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 470,
-    "protein": 42,
-    "fat": 17,
-    "carbs": 30
-   },
-   "ingredients": [
-    "Sirloin \u2014 6 oz",
-    "Mixed greens \u2014 3 cups",
-    "Cherry tomatoes \u2014 1/2 cup",
-    "Blue cheese crumbles \u2014 1 tbsp",
-    "Balsamic vinaigrette \u2014 1 tbsp",
-    "Croutons \u2014 1/3 cup"
-   ],
-   "steps": [
-    "Sear steak to medium-rare; rest, slice thin.",
-    "Fan over dressed greens with the rest."
-   ],
-   "photoQuery": "steak salad greens"
-  },
-  {
-   "id": "seed:shrimp-rice-bowl",
-   "name": "Shrimp & rice bowl",
-   "slot": "lunch",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 450,
-    "protein": 38,
-    "fat": 9,
-    "carbs": 54
-   },
-   "ingredients": [
-    "Shrimp \u2014 7 oz",
-    "Jasmine rice \u2014 3/4 cup cooked",
-    "Edamame \u2014 1/2 cup",
-    "Cucumber \u2014 1/2, sliced",
-    "Soy & sriracha drizzle"
-   ],
-   "steps": [
-    "Sear shrimp 2 min per side.",
-    "Bowl over rice with edamame and cucumber; drizzle."
-   ],
-   "photoQuery": "shrimp rice bowl"
-  },
-  {
-   "id": "seed:turkey-rice-soup",
-   "name": "Turkey & rice soup",
-   "slot": "lunch",
-   "tags": [
-    "warm"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 340,
-    "protein": 30,
-    "fat": 6,
-    "carbs": 40
-   },
-   "ingredients": [
-    "Ground turkey \u2014 5 oz",
-    "White rice \u2014 1/2 cup cooked",
-    "Low-sodium broth \u2014 2.5 cups",
-    "Carrot \u2014 1, coins",
-    "Salt \u2014 light"
-   ],
-   "steps": [
-    "Brown turkey; add broth and carrots, simmer 10 min.",
-    "Stir in rice; keep it mild and brothy."
-   ],
-   "photoQuery": "turkey rice soup"
-  },
-  {
-   "id": "seed:baked-potato-cottage",
-   "name": "Baked potato + cottage cheese",
-   "slot": "lunch",
-   "tags": [
-    "plain"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 360,
-    "protein": 24,
-    "fat": 3,
-    "carbs": 58
-   },
-   "ingredients": [
-    "Russet potato \u2014 1 large",
-    "Low-fat cottage cheese \u2014 3/4 cup",
-    "Chives \u2014 snipped",
-    "Salt \u2014 light"
-   ],
-   "steps": [
-    "Bake or microwave the potato until fluffy.",
-    "Split, pile on cottage cheese, chives."
-   ],
-   "photoQuery": "baked potato cottage cheese"
-  },
-  {
-   "id": "seed:chicken-pita",
-   "name": "Chicken pita pocket",
-   "slot": "lunch",
-   "tags": [
-    "hand-held"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 470,
-    "protein": 40,
-    "fat": 12,
-    "carbs": 50
-   },
-   "ingredients": [
-    "Chicken breast \u2014 7 oz, sliced",
-    "Whole-wheat pita \u2014 1",
-    "Tzatziki \u2014 2 tbsp",
-    "Tomato & cucumber",
-    "Lettuce"
-   ],
-   "steps": [
-    "Stuff and go."
-   ],
-   "photoQuery": "chicken pita pocket tzatziki"
-  },
-  {
-   "id": "seed:tilapia-mash",
-   "name": "Baked tilapia & mashed potatoes",
-   "slot": "dinner",
-   "tags": [
-    "oven"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 460,
-    "protein": 42,
-    "fat": 9,
-    "carbs": 52
-   },
-   "ingredients": [
-    "Tilapia fillets \u2014 8 oz",
-    "Potatoes \u2014 1.5 cups, mashed w/ milk",
-    "Green beans \u2014 1 cup, steamed",
-    "Lemon",
-    "Salt \u2014 light"
-   ],
-   "steps": [
-    "Bake tilapia at 400\u00b0F ~12 min with lemon.",
-    "Plate with mash and steamed beans. Mild by design."
-   ],
-   "photoQuery": "baked tilapia mashed potatoes"
-  },
-  {
-   "id": "seed:chicken-plain-rice",
-   "name": "Chicken breast & plain rice",
-   "slot": "dinner",
-   "tags": [
-    "plain"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 470,
-    "protein": 46,
-    "fat": 7,
-    "carbs": 54
-   },
-   "ingredients": [
-    "Chicken breast \u2014 8 oz",
-    "Jasmine rice \u2014 1 cup cooked",
-    "Steamed zucchini \u2014 1 cup",
-    "Salt \u2014 light"
-   ],
-   "steps": [
-    "Poach or bake the chicken plain; slice.",
-    "The blandest big-protein plate in the book \u2014 that's the point."
-   ],
-   "photoQuery": "grilled chicken breast rice"
-  },
-  {
-   "id": "seed:turkey-meatballs",
-   "name": "Turkey meatballs & spaghetti (light)",
-   "slot": "dinner",
-   "tags": [
-    "family"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 560,
-    "protein": 44,
-    "fat": 15,
-    "carbs": 60
-   },
-   "ingredients": [
-    "93/7 ground turkey \u2014 7 oz",
-    "Egg \u2014 1",
-    "Panko \u2014 3 tbsp",
-    "Marinara \u2014 3/4 cup",
-    "Spaghetti \u2014 1.25 cups cooked",
-    "Parmesan \u2014 1 tbsp"
-   ],
-   "steps": [
-    "Roll and bake meatballs at 425\u00b0F ~15 min.",
-    "Simmer briefly in marinara; serve over spaghetti."
-   ],
-   "photoQuery": "turkey meatballs spaghetti"
-  },
-  {
-   "id": "seed:garlic-shrimp-pasta",
-   "name": "Garlic shrimp pasta (light)",
-   "slot": "dinner",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 540,
-    "protein": 40,
-    "fat": 13,
-    "carbs": 62
-   },
-   "ingredients": [
-    "Shrimp \u2014 8 oz",
-    "Linguine \u2014 1.25 cups cooked",
-    "Garlic \u2014 3 cloves",
-    "Olive oil \u2014 2 tsp",
-    "Lemon & parsley",
-    "Red pepper flakes \u2014 pinch"
-   ],
-   "steps": [
-    "Sizzle garlic in oil; add shrimp 3 min.",
-    "Toss with pasta, lemon, parsley, a splash of pasta water."
-   ],
-   "photoQuery": "garlic shrimp pasta"
-  },
-  {
-   "id": "seed:beef-rice-skillet",
-   "name": "Beef & rice skillet",
-   "slot": "dinner",
-   "tags": [
-    "one-pan"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 560,
-    "protein": 42,
-    "fat": 17,
-    "carbs": 56
-   },
-   "ingredients": [
-    "93/7 ground beef \u2014 7 oz",
-    "Rice \u2014 3/4 cup cooked",
-    "Bell pepper & onion \u2014 1 cup",
-    "Tomato paste \u2014 1 tbsp",
-    "Smoked paprika"
-   ],
-   "steps": [
-    "Brown beef with vegetables.",
-    "Stir in rice, paste, paprika; one pan, done."
-   ],
-   "photoQuery": "ground beef rice skillet"
-  },
-  {
-   "id": "seed:roast-chicken-thighs",
-   "name": "Roast chicken thighs & vegetables",
-   "slot": "dinner",
-   "tags": [
-    "oven",
-    "sheet-pan"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 540,
-    "protein": 44,
-    "fat": 20,
-    "carbs": 40
-   },
-   "ingredients": [
-    "Chicken thighs, skinless \u2014 8 oz",
-    "Carrots & brussels \u2014 2 cups",
-    "Baby potatoes \u2014 4",
-    "Olive oil \u2014 2 tsp",
-    "Rosemary"
-   ],
-   "steps": [
-    "Everything on one pan, 425\u00b0F ~28 min.",
-    "Toss halfway."
-   ],
-   "photoQuery": "roasted chicken thighs vegetables sheet pan"
-  },
-  {
-   "id": "seed:pork-chop-applesauce",
-   "name": "Pork chop, applesauce & rice",
-   "slot": "dinner",
-   "tags": [
-    "classic"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 520,
-    "protein": 42,
-    "fat": 14,
-    "carbs": 54
-   },
-   "ingredients": [
-    "Boneless pork chop \u2014 7 oz",
-    "Unsweetened applesauce \u2014 1/2 cup",
-    "Rice \u2014 3/4 cup cooked",
-    "Steamed broccoli \u2014 1 cup"
-   ],
-   "steps": [
-    "Sear the chop 4 min a side; rest.",
-    "Serve with applesauce, rice, broccoli."
-   ],
-   "photoQuery": "pork chop applesauce"
-  },
-  {
-   "id": "seed:salmon-rice-bowl",
-   "name": "Salmon rice bowl",
-   "slot": "dinner",
-   "tags": [
-    "quick"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 540,
-    "protein": 42,
-    "fat": 18,
-    "carbs": 50
-   },
-   "ingredients": [
-    "Salmon \u2014 7 oz",
-    "Rice \u2014 3/4 cup cooked",
-    "Avocado \u2014 1/4",
-    "Cucumber",
-    "Soy & sesame"
-   ],
-   "steps": [
-    "Sear or air-fry salmon; flake over rice.",
-    "Top with avocado, cucumber, drizzle."
-   ],
-   "photoQuery": "salmon rice bowl avocado"
-  },
-  {
-   "id": "seed:chicken-fajita-bowl",
-   "name": "Chicken fajita bowl",
-   "slot": "dinner",
-   "tags": [
-    "one-pan"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 530,
-    "protein": 46,
-    "fat": 14,
-    "carbs": 52
-   },
-   "ingredients": [
-    "Chicken breast \u2014 8 oz, strips",
-    "Peppers & onions \u2014 1.5 cups",
-    "Fajita seasoning",
-    "Rice \u2014 3/4 cup cooked",
-    "Greek yogurt \u2014 1 tbsp",
-    "Lime"
-   ],
-   "steps": [
-    "Sear chicken and vegetables hard with seasoning.",
-    "Bowl over rice; yogurt and lime on top."
-   ],
-   "photoQuery": "chicken fajita bowl"
-  },
-  {
-   "id": "seed:white-chicken-chili",
-   "name": "White chicken chili",
-   "slot": "dinner",
-   "tags": [
-    "make-ahead",
-    "warm"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 460,
-    "protein": 42,
-    "fat": 11,
-    "carbs": 46
-   },
-   "ingredients": [
-    "Chicken breast \u2014 7 oz, shredded",
-    "White beans \u2014 3/4 cup",
-    "Green chiles \u2014 2 tbsp",
-    "Broth \u2014 1.5 cups",
-    "Cumin & oregano",
-    "Greek yogurt \u2014 1 tbsp"
-   ],
-   "steps": [
-    "Simmer everything but yogurt 15 min.",
-    "Stir in yogurt off heat for creaminess."
-   ],
-   "photoQuery": "white chicken chili"
-  },
-  {
-   "id": "seed:flank-steak-potatoes",
-   "name": "Flank steak & roasted potatoes",
-   "slot": "dinner",
-   "tags": [
-    "oven"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 560,
-    "protein": 45,
-    "fat": 16,
-    "carbs": 52
-   },
-   "ingredients": [
-    "Flank steak \u2014 7 oz",
-    "Baby potatoes \u2014 6, halved",
-    "Asparagus \u2014 8 spears",
-    "Olive oil \u2014 2 tsp",
-    "Garlic powder"
-   ],
-   "steps": [
-    "Roast potatoes 425\u00b0F 20 min; add asparagus last 8.",
-    "Sear steak 4 min a side; rest 5; slice against the grain."
-   ],
-   "photoQuery": "flank steak roasted potatoes"
-  },
-  {
-   "id": "seed:tofu-stirfry",
-   "name": "Tofu veggie stir-fry + edamame",
-   "slot": "dinner",
-   "tags": [
-    "vegetarian",
-    "one-pan"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 440,
-    "protein": 28,
-    "fat": 14,
-    "carbs": 50
-   },
-   "ingredients": [
-    "Extra-firm tofu \u2014 7 oz, cubed",
-    "Broccoli & snap peas \u2014 2 cups",
-    "Edamame \u2014 1/2 cup",
-    "Rice \u2014 1/2 cup cooked",
-    "Soy-garlic sauce \u2014 1.5 tbsp",
-    "Sesame oil \u2014 1 tsp"
-   ],
-   "steps": [
-    "Crisp tofu in a hot pan; set aside.",
-    "Stir-fry vegetables; return tofu with sauce and edamame; serve over rice."
-   ],
-   "photoQuery": "tofu vegetable stir fry"
-  },
-  {
-   "id": "seed:tuna-crackers",
-   "name": "Tuna pouch & crackers",
-   "slot": "snack",
-   "tags": [
-    "grab",
-    "no-cook"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 190,
-    "protein": 22,
-    "fat": 3,
-    "carbs": 18
-   },
-   "ingredients": [
-    "Tuna pouch \u2014 1 (flavored ok)",
-    "Whole-grain crackers \u2014 8"
-   ],
-   "steps": [
-    "Desk-drawer protein."
-   ],
-   "photoQuery": "tuna crackers snack"
-  },
-  {
-   "id": "seed:protein-bar",
-   "name": "Protein bar",
-   "slot": "snack",
-   "tags": [
-    "grab"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 210,
-    "protein": 20,
-    "fat": 7,
-    "carbs": 22
-   },
-   "ingredients": [
-    "Protein bar \u2014 1 (20g class)"
-   ],
-   "steps": [
-    "Unwrap."
-   ],
-   "photoQuery": "protein bar"
-  },
-  {
-   "id": "seed:edamame-cup",
-   "name": "Edamame cup, salted",
-   "slot": "snack",
-   "tags": [
-    "no-cook"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 130,
-    "protein": 12,
-    "fat": 4,
-    "carbs": 10
-   },
-   "ingredients": [
-    "Shelled edamame \u2014 3/4 cup",
-    "Sea salt"
-   ],
-   "steps": [
-    "Microwave from frozen 90 sec; salt."
-   ],
-   "photoQuery": "edamame bowl salted"
-  },
-  {
-   "id": "seed:hard-boiled-eggs",
-   "name": "Hard-boiled eggs (2)",
-   "slot": "snack",
-   "tags": [
-    "make-ahead",
-    "grab"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 140,
-    "protein": 12,
-    "fat": 10,
-    "carbs": 1
-   },
-   "ingredients": [
-    "Eggs \u2014 2",
-    "Salt & pepper"
-   ],
-   "steps": [
-    "Boil a batch Sunday; fridge all week."
-   ],
-   "photoQuery": "hard boiled eggs"
-  },
-  {
-   "id": "seed:banana-whey-half",
-   "name": "Banana + half-scoop whey",
-   "slot": "snack",
-   "tags": [
-    "no-cook",
-    "liquid"
-   ],
-   "gentle": true,
-   "servings": 1,
-   "perServing": {
-    "calories": 160,
-    "protein": 16,
-    "fat": 2,
-    "carbs": 24
-   },
-   "ingredients": [
-    "Banana \u2014 1",
-    "Vanilla whey \u2014 1/2 scoop in water"
-   ],
-   "steps": [
-    "Gentle calories that go down easy on rough days."
-   ],
-   "photoQuery": "banana protein shake"
-  },
-  {
-   "id": "seed:turkey-rollups",
-   "name": "Turkey roll-ups",
-   "slot": "snack",
-   "tags": [
-    "no-cook",
-    "grab"
-   ],
-   "gentle": false,
-   "servings": 1,
-   "perServing": {
-    "calories": 150,
-    "protein": 18,
-    "fat": 5,
-    "carbs": 6
-   },
-   "ingredients": [
-    "Deli turkey \u2014 4 oz",
-    "Light string cheese \u2014 1, halved lengthwise",
-    "Mustard"
-   ],
-   "steps": [
-    "Roll cheese and mustard inside the turkey."
-   ],
-   "photoQuery": "turkey cheese roll ups"
-  }
- ]
+  "version": 1,
+  "note": "ForkCaster starter cookbook — built-in, works with no API keys. 'gentle' = dose-day safe (low fat, bland, small volume).",
+  "recipes": [
+    {
+      "id": "seed:yogurt-power-bowl",
+      "name": "Greek yogurt power bowl + whey",
+      "slot": "breakfast",
+      "tags": [
+        "no-cook",
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 390,
+        "protein": 38,
+        "fat": 9,
+        "carbs": 38
+      },
+      "ingredients": [
+        "Nonfat Greek yogurt — 1 cup",
+        "Vanilla whey protein — 1/2 scoop",
+        "Mixed berries — 3/4 cup",
+        "Chia seeds — 1 tbsp",
+        "Honey — 1 tsp"
+      ],
+      "steps": [
+        "Stir the whey into the yogurt until smooth.",
+        "Top with berries, chia, and honey."
+      ],
+      "photoQuery": "greek yogurt bowl berries"
+    },
+    {
+      "id": "seed:egg-white-scramble",
+      "name": "Egg & egg-white scramble",
+      "slot": "breakfast",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 360,
+        "protein": 34,
+        "fat": 12,
+        "carbs": 26
+      },
+      "ingredients": [
+        "Eggs — 2",
+        "Egg whites — 3",
+        "Feta — 2 tbsp, crumbled",
+        "Bell pepper — 1/2, diced",
+        "Whole-wheat toast — 1 slice",
+        "Olive oil spray"
+      ],
+      "steps": [
+        "Soften the pepper in a sprayed nonstick pan, 2 min.",
+        "Add eggs and whites; scramble low and slow.",
+        "Fold in feta off heat; serve with toast."
+      ],
+      "photoQuery": "scrambled eggs feta toast"
+    },
+    {
+      "id": "seed:overnight-oats-whey",
+      "name": "Overnight oats + whey",
+      "slot": "breakfast",
+      "tags": [
+        "no-cook",
+        "make-ahead"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 430,
+        "protein": 34,
+        "fat": 13,
+        "carbs": 46
+      },
+      "ingredients": [
+        "Rolled oats — 1/2 cup",
+        "Milk (1%) — 3/4 cup",
+        "Vanilla whey protein — 1 scoop",
+        "Peanut butter — 1 tbsp",
+        "Banana — 1/2, sliced",
+        "Cinnamon — a shake"
+      ],
+      "steps": [
+        "Whisk milk and whey until smooth.",
+        "Stir in oats, peanut butter, cinnamon.",
+        "Refrigerate overnight; top with banana."
+      ],
+      "photoQuery": "overnight oats peanut butter banana"
+    },
+    {
+      "id": "seed:cottage-banana",
+      "name": "Cottage cheese & banana",
+      "slot": "breakfast",
+      "tags": [
+        "no-cook",
+        "quick"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 250,
+        "protein": 20,
+        "fat": 4,
+        "carbs": 33
+      },
+      "ingredients": [
+        "Low-fat cottage cheese — 3/4 cup",
+        "Banana — 1, sliced",
+        "Cinnamon — a shake"
+      ],
+      "steps": [
+        "Bowl, slice, sprinkle. Eat slowly."
+      ],
+      "photoQuery": "cottage cheese banana bowl"
+    },
+    {
+      "id": "seed:protein-pancakes",
+      "name": "Protein pancakes",
+      "slot": "breakfast",
+      "tags": [
+        "weekend"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 420,
+        "protein": 36,
+        "fat": 10,
+        "carbs": 44
+      },
+      "ingredients": [
+        "Rolled oats — 1/2 cup",
+        "Vanilla whey protein — 1 scoop",
+        "Egg — 1",
+        "Banana — 1/2",
+        "Baking powder — 1/2 tsp",
+        "Strawberries — 1/2 cup"
+      ],
+      "steps": [
+        "Blend everything but the berries into a batter.",
+        "Cook 3 small pancakes on a nonstick pan.",
+        "Top with strawberries."
+      ],
+      "photoQuery": "protein pancakes strawberries"
+    },
+    {
+      "id": "seed:toast-eggs-gentle",
+      "name": "Toast, eggs & extra whites",
+      "slot": "breakfast",
+      "tags": [
+        "quick"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 280,
+        "protein": 22,
+        "fat": 8,
+        "carbs": 28
+      },
+      "ingredients": [
+        "White toast — 1 slice",
+        "Egg — 1",
+        "Egg whites — 3",
+        "Salt — small pinch"
+      ],
+      "steps": [
+        "Scramble the egg and whites gently, no butter needed in nonstick.",
+        "Serve on dry or lightly buttered toast. Small plate on purpose."
+      ],
+      "photoQuery": "scrambled eggs on toast"
+    },
+    {
+      "id": "seed:burrito-bowl",
+      "name": "Chicken burrito bowl",
+      "slot": "lunch",
+      "tags": [
+        "meal-prep"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 560,
+        "protein": 52,
+        "fat": 14,
+        "carbs": 55
+      },
+      "ingredients": [
+        "Chicken breast — 8 oz, grilled & sliced",
+        "Brown rice — 3/4 cup cooked",
+        "Black beans — 1/2 cup",
+        "Salsa — 1/4 cup",
+        "Shredded lettuce — 1 cup",
+        "Lime — 1/2"
+      ],
+      "steps": [
+        "Layer rice, beans, chicken, lettuce.",
+        "Top with salsa and a squeeze of lime."
+      ],
+      "photoQuery": "chicken burrito bowl"
+    },
+    {
+      "id": "seed:turkey-wrap",
+      "name": "Turkey & avocado wrap",
+      "slot": "lunch",
+      "tags": [
+        "no-cook",
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 510,
+        "protein": 42,
+        "fat": 16,
+        "carbs": 46
+      },
+      "ingredients": [
+        "High-protein wrap — 1",
+        "Deli turkey — 7 oz",
+        "Avocado — 1/3, mashed",
+        "Spinach — a handful",
+        "Tomato — 3 slices",
+        "Mustard"
+      ],
+      "steps": [
+        "Spread avocado and mustard on the wrap.",
+        "Layer turkey, spinach, tomato; roll tight and halve."
+      ],
+      "photoQuery": "turkey avocado wrap"
+    },
+    {
+      "id": "seed:tuna-greens",
+      "name": "Tuna salad on greens",
+      "slot": "lunch",
+      "tags": [
+        "no-cook",
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 440,
+        "protein": 44,
+        "fat": 14,
+        "carbs": 30
+      },
+      "ingredients": [
+        "Tuna pouches — 2 (5 oz total drained)",
+        "Light mayo — 1 tbsp",
+        "Dijon — 1 tsp",
+        "Mixed greens — 3 cups",
+        "Olive-oil vinaigrette — 1 tbsp",
+        "Whole-grain crackers — 8"
+      ],
+      "steps": [
+        "Mix tuna with mayo and Dijon.",
+        "Pile onto dressed greens; crackers on the side."
+      ],
+      "photoQuery": "tuna salad greens"
+    },
+    {
+      "id": "seed:ginger-congee",
+      "name": "Ginger chicken congee, extra chicken",
+      "slot": "lunch",
+      "tags": [
+        "make-ahead",
+        "warm"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 360,
+        "protein": 34,
+        "fat": 6,
+        "carbs": 42
+      },
+      "ingredients": [
+        "Jasmine rice — 1/2 cup dry",
+        "Low-sodium chicken broth — 3 cups",
+        "Chicken breast — 7 oz, shredded",
+        "Fresh ginger — 1 inch, sliced",
+        "Scallion — 1, thin-sliced",
+        "Salt — a pinch at the end"
+      ],
+      "steps": [
+        "Simmer rice, broth, and ginger 35–45 min, stirring now and then, until porridge-thick.",
+        "Stir in shredded chicken to warm through.",
+        "Finish with scallion and a small pinch of salt. Eat warm and slow."
+      ],
+      "photoQuery": "chicken rice porridge"
+    },
+    {
+      "id": "seed:chicken-noodle-soup",
+      "name": "Chicken noodle soup, extra chicken",
+      "slot": "lunch",
+      "tags": [
+        "warm"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 390,
+        "protein": 34,
+        "fat": 8,
+        "carbs": 42
+      },
+      "ingredients": [
+        "Low-sodium chicken broth — 2.5 cups",
+        "Chicken breast — 6 oz, shredded",
+        "Egg noodles — 1 cup cooked",
+        "Carrot — 1, thin coins",
+        "Celery — 1 rib, sliced",
+        "Saltines — 6"
+      ],
+      "steps": [
+        "Simmer carrot and celery in broth until tender.",
+        "Add noodles and chicken; warm through.",
+        "Saltines on the side."
+      ],
+      "photoQuery": "chicken noodle soup"
+    },
+    {
+      "id": "seed:caesar-light",
+      "name": "Grilled chicken Caesar (light)",
+      "slot": "lunch",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 520,
+        "protein": 48,
+        "fat": 18,
+        "carbs": 34
+      },
+      "ingredients": [
+        "Chicken breast — 8 oz, grilled",
+        "Romaine — 3 cups, chopped",
+        "Light Caesar dressing — 1.5 tbsp, on the side",
+        "Parmesan — 1 tbsp",
+        "Croutons — 1/2 cup"
+      ],
+      "steps": [
+        "Slice the grilled chicken over the romaine.",
+        "Top with parmesan and croutons; dip, don't pour, the dressing."
+      ],
+      "photoQuery": "grilled chicken caesar salad"
+    },
+    {
+      "id": "seed:sheetpan-salmon",
+      "name": "Sheet-pan salmon & green beans",
+      "slot": "dinner",
+      "tags": [
+        "sheet-pan"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 580,
+        "protein": 45,
+        "fat": 24,
+        "carbs": 40
+      },
+      "ingredients": [
+        "Salmon fillet — 8 oz",
+        "Green beans — 2 cups",
+        "Baby potatoes — 5, halved",
+        "Olive oil — 2 tsp",
+        "Lemon — 1/2",
+        "Garlic powder, salt, pepper"
+      ],
+      "steps": [
+        "Roast oiled potatoes at 425°F for 15 min.",
+        "Add salmon and green beans; season; roast 12–14 min more.",
+        "Finish with lemon."
+      ],
+      "photoQuery": "sheet pan salmon green beans"
+    },
+    {
+      "id": "seed:sirloin-stirfry",
+      "name": "Sirloin & broccoli stir-fry",
+      "slot": "dinner",
+      "tags": [
+        "one-pan"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 560,
+        "protein": 42,
+        "fat": 18,
+        "carbs": 52
+      },
+      "ingredients": [
+        "Sirloin — 7 oz, thin-sliced",
+        "Broccoli florets — 2 cups",
+        "Jasmine rice — 3/4 cup cooked",
+        "Low-sodium soy sauce — 1.5 tbsp",
+        "Garlic — 2 cloves",
+        "Sesame oil — 1 tsp"
+      ],
+      "steps": [
+        "Sear beef hard in a hot pan; set aside.",
+        "Stir-fry broccoli and garlic with a splash of water, lidded, 3 min.",
+        "Return beef with soy and sesame; serve over rice."
+      ],
+      "photoQuery": "beef broccoli stir fry rice"
+    },
+    {
+      "id": "seed:chicken-parm-light",
+      "name": "Baked chicken parm (light)",
+      "slot": "dinner",
+      "tags": [
+        "oven"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 540,
+        "protein": 52,
+        "fat": 16,
+        "carbs": 42
+      },
+      "ingredients": [
+        "Chicken breast — 8 oz, butterflied",
+        "Panko — 1/3 cup",
+        "Egg white — 1",
+        "Marinara — 1/2 cup",
+        "Part-skim mozzarella — 1/4 cup",
+        "Zucchini — 2, spiralized"
+      ],
+      "steps": [
+        "Dip chicken in egg white, press into panko; bake at 425°F ~18 min.",
+        "Top with marinara and mozzarella; bake until melted.",
+        "Serve over quickly sautéed zucchini noodles."
+      ],
+      "photoQuery": "baked chicken parmesan zucchini noodles"
+    },
+    {
+      "id": "seed:poached-cod",
+      "name": "Poached cod & white rice",
+      "slot": "dinner",
+      "tags": [
+        "quick",
+        "warm"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 380,
+        "protein": 40,
+        "fat": 5,
+        "carbs": 44
+      },
+      "ingredients": [
+        "Cod fillet — 8 oz",
+        "White rice — 3/4 cup cooked",
+        "Carrots — 1 cup, steamed",
+        "Lemon — 2 slices",
+        "Salt — small pinch"
+      ],
+      "steps": [
+        "Slide cod into barely simmering salted water with lemon; poach 7–9 min.",
+        "Serve over rice with steamed carrots. No sauce on purpose."
+      ],
+      "photoQuery": "poached cod rice"
+    },
+    {
+      "id": "seed:turkey-rice-mild",
+      "name": "Turkey rice bowl, mild",
+      "slot": "dinner",
+      "tags": [
+        "one-pan"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 470,
+        "protein": 44,
+        "fat": 10,
+        "carbs": 50
+      },
+      "ingredients": [
+        "93/7 ground turkey — 8 oz",
+        "Jasmine rice — 3/4 cup cooked",
+        "Zucchini — 1, half-moons, steamed",
+        "Low-sodium soy — 2 tsp",
+        "Salt, no heat"
+      ],
+      "steps": [
+        "Brown the turkey; drain if needed; season mild.",
+        "Bowl over rice with steamed zucchini."
+      ],
+      "photoQuery": "ground turkey rice bowl"
+    },
+    {
+      "id": "seed:pork-tenderloin",
+      "name": "Pork tenderloin & sweet potato",
+      "slot": "dinner",
+      "tags": [
+        "oven",
+        "meal-prep"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 560,
+        "protein": 44,
+        "fat": 16,
+        "carbs": 54
+      },
+      "ingredients": [
+        "Pork tenderloin — 7 oz",
+        "Sweet potato — 1 large",
+        "Asparagus — 8 spears",
+        "Olive oil — 2 tsp",
+        "Smoked paprika, salt, pepper"
+      ],
+      "steps": [
+        "Roast the rubbed tenderloin and halved sweet potato at 425°F ~20 min.",
+        "Add oiled asparagus for the last 8 min.",
+        "Rest the pork 5 min before slicing."
+      ],
+      "photoQuery": "pork tenderloin sweet potato"
+    },
+    {
+      "id": "seed:shrimp-tacos",
+      "name": "Shrimp tacos (3)",
+      "slot": "dinner",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 540,
+        "protein": 42,
+        "fat": 16,
+        "carbs": 54
+      },
+      "ingredients": [
+        "Shrimp — 8 oz, peeled",
+        "Corn tortillas — 3",
+        "Cabbage slaw — 1 cup",
+        "Greek yogurt — 2 tbsp",
+        "Lime — 1",
+        "Chili powder"
+      ],
+      "steps": [
+        "Sear chili-dusted shrimp 2 min per side.",
+        "Warm tortillas; fill with slaw and shrimp.",
+        "Lime-spiked yogurt on top."
+      ],
+      "photoQuery": "shrimp tacos slaw"
+    },
+    {
+      "id": "seed:cottage-pineapple",
+      "name": "Cottage cheese & pineapple",
+      "slot": "snack",
+      "tags": [
+        "no-cook"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 160,
+        "protein": 17,
+        "fat": 2,
+        "carbs": 18
+      },
+      "ingredients": [
+        "Low-fat cottage cheese — 3/4 cup",
+        "Pineapple chunks — 1/2 cup"
+      ],
+      "steps": [
+        "Combine. Done."
+      ],
+      "photoQuery": "cottage cheese pineapple"
+    },
+    {
+      "id": "seed:skyr-cup",
+      "name": "Skyr cup",
+      "slot": "snack",
+      "tags": [
+        "no-cook",
+        "grab"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 120,
+        "protein": 15,
+        "fat": 0,
+        "carbs": 14
+      },
+      "ingredients": [
+        "Plain skyr — 1 single-serve cup"
+      ],
+      "steps": [
+        "Peel lid."
+      ],
+      "photoQuery": "skyr yogurt cup"
+    },
+    {
+      "id": "seed:whey-shake",
+      "name": "Vanilla whey, sipped slowly",
+      "slot": "snack",
+      "tags": [
+        "no-cook",
+        "liquid"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 160,
+        "protein": 25,
+        "fat": 2,
+        "carbs": 8
+      },
+      "ingredients": [
+        "Vanilla whey protein — 1 scoop",
+        "Cold water or milk — 10 oz",
+        "Ice"
+      ],
+      "steps": [
+        "Shake hard. Sip slowly — liquid protein for days solids are hard."
+      ],
+      "photoQuery": "vanilla protein shake"
+    },
+    {
+      "id": "seed:greek-yogurt-plain",
+      "name": "Greek yogurt, plain",
+      "slot": "snack",
+      "tags": [
+        "no-cook"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 140,
+        "protein": 17,
+        "fat": 0,
+        "carbs": 9
+      },
+      "ingredients": [
+        "Nonfat Greek yogurt — 3/4 cup"
+      ],
+      "steps": [
+        "Cold and simple."
+      ],
+      "photoQuery": "greek yogurt bowl"
+    },
+    {
+      "id": "seed:jerky-apple",
+      "name": "Beef jerky & an apple",
+      "slot": "snack",
+      "tags": [
+        "grab",
+        "no-cook"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 150,
+        "protein": 14,
+        "fat": 2,
+        "carbs": 20
+      },
+      "ingredients": [
+        "Beef jerky — 1 oz",
+        "Apple — 1"
+      ],
+      "steps": [
+        "Glovebox-proof."
+      ],
+      "photoQuery": "beef jerky apple"
+    },
+    {
+      "id": "seed:cheese-almonds",
+      "name": "String cheese & almonds",
+      "slot": "snack",
+      "tags": [
+        "grab",
+        "no-cook"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 170,
+        "protein": 12,
+        "fat": 12,
+        "carbs": 5
+      },
+      "ingredients": [
+        "String cheese — 1",
+        "Almonds — small handful (10)"
+      ],
+      "steps": [
+        "Pocket snack."
+      ],
+      "photoQuery": "string cheese almonds"
+    },
+    {
+      "id": "seed:veggie-egg-bites",
+      "name": "Veggie egg bites (4)",
+      "slot": "breakfast",
+      "tags": [
+        "make-ahead"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 280,
+        "protein": 24,
+        "fat": 12,
+        "carbs": 16
+      },
+      "ingredients": [
+        "Eggs — 2",
+        "Egg whites — 3",
+        "Bell pepper — 1/3 cup, diced",
+        "Spinach — handful, chopped",
+        "Cheddar — 3 tbsp",
+        "Milk — splash"
+      ],
+      "steps": [
+        "Whisk everything; pour into 4 greased muffin cups.",
+        "Bake 350°F ~18 min until set.",
+        "Fridge 4 days — grab and reheat."
+      ],
+      "photoQuery": "egg bites vegetables"
+    },
+    {
+      "id": "seed:salmon-toast",
+      "name": "Smoked salmon toast",
+      "slot": "breakfast",
+      "tags": [
+        "no-cook",
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 340,
+        "protein": 29,
+        "fat": 12,
+        "carbs": 30
+      },
+      "ingredients": [
+        "Whole-grain toast — 2 slices",
+        "Smoked salmon — 4 oz",
+        "Light cream cheese — 2 tbsp",
+        "Capers — 1 tsp",
+        "Red onion — a few slivers"
+      ],
+      "steps": [
+        "Spread, layer, done."
+      ],
+      "photoQuery": "smoked salmon toast"
+    },
+    {
+      "id": "seed:banana-whey-smoothie",
+      "name": "Banana oat whey smoothie",
+      "slot": "breakfast",
+      "tags": [
+        "no-cook",
+        "liquid",
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 380,
+        "protein": 32,
+        "fat": 7,
+        "carbs": 50
+      },
+      "ingredients": [
+        "Vanilla whey — 1 scoop",
+        "Banana — 1",
+        "Rolled oats — 1/3 cup",
+        "Milk (1%) — 1 cup",
+        "Ice"
+      ],
+      "steps": [
+        "Blend until smooth."
+      ],
+      "photoQuery": "banana oat protein smoothie"
+    },
+    {
+      "id": "seed:turkey-sausage-eggs",
+      "name": "Turkey sausage & eggs",
+      "slot": "breakfast",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 340,
+        "protein": 33,
+        "fat": 14,
+        "carbs": 18
+      },
+      "ingredients": [
+        "Turkey breakfast sausage — 3 links",
+        "Eggs — 2",
+        "Whole-wheat toast — 1 slice"
+      ],
+      "steps": [
+        "Brown sausage; scramble eggs alongside.",
+        "Plate with toast."
+      ],
+      "photoQuery": "turkey sausage scrambled eggs breakfast"
+    },
+    {
+      "id": "seed:skyr-parfait",
+      "name": "Skyr granola parfait",
+      "slot": "breakfast",
+      "tags": [
+        "no-cook",
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 330,
+        "protein": 28,
+        "fat": 6,
+        "carbs": 42
+      },
+      "ingredients": [
+        "Plain skyr — 1 cup",
+        "Low-sugar granola — 1/3 cup",
+        "Blueberries — 1/2 cup",
+        "Honey — 1 tsp"
+      ],
+      "steps": [
+        "Layer in a glass; eat with a long spoon."
+      ],
+      "photoQuery": "yogurt granola berry parfait"
+    },
+    {
+      "id": "seed:rice-porridge-egg",
+      "name": "Rice porridge with soft egg",
+      "slot": "breakfast",
+      "tags": [
+        "warm"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 280,
+        "protein": 18,
+        "fat": 6,
+        "carbs": 40
+      },
+      "ingredients": [
+        "White rice — 1/3 cup dry",
+        "Water or broth — 2.5 cups",
+        "Egg — 1, soft-cooked",
+        "Salt — pinch"
+      ],
+      "steps": [
+        "Simmer rice loose and soupy, ~30 min.",
+        "Slide the soft egg on top; season lightly.",
+        "Warm, mild, easy — dose-morning food."
+      ],
+      "photoQuery": "rice porridge soft egg"
+    },
+    {
+      "id": "seed:applesauce-oats",
+      "name": "Applesauce oats + whey",
+      "slot": "breakfast",
+      "tags": [
+        "warm"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 310,
+        "protein": 26,
+        "fat": 5,
+        "carbs": 44
+      },
+      "ingredients": [
+        "Rolled oats — 1/2 cup",
+        "Unsweetened applesauce — 1/2 cup",
+        "Vanilla whey — 3/4 scoop",
+        "Cinnamon — a shake",
+        "Water"
+      ],
+      "steps": [
+        "Cook oats in water; stir in applesauce and cinnamon.",
+        "Cool 2 min, stir in whey (off heat so it stays smooth)."
+      ],
+      "photoQuery": "cinnamon apple oatmeal bowl"
+    },
+    {
+      "id": "seed:breakfast-burrito",
+      "name": "Turkey breakfast burrito",
+      "slot": "breakfast",
+      "tags": [
+        "hand-held"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 420,
+        "protein": 34,
+        "fat": 14,
+        "carbs": 40
+      },
+      "ingredients": [
+        "High-protein tortilla — 1",
+        "Eggs — 2",
+        "Egg whites — 2",
+        "Turkey sausage crumbles — 2 oz",
+        "Salsa — 2 tbsp",
+        "Cheddar — 2 tbsp"
+      ],
+      "steps": [
+        "Scramble eggs, whites, and sausage together.",
+        "Roll with cheese and salsa; toast seam-side down 1 min."
+      ],
+      "photoQuery": "breakfast burrito eggs"
+    },
+    {
+      "id": "seed:chicken-quinoa-bowl",
+      "name": "Chicken quinoa power bowl",
+      "slot": "lunch",
+      "tags": [
+        "meal-prep"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 520,
+        "protein": 44,
+        "fat": 14,
+        "carbs": 52
+      },
+      "ingredients": [
+        "Chicken breast — 7 oz, grilled",
+        "Quinoa — 3/4 cup cooked",
+        "Cucumber & tomato — 1 cup, chopped",
+        "Feta — 2 tbsp",
+        "Lemon vinaigrette — 1 tbsp"
+      ],
+      "steps": [
+        "Bowl the quinoa and vegetables.",
+        "Top with sliced chicken, feta, vinaigrette."
+      ],
+      "photoQuery": "chicken quinoa bowl"
+    },
+    {
+      "id": "seed:turkey-chili",
+      "name": "Turkey chili (big cup)",
+      "slot": "lunch",
+      "tags": [
+        "make-ahead",
+        "warm"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 380,
+        "protein": 36,
+        "fat": 10,
+        "carbs": 38
+      },
+      "ingredients": [
+        "93/7 ground turkey — 6 oz",
+        "Kidney beans — 1/2 cup",
+        "Crushed tomatoes — 3/4 cup",
+        "Onion — 1/4, diced",
+        "Chili powder & cumin"
+      ],
+      "steps": [
+        "Brown turkey with onion.",
+        "Add beans, tomatoes, spices; simmer 20 min.",
+        "Freezes beautifully — make triple."
+      ],
+      "photoQuery": "turkey chili bowl"
+    },
+    {
+      "id": "seed:egg-salad-sandwich",
+      "name": "Egg salad sandwich (light)",
+      "slot": "lunch",
+      "tags": [
+        "no-cook-ish",
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 400,
+        "protein": 26,
+        "fat": 14,
+        "carbs": 40
+      },
+      "ingredients": [
+        "Hard-boiled eggs — 2 + 2 whites",
+        "Light mayo — 1 tbsp",
+        "Dijon — 1 tsp",
+        "Whole-grain bread — 2 slices",
+        "Lettuce"
+      ],
+      "steps": [
+        "Mash eggs with mayo and Dijon.",
+        "Sandwich with lettuce."
+      ],
+      "photoQuery": "egg salad sandwich"
+    },
+    {
+      "id": "seed:lentil-chicken-soup",
+      "name": "Lentil soup with chicken",
+      "slot": "lunch",
+      "tags": [
+        "warm",
+        "make-ahead"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 420,
+        "protein": 34,
+        "fat": 8,
+        "carbs": 52
+      },
+      "ingredients": [
+        "Cooked lentils — 3/4 cup",
+        "Chicken breast — 4 oz, shredded",
+        "Carrot & celery — 3/4 cup",
+        "Low-sodium broth — 2 cups",
+        "Cumin"
+      ],
+      "steps": [
+        "Simmer vegetables in broth until tender.",
+        "Add lentils and chicken; warm through."
+      ],
+      "photoQuery": "lentil soup chicken"
+    },
+    {
+      "id": "seed:steak-salad",
+      "name": "Sirloin steak salad",
+      "slot": "lunch",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 470,
+        "protein": 42,
+        "fat": 17,
+        "carbs": 30
+      },
+      "ingredients": [
+        "Sirloin — 6 oz",
+        "Mixed greens — 3 cups",
+        "Cherry tomatoes — 1/2 cup",
+        "Blue cheese crumbles — 1 tbsp",
+        "Balsamic vinaigrette — 1 tbsp",
+        "Croutons — 1/3 cup"
+      ],
+      "steps": [
+        "Sear steak to medium-rare; rest, slice thin.",
+        "Fan over dressed greens with the rest."
+      ],
+      "photoQuery": "steak salad greens"
+    },
+    {
+      "id": "seed:shrimp-rice-bowl",
+      "name": "Shrimp & rice bowl",
+      "slot": "lunch",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 450,
+        "protein": 38,
+        "fat": 9,
+        "carbs": 54
+      },
+      "ingredients": [
+        "Shrimp — 7 oz",
+        "Jasmine rice — 3/4 cup cooked",
+        "Edamame — 1/2 cup",
+        "Cucumber — 1/2, sliced",
+        "Soy & sriracha drizzle"
+      ],
+      "steps": [
+        "Sear shrimp 2 min per side.",
+        "Bowl over rice with edamame and cucumber; drizzle."
+      ],
+      "photoQuery": "shrimp rice bowl"
+    },
+    {
+      "id": "seed:turkey-rice-soup",
+      "name": "Turkey & rice soup",
+      "slot": "lunch",
+      "tags": [
+        "warm"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 340,
+        "protein": 30,
+        "fat": 6,
+        "carbs": 40
+      },
+      "ingredients": [
+        "Ground turkey — 5 oz",
+        "White rice — 1/2 cup cooked",
+        "Low-sodium broth — 2.5 cups",
+        "Carrot — 1, coins",
+        "Salt — light"
+      ],
+      "steps": [
+        "Brown turkey; add broth and carrots, simmer 10 min.",
+        "Stir in rice; keep it mild and brothy."
+      ],
+      "photoQuery": "turkey rice soup"
+    },
+    {
+      "id": "seed:baked-potato-cottage",
+      "name": "Baked potato + cottage cheese",
+      "slot": "lunch",
+      "tags": [
+        "plain"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 360,
+        "protein": 24,
+        "fat": 3,
+        "carbs": 58
+      },
+      "ingredients": [
+        "Russet potato — 1 large",
+        "Low-fat cottage cheese — 3/4 cup",
+        "Chives — snipped",
+        "Salt — light"
+      ],
+      "steps": [
+        "Bake or microwave the potato until fluffy.",
+        "Split, pile on cottage cheese, chives."
+      ],
+      "photoQuery": "baked potato cottage cheese"
+    },
+    {
+      "id": "seed:chicken-pita",
+      "name": "Chicken pita pocket",
+      "slot": "lunch",
+      "tags": [
+        "hand-held"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 470,
+        "protein": 40,
+        "fat": 12,
+        "carbs": 50
+      },
+      "ingredients": [
+        "Chicken breast — 7 oz, sliced",
+        "Whole-wheat pita — 1",
+        "Tzatziki — 2 tbsp",
+        "Tomato & cucumber",
+        "Lettuce"
+      ],
+      "steps": [
+        "Stuff and go."
+      ],
+      "photoQuery": "chicken pita pocket tzatziki"
+    },
+    {
+      "id": "seed:tilapia-mash",
+      "name": "Baked tilapia & mashed potatoes",
+      "slot": "dinner",
+      "tags": [
+        "oven"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 460,
+        "protein": 42,
+        "fat": 9,
+        "carbs": 52
+      },
+      "ingredients": [
+        "Tilapia fillets — 8 oz",
+        "Potatoes — 1.5 cups, mashed w/ milk",
+        "Green beans — 1 cup, steamed",
+        "Lemon",
+        "Salt — light"
+      ],
+      "steps": [
+        "Bake tilapia at 400°F ~12 min with lemon.",
+        "Plate with mash and steamed beans. Mild by design."
+      ],
+      "photoQuery": "baked tilapia mashed potatoes"
+    },
+    {
+      "id": "seed:chicken-plain-rice",
+      "name": "Chicken breast & plain rice",
+      "slot": "dinner",
+      "tags": [
+        "plain"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 470,
+        "protein": 46,
+        "fat": 7,
+        "carbs": 54
+      },
+      "ingredients": [
+        "Chicken breast — 8 oz",
+        "Jasmine rice — 1 cup cooked",
+        "Steamed zucchini — 1 cup",
+        "Salt — light"
+      ],
+      "steps": [
+        "Poach or bake the chicken plain; slice.",
+        "The blandest big-protein plate in the book — that's the point."
+      ],
+      "photoQuery": "grilled chicken breast rice"
+    },
+    {
+      "id": "seed:turkey-meatballs",
+      "name": "Turkey meatballs & spaghetti (light)",
+      "slot": "dinner",
+      "tags": [
+        "family"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 560,
+        "protein": 44,
+        "fat": 15,
+        "carbs": 60
+      },
+      "ingredients": [
+        "93/7 ground turkey — 7 oz",
+        "Egg — 1",
+        "Panko — 3 tbsp",
+        "Marinara — 3/4 cup",
+        "Spaghetti — 1.25 cups cooked",
+        "Parmesan — 1 tbsp"
+      ],
+      "steps": [
+        "Roll and bake meatballs at 425°F ~15 min.",
+        "Simmer briefly in marinara; serve over spaghetti."
+      ],
+      "photoQuery": "turkey meatballs spaghetti"
+    },
+    {
+      "id": "seed:garlic-shrimp-pasta",
+      "name": "Garlic shrimp pasta (light)",
+      "slot": "dinner",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 540,
+        "protein": 40,
+        "fat": 13,
+        "carbs": 62
+      },
+      "ingredients": [
+        "Shrimp — 8 oz",
+        "Linguine — 1.25 cups cooked",
+        "Garlic — 3 cloves",
+        "Olive oil — 2 tsp",
+        "Lemon & parsley",
+        "Red pepper flakes — pinch"
+      ],
+      "steps": [
+        "Sizzle garlic in oil; add shrimp 3 min.",
+        "Toss with pasta, lemon, parsley, a splash of pasta water."
+      ],
+      "photoQuery": "garlic shrimp pasta"
+    },
+    {
+      "id": "seed:beef-rice-skillet",
+      "name": "Beef & rice skillet",
+      "slot": "dinner",
+      "tags": [
+        "one-pan"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 560,
+        "protein": 42,
+        "fat": 17,
+        "carbs": 56
+      },
+      "ingredients": [
+        "93/7 ground beef — 7 oz",
+        "Rice — 3/4 cup cooked",
+        "Bell pepper & onion — 1 cup",
+        "Tomato paste — 1 tbsp",
+        "Smoked paprika"
+      ],
+      "steps": [
+        "Brown beef with vegetables.",
+        "Stir in rice, paste, paprika; one pan, done."
+      ],
+      "photoQuery": "ground beef rice skillet"
+    },
+    {
+      "id": "seed:roast-chicken-thighs",
+      "name": "Roast chicken thighs & vegetables",
+      "slot": "dinner",
+      "tags": [
+        "oven",
+        "sheet-pan"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 540,
+        "protein": 44,
+        "fat": 20,
+        "carbs": 40
+      },
+      "ingredients": [
+        "Chicken thighs, skinless — 8 oz",
+        "Carrots & brussels — 2 cups",
+        "Baby potatoes — 4",
+        "Olive oil — 2 tsp",
+        "Rosemary"
+      ],
+      "steps": [
+        "Everything on one pan, 425°F ~28 min.",
+        "Toss halfway."
+      ],
+      "photoQuery": "roasted chicken thighs vegetables sheet pan"
+    },
+    {
+      "id": "seed:pork-chop-applesauce",
+      "name": "Pork chop, applesauce & rice",
+      "slot": "dinner",
+      "tags": [
+        "classic"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 520,
+        "protein": 42,
+        "fat": 14,
+        "carbs": 54
+      },
+      "ingredients": [
+        "Boneless pork chop — 7 oz",
+        "Unsweetened applesauce — 1/2 cup",
+        "Rice — 3/4 cup cooked",
+        "Steamed broccoli — 1 cup"
+      ],
+      "steps": [
+        "Sear the chop 4 min a side; rest.",
+        "Serve with applesauce, rice, broccoli."
+      ],
+      "photoQuery": "pork chop applesauce"
+    },
+    {
+      "id": "seed:salmon-rice-bowl",
+      "name": "Salmon rice bowl",
+      "slot": "dinner",
+      "tags": [
+        "quick"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 540,
+        "protein": 42,
+        "fat": 18,
+        "carbs": 50
+      },
+      "ingredients": [
+        "Salmon — 7 oz",
+        "Rice — 3/4 cup cooked",
+        "Avocado — 1/4",
+        "Cucumber",
+        "Soy & sesame"
+      ],
+      "steps": [
+        "Sear or air-fry salmon; flake over rice.",
+        "Top with avocado, cucumber, drizzle."
+      ],
+      "photoQuery": "salmon rice bowl avocado"
+    },
+    {
+      "id": "seed:chicken-fajita-bowl",
+      "name": "Chicken fajita bowl",
+      "slot": "dinner",
+      "tags": [
+        "one-pan"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 530,
+        "protein": 46,
+        "fat": 14,
+        "carbs": 52
+      },
+      "ingredients": [
+        "Chicken breast — 8 oz, strips",
+        "Peppers & onions — 1.5 cups",
+        "Fajita seasoning",
+        "Rice — 3/4 cup cooked",
+        "Greek yogurt — 1 tbsp",
+        "Lime"
+      ],
+      "steps": [
+        "Sear chicken and vegetables hard with seasoning.",
+        "Bowl over rice; yogurt and lime on top."
+      ],
+      "photoQuery": "chicken fajita bowl"
+    },
+    {
+      "id": "seed:white-chicken-chili",
+      "name": "White chicken chili",
+      "slot": "dinner",
+      "tags": [
+        "make-ahead",
+        "warm"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 460,
+        "protein": 42,
+        "fat": 11,
+        "carbs": 46
+      },
+      "ingredients": [
+        "Chicken breast — 7 oz, shredded",
+        "White beans — 3/4 cup",
+        "Green chiles — 2 tbsp",
+        "Broth — 1.5 cups",
+        "Cumin & oregano",
+        "Greek yogurt — 1 tbsp"
+      ],
+      "steps": [
+        "Simmer everything but yogurt 15 min.",
+        "Stir in yogurt off heat for creaminess."
+      ],
+      "photoQuery": "white chicken chili"
+    },
+    {
+      "id": "seed:flank-steak-potatoes",
+      "name": "Flank steak & roasted potatoes",
+      "slot": "dinner",
+      "tags": [
+        "oven"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 560,
+        "protein": 45,
+        "fat": 16,
+        "carbs": 52
+      },
+      "ingredients": [
+        "Flank steak — 7 oz",
+        "Baby potatoes — 6, halved",
+        "Asparagus — 8 spears",
+        "Olive oil — 2 tsp",
+        "Garlic powder"
+      ],
+      "steps": [
+        "Roast potatoes 425°F 20 min; add asparagus last 8.",
+        "Sear steak 4 min a side; rest 5; slice against the grain."
+      ],
+      "photoQuery": "flank steak roasted potatoes"
+    },
+    {
+      "id": "seed:tofu-stirfry",
+      "name": "Tofu veggie stir-fry + edamame",
+      "slot": "dinner",
+      "tags": [
+        "vegetarian",
+        "one-pan"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 440,
+        "protein": 28,
+        "fat": 14,
+        "carbs": 50
+      },
+      "ingredients": [
+        "Extra-firm tofu — 7 oz, cubed",
+        "Broccoli & snap peas — 2 cups",
+        "Edamame — 1/2 cup",
+        "Rice — 1/2 cup cooked",
+        "Soy-garlic sauce — 1.5 tbsp",
+        "Sesame oil — 1 tsp"
+      ],
+      "steps": [
+        "Crisp tofu in a hot pan; set aside.",
+        "Stir-fry vegetables; return tofu with sauce and edamame; serve over rice."
+      ],
+      "photoQuery": "tofu vegetable stir fry"
+    },
+    {
+      "id": "seed:tuna-crackers",
+      "name": "Tuna pouch & crackers",
+      "slot": "snack",
+      "tags": [
+        "grab",
+        "no-cook"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 190,
+        "protein": 22,
+        "fat": 3,
+        "carbs": 18
+      },
+      "ingredients": [
+        "Tuna pouch — 1 (flavored ok)",
+        "Whole-grain crackers — 8"
+      ],
+      "steps": [
+        "Desk-drawer protein."
+      ],
+      "photoQuery": "tuna crackers snack"
+    },
+    {
+      "id": "seed:protein-bar",
+      "name": "Protein bar",
+      "slot": "snack",
+      "tags": [
+        "grab"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 210,
+        "protein": 20,
+        "fat": 7,
+        "carbs": 22
+      },
+      "ingredients": [
+        "Protein bar — 1 (20g class)"
+      ],
+      "steps": [
+        "Unwrap."
+      ],
+      "photoQuery": "protein bar"
+    },
+    {
+      "id": "seed:edamame-cup",
+      "name": "Edamame cup, salted",
+      "slot": "snack",
+      "tags": [
+        "no-cook"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 130,
+        "protein": 12,
+        "fat": 4,
+        "carbs": 10
+      },
+      "ingredients": [
+        "Shelled edamame — 3/4 cup",
+        "Sea salt"
+      ],
+      "steps": [
+        "Microwave from frozen 90 sec; salt."
+      ],
+      "photoQuery": "edamame bowl salted"
+    },
+    {
+      "id": "seed:hard-boiled-eggs",
+      "name": "Hard-boiled eggs (2)",
+      "slot": "snack",
+      "tags": [
+        "make-ahead",
+        "grab"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 140,
+        "protein": 12,
+        "fat": 10,
+        "carbs": 1
+      },
+      "ingredients": [
+        "Eggs — 2",
+        "Salt & pepper"
+      ],
+      "steps": [
+        "Boil a batch Sunday; fridge all week."
+      ],
+      "photoQuery": "hard boiled eggs"
+    },
+    {
+      "id": "seed:banana-whey-half",
+      "name": "Banana + half-scoop whey",
+      "slot": "snack",
+      "tags": [
+        "no-cook",
+        "liquid"
+      ],
+      "gentle": true,
+      "servings": 1,
+      "perServing": {
+        "calories": 160,
+        "protein": 16,
+        "fat": 2,
+        "carbs": 24
+      },
+      "ingredients": [
+        "Banana — 1",
+        "Vanilla whey — 1/2 scoop in water"
+      ],
+      "steps": [
+        "Gentle calories that go down easy on rough days."
+      ],
+      "photoQuery": "banana protein shake"
+    },
+    {
+      "id": "seed:turkey-rollups",
+      "name": "Turkey roll-ups",
+      "slot": "snack",
+      "tags": [
+        "no-cook",
+        "grab"
+      ],
+      "gentle": false,
+      "servings": 1,
+      "perServing": {
+        "calories": 150,
+        "protein": 18,
+        "fat": 5,
+        "carbs": 6
+      },
+      "ingredients": [
+        "Deli turkey — 4 oz",
+        "Light string cheese — 1, halved lengthwise",
+        "Mustard"
+      ],
+      "steps": [
+        "Roll cheese and mustard inside the turkey."
+      ],
+      "photoQuery": "turkey cheese roll ups"
+    }
+  ]
 }
