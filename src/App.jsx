@@ -115,9 +115,10 @@ const EXTRACT_SCHEMA = { type: "array", items: { type: "object", properties: { i
 const NL_SCHEMA = { type: "object", properties: { name: { type: "string" }, calories: { type: "integer" }, protein: { type: "integer" }, carbs: { type: "integer" }, fat: { type: "integer" }, fiber: { type: "integer" } }, required: ["name", "calories", "protein", "carbs", "fat", "fiber"] };
 const POLISH_SCHEMA = { type: "object", properties: { coach: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { item: { type: "string" }, why: { type: "string" } }, required: ["item", "why"] } } }, required: ["coach", "notes"] };
 /* Deterministic pick selection: AI only extracts items; code enforces goal rules. */
-function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
+function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil) {
   const glpTag = (it) => /glp/i.test(String(it.section || ""));
   const queasy = nauseaRisk === "moderate" || nauseaRisk === "high";
+  const FAT_HI = fatCeil != null ? Math.max(8, Math.min(30, Math.round(fatCeil))) : 15; // personal dose-window ceiling when learned
   const score = (it) => {
     const p = +it.protein || 0, c = +it.cal || 400, f = it.fat == null ? null : +it.fat || 0;
     if (mode === "gain") return p * 3 + c * 0.1;
@@ -125,7 +126,7 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
     if (mode === "glp1") s += (c <= 400 ? 20 : 0) + (glpTag(it) ? 60 : 0);
     // Fat is the primary GLP-1 nausea trigger (delays gastric emptying) — penalize it above ~15g,
     // hardest on dose/nausea weeks. Keeps greasy items off the top and makes "gentle" mean gentle.
-    if (f != null) s -= Math.max(0, f - 15) * (queasy ? 1.4 : mode === "glp1" ? 0.7 : 0.2);
+    if (f != null) s -= Math.max(0, f - FAT_HI) * (queasy ? 1.4 : mode === "glp1" ? 0.7 : 0.2);
     if (queasy && /smoothie|soup|yogurt|broth/i.test(it.item)) s += 5;
     return s;
   };
@@ -142,8 +143,8 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft) {
   // "gentle volume" is only honest for genuinely low-fat items; fat, not just calories, drives GLP-1 nausea.
   const mkWhy = (it) => {
     const f = it.fat == null ? null : +it.fat || 0, c = +it.cal || 0;
-    const gentle = queasy && c <= 600 && (f == null ? c <= 450 : f <= 15);
-    const heavyFat = f != null && f >= 30 && (mode === "glp1" || queasy);
+    const gentle = queasy && c <= 600 && (f == null ? c <= 450 : f <= FAT_HI);
+    const heavyFat = f != null && f >= Math.max(30, FAT_HI * 2) && (mode === "glp1" || queasy);
     return [
       mode === "glp1" && glpTag(it) ? "GLP-1 section" : null,
       gentle ? "gentle volume" : heavyFat ? "higher fat — go slow" : null,
@@ -288,6 +289,31 @@ function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
     else { flag = "plateau"; detail = `Flat trend (${ratePctWk.toFixed(1)}%/wk) at a stable dose across this window.`; suggestion = { calDelta: -125, label: "Trim calories −125/day" }; }
   } else { flag = "on-track"; detail = `Losing ${ratePctWk.toFixed(1)}%/week — inside the healthy 0.2–1%/week band. No target changes needed.`; }
   return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays };
+}
+/* ── Dose-response engine: learn YOUR dose-window fat ceiling from your own logs (v0.4.2) ── */
+function doseResponseRead(mealLog, glp) {
+  const doses = ((glp && glp.doseLog) || []).map((d) => d.date).filter(Boolean);
+  const t = (d) => new Date(d + "T12:00:00").getTime();
+  const inWindow = (date) => doses.some((dd) => { const dt = t(date) - t(dd); return dt >= 0 && dt <= 48 * 3600 * 1000; });
+  const days = new Map();
+  for (const m of (mealLog || [])) { if (!m.date) continue; const r = days.get(m.date) || { maxFat: 0, meals: 0 }; r.maxFat = Math.max(r.maxFat, +m.fat || 0); r.meals++; days.set(m.date, r); }
+  const gi = new Set(((glp && glp.sideEffects) || []).filter((x) => /nausea|vomit|reflux|heartburn|queas/i.test(x.symptom || "")).map((x) => x.date));
+  const rows = [...days.entries()].map(([date, r]) => ({ date, maxFat: r.maxFat, sym: gi.has(date), win: inWindow(date) }));
+  const winRows = rows.filter((r) => r.win);
+  if (gi.size < 5 || rows.length < 10 || winRows.length < 3) return { status: "collecting", sym: gi.size, days: rows.length, inWin: winRows.length };
+  const pool = winRows.filter((r) => r.sym).length >= 3 ? winRows : rows;
+  const scope = pool === winRows ? "within 48h of your shot" : "across all logged days";
+  const fats = [...new Set(pool.map((r) => r.maxFat))].sort((a, b) => a - b);
+  let best = null;
+  for (let i = 0; i < fats.length - 1; i++) {
+    const T = (fats[i] + fats[i + 1]) / 2;
+    const above = pool.filter((r) => r.maxFat > T), below = pool.filter((r) => r.maxFat <= T);
+    if (above.length < 2 || below.length < 2) continue;
+    const sep = above.filter((r) => r.sym).length / above.length - below.filter((r) => r.sym).length / below.length;
+    if (!best || sep > best.sep) best = { T: Math.round(T), sep, aboveSym: above.filter((r) => r.sym).length, above: above.length, belowSym: below.filter((r) => r.sym).length, below: below.length };
+  }
+  if (!best || best.sep < 0.3) return { status: "no-pattern", sym: gi.size, days: rows.length, inWin: winRows.length };
+  return { status: "ok", ceiling: best.T, scope, ...best };
 }
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const fmtDate = (d) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" });
@@ -571,6 +597,8 @@ export default function App() {
   const nauseaShift = prefs.nauseaSensitivity === "high" ? 1 : prefs.nauseaSensitivity === "low" ? -1 : 0;
   const nauseaAdj = nauseaScore + nauseaShift;
   const nauseaRisk = !onMed ? "none" : nauseaAdj >= 3 ? "high" : nauseaAdj >= 1 ? "moderate" : "low";
+  const doseResp = doseResponseRead(mealLog, glp);
+  const personalFatCeil = doseResp.status === "ok" && (nauseaRisk === "moderate" || nauseaRisk === "high") ? doseResp.ceiling : null;
 
   // ── symptom↔food correlation (WHITE SPACE #2) ──
   const nauseaDays = glp.sideEffects.filter((s) => s.symptom === "Nausea");
@@ -706,7 +734,7 @@ export default function App() {
     // Use the server's already-parsed structured items directly — deterministic, no fragile AI re-extraction round-trip
     if (liveMenu && Array.isArray(liveMenu.items) && liveMenu.items.length >= 3) {
       try {
-        const cleaned = sanitizePicks(composePicks(liveMenu.items, mode, nauseaRisk, proteinLeft, calLeft), allergies);
+        const cleaned = sanitizePicks(composePicks(liveMenu.items, mode, nauseaRisk, proteinLeft, calLeft, personalFatCeil), allergies);
         cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method; cleaned._menuText = (liveMenu.text || "").slice(0, 6000);
         try {
           const polishPrompt = `User goal: ${MODES[mode] ? MODES[mode].label : mode}. Med context: ${nauseaRisk} nausea risk. Remaining: ${proteinLeft}g protein, ${calLeft} cal. These items were selected (do NOT change them): ${JSON.stringify(cleaned.picks.map((p) => ({ item: p.item, protein: p.protein, cal: p.cal, fat: p.fat })))}. Write one sharp coach line and, for each item, a short why (max 12 words) with a smart tip. On GLP-1 or any nausea risk, fat is the main trigger: never call a 30g+ fat item gentle or light; suggest a lower-fat tweak. If the venue serves alcohol, fold ONE drink line into coach (lower-sugar; alcohol hits harder on GLP-1 — pace slow).`;
@@ -722,7 +750,7 @@ export default function App() {
           `Include "carbs" ONLY when a NUTRITION section provides carbohydrate grams — never estimate carbs; omit the key when unknown. Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>,"carbs":<int, optional>}]\nTEXT:\n"""${liveMenu.text.slice(0, 9000)}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
-          const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);
+          const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, personalFatCeil);
           const cleaned = sanitizePicks(composed, allergies);
           cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method; cleaned._menuText = (liveMenu.text || "").slice(0, 6000);
           try { // intelligence layer: AI annotates picks CODE already locked
@@ -2094,6 +2122,22 @@ export default function App() {
                   {ar.suggestion && !applied && <button onClick={() => { const sg = ar.suggestion; setTargets({ ...targets, ...(sg.proteinDelta ? { protein: targets.protein + sg.proteinDelta } : {}), ...(sg.calDelta ? { calories: Math.max(1000, targets.calories + sg.calDelta) } : {}) }); setPrefs({ ...prefs, adaptiveAppliedOn: todayISO() }); }} style={{ marginTop: 9, width: "100%", background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Apply: {ar.suggestion.label}</button>}
                   {applied && <div style={{ fontSize: 11.5, color: C.go, marginTop: 7, fontWeight: 700 }}>✓ Applied today — adjust anytime in Plan settings.</div>}
                   <div style={{ fontSize: 10.5, color: C.faint, marginTop: 7 }}>{ar.pts} weigh-ins over {ar.spanDays} days · a suggestion, not a prescription — your prescriber owns your targets</div>
+                </div>
+              )}
+            </div>, { marginBottom: 12 });
+          })()}{(() => {
+            const dr = doseResponseRead(mealLog, glp);
+            return card(<div>
+              {sectionTitle("Dose response · your body's own data")}
+              {dr.status === "collecting" ? (
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>Learning quietly — {dr.sym}/5 GI symptom entries · {dr.days}/10 days with meals logged · {dr.inWin}/3 dose-window days. Log symptoms on the GLP-1 tab and meals daily; this engine learns YOUR fat ceiling, not the textbook's.</div>
+              ) : dr.status === "no-pattern" ? (
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>No clear fat↔symptom pattern in {dr.days} logged days ({dr.inWin} in dose windows) — either good tolerance or thin data. Keep logging; the picture sharpens itself.</div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 13, color: C.ink, fontWeight: 700, lineHeight: 1.5 }}>Meals over ~{dr.ceiling}g fat {dr.scope} preceded GI symptoms {dr.aboveSym} of {dr.above} times — at or under, {dr.belowSym} of {dr.below}.</div>
+                  <div style={{ fontSize: 12.5, color: C.go, fontWeight: 700, marginTop: 7 }}>Your personal fat ceiling: ~{dr.ceiling}g (generic default: 15g). "Order for me" now uses YOUR number during dose windows.</div>
+                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 7 }}>Correlation from your own {dr.days} logged days — a pattern, not proof. Worth showing your prescriber.</div>
                 </div>
               )}
             </div>, { marginBottom: 12 });
