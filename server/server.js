@@ -707,6 +707,7 @@ app.get("/api/recipes/search", async (req, res) => {
     for (const k of ["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type"]) if (req.query[k]) q.set(k, String(req.query[k]));
     q.delete("sort"); // default relevance
     const r = await fetch(`${SPN_BASE}/recipes/complexSearch?${q}`, { signal: AbortSignal.timeout(12000) });
+    _noteQuota(r);
     if (!r.ok) { console.log(`[recipes] search -> HTTP ${r.status}`); return res.json({ ok: false, reason: `spoonacular ${r.status}` }); }
     const d = await r.json();
     const pull = (rec, want) => { const n = ((rec.nutrition || {}).nutrients || []).find((x) => x.name === want); return n ? Math.round(n.amount) : null; };
@@ -747,6 +748,9 @@ async function _visionOk(anthKey, imgUrl, q) { // one cheap haiku look: does the
     return /yes/i.test(((d.content || []).find((x) => x.type === "text") || {}).text || "");
   } catch { return false; }
 }
+let _spnLeft = null; // remaining Spoonacular points today, read from X-API-Quota-Left on every response
+const _noteQuota = (r) => { const q = parseFloat(r.headers.get("x-api-quota-left")); if (Number.isFinite(q)) _spnLeft = q; };
+const PHOTO_QUOTA_FLOOR = 15; // photos are decoration; meal searches are the product — photos never spend the last points
 const _STOP = new Set(["a","an","the","with","and","of","on","in","style","fresh","easy","best","homemade"]);
 const _toks = (t) => String(t).toLowerCase().split(/\W+/).filter((x) => x.length >= 3 && !_STOP.has(x));
 app.get("/api/recipes/photo", async (req, res) => {
@@ -757,7 +761,9 @@ app.get("/api/recipes/photo", async (req, res) => {
   const SPN = key("SPOONACULAR_KEY");
   if (!SPN) return res.json({ ok: false, reason: "no-key" });
   try {
+    if (_spnLeft != null && _spnLeft < PHOTO_QUOTA_FLOOR) { console.log(`[recipes] photo "${q}" -> paused (quota ${_spnLeft} < floor ${PHOTO_QUOTA_FLOOR})`); return res.json({ ok: false, reason: `paused — saving your last ${Math.floor(_spnLeft)} Spoonacular points for meal planning; photos resume after the daily reset` }); }
     const r = await fetch(`${SPN_BASE}/recipes/complexSearch?${new URLSearchParams({ apiKey: SPN, query: q, number: "5" })}`, { signal: AbortSignal.timeout(9000) });
+    _noteQuota(r);
     if (!r.ok) { console.log(`[recipes] photo "${q}" -> HTTP ${r.status}`); return res.json({ ok: false, reason: `spoonacular ${r.status}` }); }
     const d = await r.json();
     // pick the candidate whose TITLE actually matches the dish — zero-overlap results are junk, reject them

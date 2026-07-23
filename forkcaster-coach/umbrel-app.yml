@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.3.18"
+version: "0.3.19"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.3.18: meal-plan photos now pass an eye test. Candidate photos are
-  shortlisted by name, then actually LOOKED AT - a quick AI vision check asks
-  whether each picture plausibly shows the dish before it's allowed on a meal
-  card. Lookalike impostors (a chocolate mug cake posing as apple oatmeal)
-  get rejected; nothing convincing means an honest blank that retries daily.
-  Uses your own Anthropic key, pennies once per dish, cached forever.
-  Existing photo picks re-verify themselves after this update.
+  v0.3.19: meal planning can never be starved by photo lookups again. The app
+  now watches your remaining Spoonacular balance (reported by their API on
+  every response) and reserves the last 15 points exclusively for meal
+  searches - photo fetching pauses itself below that line and says exactly
+  why, with your actual remaining balance, instead of quietly draining the
+  day's quota on decoration. Photos resume automatically after the daily
+  reset.
 dependencies: []
 path: ""
 defaultUsername: ""
