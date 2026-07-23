@@ -377,6 +377,7 @@ export default function App() {
 
   // food logging / barcode scan
   const [logOpen, setLogOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [barcode, setBarcode] = useState("");
   const [camOn, setCamOn] = useState(false);
   const [camErr, setCamErr] = useState("");
@@ -1438,6 +1439,7 @@ export default function App() {
           })}
         </div>
         <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>{venues[0] && !venues[0].menu ? "Live venues from Google Places. Menus aren’t public data anywhere — the AI proposes realistic goal-fit orders for each spot and estimates macros conservatively." : "Demo venues until GPS locks and a Google Places key is added in Settings → API keys."}</div>
+        <button onClick={() => setInfoOpen(true)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "6px 0 0", textDecoration: "underline" }}>ⓘ How these numbers are made — what's exact, what's estimated</button>
       </div>
 
       <div style={{ marginTop: 6 }}>
@@ -2016,6 +2018,53 @@ export default function App() {
           {tab === "glp" && renderGlp()}
           {tab === "plan" && renderPlan()}
           <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
+          {infoOpen && (
+            <div onClick={() => setInfoOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(30,20,10,0.5)", zIndex: 90, display: "flex", alignItems: "flex-end" }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ background: C.surface, borderRadius: "22px 22px 0 0", width: "100%", maxHeight: "86vh", overflowY: "auto", padding: "20px 20px 96px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 800, color: C.ink }}>How ForkCaster gets its numbers</div>
+                  <button onClick={() => setInfoOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 18, width: 34, height: 34, fontSize: 16, color: C.ink, cursor: "pointer" }}>×</button>
+                </div>
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5, marginBottom: 14 }}>Plain answers about what's measured, what's estimated, and how much to trust each number. Everything below runs on your own server — your data never leaves it.</div>
+                {[
+                  ["Most exact → least exact", [
+                    ["Nutrition labels you photograph", "Read digit-for-digit from the label. As exact as the label itself."],
+                    ["Barcode scans", "Looked up in Open Food Facts and USDA — the printed package data. Very reliable; occasionally a database entry is outdated."],
+                    ["Chain-published nutrition", "Read from the restaurant's own site or PDF when they publish it. Good — but menus change and portions vary by location."],
+                    ["Built-in recipes", "Computed from their ingredients. Good, assuming you cook roughly the listed amounts."],
+                    ["AI estimates", "When nothing is published, the AI proposes a realistic order or reads your plate photo and estimates conservatively, stating its assumed portion size. Treat as ±20–30% — portion size is the biggest source of error."],
+                    ["Derived carbs", "When a menu gives calories, protein, and fat but not carbs, carbs are computed by arithmetic (calories are made of macros). As good as the inputs it's derived from."],
+                  ]],
+                  ["What the AI actually does", [
+                    ["Ranks nearby spots", "By fit to YOUR protein target, calorie budget, dose week, and filters — never by star ratings or sponsorship."],
+                    ["Proposes orders", "Realistic menu items, macro-estimated conservatively, with fat flagged because it's the top nausea trigger on GLP-1 medication."],
+                    ["Plans your week", "Around your shot calendar — dose days get eased targets and gentle, low-fat, carb-forward meals on purpose."],
+                    ["Writes lists & tips", "Grocery quantities in store packages; coach notes tuned to your dose week. Suggestions, not prescriptions."],
+                  ]],
+                  ["What it can't do", [
+                    ["See inside kitchens", "Restaurant portions and recipes vary by location and by cook. Same order, different day, different grams."],
+                    ["Detect allergens", "Menu data rarely lists them reliably. If you have a food allergy, always confirm with the restaurant — never rely on this app for allergy safety."],
+                    ["Give medical advice", "Targets here are sensible templates. Your prescriber and dietitian own your real numbers — bring them these screens if it helps the conversation."],
+                  ]],
+                  ["How to use imperfect numbers well", [
+                    ["Think ranges, not decimals", "A day that reads 1,450 calories is honestly '1,300–1,600'. That's still plenty to steer by."],
+                    ["Trends beat single meals", "A week of logged days tells the truth even when individual entries are ±20%."],
+                    ["Snap labels when you can", "A photographed Nutrition Facts label beats every estimate. The camera reads it exactly."],
+                  ]],
+                ].map(([title, rows]) => (
+                  <div key={title} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: C.go, marginBottom: 6 }}>{title}</div>
+                    {rows.map(([h, b]) => (
+                      <div key={h} style={{ marginBottom: 7 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{h} — </span>
+                        <span style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>{b}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {tab === "coach" && <div style={{ height: "calc(100vh - 128px)" }}>{renderCoach()}</div>}
         </div>
 
@@ -2095,6 +2144,7 @@ export default function App() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke={C.surface} strokeWidth="1.8" strokeLinejoin="round" /><circle cx="12" cy="13" r="3.2" stroke={C.surface} strokeWidth="1.8" /></svg>
                 {scan.status === "loading" ? "Analyzing…" : "Estimate a plate from photo (AI)"}
               </button>
+              <button onClick={() => setInfoOpen(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 11.5, cursor: "pointer", padding: "7px 0 0", textDecoration: "underline" }}>ⓘ What's exact vs estimated? Tap to read</button>
 
               {scan.status === "found" && (
                 <div ref={resultRef} style={{ background: C.goSoft, border: `1px solid ${C.go}44`, borderRadius: 14, padding: 15, marginBottom: 12 }}>
