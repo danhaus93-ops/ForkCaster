@@ -1006,7 +1006,14 @@ export default function App() {
   }
   async function exportPDF() {
     try {
-      const r = await fetch("/api/report/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob });
+      const hd = healthSync && healthSync.days ? healthSync.days : [];
+      const wk = hd.slice(-7);
+      const findings = {
+        adaptive: adaptiveRead(weightLog, hd, glp, wk.reduce((n, d) => n + (d.strength || 0), 0)),
+        doseResp: doseResponseRead(mealLog, glp),
+        health: hd.length ? { days: hd.length, avgSteps: wk.length ? Math.round(wk.reduce((n, d) => n + (d.steps || 0), 0) / wk.length) : 0, strengthWk: wk.reduce((n, d) => n + (d.strength || 0), 0) } : null,
+      };
+      const r = await fetch("/api/report/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: JSON.parse(stateBlob), findings }) });
       if (!r.ok) throw new Error("report failed");
       const blob = await r.blob();
       const file = new File([blob], "ForkCaster-report.pdf", { type: "application/pdf" });

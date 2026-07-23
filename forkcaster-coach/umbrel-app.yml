@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.4.2"
+version: "0.4.3"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.4.2: the dose-response engine - the feature no other app has. ForkCaster
-  now correlates your own symptom log against your meal history against your
-  shot calendar and learns YOUR personal dose-window fat ceiling, with the
-  evidence stated plainly ("meals over ~18g fat within 48h of your shot
-  preceded GI symptoms 4 of 5 times"). Once learned, "Order for me" uses your
-  number instead of the generic 15g during dose windows. Needs real history
-  before it speaks - 5 symptom entries, 10 logged days - and says exactly
-  what it still needs while learning. A pattern from your own data, not
-  proof: worth showing your prescriber.
+  v0.4.3: the prescriber report grows up - and the learning arc is complete.
+  The PDF export (Settings) now leads with "What the app has learned": your
+  weight-trend verdict, your dose-response findings with the evidence counts,
+  and synced activity - honestly marked "still collecting" while the engines
+  are young. The nutrition table finally shows all four macros plus protein
+  adherence, and every side effect is annotated with days-post-dose, the
+  detail a prescriber can read a titration from. Four releases: Apple Health
+  in, adaptive targets, dose-response learning, and now the paper that
+  carries it into your appointment.
 dependencies: []
 path: ""
 defaultUsername: ""

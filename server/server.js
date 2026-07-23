@@ -1242,16 +1242,21 @@ setInterval(doseReminderTick, 10 * 60 * 1000);
 /* ── PDF report: rendered by the bundled Chromium ── */
 app.post("/api/report/pdf", async (req, res) => {
   try {
-    const st = req.body || {};
+    const _b = req.body || {};
+    const st = _b.state || _b; const fnd = _b.findings || {};
     const glp = st.glp || {}; const wl = st.weightLog || []; const ml = st.mealLog || []; const se = (glp.sideEffects || []);
+    const tgt = st.targets || {};
     const esc = (x) => String(x == null ? "" : x).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
     const fmtD = (d) => { try { return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); } catch { return d; } };
     const doses = (glp.doseLog || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const doseRows = doses.map((d) => `<tr><td>${fmtD(d.date)}</td><td>${esc(d.mg)} mg</td><td>${esc(d.site || "\u2014")}</td></tr>`).join("");
     const wRows = wl.slice(-20).reverse().map((w) => `<tr><td>${fmtD(w.date)}</td><td>${(+w.lbs).toFixed(1)} lb</td></tr>`).join("");
-    const seRows = se.slice().reverse().map((x) => `<tr><td>${fmtD(x.date)}</td><td>${esc(x.symptom)}</td><td>${["Mild","Moderate","Severe"][x.severity - 1] || ""}</td></tr>`).join("");
-    const byDay = {}; ml.forEach((m) => { byDay[m.date] = byDay[m.date] || { p: 0, c: 0 }; byDay[m.date].p += m.protein || 0; byDay[m.date].c += m.calories || 0; });
-    const mealRows = Object.keys(byDay).sort().slice(-14).reverse().map((d) => `<tr><td>${fmtD(d)}</td><td>${byDay[d].p} g</td><td>${byDay[d].c}</td></tr>`).join("");
+    const _t = (d) => new Date(d + "T12:00:00").getTime();
+    const postDose = (date) => { const prior = doses.filter((dd) => dd.date <= date); if (!prior.length) return "\u2014"; const dd = Math.round((_t(date) - _t(prior[0].date)) / 86400000); return dd === 0 ? "dose day" : `+${dd}d`; };
+    const seRows = se.slice().reverse().map((x) => `<tr><td>${fmtD(x.date)}</td><td>${esc(x.symptom)}</td><td>${["Mild","Moderate","Severe"][x.severity - 1] || ""}</td><td>${postDose(x.date)}</td></tr>`).join("");
+    const byDay = {}; ml.forEach((m) => { byDay[m.date] = byDay[m.date] || { p: 0, c: 0, cb: 0, f: 0 }; byDay[m.date].p += m.protein || 0; byDay[m.date].c += m.calories || 0; byDay[m.date].cb += m.carbs || 0; byDay[m.date].f += m.fat || 0; });
+    const adh = (p) => tgt.protein ? ` <span style="color:#8a97a4">(${Math.min(999, Math.round((p / tgt.protein) * 100))}%)</span>` : "";
+    const mealRows = Object.keys(byDay).sort().slice(-14).reverse().map((d) => `<tr><td>${fmtD(d)}</td><td>${byDay[d].p} g${adh(byDay[d].p)}</td><td>${byDay[d].c}</td><td>${byDay[d].cb} g</td><td>${byDay[d].f} g</td></tr>`).join("");
     const first = wl[0], last = wl[wl.length - 1];
     const delta = first && last ? (last.lbs - first.lbs).toFixed(1) : null;
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
@@ -1270,10 +1275,17 @@ app.post("/api/report/pdf", async (req, res) => {
         <div class="kpi"><b>${doses.length}</b><span>doses logged</span></div>
         <div class="kpi"><b>${delta != null ? (delta > 0 ? "+" : "") + delta + " lb" : "\u2014"}</b><span>weight change over log</span></div>
       </div>
+      <h2>What the app has learned (on-device analysis)</h2>
+      <table>
+      ${(() => { const a = fnd.adaptive || {}; return a.status === "ok" ? `<tr><td style="width:140px"><b>Weight trend</b></td><td>${esc(a.detail)} (${a.pts} weigh-ins over ${a.spanDays} days)</td></tr>` : `<tr><td style="width:140px"><b>Weight trend</b></td><td>Still collecting \u2014 ${a.pts || 0} weigh-ins over ${a.spanDays || 0} days so far.</td></tr>`; })()}
+      ${(() => { const d = fnd.doseResp || {}; return d.status === "ok" ? `<tr><td><b>Dose response</b></td><td>Meals over ~${d.ceiling}g fat ${esc(d.scope)} preceded GI symptoms ${d.aboveSym} of ${d.above} times; at or under, ${d.belowSym} of ${d.below}. Working personal fat ceiling: ~${d.ceiling}g (generic guidance: 15g).</td></tr>` : d.status === "no-pattern" ? `<tr><td><b>Dose response</b></td><td>No clear fat\u2194symptom pattern across ${d.days} logged days (${d.inWin} within 48h of a dose).</td></tr>` : `<tr><td><b>Dose response</b></td><td>Still collecting \u2014 ${d.sym || 0}/5 GI symptom entries, ${d.days || 0}/10 meal-logged days, ${d.inWin || 0}/3 dose-window days.</td></tr>`; })()}
+      ${fnd.health ? `<tr><td><b>Activity (synced)</b></td><td>${fnd.health.avgSteps.toLocaleString()} steps/day (7-day avg) \u00b7 ${fnd.health.strengthWk} resistance session${fnd.health.strengthWk === 1 ? "" : "s"} this week \u00b7 ${fnd.health.days} days of Apple Health data.</td></tr>` : ""}
+      </table>
+      <div style="color:#8a97a4;font-size:9.5px;margin-top:4px">Correlations computed on the patient's own server from self-reported logs \u2014 patterns for discussion, not diagnoses.</div>
       <h2>Dose history &amp; injection sites</h2><table><tr><th>Date</th><th>Dose</th><th>Site</th></tr>${doseRows || "<tr><td colspan=3>None logged</td></tr>"}</table>
       <h2>Weight log</h2><table><tr><th>Date</th><th>Weight</th></tr>${wRows || "<tr><td colspan=2>None logged</td></tr>"}</table>
-      <h2>Side effects</h2><table><tr><th>Date</th><th>Symptom</th><th>Severity</th></tr>${seRows || "<tr><td colspan=3>None logged</td></tr>"}</table>
-      <h2>Daily nutrition (last 14 logged days)</h2><table><tr><th>Date</th><th>Protein</th><th>Calories</th></tr>${mealRows || "<tr><td colspan=3>None logged</td></tr>"}</table>
+      <h2>Side effects</h2><table><tr><th>Date</th><th>Symptom</th><th>Severity</th><th>Post-dose</th></tr>${seRows || "<tr><td colspan=4>None logged</td></tr>"}</table>
+      <h2>Daily nutrition (last 14 logged days)</h2><table><tr><th>Date</th><th>Protein (vs goal)</th><th>Calories</th><th>Carbs</th><th>Fat</th></tr>${mealRows || "<tr><td colspan=5>None logged</td></tr>"}</table>
       <div class="foot">Generated by ForkCaster, a self-hosted nutrition companion. Injection sites labeled Arm refer to the posterior (back) upper arm. This report is informational and not medical advice.</div>
       </body></html>`;
     const puppeteer = require("puppeteer-core");
