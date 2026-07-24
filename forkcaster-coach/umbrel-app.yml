@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.4.6"
+version: "0.4.7"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.4.6: GLP-1 menus win over the fast database. The FatSecret speed tier
-  couldn't see menu structure, so chains with dedicated GLP-1 sections (like
-  Smoothie King's GLP-1 Support Menu) lost their curated items in picks. Now:
-  a one-tap "check their live site instead" link under database-ranked
-  results re-runs the full menu read - and once any site is found to carry
-  GLP-1 sections, your node remembers that domain forever and always reads
-  the live menu there first. Structure beats speed wherever structure exists.
+  v0.4.7: chain knowledge fills the database's blind spot. When picks come
+  from published nutrition data (which has real items but no menu sections),
+  the AI now identifies which of those exact items belong to the chain's
+  GLP-1 support or high-protein line - so Smoothie King's GLP-1 menu
+  smoothies get their priority back, with real published macros. It can only
+  tag items from the list, never invent them. And when no menu data exists at
+  all, proposed orders must now be food the venue actually serves - real
+  named chain items, with any known GLP-1 line featured first.
 dependencies: []
 path: ""
 defaultUsername: ""

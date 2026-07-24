@@ -743,7 +743,16 @@ export default function App() {
     // Use the server's already-parsed structured items directly — deterministic, no fragile AI re-extraction round-trip
     if (liveMenu && Array.isArray(liveMenu.items) && liveMenu.items.length >= 3) {
       try {
-        const cleaned = sanitizePicks(composePicks(liveMenu.items, mode, nauseaRisk, proteinLeft, calLeft, personalFatCeil), allergies);
+        let rankItems = liveMenu.items;
+        if (liveMenu.method === "fatsecret" && mode === "glp1") {
+          // the database has the real items but no sections — chain knowledge supplies the missing structure
+          try {
+            const tagRaw = await callClaude(`Does ${r.name} offer a GLP-1 support / high-protein menu line? If yes, which of THESE items belong to it? Items: ${rankItems.map((i) => i.item).join(" | ")}\nReturn ONLY JSON, first character {: {"glp":["exact item names copied from the list — empty array if none or unsure"]}`, "You know major restaurant chains' menus precisely. Never invent or alter item names.", null, 300, null);
+            const g = new Set(((extractJson(tagRaw).glp) || []).map((x) => String(x).toLowerCase().trim()));
+            if (g.size) rankItems = rankItems.map((i) => g.has(String(i.item).toLowerCase().trim()) ? { ...i, section: i.section + " · GLP-1 line" } : i);
+          } catch {}
+        }
+        const cleaned = sanitizePicks(composePicks(rankItems, mode, nauseaRisk, proteinLeft, calLeft, personalFatCeil), allergies);
         cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method; cleaned._menuText = (liveMenu.text || "").slice(0, 6000);
         try {
           const polishPrompt = `User goal: ${MODES[mode] ? MODES[mode].label : mode}. Med context: ${nauseaRisk} nausea risk. Remaining: ${proteinLeft}g protein, ${calLeft} cal. These items were selected (do NOT change them): ${JSON.stringify(cleaned.picks.map((p) => ({ item: p.item, protein: p.protein, cal: p.cal, fat: p.fat })))}. Write one sharp coach line and, for each item, a short why (max 12 words) with a smart tip. On GLP-1 or any nausea risk, fat is the main trigger: never call a 30g+ fat item gentle or light; suggest a lower-fat tweak. If the venue serves alcohol, fold ONE drink line into coach (lower-sugar; alcohol hits harder on GLP-1 — pace slow).`;
@@ -787,7 +796,7 @@ export default function App() {
         : ``) + `\n` +
       (r.menu ? `Menu JSON: ${JSON.stringify(r.menu)}\n\n`
         : liveMenu ? `LIVE MENU TEXT scraped from their website (may be partial/noisy — only recommend items actually evidenced in this text, estimate macros conservatively). Return EXACTLY 3 picks. If the menu has sections aligned to the goal (e.g., "GLP-1", "high protein", "light", "under 500 cal") with at least 2 suitable items, AT LEAST 2 of your 3 picks MUST come from that section. If the text turns out to be boilerplate with no actual menu items, DISREGARD it and propose well-known typical orders for this chain instead — NEVER refuse and NEVER return zero picks:\n"""${liveMenu.text.slice(0, prefs.aiModel && prefs.aiModel.includes("haiku") ? 3500 : prefs.aiModel && prefs.aiModel.includes("sonnet") ? 6000 : 8000)}"""\n\n`
-        : `No menu data available. Propose 3 realistic, commonly-available orders at a ${r.cuisine || "restaurant"} like ${r.name} that fit the goals; estimate macros conservatively.\n\n`) +
+        : `No menu data available. Propose 3 orders that ${r.name} (a ${r.cuisine || "restaurant"}) ACTUALLY SERVES — use the chain's real named menu items when the chain is well known, and never propose food the venue wouldn't sell (no chicken plates at a smoothie shop). If this chain is known to offer a GLP-1 support or high-protein menu line, feature those exact items first. Estimate macros conservatively.\n\n`) +
       `Keep all strings short (under 12 words). Include fat grams for EVERY pick (estimate conservatively from typical values if not printed; never omit fat). Your ENTIRE response must be exactly one JSON object — the first character { and the last character } — no prose, no markdown, nothing else. Format:\n` +
       `{"picks":[{"name":"<exact name>","protein":<int>,"calories":<int>,"fat":<int>,"carbs":<int - from NUTRITION data when available, otherwise estimate conservatively exactly like the other macros; never null>,"why":"<max 9 words>"}],` +
       `"avoid":[{"name":"<exact name>","reason":"<max 7 words>"}],"coachLine":"<=16 words"}\n` +
