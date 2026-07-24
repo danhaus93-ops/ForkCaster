@@ -722,7 +722,7 @@ export default function App() {
     } catch (e) { setRankState((e && e.message) || "ranking failed"); }
   }
 
-  async function orderForMe(r) {
+  async function orderForMe(r, opts = {}) {
     setSelected(r.id); setLoading(true); setResult(null); setError(null); setLoggedPicks([]); setMenuQ(""); setMenuA(null);
     const medLine = onMed
       ? ` They use ${medObj.label} (week ${glp.weeksOn}${escalating ? ", DOSE-INCREASE WEEK" : ""}). Appetite suppressed — smaller volume, protein density first.` +
@@ -734,7 +734,7 @@ export default function App() {
     let liveMenu = null;
     if (!r.menu && r.website) {
       try {
-        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}&name=${encodeURIComponent(r.name || "")}`, { signal: AbortSignal.timeout(150000) });
+        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}&name=${encodeURIComponent(r.name || "")}${opts.skipFs ? "&skipfs=1" : ""}`, { signal: AbortSignal.timeout(150000) });
         const mj = await mres.json();
         if (mj && mj.ok && mj.text) liveMenu = mj;
       } catch {}
@@ -1522,7 +1522,7 @@ export default function App() {
         {loading && !result && <div style={{ textAlign: "center", color: C.muted, fontSize: 13.5, padding: "22px 0" }}>Reading the menu against your {proteinLeft}g / {calLeft} cal…</div>}
         {result && result._menuSource && (<>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: result._menuSource === "live" ? C.go : C.faint, marginBottom: 8 }}>
-                  {result._menuMethod === "fatsecret" ? "● RANKED FROM PUBLISHED NUTRITION (FatSecret database)" : result._menuSource === "live" ? `● RANKED FROM THEIR LIVE MENU${result._menuMethod === "pdf" ? " (PDF)" : result._menuMethod === "js" ? " (RENDERED SITE)" : ""}` : result._menuSource === "photo" ? "● RANKED FROM YOUR MENU PHOTO" : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
+                  {result._menuMethod === "fatsecret" ? <>{"● RANKED FROM PUBLISHED NUTRITION (FatSecret database)"}<button onClick={() => orderForMe(result, { skipFs: true })} style={{ display: "block", width: "100%", background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "5px 0 0", textDecoration: "underline", textTransform: "none", letterSpacing: 0, textAlign: "left" }}>This chain lists a GLP-1 menu? Check their live site instead →</button></> : result._menuSource === "live" ? `● RANKED FROM THEIR LIVE MENU${result._menuMethod === "pdf" ? " (PDF)" : result._menuMethod === "js" ? " (RENDERED SITE)" : ""}` : result._menuSource === "photo" ? "● RANKED FROM YOUR MENU PHOTO" : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
                 </div>
                 <button onClick={() => menuPhotoRef.current && menuPhotoRef.current.click()} disabled={menuPhotoBusy} style={{ marginTop: 6, background: "none", color: C.violet, border: `1.5px dashed ${C.violet}88`, borderRadius: 10, padding: "9px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: menuPhotoBusy ? 0.6 : 1 }}>{menuPhotoBusy ? "Reading menu photo…" : "Snap their paper menu instead"}</button>
                 <input ref={menuPhotoRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanMenuPhoto(e.target.files[0]); e.target.value = ""; }} />

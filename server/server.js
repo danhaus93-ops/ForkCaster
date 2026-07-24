@@ -850,6 +850,10 @@ app.get("/api/recipes/seed", (_req, res) => {
   catch (e) { res.json({ ok: false, reason: e.message }); }
 });
 
+const MENU_NOTES_FILE = path.join(DATA_DIR, "menu-notes.json");
+const _menuNotes = (() => { try { return JSON.parse(fs.readFileSync(MENU_NOTES_FILE, "utf8")); } catch { return {}; } })();
+const _saveMenuNotes = () => { try { fs.writeFileSync(MENU_NOTES_FILE, JSON.stringify(_menuNotes)); } catch {} };
+const _menuDomain = (u) => { try { return new URL(String(u)).hostname.replace(/^www\./, ""); } catch { return ""; } };
 const _normBrand = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 async function fatsecretBrandItems(brand) { // published chain nutrition in one call — the fast tier
   const tok = await fatsecretToken();
@@ -872,7 +876,7 @@ app.get("/api/menu", async (req, res) => {
   let earlyFallback = null; // menu-shaped early-html text WITHOUT macro evidence — kept as fallback while we go deep
   const _diag = {}; // per-request pipeline diagnosis, attached to every response so coverage sweeps self-explain
   const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
-  const _hit = MENU_CACHE.get(_ckey);
+  const _hit = String(req.query.skipfs || "") === "1" ? null : MENU_CACHE.get(_ckey);
   if (_hit && Date.now() - _hit.t < 6 * 3600 * 1000) { console.log(`[menu] cache hit ${_ckey.slice(0, 80)}`); return res.json(_hit.obj); }
   if (MENU_INFLIGHT.has(_ckey)) {
     console.log(`[menu] joining in-flight run ${_ckey.slice(0, 80)}`);
@@ -881,10 +885,24 @@ app.get("/api/menu", async (req, res) => {
   let _resolveInflight, _rejectInflight;
   MENU_INFLIGHT.set(_ckey, new Promise((ok, no) => { _resolveInflight = ok; _rejectInflight = no; }));
   res.on("finish", () => MENU_INFLIGHT.delete(_ckey));
-  const _send = (obj) => { if (obj) obj.diag = _diag; if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj }); try { _resolveInflight(obj); } catch {} return res.json(obj); };
+  const _send = (obj) => {
+    if (obj) obj.diag = _diag;
+    if (obj && obj.ok) MENU_CACHE.set(_ckey, { t: Date.now(), obj });
+    if (obj && obj.ok && Array.isArray(obj.items) && obj.method !== "fatsecret") {
+      const dom = _menuDomain(req.query.url);
+      if (dom && obj.items.some((i) => /glp/i.test(String(i.section || ""))) && !(_menuNotes[dom] && _menuNotes[dom].glp)) {
+        _menuNotes[dom] = { glp: true, t: Date.now() }; _saveMenuNotes();
+        console.log(`[menu] ${dom} has GLP-tagged sections — scrape-first for this domain from now on`);
+      }
+    }
+    try { _resolveInflight(obj); } catch {} return res.json(obj);
+  };
   /* Stage 0 — FatSecret published nutrition: a half-second brand lookup beats a 90-second render. Cached scrapes still win (cache check above). */
   try {
-    if (key("FATSECRET_CLIENT_ID") && key("FATSECRET_CLIENT_SECRET")) {
+    const _dom0 = _menuDomain(req.query.url);
+    const _skipFs = String(req.query.skipfs || "") === "1" || !!(_dom0 && _menuNotes[_dom0] && _menuNotes[_dom0].glp);
+    if (_skipFs) _diag.fatsecret = (_dom0 && _menuNotes[_dom0] && _menuNotes[_dom0].glp) ? "skipped — site has GLP-1 sections (scrape carries structure)" : "skipped by request";
+    if (!_skipFs && key("FATSECRET_CLIENT_ID") && key("FATSECRET_CLIENT_SECRET")) {
       const rawName = String(req.query.name || "").trim() || (() => { try { return new URL(String(req.query.url)).hostname.replace(/^www\./, "").split(".")[0]; } catch { return ""; } })();
       const brand = rawName.split(/\s+at\s+/i)[0].replace(/grill|bar|express|restaurant|cafe|kitchen|\+/gi, " ").replace(/\s+/g, " ").trim();
       if (brand.length >= 3) {
