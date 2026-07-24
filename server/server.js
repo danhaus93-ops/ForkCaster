@@ -876,7 +876,10 @@ app.get("/api/menu", async (req, res) => {
   let earlyFallback = null; // menu-shaped early-html text WITHOUT macro evidence — kept as fallback while we go deep
   const _diag = {}; // per-request pipeline diagnosis, attached to every response so coverage sweeps self-explain
   const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
-  const _hit = String(req.query.skipfs || "") === "1" ? null : MENU_CACHE.get(_ckey);
+  const _rawHit = String(req.query.skipfs || "") === "1" ? null : MENU_CACHE.get(_ckey);
+  const _hitUseful = (h) => { const o = h && h.obj; if (!o || !o.ok) return false; if (o.method === "fatsecret") return true;
+    const mg = (o.items || []).filter((i) => (i.protein || 0) >= 15 && (i.cal || 0) >= 200).length; return mg >= 3; };
+  const _hit = _hitUseful(_rawHit) ? _rawHit : null; // thin scrape cached ≠ answered: fall through to the FatSecret tier
   if (_hit && Date.now() - _hit.t < 6 * 3600 * 1000) { console.log(`[menu] cache hit ${_ckey.slice(0, 80)}`); return res.json(_hit.obj); }
   if (MENU_INFLIGHT.has(_ckey)) {
     console.log(`[menu] joining in-flight run ${_ckey.slice(0, 80)}`);

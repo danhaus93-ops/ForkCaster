@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.4.7"
+version: "0.4.8"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.4.7: chain knowledge fills the database's blind spot. When picks come
-  from published nutrition data (which has real items but no menu sections),
-  the AI now identifies which of those exact items belong to the chain's
-  GLP-1 support or high-protein line - so Smoothie King's GLP-1 menu
-  smoothies get their priority back, with real published macros. It can only
-  tag items from the list, never invent them. And when no menu data exists at
-  all, proposed orders must now be food the venue actually serves - real
-  named chain items, with any known GLP-1 line featured first.
+  v0.4.8: the real Smoothie King fix, reproduced in tests before shipping. An
+  empty scrape of a site whose menu lives in its ordering app was being cached
+  as if it were an answer, so every later "Order for me" was served that empty
+  result and never reached the published-nutrition database. Now a cached menu
+  only counts if it actually contains items - otherwise the database tier runs
+  and replaces it. Also fixes the fallback wording that produced grilled
+  chicken and salmon suggestions at a smoothie shop: proposed orders must be
+  items the venue really serves, with any known GLP-1 line first.
 dependencies: []
 path: ""
 defaultUsername: ""
