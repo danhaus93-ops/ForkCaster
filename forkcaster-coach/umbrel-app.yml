@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.4.8"
+version: "0.4.9"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.4.8: the real Smoothie King fix, reproduced in tests before shipping. An
-  empty scrape of a site whose menu lives in its ordering app was being cached
-  as if it were an answer, so every later "Order for me" was served that empty
-  result and never reached the published-nutrition database. Now a cached menu
-  only counts if it actually contains items - otherwise the database tier runs
-  and replaces it. Also fixes the fallback wording that produced grilled
-  chicken and salmon suggestions at a smoothie shop: proposed orders must be
-  items the venue really serves, with any known GLP-1 line first.
+  v0.4.9: chains that publish a GLP-1 menu now get served that menu, exactly.
+  Smoothie King's full 10-item GLP-1 Support Menu ships with the app and is
+  returned before any cache, database lookup, or website scrape can get it
+  wrong - Gladiator, Keto Champ, Activator Recovery, Slim N Trim and Power
+  Meal Slim, every flavor, with their published protein and calories. Picks
+  now also show one item per blend family, so three flavors of the same
+  smoothie can't fill all three cards. Verified end to end in tests before
+  release, including against the exact failure state this fixes.
 dependencies: []
 path: ""
 defaultUsername: ""

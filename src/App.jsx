@@ -131,12 +131,16 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil) {
     return s;
   };
   const sorted = [...items].sort((a, b) => score(b) - score(a));
-  let picks = sorted.slice(0, 3);
+  // One card per blend/sandwich family — flavor variants of the same item shouldn't fill all three slots.
+  const famKey = (it) => String(it.item || "").toLowerCase().split(/\s[—–-]\s|\(|,/)[0].replace(/[^a-z0-9]+/g, " ").trim();
+  const takeDistinct = (list, n) => { const seen = new Set(), out = []; for (const it of list) { const k = famKey(it); if (k && seen.has(k)) continue; seen.add(k); out.push(it); if (out.length >= n) break; } return out; };
+  let picks = takeDistinct(sorted, 3);
+  if (picks.length < 3) picks = sorted.slice(0, 3);
   if (mode === "glp1") {
     const glp = sorted.filter(glpTag);
     if (glp.length >= 2) {
-      const rest = sorted.filter((i) => !glp.slice(0, 3).includes(i));
-      picks = [...glp.slice(0, 3), ...rest].slice(0, 3); // quota by construction: GLP-1 items fill first
+      const q = takeDistinct([...glp, ...sorted], 3); // quota by construction: GLP-1 items fill first
+      picks = q.length >= 3 ? q : [...glp, ...sorted].slice(0, 3);
     }
   }
   // Macros (protein/cal/fat) are shown as numbers on the card — the why line must NOT restate them.
@@ -1531,7 +1535,7 @@ export default function App() {
         {loading && !result && <div style={{ textAlign: "center", color: C.muted, fontSize: 13.5, padding: "22px 0" }}>Reading the menu against your {proteinLeft}g / {calLeft} cal…</div>}
         {result && result._menuSource && (<>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, color: result._menuSource === "live" ? C.go : C.faint, marginBottom: 8 }}>
-                  {result._menuMethod === "fatsecret" ? <>{"● RANKED FROM PUBLISHED NUTRITION (FatSecret database)"}<button onClick={() => orderForMe(result, { skipFs: true })} style={{ display: "block", width: "100%", background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "5px 0 0", textDecoration: "underline", textTransform: "none", letterSpacing: 0, textAlign: "left" }}>This chain lists a GLP-1 menu? Check their live site instead →</button></> : result._menuSource === "live" ? `● RANKED FROM THEIR LIVE MENU${result._menuMethod === "pdf" ? " (PDF)" : result._menuMethod === "js" ? " (RENDERED SITE)" : ""}` : result._menuSource === "photo" ? "● RANKED FROM YOUR MENU PHOTO" : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
+                  {result._menuMethod === "chain" ? "● RANKED FROM THEIR PUBLISHED GLP-1 MENU" : result._menuMethod === "fatsecret" ? <>{"● RANKED FROM PUBLISHED NUTRITION (FatSecret database)"}<button onClick={() => orderForMe(result, { skipFs: true })} style={{ display: "block", width: "100%", background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "5px 0 0", textDecoration: "underline", textTransform: "none", letterSpacing: 0, textAlign: "left" }}>This chain lists a GLP-1 menu? Check their live site instead →</button></> : result._menuSource === "live" ? `● RANKED FROM THEIR LIVE MENU${result._menuMethod === "pdf" ? " (PDF)" : result._menuMethod === "js" ? " (RENDERED SITE)" : ""}` : result._menuSource === "photo" ? "● RANKED FROM YOUR MENU PHOTO" : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
                 </div>
                 <button onClick={() => menuPhotoRef.current && menuPhotoRef.current.click()} disabled={menuPhotoBusy} style={{ marginTop: 6, background: "none", color: C.violet, border: `1.5px dashed ${C.violet}88`, borderRadius: 10, padding: "9px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: menuPhotoBusy ? 0.6 : 1 }}>{menuPhotoBusy ? "Reading menu photo…" : "Snap their paper menu instead"}</button>
                 <input ref={menuPhotoRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanMenuPhoto(e.target.files[0]); e.target.value = ""; }} />

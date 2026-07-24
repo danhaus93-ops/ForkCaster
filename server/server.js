@@ -850,6 +850,34 @@ app.get("/api/recipes/seed", (_req, res) => {
   catch (e) { res.json({ ok: false, reason: e.message }); }
 });
 
+/* ── Chains that publish a dedicated GLP-1 menu line. Deterministic Stage -1: no cache, no API,
+   no scraper can defeat it. Protein = published low end, calories = published high end. ── */
+const CHAIN_GLP_MENUS = {
+  smoothieking: {
+    label: "Smoothie King",
+    source: "smoothieking.com/glp-1",
+    section: "GLP-1 SUPPORT MENU",
+    note: "Published GLP-1 Support Menu (20g+ protein, 0g added sugar), crafted with Ochsner Health dietitians. Ten orderable items: Gladiator, Power Meal Slim and Keto Champ each come in flavors. Where the chain publishes a range, protein shown is the low end and calories the high end — add-ins and size shift both.",
+    items: [
+      { item: "Gladiator GLP-1 — Chocolate (pick 2 add-ins)", protein: 45, cal: 560, fat: null, carbs: null },
+      { item: "Gladiator GLP-1 — Vanilla (pick 2 add-ins)", protein: 45, cal: 560, fat: null, carbs: null },
+      { item: "Gladiator GLP-1 — Strawberry (pick 2 add-ins)", protein: 45, cal: 560, fat: null, carbs: null },
+      { item: "Keto Champ GLP-1 — Berry", protein: 24, cal: 450, fat: null, carbs: null },
+      { item: "Keto Champ GLP-1 — Chocolate", protein: 24, cal: 450, fat: null, carbs: null },
+      { item: "The Activator Recovery GLP-1 Almond Berry", protein: 24, cal: 200, fat: null, carbs: null },
+      { item: "Slim 'N Trim GLP-1 Mango Greens", protein: 22, cal: 200, fat: null, carbs: null },
+      { item: "Power Meal Slim GLP-1 — Chocolate", protein: 19, cal: 210, fat: null, carbs: null },
+      { item: "Power Meal Slim GLP-1 — Vanilla", protein: 19, cal: 210, fat: null, carbs: null },
+      { item: "Power Meal Slim GLP-1 — Strawberry", protein: 19, cal: 210, fat: null, carbs: null },
+    ],
+  },
+};
+const chainGlpProfile = (name, url) => {
+  const keys = [_normBrandKey(name), _normBrandKey((() => { try { return new URL(String(url)).hostname.replace(/^www\./, "").split(".")[0]; } catch { return ""; } })())];
+  for (const k of keys) { if (k && CHAIN_GLP_MENUS[k]) return CHAIN_GLP_MENUS[k]; }
+  return null;
+};
+const _normBrandKey = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 const MENU_NOTES_FILE = path.join(DATA_DIR, "menu-notes.json");
 const _menuNotes = (() => { try { return JSON.parse(fs.readFileSync(MENU_NOTES_FILE, "utf8")); } catch { return {}; } })();
 const _saveMenuNotes = () => { try { fs.writeFileSync(MENU_NOTES_FILE, JSON.stringify(_menuNotes)); } catch {} };
@@ -876,6 +904,17 @@ app.get("/api/menu", async (req, res) => {
   let earlyFallback = null; // menu-shaped early-html text WITHOUT macro evidence — kept as fallback while we go deep
   const _diag = {}; // per-request pipeline diagnosis, attached to every response so coverage sweeps self-explain
   const _ckey = String(req.query.url || "") + "|" + String(req.query.goal || "");
+  /* Stage -1 — the chain publishes a GLP-1 line: serve it verbatim, ahead of cache/FatSecret/scrape */
+  if (String(req.query.goal || "") === "glp1" && String(req.query.chain || "") !== "0") {
+    const cg = chainGlpProfile(req.query.name, req.query.url);
+    if (cg) {
+      const items = cg.items.map((i) => ({ ...i, section: cg.section }));
+      console.log(`[menu] chain GLP-1 menu: ${cg.label} (${items.length} published items)`);
+      _diag.chain = `${cg.label} GLP-1 menu`;
+      return res.json({ ok: true, method: "chain", source: cg.source, note: cg.note,
+        text: items.map((i) => `${i.item} — ${i.cal} cal, ${i.protein}g protein`).join("\n"), items, diag: _diag });
+    }
+  }
   const _rawHit = String(req.query.skipfs || "") === "1" ? null : MENU_CACHE.get(_ckey);
   const _hitUseful = (h) => { const o = h && h.obj; if (!o || !o.ok) return false; if (o.method === "fatsecret") return true;
     const mg = (o.items || []).filter((i) => (i.protein || 0) >= 15 && (i.cal || 0) >= 200).length; return mg >= 3; };
