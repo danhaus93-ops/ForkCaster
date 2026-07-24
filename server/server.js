@@ -127,6 +127,11 @@ app.post("/api/health/sync", (req, res) => {
       const d = String(rec.date || "").slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
       const clean = {};
       for (const [k, cast] of [["steps", Math.round], ["activeKcal", Math.round], ["exerciseMin", Math.round], ["strength", Math.round]]) { const v = +rec[k]; if (Number.isFinite(v) && v >= 0) clean[k] = cast(v); }
+      let bf = +rec.bodyFatPct; if (Number.isFinite(bf) && bf > 0 && bf <= 1) bf *= 100; // scales report either 0.28 or 28
+      if (Number.isFinite(bf) && bf >= 3 && bf <= 70) clean.bodyFatPct = Math.round(bf * 10) / 10;
+      const lm = +rec.leanMassLbs, lmk = +rec.leanMassKg;
+      if (Number.isFinite(lm) && lm > 30 && lm < 500) clean.leanMassLbs = Math.round(lm * 10) / 10;
+      else if (Number.isFinite(lmk) && lmk > 13) clean.leanMassLbs = Math.round(lmk * 2.20462 * 10) / 10;
       const w = +rec.weightLbs; if (Number.isFinite(w) && w > 40 && w < 900) clean.weightLbs = Math.round(w * 10) / 10;
       const wkg = +rec.weightKg; if (clean.weightLbs == null && Number.isFinite(wkg) && wkg > 18) clean.weightLbs = Math.round(wkg * 2.20462 * 10) / 10;
       if (!Object.keys(clean).length) continue;
@@ -150,6 +155,8 @@ app.post("/api/health/sync", (req, res) => {
       else if (nm === "step_count") rec.steps = (rec.steps || 0) + Math.round(q);
       else if (nm === "active_energy") rec.activeKcal = (rec.activeKcal || 0) + Math.round(q);
       else if (nm === "apple_exercise_time") rec.exerciseMin = (rec.exerciseMin || 0) + Math.round(q);
+      else if (nm === "body_fat_percentage") { const v = q <= 1 ? q * 100 : q; if (v >= 3 && v <= 70) rec.bodyFatPct = Math.round(v * 10) / 10; }
+      else if (nm === "lean_body_mass") { const v = unit.startsWith("kg") ? q * 2.20462 : q; if (v > 30 && v < 500) rec.leanMassLbs = Math.round(v * 10) / 10; }
     }
   }
   for (const w of workouts) {
@@ -1388,7 +1395,8 @@ app.post("/api/report/pdf", async (req, res) => {
       <table>
       ${(() => { const a = fnd.adaptive || {}; return a.status === "ok" ? `<tr><td style="width:140px"><b>Weight trend</b></td><td>${esc(a.detail)} (${a.pts} weigh-ins over ${a.spanDays} days)</td></tr>` : `<tr><td style="width:140px"><b>Weight trend</b></td><td>Still collecting \u2014 ${a.pts || 0} weigh-ins over ${a.spanDays || 0} days so far.</td></tr>`; })()}
       ${(() => { const d = fnd.doseResp || {}; return d.status === "ok" ? `<tr><td><b>Dose response</b></td><td>Meals over ~${d.ceiling}g fat ${esc(d.scope)} preceded GI symptoms ${d.aboveSym} of ${d.above} times; at or under, ${d.belowSym} of ${d.below}. Working personal fat ceiling: ~${d.ceiling}g (generic guidance: 15g).</td></tr>` : d.status === "no-pattern" ? `<tr><td><b>Dose response</b></td><td>No clear fat\u2194symptom pattern across ${d.days} logged days (${d.inWin} within 48h of a dose).</td></tr>` : `<tr><td><b>Dose response</b></td><td>Still collecting \u2014 ${d.sym || 0}/5 GI symptom entries, ${d.days || 0}/10 meal-logged days, ${d.inWin || 0}/3 dose-window days.</td></tr>`; })()}
-      ${fnd.health ? `<tr><td><b>Activity (synced)</b></td><td>${fnd.health.avgSteps.toLocaleString()} steps/day (7-day avg) \u00b7 ${fnd.health.strengthWk} resistance session${fnd.health.strengthWk === 1 ? "" : "s"} this week \u00b7 ${fnd.health.days} days of Apple Health data.</td></tr>` : ""}
+      ${fnd.health ? `<tr><td><b>Activity (synced)</b></td><td>${fnd.health.avgSteps.toLocaleString()} steps/day (7-day avg) \u00b7 ${fnd.health.strengthWk} resistance session${fnd.health.strengthWk === 1 ? "" : "s"} this week \u00b7 ${fnd.health.days} days of Apple Health data${fnd.health.bodyFatPct != null ? ` \u00b7 body fat ${fnd.health.bodyFatPct}% (home bioimpedance scale — estimate)` : ""}.</td></tr>` : ""}
+      ${(fnd.adaptive && fnd.adaptive.leanRatePctWk != null) ? `<tr><td><b>Lean mass</b></td><td>Measured trend ${fnd.adaptive.leanRatePctWk > 0 ? "down" : "up"} ${Math.abs(fnd.adaptive.leanRatePctWk).toFixed(1)}%/week across ${fnd.adaptive.leanPts} scale readings (bioimpedance estimate, not DXA).</td></tr>` : ""}
       </table>
       <div style="color:#8a97a4;font-size:9.5px;margin-top:4px">Correlations computed on the patient's own server from self-reported logs \u2014 patterns for discussion, not diagnoses.</div>
       <h2>Dose history &amp; injection sites</h2><table><tr><th>Date</th><th>Dose</th><th>Site</th></tr>${doseRows || "<tr><td colspan=3>None logged</td></tr>"}</table>

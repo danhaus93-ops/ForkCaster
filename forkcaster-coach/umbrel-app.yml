@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.5.0"
+version: "0.5.1"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.5.0: your node's image storage is now yours to see and control. Settings
-  shows how many progress photos and forecast images are stored and how much
-  space they use, with a one-tap sweep that removes only images the app no
-  longer references - photos, comparisons and forecasts in use are always
-  kept. "Reset all data" previously left every image file stranded on the
-  node forever; it now deletes them too, and says so before you confirm.
+  v0.5.1: smart-scale support - body fat and lean mass now sync to your node
+  alongside weight, and the adaptive engine uses them. Fast weight loss with
+  measured lean mass holding steady now gets a different verdict than fast
+  loss with muscle going: no false alarm, no unnecessary target changes, and
+  when muscle really is going the warning says so as a measurement rather
+  than an inference. Body tab gains body-fat and lean-mass tiles, and the
+  prescriber report gains a lean-mass trend row - both labeled as
+  bioimpedance estimates, not DXA. Works with any scale that writes to Apple
+  Health.
 dependencies: []
 path: ""
 defaultUsername: ""

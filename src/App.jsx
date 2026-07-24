@@ -283,8 +283,34 @@ function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
   const ratePctWk = ((avg(head) - avg(tail)) / avg(head)) * (7 / dDays) * 100;
   const mgs = ((glp && glp.doseLog) || []).slice(-6).map((d) => +d.mg || 0);
   const titration = (mgs.length >= 2 && mgs[mgs.length - 1] > Math.min(...mgs.slice(0, -1))) || (glp && glp.lastDoseChangeWk != null && glp.lastDoseChangeWk <= 2);
+  /* Measured lean mass (smart scale via Apple Health) beats inference: a fast drop with muscle
+     holding is a different situation from a fast drop with muscle going. */
+  const leanAll = (healthDays || []).map((d) => {
+    const lm = d.leanMassLbs != null ? +d.leanMassLbs
+      : (d.bodyFatPct != null && d.weightLbs != null ? +d.weightLbs * (1 - +d.bodyFatPct / 100) : null);
+    return lm && lm > 30 ? { date: d.date, lm } : null;
+  }).filter(Boolean).sort((a, b) => (a.date < b.date ? -1 : 1));
+  const leanPts = leanAll.filter((p) => endT - t(p.date) <= 21 * 86400000);
+  const leanSpan = leanPts.length ? Math.round((t(leanPts[leanPts.length - 1].date) - t(leanPts[0].date)) / 86400000) : 0;
+  let leanRatePctWk = null;
+  if (leanPts.length >= 3 && leanSpan >= 10) {
+    const lh = leanPts.slice(0, 2), lt = leanPts.slice(-2);
+    const avgL = (a) => a.reduce((n, p) => n + p.lm, 0) / a.length;
+    const ctL = (a) => a.reduce((n, p) => n + t(p.date), 0) / a.length;
+    const dD = Math.max(5, (ctL(lt) - ctL(lh)) / 86400000);
+    leanRatePctWk = ((avgL(lh) - avgL(lt)) / avgL(lh)) * (7 / dD) * 100; // positive = losing lean
+  }
+  const leanFalling = leanRatePctWk != null && leanRatePctWk > 0.35;
+  const leanHolding = leanRatePctWk != null && leanRatePctWk <= 0.35;
   let flag, detail, suggestion = null;
-  if (ratePctWk > 1.0) {
+  if (leanFalling) {
+    flag = "lean-mass";
+    detail = `Your scale shows lean mass falling ${leanRatePctWk.toFixed(1)}%/week (weight ${ratePctWk.toFixed(1)}%/week) — that's muscle going with the fat, measured, not guessed.`;
+    suggestion = { proteinDelta: 15, label: "Raise protein +15g/day", extra: strengthWk === 0 ? "No resistance sessions logged this week — 2/week is the other half of muscle protection." : "Keep the resistance work; it's the lever that moves this number." };
+  } else if (ratePctWk > 1.0 && leanHolding) {
+    flag = "fast-lean-holding";
+    detail = `Losing ${ratePctWk.toFixed(1)}%/week — fast — but your measured lean mass is holding (${leanRatePctWk.toFixed(1)}%/week). Protein and lifting are doing their job; keep both where they are.`;
+  } else if (ratePctWk > 1.0) {
     flag = "lean-mass";
     detail = `Losing ${ratePctWk.toFixed(1)}%/week — above the ~1%/week line where lean-mass loss accelerates on GLP-1 medication.`;
     suggestion = { proteinDelta: 15, label: "Raise protein +15g/day", extra: strengthWk === 0 ? "Synced workouts show no resistance training this week — 2 sessions/week is the other half of muscle protection." : null };
@@ -292,7 +318,7 @@ function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
     if (titration) { flag = "titration-patience"; detail = `Trend is flat (${ratePctWk.toFixed(1)}%/wk) but your dose just moved — appetite typically drops over the next 1–2 weeks. Patience beats cutting here.`; }
     else { flag = "plateau"; detail = `Flat trend (${ratePctWk.toFixed(1)}%/wk) at a stable dose across this window.`; suggestion = { calDelta: -125, label: "Trim calories −125/day" }; }
   } else { flag = "on-track"; detail = `Losing ${ratePctWk.toFixed(1)}%/week — inside the healthy 0.2–1%/week band. No target changes needed.`; }
-  return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays };
+  return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays, leanRatePctWk, leanPts: leanPts.length };
 }
 /* ── Dose-response engine: learn YOUR dose-window fat ceiling from your own logs (v0.4.2) ── */
 function doseResponseRead(mealLog, glp) {
@@ -1035,7 +1061,7 @@ export default function App() {
       const findings = {
         adaptive: adaptiveRead(weightLog, hd, glp, wk.reduce((n, d) => n + (d.strength || 0), 0)),
         doseResp: doseResponseRead(mealLog, glp),
-        health: hd.length ? { days: hd.length, avgSteps: (() => { const sd = wk.filter((d) => d.steps > 0); return sd.length ? Math.round(sd.reduce((n, d) => n + d.steps, 0) / sd.length) : 0; })(), strengthWk: wk.reduce((n, d) => n + (d.strength || 0), 0) } : null,
+        health: hd.length ? { days: hd.length, avgSteps: (() => { const sd = wk.filter((d) => d.steps > 0); return sd.length ? Math.round(sd.reduce((n, d) => n + d.steps, 0) / sd.length) : 0; })(), strengthWk: wk.reduce((n, d) => n + (d.strength || 0), 0), bodyFatPct: ([...hd].reverse().find((d) => d.bodyFatPct != null) || {}).bodyFatPct ?? null } : null,
       };
       const r = await fetch("/api/report/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: JSON.parse(stateBlob), findings }) });
       if (!r.ok) throw new Error("report failed");
@@ -2128,7 +2154,9 @@ export default function App() {
               ) : (
                 <div>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {[["avg steps/day", avgSteps ? avgSteps.toLocaleString() : "—"], ["strength this wk", `${strengthWk}×`], ["last synced weight", lastW ? `${lastW.weightLbs} lb` : "—"]].map(([l, v]) => (
+                    {(() => { const lastBf = [...hd].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd].reverse().find((d) => d.leanMassLbs != null || (d.bodyFatPct != null && d.weightLbs != null));
+                      const lmVal = lastLm ? (lastLm.leanMassLbs != null ? +lastLm.leanMassLbs : Math.round(lastLm.weightLbs * (1 - lastLm.bodyFatPct / 100) * 10) / 10) : null;
+                      return [["avg steps/day", avgSteps ? avgSteps.toLocaleString() : "—"], ["strength this wk", `${strengthWk}×`], ["last synced weight", lastW ? `${lastW.weightLbs} lb` : "—"], ...(lastBf ? [["body fat", `${lastBf.bodyFatPct}%`]] : []), ...(lmVal ? [["lean mass", `${lmVal} lb`]] : [])]; })().map(([l, v]) => (
                       <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 10, padding: "9px 10px" }}>
                         <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{v}</div>
                         <div style={{ fontSize: 10.5, color: C.muted }}>{l}</div>
