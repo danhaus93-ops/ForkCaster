@@ -35,9 +35,16 @@ app.get("/api/state", (_req, res) => {
   try { res.json(JSON.parse(fs.readFileSync(STATE_FILE, "utf8"))); }
   catch { res.json({ saved: false }); }
 });
-app.delete("/api/state", (_req, res) => {
-  try { fs.rmSync(STATE_FILE, { force: true }); res.json({ ok: true }); }
-  catch (e) { res.status(500).json({ error: String(e) }); }
+app.delete("/api/state", (req, res) => {
+  try {
+    fs.rmSync(STATE_FILE, { force: true });
+    let photos = 0;
+    if (String(req.query.photos || "") === "1") { // opt-in: reset would otherwise strand image files forever
+      for (const f of fs.readdirSync(PHOTO_DIR).filter((x) => /\.(jpg|png)$/i.test(x))) { try { fs.rmSync(path.join(PHOTO_DIR, f), { force: true }); photos++; } catch {} }
+      console.log(`[state] reset: ${photos} photo file(s) deleted with it`);
+    }
+    res.json({ ok: true, photosDeleted: photos });
+  } catch (e) { res.status(500).json({ error: String(e) }); }
 });
 app.post("/api/state", (req, res) => {
   try { fs.writeFileSync(STATE_FILE, JSON.stringify(req.body)); res.json({ ok: true }); }
@@ -53,6 +60,28 @@ app.post("/api/photo", (req, res) => {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     fs.writeFileSync(path.join(PHOTO_DIR, `${id}.${ext}`), Buffer.from(data, "base64"));
     res.json({ id, url: `/api/photo/${id}.${ext}` });
+  } catch (e) { res.status(500).json({ error: String(e) }); }
+});
+app.get("/api/photos/usage", (_req, res) => {
+  try {
+    const files = fs.readdirSync(PHOTO_DIR).filter((f) => /\.(jpg|png)$/i.test(f));
+    const bytes = files.reduce((n, f) => { try { return n + fs.statSync(path.join(PHOTO_DIR, f)).size; } catch { return n; } }, 0);
+    res.json({ ok: true, count: files.length, bytes });
+  } catch (e) { res.json({ ok: true, count: 0, bytes: 0 }); }
+});
+/* Sweep: delete any image the app no longer references. The keep list comes from the client's
+   live state, so forecasts, comparisons and meal shots are all protected — orphans only. */
+app.post("/api/photos/prune", (req, res) => {
+  try {
+    const keep = new Set(((req.body && req.body.keep) || []).map((u) => path.basename(String(u))));
+    const files = fs.readdirSync(PHOTO_DIR).filter((f) => /\.(jpg|png)$/i.test(f));
+    let deleted = 0, freed = 0;
+    for (const f of files) {
+      if (keep.has(f)) continue;
+      try { freed += fs.statSync(path.join(PHOTO_DIR, f)).size; fs.rmSync(path.join(PHOTO_DIR, f), { force: true }); deleted++; } catch {}
+    }
+    console.log(`[photos] prune: ${deleted} orphan(s) removed, ${Math.round(freed / 1024)}KB freed`);
+    res.json({ ok: true, deleted, freed, kept: files.length - deleted });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });
 app.delete("/api/photo/:file", (req, res) => {

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.4.9"
+version: "0.5.0"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.4.9: chains that publish a GLP-1 menu now get served that menu, exactly.
-  Smoothie King's full 10-item GLP-1 Support Menu ships with the app and is
-  returned before any cache, database lookup, or website scrape can get it
-  wrong - Gladiator, Keto Champ, Activator Recovery, Slim N Trim and Power
-  Meal Slim, every flavor, with their published protein and calories. Picks
-  now also show one item per blend family, so three flavors of the same
-  smoothie can't fill all three cards. Verified end to end in tests before
-  release, including against the exact failure state this fixes.
+  v0.5.0: your node's image storage is now yours to see and control. Settings
+  shows how many progress photos and forecast images are stored and how much
+  space they use, with a one-tap sweep that removes only images the app no
+  longer references - photos, comparisons and forecasts in use are always
+  kept. "Reset all data" previously left every image file stranded on the
+  node forever; it now deletes them too, and says so before you confirm.
 dependencies: []
 path: ""
 defaultUsername: ""

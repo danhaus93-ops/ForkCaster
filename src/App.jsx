@@ -437,6 +437,8 @@ export default function App() {
   // food logging / barcode scan
   const [logOpen, setLogOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [photoUsage, setPhotoUsage] = useState(null); // {count, bytes} of images stored on the node
+  useEffect(() => { (async () => { try { setPhotoUsage(await fetch("/api/photos/usage").then((r) => r.json())); } catch {} })(); }, []);
   const [healthSync, setHealthSync] = useState(null); // {token, days:[...]} from the node
   useEffect(() => { (async () => { try { const su = await fetch("/api/health/setup").then((r) => r.json()); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ token: su.token, days: sm.days || [] }); } catch {} })(); }, []);
   const [barcode, setBarcode] = useState("");
@@ -2533,7 +2535,20 @@ export default function App() {
                   <label style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>Restore…<input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) restoreJSON(e.target.files[0]); e.target.value = ""; }} /></label>
                 </div>
                 <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>The PDF is a clean, organized report (doses &amp; sites, weight, side effects, nutrition) you can email or AirDrop to your care team. JSON is the full-fidelity backup for restore.</div>
-                <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, and settings will be wiped.")) { hydrated.current = false; try { await fetch("/api/state", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
+                <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 11, padding: "11px 12px" }}>
+                  <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 700 }}>Images on your node</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{photoUsage ? `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB` : "checking…"}</div>
+                  <button onClick={async () => {
+                    try {
+                      const keep = (stateBlob.match(/\/api\/photo\/[A-Za-z0-9._-]+/g) || []);
+                      const r = await fetch("/api/photos/prune", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keep }) }).then((x) => x.json());
+                      const u = await fetch("/api/photos/usage").then((x) => x.json()); setPhotoUsage(u);
+                      alert(r.deleted ? `Removed ${r.deleted} unreferenced image${r.deleted === 1 ? "" : "s"} (${Math.round((r.freed || 0) / 1024)} KB freed).` : "Nothing to sweep — every image on the node is still in use.");
+                    } catch { alert("Sweep failed."); }
+                  }} style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Sweep orphaned images</button>
+                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 6 }}>Deletes only images the app no longer references — photos, comparisons and forecasts in use are kept.</div>
+                </div>
+                <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.")) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
               <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
             </div>
