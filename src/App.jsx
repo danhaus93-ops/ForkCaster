@@ -525,8 +525,17 @@ export default function App() {
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
       }
       hydrated.current = true;
-    }).catch(() => { hydrated.current = true; });
+      _splashReady();
+    }).catch(() => { hydrated.current = true; _splashReady(); });
   }, []);
+  /* Splash: painted instantly at boot, plays the forecast once, holds until the slogan has been readable, fades when the node has answered */
+  const [splashOn, setSplashOn] = useState(true);
+  const [splashFade, setSplashFade] = useState(false);
+  const splashT0 = useRef(Date.now());
+  function _splashReady() {
+    const MIN_HOLD = 4250, FADE = 450;
+    setTimeout(() => { setSplashFade(true); setTimeout(() => setSplashOn(false), FADE); }, Math.max(0, MIN_HOLD - (Date.now() - splashT0.current)));
+  }
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
   const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore });
@@ -2156,6 +2165,28 @@ export default function App() {
           {tab === "glp" && renderGlp()}
           {tab === "plan" && renderPlan()}
           <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
+          {splashOn && (
+            <div style={{ position: "fixed", inset: 0, zIndex: 400, background: "#050807", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", opacity: splashFade ? 0 : 1, transition: "opacity .45s ease", pointerEvents: splashFade ? "none" : "auto" }}>
+              <style>{`
+                .fc-lockup{display:flex;flex-direction:column;align-items:center;
+                  -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 27%, #000 39%, #000 61%, rgba(0,0,0,0) 73%, rgba(0,0,0,0) 100%);
+                          mask-image:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 27%, #000 39%, #000 61%, rgba(0,0,0,0) 73%, rgba(0,0,0,0) 100%);
+                  -webkit-mask-size:100% 300%;mask-size:100% 300%;
+                  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+                  animation:fcRoll 4.2s linear forwards}
+                @keyframes fcRoll{0%{-webkit-mask-position:0 130%;mask-position:0 130%}100%{-webkit-mask-position:0 -34%;mask-position:0 -34%}}
+                @media (prefers-reduced-motion: reduce){.fc-lockup{animation:none;-webkit-mask-image:none;mask-image:none}}
+              `}</style>
+              <div className="fc-lockup">
+                <svg width="130" height="130" viewBox="0 0 48 48" fill="none" style={{ overflow: "visible", display: "block" }}>
+                  <g fill="#63D48C"><circle cx="19" cy="13" r="5" /><circle cx="26" cy="9.5" r="6.5" /><circle cx="32" cy="13.5" r="5" /><rect x="16" y="12.5" width="17" height="5.5" rx="2.75" /></g>
+                  <path d="M22.80 35.00 C21.04 32.80 18.40 31.26 18.40 28.20 L18.40 24.80 L19.45 19.80 L20.50 24.80 L20.50 28.20 L21.43 28.20 L21.43 24.80 L22.48 19.80 L23.53 24.80 L23.53 28.20 L24.47 28.20 L24.47 24.80 L25.52 19.80 L26.57 24.80 L26.57 28.20 L27.50 28.20 L27.50 24.80 L28.55 19.80 L29.60 24.80 L29.60 28.20 C29.60 31.26 26.96 32.80 25.20 35.00 L26.00 45.80 A2.00 2.00 0 0 1 22.00 45.80 Z" fill="#63D48C" />
+                </svg>
+                <div style={{ fontFamily: DISPLAY, fontSize: 29, fontWeight: 700, color: "#f2f7f4", marginTop: 24, letterSpacing: -0.3 }}>Fork<span style={{ color: "#63D48C" }}>Caster</span></div>
+                <div style={{ fontFamily: BODY, fontSize: 13.5, color: "#94a89c", marginTop: 10 }}>Your best body is in the <span style={{ color: "#63D48C" }}>forecast</span>.</div>
+              </div>
+            </div>
+          )}
           {infoOpen && (
             <div onClick={() => setInfoOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(30,20,10,0.5)", zIndex: 90, display: "flex", alignItems: "flex-end" }}>
               <div onClick={(e) => e.stopPropagation()} style={{ background: C.surface, borderRadius: "22px 22px 0 0", width: "100%", maxHeight: "86vh", overflowY: "auto", padding: "20px 20px 96px" }}>
