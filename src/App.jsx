@@ -1011,7 +1011,7 @@ export default function App() {
       const findings = {
         adaptive: adaptiveRead(weightLog, hd, glp, wk.reduce((n, d) => n + (d.strength || 0), 0)),
         doseResp: doseResponseRead(mealLog, glp),
-        health: hd.length ? { days: hd.length, avgSteps: wk.length ? Math.round(wk.reduce((n, d) => n + (d.steps || 0), 0) / wk.length) : 0, strengthWk: wk.reduce((n, d) => n + (d.strength || 0), 0) } : null,
+        health: hd.length ? { days: hd.length, avgSteps: (() => { const sd = wk.filter((d) => d.steps > 0); return sd.length ? Math.round(sd.reduce((n, d) => n + d.steps, 0) / sd.length) : 0; })(), strengthWk: wk.reduce((n, d) => n + (d.strength || 0), 0) } : null,
       };
       const r = await fetch("/api/report/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: JSON.parse(stateBlob), findings }) });
       if (!r.ok) throw new Error("report failed");
@@ -2084,30 +2084,34 @@ export default function App() {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const last = hd[hd.length - 1];
             const wk = hd.slice(-7);
-            const avgSteps = wk.length ? Math.round(wk.reduce((n, d) => n + (d.steps || 0), 0) / wk.length) : 0;
+            const stepDays = wk.filter((d) => d.steps > 0);
+            const avgSteps = stepDays.length ? Math.round(stepDays.reduce((n, d) => n + d.steps, 0) / stepDays.length) : 0;
             const strengthWk = wk.reduce((n, d) => n + (d.strength || 0), 0);
             const lastW = [...hd].reverse().find((d) => d.weightLbs);
             return card(<div>
               {sectionTitle("Apple Health · feeds the learning engines")}
               {hd.length === 0 ? (
                 <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>
-                  Steps, weight, and workouts from your iPhone can flow to your own node — no cloud in between. One-time setup:
-                  <div style={{ marginTop: 7 }}>1. Install the <b style={{ color: C.ink }}>Health Auto Export</b> app (App Store).</div>
-                  <div>2. Create an automation → type <b style={{ color: C.ink }}>REST API</b> → URL:</div>
+                  Steps and weight can flow from your iPhone to your own node using nothing but Apple's built-in <b style={{ color: C.ink }}>Shortcuts</b> app — no third-party apps, no cloud:
+                  <div style={{ marginTop: 7 }}>1. Shortcuts → + → add <b style={{ color: C.ink }}>Find Health Samples</b> (Type: Steps · Date is Today), then <b style={{ color: C.ink }}>Calculate Statistics → Sum</b>.</div>
+                  <div>2. Add a second <b style={{ color: C.ink }}>Find Health Samples</b> (Type: Weight · Latest · Limit 1).</div>
+                  <div>3. Add <b style={{ color: C.ink }}>Format Date</b> (Current Date → custom <span style={{ color: C.ink }}>yyyy-MM-dd</span>).</div>
+                  <div>4. Add <b style={{ color: C.ink }}>Get Contents of URL</b> → Method POST → Request Body JSON with fields <span style={{ color: C.ink }}>date</span> (formatted date), <span style={{ color: C.ink }}>steps</span> (statistics), <span style={{ color: C.ink }}>weightLbs</span> (sample magnitude) → URL:</div>
                   <div style={{ background: C.surfaceAlt, borderRadius: 8, padding: "8px 10px", margin: "6px 0", fontSize: 11, wordBreak: "break-all", color: C.ink }}>{`${window.location.origin}/api/health/sync?token=${healthSync ? healthSync.token : "…"}`}</div>
-                  <div>3. Metrics: body mass, steps, active energy, exercise time + workouts. Schedule: daily.</div>
-                  <div style={{ marginTop: 6, color: C.faint, fontSize: 11.5 }}>Manual weigh-ins here stay authoritative — synced data trains the trend and dose-response engines arriving in the next updates.</div>
+                  <div>5. Automation → Time of Day → daily → Run Immediately → your shortcut.</div>
+                  <div style={{ marginTop: 6, color: C.faint, fontSize: 11.5 }}>Prefer an app? The Health Auto Export app posting to the same URL also works. Manual weigh-ins here stay authoritative either way.</div>
                 </div>
               ) : (
                 <div>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {[["7-day steps", avgSteps ? avgSteps.toLocaleString() : "—"], ["strength this wk", `${strengthWk}×`], ["last synced weight", lastW ? `${lastW.weightLbs} lb` : "—"]].map(([l, v]) => (
+                    {[["avg steps/day", avgSteps ? avgSteps.toLocaleString() : "—"], ["strength this wk", `${strengthWk}×`], ["last synced weight", lastW ? `${lastW.weightLbs} lb` : "—"]].map(([l, v]) => (
                       <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 10, padding: "9px 10px" }}>
                         <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{v}</div>
                         <div style={{ fontSize: 10.5, color: C.muted }}>{l}</div>
                       </div>
                     ))}
                   </div>
+                  <button onClick={async () => { try { await fetch(`/api/health/sync?token=${healthSync.token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: todayISO(), strength: 1 }) }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ ...healthSync, days: sm.days || [] }); } catch {} }} style={{ marginTop: 9, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>🏋️ Log a strength session today</button>
                   <div style={{ fontSize: 11, color: C.faint, marginTop: 7 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines (coming next)</div>
                 </div>
               )}

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.4.3"
+version: "0.4.4"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.4.3: the prescriber report grows up - and the learning arc is complete.
-  The PDF export (Settings) now leads with "What the app has learned": your
-  weight-trend verdict, your dose-response findings with the evidence counts,
-  and synced activity - honestly marked "still collecting" while the engines
-  are young. The nutrition table finally shows all four macros plus protein
-  adherence, and every side effect is annotated with days-post-dose, the
-  detail a prescriber can read a titration from. Four releases: Apple Health
-  in, adaptive targets, dose-response learning, and now the paper that
-  carries it into your appointment.
+  v0.4.4: health sync you can audit against Apple's own charts. Fixes
+  double-counting when the same day was re-sent (repeated exports were adding
+  instead of replacing - inflated days now self-heal on the next sync), and
+  the steps tile honestly says "avg steps/day". New: sync straight from
+  Apple's built-in Shortcuts app - a six-step recipe on the Body tab, no
+  third-party apps needed (Health Auto Export still works too). Plus a
+  one-tap "log a strength session" button for the workouts Shortcuts can't
+  read.
 dependencies: []
 path: ""
 defaultUsername: ""

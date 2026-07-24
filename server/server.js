@@ -90,10 +90,28 @@ app.get("/api/health/setup", (req, res) => {
 app.post("/api/health/sync", (req, res) => {
   const h = _loadHealth();
   if (!h.token || String(req.query.token || "") !== h.token) return res.status(403).json({ ok: false, error: "bad token" });
+  // SIMPLE shape (Apple Shortcuts-friendly): {"date":"YYYY-MM-DD","steps":N,"weightLbs":N,...} or an array of such — no HAE required
+  const _simple = Array.isArray(req.body) ? req.body : (req.body && req.body.date ? [req.body] : null);
+  if (_simple) {
+    h.days = h.days || {}; let n = 0;
+    for (const rec of _simple) {
+      const d = String(rec.date || "").slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+      const clean = {};
+      for (const [k, cast] of [["steps", Math.round], ["activeKcal", Math.round], ["exerciseMin", Math.round], ["strength", Math.round]]) { const v = +rec[k]; if (Number.isFinite(v) && v >= 0) clean[k] = cast(v); }
+      const w = +rec.weightLbs; if (Number.isFinite(w) && w > 40 && w < 900) clean.weightLbs = Math.round(w * 10) / 10;
+      const wkg = +rec.weightKg; if (clean.weightLbs == null && Number.isFinite(wkg) && wkg > 18) clean.weightLbs = Math.round(wkg * 2.20462 * 10) / 10;
+      if (!Object.keys(clean).length) continue;
+      h.days[d] = { ...h.days[d], ...clean }; n++;
+    }
+    const kk = Object.keys(h.days).sort(); while (kk.length > 400) delete h.days[kk.shift()];
+    _saveHealth(h);
+    console.log(`[health] simple sync: ${n} day(s)`);
+    return res.json({ ok: true, daysUpdated: n, format: "simple" });
+  }
   const metrics = (req.body && req.body.data && req.body.data.metrics) || [];
   const workouts = (req.body && req.body.data && req.body.data.workouts) || [];
-  h.days = h.days || {}; let touched = new Set();
-  const day = (dstr) => { const d = String(dstr || "").slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null; h.days[d] = h.days[d] || {}; touched.add(d); return h.days[d]; };
+  h.days = h.days || {}; const acc = {}; let touched = new Set();
+  const day = (dstr) => { const d = String(dstr || "").slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null; acc[d] = acc[d] || {}; touched.add(d); return acc[d]; };
   for (const m of metrics) {
     const nm = String(m.name || "").toLowerCase(), unit = String(m.units || "").toLowerCase();
     for (const pt of (m.data || [])) {
@@ -109,6 +127,8 @@ app.post("/api/health/sync", (req, res) => {
     const rec = day(w.start || w.date); if (!rec) continue;
     if (/strength|weight|functional|core|resistance/i.test(String(w.name || ""))) rec.strength = (rec.strength || 0) + 1;
   }
+  // REPLACE each touched day's fields with this payload's totals — re-sent exports overwrite instead of double-counting
+  for (const [d, rec] of Object.entries(acc)) h.days[d] = { ...h.days[d], ...rec };
   const keys = Object.keys(h.days).sort(); while (keys.length > 400) delete h.days[keys.shift()]; // cap history
   _saveHealth(h);
   console.log(`[health] sync: ${touched.size} day(s) updated`);
