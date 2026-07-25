@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.7.3"
+version: "0.7.4"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.7.3: important fix - your routine and workout history were not being
-  loaded when the app started. A stray comment added in v0.6.5 ran to the end
-  of its line and disabled both loaders, so every launch began with an empty
-  routine and empty training history, which then overwrote the saved copy.
-  Both load correctly again, and a new test fails the build if any saved field
-  ever stops loading. Also clarifies the coach-channel box, whose placeholder
-  text read like a saved value.
+  v0.7.4: routines now include core work. Trunk exercises sat last in most
+  split lists, so they kept falling off the end of the session - a five-day
+  week could contain a single core movement. Every routine now gets at least
+  three core sessions a week with different movements, and core is prescribed
+  at higher reps with shorter rest rather than the heavy scheme used for main
+  lifts. Rebuild your routine to pick it up.
   match found.
 dependencies: []
 path: ""

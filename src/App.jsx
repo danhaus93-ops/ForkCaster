@@ -412,6 +412,7 @@ function buildRoutine(catalog, opts = {}) {
     // twice a week is normal programming and gives the progression engine more data. Accessories rotate.
     return cands.sort(mainLift ? ((a, b) => byGood(a, b) || byUse(a, b)) : ((a, b) => byUse(a, b) || byGood(a, b)))[0];
   };
+  const CORE_TARGET = Math.min(3, days); // trunk work recovers fast — 2-3 sessions a week is the standard
   const out = split.map(([name, groups], di) => {
     const exercises = [];
     for (let i = 0; i < perDay; i++) {
@@ -421,13 +422,29 @@ function buildRoutine(catalog, opts = {}) {
       const e = pick(group, i < Math.ceil(perDay / 2), daySt, isMain) || pick(group, false, daySt, isMain);
       if (!e || exercises.find((x) => x.exId === e.id)) continue;
       used.set(e.id, (used.get(e.id) || 0) + 1);
+      const isCore = e.group === "core"; // trunk work responds to time under tension, not heavy triples
       exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic, force: e.force || null,
-        sets: sch.sets, repLow: sch.repLow, repHigh: sch.repHigh, restSec: sch.rest });
+        sets: sch.sets, repLow: isCore ? Math.max(10, sch.repLow) : sch.repLow, repHigh: isCore ? Math.max(20, sch.repHigh) : sch.repHigh, restSec: isCore ? 60 : sch.rest });
     }
     const heavy = exercises.filter((x) => x.mechanic === "compound").length >= 2;
     return { id: `d${di}`, name, focus: groups, heavy, exercises };
   });
-  return { generatedAt: Date.now(), goal, days, minutes, equipment, blurb: sch.blurb, days_: out };
+  // Core is last in most split group lists, so it kept falling off the end of the session. Guarantee it.
+  let coreDays = out.filter((d) => d.exercises.some((x) => x.group === "core")).length;
+  if (coreDays < CORE_TARGET) {
+    for (const d of [...out].sort((a, b) => a.exercises.length - b.exercises.length)) {
+      if (coreDays >= CORE_TARGET) break;
+      if (d.exercises.some((x) => x.group === "core")) continue;
+      const daySt = d.exercises.map((x) => `${x.group}|${x.force || "?"}|${x.mechanic}`);
+      const e = pick("core", false, daySt, false);
+      if (!e) continue;
+      used.set(e.id, (used.get(e.id) || 0) + 1);
+      d.exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic, force: e.force || null,
+        sets: sch.sets, repLow: Math.max(10, sch.repLow), repHigh: Math.max(20, sch.repHigh), restSec: 60 });
+      coreDays++;
+    }
+  }
+  return { generatedAt: Date.now(), goal, days, minutes, equipment, blurb: sch.blurb, coreDays, days_: out };
 }
 const LEG_GROUPS = ["quads", "hamstrings", "glutes"];
 const CARDIO_TYPES = ["walk", "incline treadmill", "bike", "row", "elliptical", "stairs"];
