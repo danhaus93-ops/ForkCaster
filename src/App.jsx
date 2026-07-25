@@ -442,6 +442,7 @@ export default function App() {
   const [planMealsOn, setPlanMealsOn] = useState(_slotsFor(4));
   const [planBusy, setPlanBusy] = useState(null);
   const [planErr, setPlanErr] = useState("");
+  const [planNote, setPlanNote] = useState(""); // soft: plan built, but something degraded
   const seedRef = useRef(null);
   /* Shop Mode (Phase 2) — declared early: stateBlob below references priceLog/shopStore */
   const [shopScan, setShopScan] = useState({ status: "idle" });
@@ -1167,7 +1168,7 @@ export default function App() {
         "OTHERWISE identify the food and estimate macros for the full portion shown: state your assumed portion weight in grams, and be CONSERVATIVE about size — packaged single-serve bakery/deli items are typically 60–100 g, not restaurant portions; use the container for scale. " +
         "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"calories\":<int>,\"protein\":<int>,\"carbs\":<int>,\"fat\":<int>,\"fiber\":<int>,\"grams\":<int or 0>,\"src\":\"label\" or \"estimate\"}.";
       const text = await callClaude(prompt, null, { data: b64, media_type: "image/jpeg" });
-      const f = extractJson(text);
+      const f = salvageJSONObject(text);
       setScan({ status: "found", food: {
         name: f.name || "Photo estimate", brand: "", basis: f.src === "label" ? "1 serving (from label)" : (f.grams ? `~${Math.round(f.grams)} g portion` : "portion shown"), source: f.src === "label" ? "nutrition label read from photo" : "AI photo estimate",
         calories: Math.round(f.calories || 0), protein: Math.round(f.protein || 0), carbs: Math.round(f.carbs || 0), fat: Math.round(f.fat || 0), fiber: Math.round(f.fiber || 0) } });
@@ -1253,7 +1254,7 @@ export default function App() {
   }
   async function generatePlan(fresh) {
     fresh = fresh === true; // guard against click-event args
-    setPlanErr(""); setPlanBusy("cookbook");
+    setPlanErr(""); setPlanNote(""); setPlanBusy("cookbook");
     try {
       const seed = await fetchSeedBook();
       const days = planDates(planDaysN);
@@ -1269,8 +1270,15 @@ export default function App() {
       const raw = await callClaude(
         `CANDIDATE RECIPES (id | slot | gentle | per-serving macros | name):\n${cand}\n\nDAYS:\n${dayLines}\n\nAssign one candidate per slot per day (slot names include snack and snack2 — both take snack-type candidates, and they MUST be two different recipes on the same day). Rules: on GENTLE ONLY days use only GENTLE candidates. servings between 1 and 2 in steps of 0.25 — use servings to reach each day's protein target without exceeding its calorie budget by more than 10%.${planMealsOn.length === 3 ? " NO SNACKS THIS WEEK: only three plates per day, so choose the HIGHEST-PROTEIN candidate available for every slot and lean on larger servings — every plate must pull maximum protein." : ""} Prefer variety (avoid using the same recipe more than twice across the week). Return ONLY JSON — no prose, no notes, no explanation before or after; the FIRST character of your reply must be {. Shape: {"days":[{"slots":[{"slot":"breakfast","id":"seed:x","servings":1}]}]}`,
         "You are ForkCaster's meal-prep curator. You never invent recipes or nutrition — you only assign the provided candidates and scale servings.",
-        null, 1800, null);
-      const parsed = extractJson(raw);
+        null, Math.min(6000, 900 + days.length * planMealsOn.length * 70), null);
+      /* The week must never hinge on the model's punctuation: salvage repairs truncated/prose-wrapped
+         replies, and anything still unusable falls through to the deterministic fill below. */
+      let parsed = {}, curatorNote = "";
+      try { parsed = salvageJSONObject(raw) || {}; } catch { parsed = {}; }
+      if (!Array.isArray(parsed.days) || !parsed.days.length) {
+        parsed = { days: [] };
+        curatorNote = `Curator reply unusable — built your week from the cookbook instead. (reply began: ${String(raw).replace(/\s+/g, " ").trim().slice(0, 70) || "empty"})`;
+      }
       const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot) && pool.get(x.id).slot === _slotType(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, photoQuery: r.photoQuery || null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
       for (const d of built) for (const m of planMealsOn) if (!d.slots.find((x) => x.slot === m)) { // curator skipped a slot — fill from pool deterministically
         const used = new Set(d.slots.map((x) => x.id));
@@ -1327,7 +1335,7 @@ export default function App() {
         const lines = [...groupIngredients().entries()].map(([name, uses]) => `${name}: ${uses.map((u) => u.servings === 1 ? u.amt || "1" : `${u.amt || "1"} ×${u.servings}`).join(" + ")}`);
         if (lines.length) {
           const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections — use EXACTLY these five and never invent others: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, 3500, null);
-          grocery = (extractJson(graw).items || []).map((g) => ({ ...g, checked: false }));
+          grocery = (salvageJSONObject(graw).items || []).map((g) => ({ ...g, checked: false }));
         }
         setGroceryNote("");
       } catch (ge) { grocery = fallbackGrocery(); setGroceryNote(String(ge.message || ge).slice(0, 120)); }
@@ -1336,6 +1344,7 @@ export default function App() {
       let planOut = { createdAt: Date.now(), days: built, grocery };
       try { planOut = await enrichPlanPhotos(planOut); } catch {}
       setMealPlan(planOut);
+      setPlanNote(curatorNote);
       setPlanSel(Math.max(0, built.findIndex((d) => d.dose)));
       setPlanView("week"); setPlanBusy(null);
     } catch (e) { setPlanBusy(null); setPlanErr(String(e.message || e)); }
@@ -1972,7 +1981,8 @@ export default function App() {
         {allergies.length > 0 && <div style={{ fontSize: 12.5, color: C.avoid, marginBottom: 12 }}><b>Filtering out:</b> {allergies.join(", ")} — hidden from every meal, same as ordering.</div>}
         <button onClick={() => generatePlan(false)} disabled={!!planBusy} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer", opacity: planBusy ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
         {mealPlan && !planBusy && <button onClick={() => setPlanView("week")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 13, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>Back to current plan</button>}
-        {planErr && <div style={{ fontSize: 12.5, color: C.avoid, marginTop: 10 }}>Plan hiccup: {planErr} — tap generate to retry.</div>}
+        {planErr && <div style={{ fontSize: 12.5, color: C.avoid, marginTop: 10 }}>Plan hiccup: {planErr}</div>}
+        {planNote && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>{planNote}</div>}
         <div style={{ textAlign: "center", fontSize: 12, color: C.faint, marginTop: 12 }}>Runs on your own node · nothing leaves your server</div>
       </div>
     );

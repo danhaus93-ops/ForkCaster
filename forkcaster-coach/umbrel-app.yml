@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.5.1"
+version: "0.5.2"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.5.1: smart-scale support - body fat and lean mass now sync to your node
-  alongside weight, and the adaptive engine uses them. Fast weight loss with
-  measured lean mass holding steady now gets a different verdict than fast
-  loss with muscle going: no false alarm, no unnecessary target changes, and
-  when muscle really is going the warning says so as a measurement rather
-  than an inference. Body tab gains body-fat and lean-mass tiles, and the
-  prescriber report gains a lean-mass trend row - both labeled as
-  bioimpedance estimates, not DXA. Works with any scale that writes to Apple
-  Health.
+  v0.5.2: "Plan hiccup: AI reply wasn't valid JSON" is gone for good. The
+  weekly plan was the last place in the app using a strict JSON parser, so a
+  single stray sentence, trailing comma, or reply that ran past its token
+  limit could kill an entire generated week. Now it uses the same forgiving
+  parser as everything else, the token budget scales with how many days and
+  meals you asked for, and an unusable reply can no longer fail the plan at
+  all - your week gets built from your cookbook instead, with a quiet note
+  explaining what happened.
 dependencies: []
 path: ""
 defaultUsername: ""
