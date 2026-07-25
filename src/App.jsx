@@ -341,16 +341,30 @@ function buildRoutine(catalog, opts = {}) {
   const LIFT_CATS = ["strength", "powerlifting", "olympic weightlifting", "strongman"];
   const pool = (catalog || []).filter((e) => equipment.includes(e.equipment) && !avoid.includes(e.id) && LIFT_CATS.includes(e.category || "strength"));
   const used = new Map();
-  const pick = (group, wantCompound) => {
-    const cands = pool.filter((e) => e.group === group && (wantCompound ? e.mechanic === "compound" : true));
-    if (!cands.length) return null;
-    return cands.sort((a, b) => ((used.get(a.id) || 0) - (used.get(b.id) || 0)) || ((b.mechanic === "compound") - (a.mechanic === "compound")) || a.name.localeCompare(b.name))[0];
+  const LEVEL_RANK = { beginner: 0, intermediate: 1, expert: 2 };
+  const canonical = (e) => { // plain, well-known lifts before exotic variations
+    let s2 = 0;
+    s2 += (LEVEL_RANK[e.level] ?? 1) * 3;
+    s2 += Math.min(6, Math.max(0, e.name.split(/\s+/).length - 2)) * 2;   // "Barbell Squat" beats "Bottoms-Up Clean From The Hang Position"
+    if (/alternating|bottoms-up|around the world|behind the back|single-arm|one-arm|iso|band |suspended|smith/i.test(e.name)) s2 += 4;
+    if (["barbell", "dumbbell", "bodyweight"].includes(e.equipment)) s2 -= 2;
+    return s2;
+  };
+  const firstWord = (n) => String(n || "").split(/[\s/]+/)[0].toLowerCase();
+  const pick = (group, wantCompound, dayWords = []) => {
+    const all = pool.filter((e) => e.group === group && (wantCompound ? e.mechanic === "compound" : true));
+    if (!all.length) return null;
+    const heavy = dayWords.reduce((m, w) => ((m[w] = (m[w] || 0) + 1), m), {});
+    const cands = all.filter((e) => (heavy[firstWord(e.name)] || 0) < 2); // three "Dumbbell …" lifts in one day reads like a bug
+    if (!cands.length) return all.sort((a, b) => ((used.get(a.id) || 0) - (used.get(b.id) || 0)) || (canonical(a) - canonical(b)))[0];
+    return cands.sort((a, b) => ((used.get(a.id) || 0) - (used.get(b.id) || 0)) || ((b.mechanic === "compound") - (a.mechanic === "compound")) || (canonical(a) - canonical(b)) || a.name.localeCompare(b.name))[0];
   };
   const out = split.map(([name, groups], di) => {
     const exercises = [];
     for (let i = 0; i < perDay; i++) {
       const group = groups[i % groups.length];
-      const e = pick(group, i < Math.ceil(perDay / 2)) || pick(group, false);
+      const dayWords = exercises.map((x) => firstWord(x.name));
+      const e = pick(group, i < Math.ceil(perDay / 2), dayWords) || pick(group, false, dayWords);
       if (!e || exercises.find((x) => x.exId === e.id)) continue;
       used.set(e.id, (used.get(e.id) || 0) + 1);
       exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic,
@@ -616,7 +630,7 @@ export default function App() {
   const [planBusy, setPlanBusy] = useState(null);
   const [planErr, setPlanErr] = useState("");
   const [planNote, setPlanNote] = useState(""); // soft: plan built, but something degraded
-  const [trainPrefs, setTrainPrefs] = useState({ days: 4, goal: "preserve", equipment: ["bodyweight", "dumbbell", "barbell"], minutes: 45, nightShift: false, videoChannel: "athleanx" });
+  const [trainPrefs, setTrainPrefs] = useState({ days: 4, goal: "preserve", equipment: ["bodyweight", "dumbbell", "barbell"], minutes: 45, nightShift: false, videoChannel: "" });
   const [routine, setRoutine] = useState(null);
   const [workoutLog, setWorkoutLog] = useState([]);
   const [exCatalog, setExCatalog] = useState([]);
@@ -749,7 +763,7 @@ export default function App() {
         if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
-        if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs })); if (s.routine) setRoutine(s.routine); if (s.workoutLog) setWorkoutLog(s.workoutLog);
+        if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) })); // shipped default reverted if (s.routine) setRoutine(s.routine); if (s.workoutLog) setWorkoutLog(s.workoutLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog);
         if (s.photos) { const alive = s.photos.filter((p) => p && p.url && !p.url.startsWith("blob:")); const real = alive.filter((p) => !p.sim); const legacySims = alive.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
