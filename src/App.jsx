@@ -1239,12 +1239,16 @@ export default function App() {
   }
   async function searchSpoon(slot, env, fresh) {
     try {
-      const q = new URLSearchParams({ number: "6", minProtein: String(Math.max(5, Math.round(env.protein * 0.8))), maxCalories: String(Math.round(env.calories * 1.25)), type: slot === "breakfast" ? "breakfast" : slot === "snack" ? "snack" : "main course" });
+      const q = new URLSearchParams({ number: "12", minProtein: String(Math.max(5, Math.round(env.protein * 0.8))), maxCalories: String(Math.round(env.calories * 1.25)), type: slot === "breakfast" ? "breakfast" : slot === "snack" ? "snack" : "main course" });
       if (fresh) q.set("fresh", "1");
       if (allergies.length) q.set("excludeIngredients", allergies.join(","));
       const d = await fetch(`/api/recipes/search?${q}`).then((r) => r.json());
       if (!d.ok) return [];
-      return (d.results || []).filter((r) => r.perServing.protein != null).map((r) => ({ id: r.id, name: r.name, slot, gentle: false, image: r.image, url: r.url, servings: 1, perServing: r.perServing, ingredients: [], steps: [], p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat ?? 0 }));
+      return (d.results || [])
+        .filter((r) => r.perServing.protein != null)
+        // one-app rule: if we can't show the ingredients AND the steps in here, it doesn't go in your week
+        .filter((r) => (r.ingredients || []).length >= 2 && (r.steps || []).length >= 1)
+        .map((r) => ({ id: r.id, name: r.name, slot, gentle: false, image: r.image, url: r.url, servings: 1, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], p: r.perServing.protein, cal: r.perServing.calories, f: r.perServing.fat ?? 0 }));
     } catch { return []; }
   }
   function extractJson(raw) {
@@ -2085,7 +2089,7 @@ export default function App() {
         {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12, fontSize: 13, color: C.ink, lineHeight: 1.45 }}><b style={{ color: C.violet }}>Why this meal today:</b> post-shot, warm bland low-fat food is easiest to keep down. Eat slowly — stop at comfortable, not full.</div>}
         {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 13.5, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, { marginBottom: 12 })}
         {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 9, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 13 }}>{i + 1}</b><span style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, { marginBottom: 12 })}
-        {slot.url && <a href={slot.url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 12.5, color: C.muted, marginBottom: 12, textDecoration: "underline" }}>Full recipe at the source ↗</a>}
+        {slot.url && <a href={slot.url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 11.5, color: C.faint, marginBottom: 12, textDecoration: "underline" }}>Original recipe source ↗</a>}
         <button onClick={() => logPlannedMeal(di, si)} style={{ width: "100%", background: slot.logged ? C.surfaceAlt : C.go, color: slot.logged ? C.go : C.surface, border: slot.logged ? `1.5px solid ${C.go}` : "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{slot.logged ? "Logged ✓" : "Log this meal ✓"}</button>
       </div>
     ); }

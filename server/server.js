@@ -796,13 +796,13 @@ const SEARCH_TTL = 7 * 24 * 3600 * 1000;
 app.get("/api/recipes/search", async (req, res) => {
   const SPN = key("SPOONACULAR_KEY");
   if (!SPN) return res.json({ ok: false, reason: "no-key" });
-  const ck = JSON.stringify(["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type", "number"].map((k) => String(req.query[k] || "")));
+  const ck = JSON.stringify(["v2-full", ...["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type", "number"].map((k) => String(req.query[k] || ""))]);
   if (!req.query.fresh) {
     const hit = _searchCache.get(ck);
     if (hit && Date.now() - hit.t < SEARCH_TTL) { console.log(`[recipes] search (cached)`); return res.json({ ...hit.data, cached: true }); }
   }
   try {
-    const q = new URLSearchParams({ apiKey: SPN, addRecipeNutrition: "true", number: String(Math.min(12, +req.query.number || 8)), sort: "max-used-ingredients" });
+    const q = new URLSearchParams({ apiKey: SPN, addRecipeNutrition: "true", fillIngredients: "true", addRecipeInstructions: "true", instructionsRequired: "true", number: String(Math.min(12, +req.query.number || 8)), sort: "max-used-ingredients" });
     for (const k of ["query", "minProtein", "maxProtein", "minCalories", "maxCalories", "maxFat", "excludeIngredients", "type"]) if (req.query[k]) q.set(k, String(req.query[k]));
     q.delete("sort"); // default relevance
     const r = await fetch(`${SPN_BASE}/recipes/complexSearch?${q}`, { signal: AbortSignal.timeout(12000) });
@@ -810,10 +810,28 @@ app.get("/api/recipes/search", async (req, res) => {
     if (!r.ok) { console.log(`[recipes] search -> HTTP ${r.status}`); return res.json({ ok: false, reason: `spoonacular ${r.status}` }); }
     const d = await r.json();
     const pull = (rec, want) => { const n = ((rec.nutrition || {}).nutrients || []).find((x) => x.name === want); return n ? Math.round(n.amount) : null; };
+    const ingOf = (rec) => { // "name — 2 tbsp": the shape the grocery grouper and recipe view already speak
+      const list = rec.extendedIngredients && rec.extendedIngredients.length ? rec.extendedIngredients : [...(rec.usedIngredients || []), ...(rec.missedIngredients || [])];
+      const seen = new Set(), out = [];
+      for (const i of (list || [])) {
+        const nm = String(i.nameClean || i.name || i.originalName || "").trim();
+        if (!nm || seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
+        const amt = [i.amount ? Math.round(i.amount * 100) / 100 : null, String(i.unit || "").trim()].filter(Boolean).join(" ").trim();
+        out.push(amt ? `${nm} — ${amt}` : nm);
+      }
+      return out;
+    };
+    const stepsOf = (rec) => {
+      const ai = (rec.analyzedInstructions || [])[0];
+      if (ai && Array.isArray(ai.steps) && ai.steps.length) return ai.steps.map((x) => String(x.step || "").trim()).filter(Boolean).slice(0, 25);
+      const raw = String(rec.instructions || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      return raw ? raw.split(/(?<=[.!?])\s+(?=[A-Z0-9])/).map((t) => t.trim()).filter((t) => t.length > 3).slice(0, 25) : [];
+    };
     const payload = { ok: true, results: (d.results || []).map((rec) => ({
       id: "spn:" + rec.id, name: rec.title, image: rec.image || null, source: "spoonacular",
       url: rec.sourceUrl || null, servings: rec.servings || 1, readyMin: rec.readyInMinutes || null,
       perServing: { calories: pull(rec, "Calories"), protein: pull(rec, "Protein"), fat: pull(rec, "Fat"), carbs: pull(rec, "Carbohydrates") },
+      ingredients: ingOf(rec), steps: stepsOf(rec),
     })) };
     _searchCache.set(ck, { t: Date.now(), data: payload }); _saveSearchCache();
     res.json({ ...payload, cached: false });

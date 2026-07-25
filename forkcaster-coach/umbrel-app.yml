@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.5.3"
+version: "0.5.4"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.5.3: no more eating the same plate seven days running. When the plan
-  filled a slot itself it always reached for the single highest-protein
-  recipe, ignoring what the rest of the week already looked like - so a
-  degraded week could come back with four recipes stretched across seven
-  days. Now selection favours the least-used recipe that fits, a final pass
-  swaps anything appearing more than twice for something fresher, and dose
-  day plus the day after still get gentle recipes only. If your cookbook
-  genuinely can not cover the week, it says so instead of repeating quietly.
+  v0.5.4: every recipe in your plan is now cookable inside the app. Searched
+  recipes previously arrived with no ingredients and no steps, so they added
+  nothing to your grocery list and sent you to another website to cook - now
+  the full ingredient list and prep steps come with them, formatted for the
+  grocery list and shown on the recipe card, with the original source kept
+  only as a small credit. Anything that cannot be shown completely is left
+  out of the plan entirely. The recipe net is also wider: twelve candidates
+  per meal type instead of six, filtered to recipes that actually include
+  instructions.
 dependencies: []
 path: ""
 defaultUsername: ""
