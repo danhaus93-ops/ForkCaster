@@ -270,14 +270,16 @@ app.get("/api/health/summary", (req, res) => {
   const days = Object.entries(h.days || {}).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-60).map(([date, v]) => ({ date, ...v }));
   res.json({ ok: true, days });
 });
+const KNOWN_KEYS = ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY", "FATSECRET_CLIENT_ID", "FATSECRET_CLIENT_SECRET", "GEMINI_API_KEY", "SPOONACULAR_KEY", "YOUTUBE_API_KEY"];
 app.post("/api/keys", (req, res) => {
   try {
     const cur = readSecrets(); const b = req.body || {};
-    for (const k of ["ANTHROPIC_API_KEY", "GOOGLE_PLACES_KEY", "USDA_FDC_KEY", "FATSECRET_CLIENT_ID", "FATSECRET_CLIENT_SECRET", "GEMINI_API_KEY", "SPOONACULAR_KEY"]) {
-      if (typeof b[k] === "string" && b[k].trim()) cur[k] = b[k].trim();
-    }
+    let stored = [], dropped = [];
+    for (const k of KNOWN_KEYS) if (typeof b[k] === "string" && b[k].trim()) { cur[k] = b[k].trim(); stored.push(k); }
+    for (const k of Object.keys(b)) if (!KNOWN_KEYS.includes(k)) dropped.push(k);
+    if (dropped.length) console.log(`[keys] IGNORED unknown key name(s): ${dropped.join(", ")}`); // never fail silently again
     fs.writeFileSync(path.join(DATA_DIR, "secrets.json"), JSON.stringify(cur, null, 2));
-    res.json({ ok: true });
+    res.json({ ok: true, stored, ignored: dropped });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });
 
