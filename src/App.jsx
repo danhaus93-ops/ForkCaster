@@ -320,6 +320,137 @@ function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
   } else { flag = "on-track"; detail = `Losing ${ratePctWk.toFixed(1)}%/week — inside the healthy 0.2–1%/week band. No target changes needed.`; }
   return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays, leanRatePctWk, leanPts: leanPts.length };
 }
+/* ── Training engines: routine building, progressive overload, volume, dose-aware scheduling ── */
+const SPLITS = {
+  3: [["Full Body A", ["quads", "chest", "back", "shoulders", "core"]], ["Full Body B", ["hamstrings", "back", "chest", "triceps", "core"]], ["Full Body C", ["glutes", "shoulders", "back", "biceps", "calves"]]],
+  4: [["Upper A", ["chest", "back", "shoulders", "triceps"]], ["Lower A", ["quads", "hamstrings", "glutes", "calves"]], ["Upper B", ["back", "chest", "shoulders", "biceps"]], ["Lower B", ["hamstrings", "quads", "glutes", "core"]]],
+  5: [["Upper", ["chest", "back", "shoulders", "biceps"]], ["Lower", ["quads", "hamstrings", "glutes", "calves"]], ["Push", ["chest", "shoulders", "triceps"]], ["Pull", ["back", "biceps", "core"]], ["Legs", ["quads", "hamstrings", "glutes", "calves"]]],
+  6: [["Push A", ["chest", "shoulders", "triceps"]], ["Pull A", ["back", "biceps"]], ["Legs A", ["quads", "glutes", "calves"]], ["Push B", ["shoulders", "chest", "triceps"]], ["Pull B", ["back", "biceps", "core"]], ["Legs B", ["hamstrings", "quads", "core"]]],
+};
+const GOAL_SCHEME = {
+  preserve: { sets: 3, repLow: 6, repHigh: 10, rest: 120, blurb: "Heavy enough to defend muscle while calories are low — the whole point on a GLP-1." },
+  build: { sets: 4, repLow: 6, repHigh: 12, rest: 105, blurb: "Volume-forward. Needs calories to match." },
+  maintain: { sets: 2, repLow: 8, repHigh: 12, rest: 90, blurb: "Minimum effective dose to hold what you have." },
+};
+const LOWER_GROUPS = ["quads", "hamstrings", "glutes", "calves"];
+function buildRoutine(catalog, opts = {}) {
+  const { days = 4, goal = "preserve", equipment = ["bodyweight", "dumbbell", "barbell"], minutes = 45, avoid = [] } = opts;
+  const sch = GOAL_SCHEME[goal] || GOAL_SCHEME.preserve;
+  const perDay = minutes >= 75 ? 7 : minutes >= 60 ? 6 : minutes >= 45 ? 5 : 4;
+  const split = SPLITS[days] || SPLITS[4];
+  const LIFT_CATS = ["strength", "powerlifting", "olympic weightlifting", "strongman"];
+  const pool = (catalog || []).filter((e) => equipment.includes(e.equipment) && !avoid.includes(e.id) && LIFT_CATS.includes(e.category || "strength"));
+  const used = new Map();
+  const pick = (group, wantCompound) => {
+    const cands = pool.filter((e) => e.group === group && (wantCompound ? e.mechanic === "compound" : true));
+    if (!cands.length) return null;
+    return cands.sort((a, b) => ((used.get(a.id) || 0) - (used.get(b.id) || 0)) || ((b.mechanic === "compound") - (a.mechanic === "compound")) || a.name.localeCompare(b.name))[0];
+  };
+  const out = split.map(([name, groups], di) => {
+    const exercises = [];
+    for (let i = 0; i < perDay; i++) {
+      const group = groups[i % groups.length];
+      const e = pick(group, i < Math.ceil(perDay / 2)) || pick(group, false);
+      if (!e || exercises.find((x) => x.exId === e.id)) continue;
+      used.set(e.id, (used.get(e.id) || 0) + 1);
+      exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic,
+        sets: sch.sets, repLow: sch.repLow, repHigh: sch.repHigh, restSec: sch.rest });
+    }
+    const heavy = exercises.filter((x) => x.mechanic === "compound").length >= 2;
+    return { id: `d${di}`, name, focus: groups, heavy, exercises };
+  });
+  return { generatedAt: Date.now(), goal, days, minutes, equipment, blurb: sch.blurb, days_: out };
+}
+const LEG_GROUPS = ["quads", "hamstrings", "glutes"];
+const CARDIO_TYPES = ["walk", "incline treadmill", "bike", "row", "elliptical", "stairs"];
+function rampSets(workWeight, bodyweight) { // ramp into the first compound instead of jumping to working weight
+  const w = +workWeight || 0;
+  if (bodyweight || w < 65) return [{ w: 0, reps: 10, label: "1 easy set, no load" }];
+  const pcts = w >= 135 ? [0.5, 0.7, 0.85] : [0.55, 0.8];
+  return pcts.map((pc, i) => ({ w: Math.max(45, Math.round((w * pc) / 5) * 5), reps: i === 0 ? 5 : i === 1 ? 3 : 1, label: `${Math.round(pc * 100)}%` }));
+}
+const _DYNAMIC = /swing|circle|walkout|inchworm|high knee|butt kick|jumping|lunge|good morning|squat|push-?up|band|scapular|bridge|bird dog|plank/i;
+function warmupBlock(catalog, groups, excludeIds = []) { // dynamic work before lifting — static stretching here blunts strength
+  const cands = (catalog || []).filter((e) => ["strength", "plyometrics"].includes(e.category) && ["bodyweight", "bands"].includes(e.equipment)
+    && groups.includes(e.group) && !excludeIds.includes(e.id) && (e.level === "beginner" || _DYNAMIC.test(e.name)));
+  const seen = new Set(), out = [];
+  for (const g of groups) { const e = cands.find((x) => x.group === g && !seen.has(x.id)); if (!e) continue; seen.add(e.id); out.push({ exId: e.id, name: e.name, group: e.group, prescribe: "2 × 8–10, easy" }); if (out.length >= 3) break; }
+  return out;
+}
+function cooldownBlock(catalog, groups) { // static stretching belongs AFTER the work
+  const cands = (catalog || []).filter((e) => e.category === "stretching" && groups.includes(e.group));
+  const seen = new Set(), out = [];
+  for (const g of groups) { const e = cands.find((x) => x.group === g && !seen.has(x.id)); if (!e) continue; seen.add(e.id); out.push({ exId: e.id, name: e.name, group: e.group, prescribe: "30–40s" }); if (out.length >= 4) break; }
+  return out;
+}
+const cardioTarget = (goal) => (goal === "build" ? 90 : goal === "maintain" ? 150 : 120);
+function cardioSchedule(weekPlan) { // cardio fills rest days, and backs off the day before heavy legs
+  return weekPlan.map((d, i) => {
+    if (d.day) return { ...d, cardio: null };
+    const next = weekPlan[i + 1];
+    const legsTomorrow = next && next.day && next.day.heavy && (next.day.focus || []).some((g) => LEG_GROUPS.includes(g));
+    return { ...d, cardio: legsTomorrow ? { minutes: 20, intensity: "easy", note: "Keep it easy — heavy legs tomorrow." } : { minutes: 30, intensity: "zone 2", note: "Conversational pace — it should not cost you a session." } };
+  });
+}
+const cardioMinutes = (workoutLog, sinceISO) => (workoutLog || []).filter((s) => s.kind === "cardio" && (!sinceISO || s.date >= sinceISO)).reduce((n, s) => n + (+s.minutes || 0), 0);
+const est1RM = (w, reps) => (w > 0 && reps > 0 ? Math.round(w * (1 + Math.min(reps, 12) / 30)) : 0);
+function progressionAdvice(entries, plan) {
+  const repHigh = (plan && plan.repHigh) || 10, repLow = (plan && plan.repLow) || 6;
+  const lower = LOWER_GROUPS.includes((plan && plan.group) || "");
+  const step = lower ? 10 : 5;
+  const list = (entries || []).filter((e) => (e.sets || []).length);
+  if (!list.length) return { action: "start", text: `First time on this lift — pick a weight you could get ${repHigh} clean reps with, leaving about 2 in the tank.` };
+  const last = list[list.length - 1];
+  const w = Math.max(...last.sets.map((x) => +x.w || 0));
+  const allHigh = last.sets.every((x) => (+x.reps || 0) >= repHigh) && last.sets.every((x) => x.rir == null || +x.rir <= 2);
+  const bests = list.slice(-3).map((e) => Math.max(...e.sets.map((x) => est1RM(+x.w || 0, +x.reps || 0))));
+  const stalled = bests.length === 3 && bests[2] <= bests[0];
+  if (allHigh) return { action: "add-weight", suggested: w + step, text: `You hit ${repHigh} on every set last time — go up to ${w + step} lb and work back from ${repLow} reps.` };
+  if (stalled) return { action: "deload", suggested: Math.max(step, Math.round((w * 0.9) / step) * step), text: `Three sessions without progress — drop to ${Math.max(step, Math.round((w * 0.9) / step) * step)} lb, rebuild for two weeks.` };
+  return { action: "add-reps", suggested: w, text: `Stay at ${w} lb and add reps until all sets reach ${repHigh}.` };
+}
+function weeklySets(workoutLog, catalog, sinceISO) {
+  const byId = new Map((catalog || []).map((e) => [e.id, e]));
+  const out = {};
+  for (const s of (workoutLog || [])) {
+    if (sinceISO && s.date < sinceISO) continue;
+    for (const en of (s.entries || [])) {
+      const g = (byId.get(en.exId) || {}).group || en.group || "other";
+      out[g] = (out[g] || 0) + (en.sets || []).length;
+    }
+  }
+  return out;
+}
+function scheduleWeek(routineDays, dates) {
+  const slots = { 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 2, 4, 5], 6: [0, 1, 2, 3, 4, 5] }[routineDays.length] || [0, 1, 3, 4];
+  const plan = dates.map((d) => ({ ...d, day: null, note: "" }));
+  const order = [...routineDays];
+  // heavy sessions dodge the shot window; if everything lands in it, the day gets a lighter note
+  const gentleIdx = new Set(plan.map((d, i) => ((d.dose || d.after) ? i : -1)).filter((i) => i >= 0));
+  const chosen = [...slots];
+  for (let k = 0; k < chosen.length; k++) {
+    const dayDef = order[k];
+    if (!dayDef) break;
+    let idx = chosen[k];
+    if (dayDef.heavy && gentleIdx.has(idx)) {
+      const alt = plan.findIndex((d, i) => !gentleIdx.has(i) && !chosen.slice(0, k).includes(i) && !chosen.slice(k + 1).includes(i));
+      if (alt >= 0) { chosen[k] = alt; idx = alt; }
+      else plan[idx].note = "Shot window — drop one set per exercise and keep the weights honest.";
+    } else if (gentleIdx.has(idx)) plan[idx].note = "Shot window — lighter session, stop early if your stomach says so.";
+    plan[idx].day = dayDef;
+  }
+  return plan;
+}
+function fuelWarning(mealLog, targets, todayISO) {
+  const goal = (targets && targets.protein) || 0;
+  if (!goal) return "";
+  const byDay = {};
+  for (const m of (mealLog || [])) byDay[m.date] = (byDay[m.date] || 0) + (+m.protein || 0);
+  const prev = Object.keys(byDay).filter((d) => d < todayISO).sort().slice(-2);
+  if (prev.length < 2) return "";
+  const short = prev.filter((d) => byDay[d] < goal * 0.8);
+  return short.length === 2 ? `Protein came in under target the last two days — lifting hard while under-fed is how muscle gets spent. Eat first, then train.` : "";
+}
 /* ── Grocery shaping: aisle sections and a merge key, so the list is usable even when the
    AI consolidation pass fails. Prep words are stripped for MERGING only — display keeps the
    recipe's own wording. ── */
@@ -485,6 +616,14 @@ export default function App() {
   const [planBusy, setPlanBusy] = useState(null);
   const [planErr, setPlanErr] = useState("");
   const [planNote, setPlanNote] = useState(""); // soft: plan built, but something degraded
+  const [trainPrefs, setTrainPrefs] = useState({ days: 4, goal: "preserve", equipment: ["bodyweight", "dumbbell", "barbell"], minutes: 45, nightShift: false });
+  const [routine, setRoutine] = useState(null);
+  const [workoutLog, setWorkoutLog] = useState([]);
+  const [exCatalog, setExCatalog] = useState([]);
+  const [trainView, setTrainView] = useState("today");
+  const [cardioDraft, setCardioDraft] = useState({ type: "walk", minutes: "30", intensity: "zone 2" });
+  const [liveSession, setLiveSession] = useState(null); // {dayId, name, entries:[{exId,name,group,sets:[{w,reps,rir}]}]}
+  useEffect(() => { (async () => { try { const d = await fetch("/api/exercises").then((r) => r.json()); setExCatalog(d.exercises || []); } catch {} })(); }, []);
   const seedRef = useRef(null);
   /* Shop Mode (Phase 2) — declared early: stateBlob below references priceLog/shopStore */
   const [shopScan, setShopScan] = useState({ status: "idle" });
@@ -591,6 +730,7 @@ export default function App() {
         if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
+        if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs })); if (s.routine) setRoutine(s.routine); if (s.workoutLog) setWorkoutLog(s.workoutLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog);
         if (s.photos) { const alive = s.photos.filter((p) => p && p.url && !p.url.startsWith("blob:")); const real = alive.filter((p) => !p.sim); const legacySims = alive.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
@@ -613,7 +753,7 @@ export default function App() {
   }
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore, trainPrefs, routine, workoutLog });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -1104,6 +1244,16 @@ export default function App() {
       const findings = {
         adaptive: adaptiveRead(weightLog, hd, glp, wk.reduce((n, d) => n + (d.strength || 0), 0)),
         doseResp: doseResponseRead(mealLog, glp),
+        training: workoutLog.length ? (() => {
+          const since = (() => { const t = new Date(); t.setDate(t.getDate() - 28); return t.toISOString().slice(0, 10); })();
+          const recent = workoutLog.filter((x) => x.date >= since);
+          const lifts = [...new Set(recent.flatMap((x) => (x.entries || []).map((e) => e.exId)))].map((id) => {
+            const h = recent.flatMap((x) => (x.entries || []).filter((e) => e.exId === id).map((e) => ({ name: e.name, sets: e.sets || [] })));
+            const bests = h.map((x) => Math.max(...x.sets.map((y) => est1RM(+y.w || 0, +y.reps || 0))));
+            return { name: h[0].name, best: Math.max(...bests), delta: Math.max(...bests) - bests[0] };
+          }).sort((a, b) => b.best - a.best).slice(0, 5);
+          return { sessions28: recent.length, perWeek: Math.round((recent.length / 4) * 10) / 10, goal: (routine || {}).goal || null, sets: weeklySets(recent, exCatalog), lifts };
+        })() : null,
         health: hd.length ? { days: hd.length, avgSteps: (() => { const sd = wk.filter((d) => d.steps > 0); return sd.length ? Math.round(sd.reduce((n, d) => n + d.steps, 0) / sd.length) : 0; })(), strengthWk: wk.reduce((n, d) => n + (d.strength || 0), 0), bodyFatPct: ([...hd].reverse().find((d) => d.bodyFatPct != null) || {}).bodyFatPct ?? null } : null,
       };
       const r = await fetch("/api/report/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: JSON.parse(stateBlob), findings }) });
@@ -1739,6 +1889,184 @@ export default function App() {
     );
   };
 
+  const trainDates = () => { // 7 days from today, marked with the shot window
+    const doses = new Set(((glp && glp.doseLog) || []).map((d) => d.date));
+    const after = new Set([...doses].map((d) => { const t = new Date(d + "T12:00:00"); t.setDate(t.getDate() + 1); return t.toISOString().slice(0, 10); }));
+    return Array.from({ length: 7 }, (_, i) => { const t = new Date(); t.setDate(t.getDate() + i); const iso = t.toISOString().slice(0, 10);
+      return { iso, label: i === 0 ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" }), dose: doses.has(iso), after: after.has(iso) }; });
+  };
+  const exHistory = (exId) => workoutLog.flatMap((s) => (s.entries || []).filter((e) => e.exId === exId).map((e) => ({ date: s.date, sets: e.sets || [] })));
+  function startSession(dayDef) {
+    setLiveSession({ dayId: dayDef.id, name: dayDef.name, date: todayISO(),
+      entries: dayDef.exercises.map((x) => { const h = exHistory(x.exId); const last = h[h.length - 1]; const adv = progressionAdvice(h, x);
+        const seed = adv.action === "add-weight" || adv.action === "deload" ? adv.suggested : (last ? Math.max(...last.sets.map((y) => +y.w || 0)) : 0);
+        return { ...x, advice: adv, sets: Array.from({ length: x.sets }, () => ({ w: seed || "", reps: "", rir: "" })) }; }) });
+    setTrainView("session");
+  }
+  function saveSession() {
+    const entries = (liveSession.entries || []).map((e) => ({ exId: e.exId, name: e.name, group: e.group,
+      sets: (e.sets || []).filter((x) => +x.w > 0 && +x.reps > 0).map((x) => ({ w: +x.w, reps: +x.reps, rir: x.rir === "" ? null : +x.rir })) })).filter((e) => e.sets.length);
+    if (!entries.length) { setLiveSession(null); setTrainView("today"); return; }
+    setWorkoutLog((L) => [...L.filter((s) => !(s.date === liveSession.date && s.dayId === liveSession.dayId)), { date: liveSession.date, dayId: liveSession.dayId, name: liveSession.name, entries }].slice(-400));
+    fetch(`/api/health/sync?token=${healthSync ? healthSync.token : ""}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: liveSession.date, strength: 1 }) }).catch(() => {});
+    setLiveSession(null); setTrainView("today");
+  }
+  const renderTrain = () => {
+    const week = routine ? scheduleWeek(routine.days_ || [], trainDates()) : [];
+    const todaySlot = week.find((d) => d.iso === todayISO() && d.day);
+    const nextSlot = todaySlot || week.find((d) => d.day);
+    const fuel = fuelWarning(mealLog, targets, todayISO());
+    const weekAgo = (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })();
+    const cardioMin7 = cardioMinutes(workoutLog, weekAgo);
+    const weekCardio = routine ? cardioSchedule(week) : [];
+    const sets7 = weeklySets(workoutLog, exCatalog, (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })());
+    const done7 = workoutLog.filter((s) => s.date >= (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })()).length;
+    const nav = (
+      <div style={{ display: "flex", gap: 7, margin: "0 0 12px", flexWrap: "wrap" }}>
+        {[["today", "Today"], ["week", "Week"], ["lifts", "Lifts"], ["setup", "Routine"]].map(([k, l]) => (
+          <button key={k} onClick={() => setTrainView(k)} style={{ background: trainView === k ? C.ink : "none", color: trainView === k ? C.surface : C.muted, border: `1.5px solid ${trainView === k ? C.ink : C.hair}`, borderRadius: 20, padding: "7px 13px", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{l}</button>
+        ))}
+      </div>
+    );
+    if (trainView === "session" && liveSession) return (
+      <div style={{ padding: "14px 18px 96px" }}>
+        <button onClick={() => { setLiveSession(null); setTrainView("today"); }} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Cancel session</button>
+        <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink, marginBottom: 12 }}>{liveSession.name}</div>
+        {(() => { const first = liveSession.entries.find((e) => e.mechanic === "compound") || liveSession.entries[0];
+          const seed = first ? +(first.sets[0] || {}).w || 0 : 0;
+          const ramp = rampSets(seed, first && first.equipment === "bodyweight");
+          const dyn = warmupBlock(exCatalog, [...new Set(liveSession.entries.map((e) => e.group))], liveSession.entries.map((e) => e.exId));
+          return card(<div>
+            {sectionTitle("Warm-up · before the working sets")}
+            {first && <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.5, marginBottom: dyn.length ? 8 : 0 }}>
+              <b>Ramp into {first.name}:</b> {ramp.map((r) => (r.w ? `${r.w} lb × ${r.reps}` : r.label)).join(" → ")} <span style={{ color: C.faint }}>· then your working sets</span>
+            </div>}
+            {dyn.map((x, i) => <div key={i} style={{ fontSize: 12.5, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
+          </div>, { marginBottom: 10 }); })()}
+        {liveSession.entries.map((e, ei) => card(<div key={ei}>
+          <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{e.name}</div>
+          <div style={{ fontSize: 11.5, color: C.muted, margin: "2px 0 7px" }}>{e.group} · {e.equipment} · target {e.repLow}–{e.repHigh} reps · rest {e.restSec}s</div>
+          <div style={{ fontSize: 12, color: e.advice.action === "deload" ? C.caution : C.go, fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{e.advice.text}</div>
+          {e.sets.map((st, si) => (
+            <div key={si} style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 6 }}>
+              <div style={{ fontSize: 11.5, color: C.faint, width: 34 }}>set {si + 1}</div>
+              {[["w", "lb"], ["reps", "reps"], ["rir", "RIR"]].map(([f, ph]) => (
+                <input key={f} inputMode="numeric" value={st[f]} placeholder={ph} onChange={(ev) => { const v = ev.target.value.replace(/[^\d.]/g, ""); setLiveSession((L) => { const n = { ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: x.sets.map((y, yi) => yi === si ? { ...y, [f]: v } : y) } : x) }; return n; }); }}
+                  style={{ flex: 1, minWidth: 0, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 9, padding: "9px 8px", fontFamily: BODY, fontSize: 14, color: C.ink, textAlign: "center" }} />
+              ))}
+            </div>
+          ))}
+          <button onClick={() => setLiveSession((L) => ({ ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: [...x.sets, { w: x.sets[x.sets.length - 1]?.w || "", reps: "", rir: "" }] } : x) }))} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>+ add set</button>
+        </div>, { marginBottom: 10 }))}
+        {(() => { const cd = cooldownBlock(exCatalog, [...new Set(liveSession.entries.map((e) => e.group))]);
+          return cd.length ? card(<div>
+            {sectionTitle("Cool-down · hold these after, not before")}
+            {cd.map((x, i) => <div key={i} style={{ fontSize: 12.5, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
+          </div>, { marginBottom: 10 }) : null; })()}
+        <button onClick={saveSession} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Finish &amp; log session ✓</button>
+      </div>
+    );
+    return (
+      <div style={{ padding: "14px 18px 96px" }}>
+        <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Train</div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Lifting is the half of muscle protection food can't do</div>
+        {nav}
+        {trainView === "today" && (!routine ? card(<div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>No routine yet — open <b style={{ color: C.ink }}>Routine</b> and generate one. Pick your days per week, equipment, and session length; everything else is automatic.</div>) : (<div>
+          {fuel && card(<div style={{ fontSize: 12.5, color: C.caution, fontWeight: 700, lineHeight: 1.5 }}>{fuel}</div>, { marginBottom: 10 })}
+          {nextSlot ? card(<div>
+            {sectionTitle(nextSlot.iso === todayISO() ? "Today's session" : `Next session · ${nextSlot.label}`)}
+            <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink, marginBottom: 3 }}>{nextSlot.day.name}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: nextSlot.note ? 7 : 10 }}>{nextSlot.day.exercises.length} exercises · {nextSlot.day.focus.join(", ")}</div>
+            {nextSlot.note && <div style={{ fontSize: 12, color: C.violet, fontWeight: 700, marginBottom: 10, lineHeight: 1.45 }}>{nextSlot.note}</div>}
+            {nextSlot.day.exercises.map((x, i) => { const h = exHistory(x.exId); const last = h[h.length - 1]; const adv = progressionAdvice(h, x);
+              return (<div key={i} style={{ padding: "8px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 700 }}>{x.name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, whiteSpace: "nowrap" }}>{x.sets}×{x.repLow}–{x.repHigh}</div>
+                </div>
+                <div style={{ fontSize: 11.5, color: adv.action === "add-weight" ? C.go : adv.action === "deload" ? C.caution : C.faint, marginTop: 2 }}>
+                  {last ? `last: ${Math.max(...last.sets.map((y) => +y.w || 0))} lb × ${Math.max(...last.sets.map((y) => +y.reps || 0))} · ` : ""}{adv.action === "add-weight" ? `▲ go to ${adv.suggested} lb` : adv.action === "deload" ? `▼ deload to ${adv.suggested} lb` : adv.action === "start" ? "first time" : "add reps"}
+                </div>
+              </div>); })}
+            <button onClick={() => startSession(nextSlot.day)} style={{ marginTop: 12, width: "100%", background: C.ink, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>Start session</button>
+          </div>, { marginBottom: 12 }) : card(<div style={{ fontSize: 13, color: C.muted }}>Rest day — next session is on the Week view.</div>, { marginBottom: 12 })}
+          {card(<div>
+            {sectionTitle("Log cardio")}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 9 }}>{CARDIO_TYPES.map((t) => (
+              <button key={t} onClick={() => setCardioDraft((d) => ({ ...d, type: t }))} style={{ background: cardioDraft.type === t ? C.ink : C.surfaceAlt, color: cardioDraft.type === t ? C.surface : C.muted, border: "none", borderRadius: 16, padding: "7px 11px", fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{t}</button>))}</div>
+            <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+              <input inputMode="numeric" value={cardioDraft.minutes} onChange={(e) => setCardioDraft((d) => ({ ...d, minutes: e.target.value.replace(/[^\d]/g, "") }))} style={{ width: 74, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 9, padding: "10px 8px", fontFamily: BODY, fontSize: 14, color: C.ink, textAlign: "center" }} />
+              <span style={{ fontSize: 12.5, color: C.muted }}>min</span>
+              {["easy", "zone 2", "hard"].map((iv) => (
+                <button key={iv} onClick={() => setCardioDraft((d) => ({ ...d, intensity: iv }))} style={{ flex: 1, background: cardioDraft.intensity === iv ? C.go : C.surfaceAlt, color: cardioDraft.intensity === iv ? C.surface : C.muted, border: "none", borderRadius: 9, padding: "10px 4px", fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{iv}</button>))}
+            </div>
+            <button onClick={() => { const mins = +cardioDraft.minutes || 0; if (!mins) return;
+              setWorkoutLog((L) => [...L, { date: todayISO(), kind: "cardio", type: cardioDraft.type, minutes: mins, intensity: cardioDraft.intensity }].slice(-400)); }}
+              style={{ marginTop: 10, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Log {cardioDraft.minutes || 0} min {cardioDraft.type}</button>
+            <div style={{ fontSize: 10.5, color: C.faint, marginTop: 7 }}>{cardioMin7} of {cardioTarget(routine.goal)} min this week · cardio helps the deficit but competes for recovery — it is placed around lifting, not piled on top.</div>
+          </div>, { marginBottom: 12 })}
+          {card(<div>{sectionTitle("This week")}<div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {[["sessions", `${done7}×`], ["hard sets", String(Object.values(sets7).reduce((n, v) => n + v, 0))], ["goal", routine.goal]].map(([l, v]) => (
+              <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 10, padding: "9px 10px" }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{v}</div><div style={{ fontSize: 10.5, color: C.muted }}>{l}</div>
+              </div>))}
+          </div></div>)}
+        </div>))}
+        {trainView === "week" && card(<div>
+          {sectionTitle("Your week · shot window respected")}
+          {(week.length ? week : trainDates()).map((d, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
+              <div><div style={{ fontSize: 13.5, fontWeight: 700, color: d.day ? C.ink : C.faint }}>{d.label}{(d.dose || d.after) ? " · shot window" : ""}</div>
+                {d.note && <div style={{ fontSize: 11, color: C.violet, marginTop: 2, lineHeight: 1.4 }}>{d.note}</div>}</div>
+              <div style={{ fontSize: 12.5, color: d.day ? C.go : C.faint, fontWeight: 700, textAlign: "right" }}>{d.day ? d.day.name : (() => { const c = (weekCardio.find((x) => x.iso === d.iso) || {}).cardio; return c ? `${c.minutes} min ${c.intensity}` : "rest"; })()}</div>
+            </div>))}
+        </div>)}
+        {trainView === "lifts" && (workoutLog.length === 0 ? card(<div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>No sessions logged yet. Finish one and this fills with per-lift bests, estimated one-rep maxes, and weekly volume by muscle.</div>) : (<div>
+          {card(<div>{sectionTitle("Weekly sets by muscle")}
+            {Object.entries(sets7).sort((a, b) => b[1] - a[1]).map(([g, n], i) => (
+              <div key={g} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
+                <span style={{ fontSize: 13, color: C.ink }}>{g}</span>
+                <span style={{ fontSize: 13, color: n >= 10 ? C.go : C.caution, fontWeight: 700 }}>{n} sets{n < 10 ? " · light" : ""}</span>
+              </div>))}
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${C.hair}` }}>
+              <span style={{ fontSize: 13, color: C.ink }}>cardio</span>
+              <span style={{ fontSize: 13, color: cardioMin7 >= cardioTarget((routine || {}).goal) ? C.go : C.muted, fontWeight: 700 }}>{cardioMin7} / {cardioTarget((routine || {}).goal)} min</span>
+            </div>
+            <div style={{ fontSize: 10.5, color: C.faint, marginTop: 7 }}>10–20 hard sets per muscle per week is the usual growth range; less still protects muscle while cutting.</div>
+          </div>, { marginBottom: 12 })}
+          {card(<div>{sectionTitle("Lifts · best estimated 1RM")}
+            {[...new Set(workoutLog.flatMap((s) => (s.entries || []).map((e) => e.exId)))].map((id, i) => {
+              const h = exHistory(id); const name = (workoutLog.flatMap((s) => s.entries || []).find((e) => e.exId === id) || {}).name || id;
+              const bests = h.map((x) => Math.max(...x.sets.map((y) => est1RM(+y.w || 0, +y.reps || 0))));
+              const best = Math.max(...bests), first = bests[0], delta = best - first;
+              return (<div key={id} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "7px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
+                <span style={{ fontSize: 13, color: C.ink }}>{name}</span>
+                <span style={{ fontSize: 12.5, color: C.muted, whiteSpace: "nowrap" }}>{best} lb {delta > 0 ? <b style={{ color: C.go }}>+{delta}</b> : delta < 0 ? <b style={{ color: C.caution }}>{delta}</b> : ""} · {h.length}×</span>
+              </div>); })}
+          </div>)}
+        </div>))}
+        {trainView === "setup" && card(<div>
+          {sectionTitle("Build my routine")}
+          {[["days", "Days per week", [3, 4, 5, 6]], ["minutes", "Session length", [30, 45, 60, 75]]].map(([k, label, opts]) => (
+            <div key={k} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{label}</div>
+              <div style={{ display: "flex", gap: 7 }}>{opts.map((o) => (
+                <button key={o} onClick={() => setTrainPrefs((t) => ({ ...t, [k]: o }))} style={{ flex: 1, background: trainPrefs[k] === o ? C.ink : C.surfaceAlt, color: trainPrefs[k] === o ? C.surface : C.ink, border: "none", borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{o}{k === "minutes" ? "m" : ""}</button>))}</div>
+            </div>))}
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Goal</div>
+          <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>{[["preserve", "Protect muscle"], ["build", "Build"], ["maintain", "Maintain"]].map(([k, l]) => (
+            <button key={k} onClick={() => setTrainPrefs((t) => ({ ...t, goal: k }))} style={{ flex: 1, background: trainPrefs.goal === k ? C.ink : C.surfaceAlt, color: trainPrefs.goal === k ? C.surface : C.ink, border: "none", borderRadius: 10, padding: "10px 4px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{l}</button>))}</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Equipment you actually have</div>
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>{["bodyweight", "dumbbell", "barbell", "cable", "machine", "kettlebell", "bands", "ball", "other"].map((e) => {
+            const on = trainPrefs.equipment.includes(e);
+            return (<button key={e} onClick={() => setTrainPrefs((t) => ({ ...t, equipment: on ? t.equipment.filter((x) => x !== e) : [...t.equipment, e] }))} style={{ background: on ? C.go : C.surfaceAlt, color: on ? C.surface : C.muted, border: "none", borderRadius: 18, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{e}</button>); })}</div>
+          <button onClick={() => { const r = buildRoutine(exCatalog, trainPrefs); setRoutine(r); setTrainView("today"); }} disabled={!exCatalog.length || !trainPrefs.equipment.length}
+            style={{ width: "100%", background: exCatalog.length && trainPrefs.equipment.length ? C.go : C.hair, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{routine ? "Rebuild routine" : "Generate routine"}</button>
+          {routine && <div style={{ fontSize: 11.5, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>{routine.blurb} Heavy days are kept off your shot day and the day after. Sessions log to Apple Health as strength training, which feeds the lean-mass engine on the Body tab.</div>}
+        </div>)}
+      </div>
+    );
+  };
   const renderBody = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Body</div>
@@ -2171,7 +2499,8 @@ export default function App() {
   const TABS = [
     { id: "now", label: "Now", icon: iconNow }, { id: "today", label: "Today", icon: iconToday },
     { id: "plan", label: "Plan", icon: iconPlan },
-    { id: "body", label: "Body", icon: iconBody }, { id: "glp", label: "GLP-1", icon: iconMed },
+    { id: "body", label: "Body", icon: iconBody }, { id: "train", label: "Train", icon: iconTrain },
+    { id: "glp", label: "GLP-1", icon: iconMed },
     { id: "coach", label: "Coach", icon: iconCoach },
   ];
 
@@ -2273,6 +2602,7 @@ export default function App() {
               )}
             </div>, { marginBottom: 12 });
           })()}{renderBody()}</div>}
+          {tab === "train" && renderTrain()}
           {tab === "glp" && renderGlp()}
           {tab === "plan" && renderPlan()}
           <video ref={camVideoRef} autoPlay playsInline muted style={{ position: "absolute", width: 2, height: 2, opacity: 0, pointerEvents: "none" }} />
@@ -3162,4 +3492,5 @@ const iconToday = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="
 const iconPlan = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15.5" rx="3" stroke={c} strokeWidth="2" /><path d="M3.5 10h17M8 3.5V7M16 3.5V7" stroke={c} strokeWidth="2" strokeLinecap="round" /><circle cx="15.5" cy="15" r="1.6" fill={c} /></svg>);
 const iconBody = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 20l4-9 4 2 4-2 4 9" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="5" r="2.5" stroke={c} strokeWidth="2" /></svg>);
 const iconMed = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg>);
+const iconTrain = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round"><path d="M4 9v6M20 9v6M7 6v12M17 6v12M7 12h10" /></svg>);
 const iconCoach = (c) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v11H9l-4 3v-3H4z" stroke={c} strokeWidth="2" strokeLinejoin="round" /></svg>);

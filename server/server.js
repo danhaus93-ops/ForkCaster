@@ -62,6 +62,14 @@ app.post("/api/photo", (req, res) => {
     res.json({ id, url: `/api/photo/${id}.${ext}` });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });
+/* ── Exercise catalog: public-domain dataset vendored into the image, no external calls ── */
+let _EXERCISES = null;
+app.get("/api/exercises", (_req, res) => {
+  try {
+    if (!_EXERCISES) _EXERCISES = JSON.parse(fs.readFileSync(path.join(__dirname, "exercises.json"), "utf8"));
+    res.json(_EXERCISES);
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
 app.get("/api/photos/usage", (_req, res) => {
   try {
     const files = fs.readdirSync(PHOTO_DIR).filter((f) => /\.(jpg|png)$/i.test(f));
@@ -1414,6 +1422,7 @@ app.post("/api/report/pdf", async (req, res) => {
       ${(() => { const a = fnd.adaptive || {}; return a.status === "ok" ? `<tr><td style="width:140px"><b>Weight trend</b></td><td>${esc(a.detail)} (${a.pts} weigh-ins over ${a.spanDays} days)</td></tr>` : `<tr><td style="width:140px"><b>Weight trend</b></td><td>Still collecting \u2014 ${a.pts || 0} weigh-ins over ${a.spanDays || 0} days so far.</td></tr>`; })()}
       ${(() => { const d = fnd.doseResp || {}; return d.status === "ok" ? `<tr><td><b>Dose response</b></td><td>Meals over ~${d.ceiling}g fat ${esc(d.scope)} preceded GI symptoms ${d.aboveSym} of ${d.above} times; at or under, ${d.belowSym} of ${d.below}. Working personal fat ceiling: ~${d.ceiling}g (generic guidance: 15g).</td></tr>` : d.status === "no-pattern" ? `<tr><td><b>Dose response</b></td><td>No clear fat\u2194symptom pattern across ${d.days} logged days (${d.inWin} within 48h of a dose).</td></tr>` : `<tr><td><b>Dose response</b></td><td>Still collecting \u2014 ${d.sym || 0}/5 GI symptom entries, ${d.days || 0}/10 meal-logged days, ${d.inWin || 0}/3 dose-window days.</td></tr>`; })()}
       ${fnd.health ? `<tr><td><b>Activity (synced)</b></td><td>${fnd.health.avgSteps.toLocaleString()} steps/day (7-day avg) \u00b7 ${fnd.health.strengthWk} resistance session${fnd.health.strengthWk === 1 ? "" : "s"} this week \u00b7 ${fnd.health.days} days of Apple Health data${fnd.health.bodyFatPct != null ? ` \u00b7 body fat ${fnd.health.bodyFatPct}% (home bioimpedance scale — estimate)` : ""}.</td></tr>` : ""}
+      ${fnd.training ? `<tr><td><b>Resistance training</b></td><td>${fnd.training.perWeek} session${fnd.training.perWeek === 1 ? "" : "s"}/week over the last 4 weeks (${fnd.training.sessions28} total)${fnd.training.goal ? `, programmed to ${esc(fnd.training.goal)} muscle` : ""}. ${fnd.training.lifts && fnd.training.lifts.length ? `Top lifts by estimated 1RM: ${fnd.training.lifts.map((l) => `${esc(l.name)} ${l.best} lb${l.delta > 0 ? ` (+${l.delta})` : l.delta < 0 ? ` (${l.delta})` : ""}`).join("; ")}.` : ""}</td></tr>` : ""}
       ${(fnd.adaptive && fnd.adaptive.leanRatePctWk != null) ? `<tr><td><b>Lean mass</b></td><td>Measured trend ${fnd.adaptive.leanRatePctWk > 0 ? "down" : "up"} ${Math.abs(fnd.adaptive.leanRatePctWk).toFixed(1)}%/week across ${fnd.adaptive.leanPts} scale readings (bioimpedance estimate, not DXA).</td></tr>` : ""}
       </table>
       <div style="color:#8a97a4;font-size:9.5px;margin-top:4px">Correlations computed on the patient's own server from self-reported logs \u2014 patterns for discussion, not diagnoses.</div>

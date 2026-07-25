@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.5.5"
+version: "0.6.0"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,18 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.5.5: the grocery list gets its aisles back and stops repeating itself.
-  Ingredients now keep the recipe's own wording ("cooked lobster meat", not
-  "lobster"), near-duplicate lines merge into one ("Fresh ginger" and
-  "ginger", "large eggs" and "egg"), and the list is grouped by aisle -
-  Produce, Protein & dairy, Pantry, Frozen, Other - even when the AI
-  consolidation pass fails, which it was doing every time because a full
-  week overflowed its fixed size limit. That limit now scales with your
-  list.
+  v0.6.0: the Train tab - the other half of protecting muscle on a GLP-1.
+  868 exercises ship inside the app with full instructions, no account and no
+  internet needed. Pick 3, 4, 5 or 6 days a week and the equipment you
+  actually own, and it builds the split for you. Log every set with weight,
+  reps and reps-in-reserve, and it tells you when to add weight, when to add
+  reps, and when to deload. Heavy days are kept off your shot day and the day
+  after. Every session opens with ramp sets computed from your working weight
+  plus dynamic warm-up movements, and closes with static stretches for what
+  you just trained. Cardio logs in two taps and gets scheduled onto rest days,
+  backing off before heavy legs. Sessions sync to Apple Health as strength
+  training, so the lean-mass engine sees them, and your prescriber report
+  gains a resistance-training section.
 dependencies: []
 path: ""
 defaultUsername: ""
