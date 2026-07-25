@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.7.6"
+version: "0.7.7"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.7.6: core days now get a real block - three different movements, not one.
-  Each core session picks across movement patterns (flexion, rotation,
-  lower-ab, anti-extension) rather than three variations of the same crunch,
-  and the block runs 2 sets of 10-20 reps with 60 seconds rest so it adds a
-  few minutes rather than a second workout. Rebuild your routine to apply it.
+  v0.7.7: the grocery list can now estimate what the week costs - using only
+  prices you have actually paid. Every price saved in Shop Mode builds a price
+  book, and the list totals the items it can match, showing how many it could
+  not: "about $38 for 14 of 23 items, 9 not priced yet". Branded barcode names
+  match plain ingredients, the most recent price wins, prices over three
+  months old are flagged, and nothing is ever estimated or invented.
   match found.
 dependencies: []
 path: ""
