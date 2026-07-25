@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.6.1"
+version: "0.6.2"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.6.1: a demo clip for every exercise. Tap the demo link under any lift and
-  it finds a short, demonstration-only video - scoring hard against podcasts,
-  "explained" videos and full workouts, and strongly preferring clips under 90
-  seconds. Results are cached on your node forever, and lookups only happen
-  when you tap, so the free YouTube quota lasts. Add a YouTube Data API key in
-  Settings for exact clips; without one you get a YouTube search already
-  filtered to short videos.
+  v0.6.2: fixes the Save button staying greyed out when the only key you
+  entered was the new YouTube one - the enable check had not been taught about
+  that field. Paste a YouTube Data API key on its own and it saves.
 dependencies: []
 path: ""
 defaultUsername: ""
