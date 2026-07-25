@@ -265,6 +265,17 @@ app.post("/api/health/sync", (req, res) => {
   console.log(`[health] sync: ${touched.size} day(s) updated`);
   res.json({ ok: true, daysUpdated: touched.size });
 });
+app.delete("/api/health/data", (req, res) => { // wipe synced days; the token survives so the phone keeps working
+  try {
+    const h = _loadHealth();
+    const n = Object.keys(h.days || {}).length;
+    h.days = {};
+    if (String(req.query.token || "") === "reset") h.token = null; // optional: force a brand-new sync URL
+    _saveHealth(h);
+    console.log(`[health] cleared ${n} synced day(s)${h.token ? "" : " and reset the token"}`);
+    res.json({ ok: true, cleared: n, tokenReset: !h.token });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
 app.get("/api/health/summary", (req, res) => {
   const h = _loadHealth();
   const days = Object.entries(h.days || {}).sort((a, b) => a[0] < b[0] ? -1 : 1).slice(-60).map(([date, v]) => ({ date, ...v }));

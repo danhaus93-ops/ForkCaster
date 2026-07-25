@@ -2658,7 +2658,7 @@ export default function App() {
                 <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>The picture is a visualization, not a promise — lighting and genetics are not macros. These four levers are the part you control.</div>
               </div>)}
             </div>, { marginBottom: 12 });
-          })()}{(() => {
+          })()}{prefs.hideHealthCard ? null : (() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const last = hd[hd.length - 1];
             const wk = hd.slice(-7);
@@ -2692,7 +2692,13 @@ export default function App() {
                     ))}
                   </div>
                   <button onClick={async () => { try { await fetch(`/api/health/sync?token=${healthSync.token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: todayISO(), strength: 1 }) }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ ...healthSync, days: sm.days || [] }); } catch {} }} style={{ marginTop: 9, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>🏋️ Log a strength session today</button>
-                  <div style={{ fontSize: 11, color: C.faint, marginTop: 7 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines (coming next)</div>
+                  <div style={{ fontSize: 11, color: C.faint, marginTop: 7 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines</div>
+                  <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+                    <button onClick={async () => { if (!window.confirm("Clear all synced Apple Health data on your node? Steps, weight, workouts and body composition from the phone will be wiped. Your sync setup keeps working — the next sync refills it.")) return;
+                      try { await fetch("/api/health/data", { method: "DELETE" }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync((x) => ({ ...(x || {}), days: sm.days || [] })); } catch {} }}
+                      style={{ background: "none", border: "none", color: C.caution, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Clear synced data</button>
+                    <button onClick={() => setPrefs({ ...prefs, hideHealthCard: true })} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Hide this card</button>
+                  </div>
                 </div>
               )}
             </div>, { marginBottom: 12 });
@@ -3093,6 +3099,7 @@ export default function App() {
                   <label style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>Restore…<input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) restoreJSON(e.target.files[0]); e.target.value = ""; }} /></label>
                 </div>
                 <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>The PDF is a clean, organized report (doses &amp; sites, weight, side effects, nutrition) you can email or AirDrop to your care team. JSON is the full-fidelity backup for restore.</div>
+                {prefs.hideHealthCard && <button onClick={() => setPrefs({ ...prefs, hideHealthCard: false })} style={{ width: "100%", marginBottom: 12, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>Show the Apple Health card again</button>}
                 <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 11, padding: "11px 12px" }}>
                   <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 700 }}>Images on your node</div>
                   <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{photoUsage ? `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB` : "checking…"}</div>
