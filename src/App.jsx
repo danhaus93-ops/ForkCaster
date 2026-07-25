@@ -320,6 +320,26 @@ function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
   } else { flag = "on-track"; detail = `Losing ${ratePctWk.toFixed(1)}%/week — inside the healthy 0.2–1%/week band. No target changes needed.`; }
   return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays, leanRatePctWk, leanPts: leanPts.length };
 }
+/* ── Weekly variety: a plan that repeats the same plate every day is a worse plan, even if
+   that plate has the most protein. Least-used first, protein as the tie-break. ── */
+function pickForSlot(poolArr, { slotType, gentleOnly, usedToday, weekCount }) {
+  const cands = poolArr.filter((r) => r.slot === slotType && !usedToday.has(r.id) && (!gentleOnly || r.gentle));
+  if (!cands.length) return null;
+  return cands.sort((a, b) => ((weekCount.get(a.id) || 0) - (weekCount.get(b.id) || 0)) || (b.p - a.p))[0];
+}
+function diversifyWeek(days, poolArr, slotTypeOf, maxRepeats = 2) {
+  const count = new Map();
+  for (const d of days) for (const x of d.slots) count.set(x.id, (count.get(x.id) || 0) + 1);
+  for (const d of days) for (const x of d.slots) {
+    if ((count.get(x.id) || 0) <= maxRepeats) continue;
+    const usedToday = new Set(d.slots.map((y) => y.id));
+    const alt = pickForSlot(poolArr, { slotType: slotTypeOf(x.slot), gentleOnly: !!(d.dose || d.after), usedToday, weekCount: count });
+    if (!alt || alt.id === x.id || (count.get(alt.id) || 0) >= (count.get(x.id) || 0)) continue;
+    count.set(x.id, (count.get(x.id) || 0) - 1); count.set(alt.id, (count.get(alt.id) || 0) + 1);
+    Object.assign(x, { id: alt.id, name: alt.name, gentle: !!alt.gentle, image: alt.image || null, photo: null, photoQuery: alt.photoQuery || null, url: alt.url || null, perServing: alt.perServing, ingredients: alt.ingredients || [], steps: alt.steps || [] });
+  }
+  return days;
+}
 /* ── Dose-response engine: learn YOUR dose-window fat ceiling from your own logs (v0.4.2) ── */
 function doseResponseRead(mealLog, glp) {
   const doses = ((glp && glp.doseLog) || []).map((d) => d.date).filter(Boolean);
@@ -1280,12 +1300,19 @@ export default function App() {
         curatorNote = `Curator reply unusable — built your week from the cookbook instead. (reply began: ${String(raw).replace(/\s+/g, " ").trim().slice(0, 70) || "empty"})`;
       }
       const built = days.map((d, i) => ({ ...d, slots: (((parsed.days || [])[i] || {}).slots || []).filter((x) => pool.has(x.id) && planMealsOn.includes(x.slot) && pool.get(x.id).slot === _slotType(x.slot)).map((x) => { const r = pool.get(x.id); return { slot: x.slot, id: r.id, name: r.name, gentle: !!r.gentle, image: r.image || null, photo: null, photoQuery: r.photoQuery || null, url: r.url || null, perServing: r.perServing, ingredients: r.ingredients || [], steps: r.steps || [], servings: Math.min(2.5, Math.max(0.5, Math.round((+x.servings || 1) * 4) / 4)), logged: false }; }) }));
-      for (const d of built) for (const m of planMealsOn) if (!d.slots.find((x) => x.slot === m)) { // curator skipped a slot — fill from pool deterministically
+      const poolArr = [...pool.values()];
+      const weekCount = new Map();
+      for (const d of built) for (const x of d.slots) weekCount.set(x.id, (weekCount.get(x.id) || 0) + 1);
+      for (const d of built) for (const m of planMealsOn) if (!d.slots.find((x) => x.slot === m)) { // curator skipped a slot — fill with the LEAST-USED fit, not just the highest protein
         const used = new Set(d.slots.map((x) => x.id));
-        const fill = [...pool.values()].filter((r) => r.slot === _slotType(m) && !used.has(r.id) && (!d.dose && !d.after || r.gentle)).sort((a, b) => b.p - a.p)[0];
+        const fill = pickForSlot(poolArr, { slotType: _slotType(m), gentleOnly: !!(d.dose || d.after), usedToday: used, weekCount });
+        if (fill) weekCount.set(fill.id, (weekCount.get(fill.id) || 0) + 1);
         if (fill) d.slots.push({ slot: m, id: fill.id, name: fill.name, gentle: !!fill.gentle, image: fill.image || null, photo: null, photoQuery: fill.photoQuery || null, url: fill.url || null, perServing: fill.perServing, ingredients: fill.ingredients || [], steps: fill.steps || [], servings: 1, logged: false });
       }
       setPlanBusy("balancing");
+      diversifyWeek(built, poolArr, _slotType);
+      const thin = [...new Set(planMealsOn.map(_slotType))].map((ty) => ({ ty, n: poolArr.filter((r) => r.slot === ty).length })).filter((x) => x.n * 2 < days.length);
+      if (thin.length) curatorNote = `${curatorNote ? curatorNote + " " : ""}Only ${thin.map((x) => `${x.n} ${x.ty}`).join(", ")} recipe${thin.length === 1 && thin[0].n === 1 ? "" : "s"} available, so some days repeat — tap Generate again for a fresh search, or add recipes to your cookbook.`;
       repairDays(built);
       setPlanBusy("grocery list");
       const groupIngredients = () => { // name -> [{amt, servings}] with prep words stripped

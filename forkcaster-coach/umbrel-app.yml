@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.5.2"
+version: "0.5.3"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.5.2: "Plan hiccup: AI reply wasn't valid JSON" is gone for good. The
-  weekly plan was the last place in the app using a strict JSON parser, so a
-  single stray sentence, trailing comma, or reply that ran past its token
-  limit could kill an entire generated week. Now it uses the same forgiving
-  parser as everything else, the token budget scales with how many days and
-  meals you asked for, and an unusable reply can no longer fail the plan at
-  all - your week gets built from your cookbook instead, with a quiet note
-  explaining what happened.
+  v0.5.3: no more eating the same plate seven days running. When the plan
+  filled a slot itself it always reached for the single highest-protein
+  recipe, ignoring what the rest of the week already looked like - so a
+  degraded week could come back with four recipes stretched across seven
+  days. Now selection favours the least-used recipe that fits, a final pass
+  swaps anything appearing more than twice for something fresher, and dose
+  day plus the day after still get gentle recipes only. If your cookbook
+  genuinely can not cover the week, it says so instead of repeating quietly.
 dependencies: []
 path: ""
 defaultUsername: ""
