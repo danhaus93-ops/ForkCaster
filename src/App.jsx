@@ -320,6 +320,28 @@ function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
   } else { flag = "on-track"; detail = `Losing ${ratePctWk.toFixed(1)}%/week — inside the healthy 0.2–1%/week band. No target changes needed.`; }
   return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays, leanRatePctWk, leanPts: leanPts.length };
 }
+/* ── Grocery shaping: aisle sections and a merge key, so the list is usable even when the
+   AI consolidation pass fails. Prep words are stripped for MERGING only — display keeps the
+   recipe's own wording. ── */
+const _INGR_PREP = /^(fresh|freshly|frozen|cooked|raw|chopped|diced|minced|sliced|shredded|grated|ground|crushed|large|small|medium|ripe|boneless|skinless|low[- ]sodium|reduced[- ]fat|unsalted|whole|organic|extra[- ]virgin)\s+/i;
+function _ingKey(name) {
+  let n = String(name || "").toLowerCase().replace(/\(.*?\)/g, " ").replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+  for (let i = 0; i < 3; i++) n = n.replace(_INGR_PREP, "");
+  n = n.replace(/\b(meat|breasts?|fillets?|leaves)\b/g, "").replace(/\s+/g, " ").trim();
+  return n.endsWith("es") && n.length > 4 ? n.slice(0, -2) : n.endsWith("s") && n.length > 3 ? n.slice(0, -1) : n;
+}
+const _AISLE = [ // order matters: the most specific claim on an item wins
+  ["Frozen", /\bfrozen\b|ice cream|popsicle/i],
+  ["Pantry", /broth|stock|canned|can of|jarred|tomato paste|soy sauce|fish sauce|hot sauce|vinegar|\boil\b|syrup|honey|stevia|cocoa|vanilla extract|baking|applesauce|dried/i],
+  ["Protein & dairy", /chicken|turkey|beef|steak|pork|bacon|sausage|lamb|fish|salmon|tuna|cod|tilapia|shrimp|lobster|crab|scallop|mussel|clam|egg|tofu|tempeh|seitan|yogurt|greek|cheese|feta|parmesan|mozzarella|cottage|milk|cream|butter|whey|protein powder|deli|ham/i],
+  ["Produce", /lettuce|spinach|kale|arugula|onion|scallion|shallot|garlic|ginger|tomato|pepper\b|cucumber|carrot|celery|zucchini|squash|broccoli|cauliflower|mushroom|potato|avocado|lemon|lime|orange|apple|banana|berry|berries|mango|herb|cilantro|parsley|basil|dill|tarragon|chive|mint|thyme|rosemary|sprout|cabbage|asparagus|green bean|pea\b|corn\b|salad/i],
+  ["Pantry", /rice|pasta|noodle|orzo|quinoa|couscous|oat|flour|sugar|salt|spice|cumin|paprika|cinnamon|chili|curry|sauce|bean|lentil|chickpea|\bnut\b|almond|walnut|pecan|cashew|peanut|seed|bread|tortilla|cracker|water/i],
+];
+function grocerySection(name) {
+  const n = String(name || "").toLowerCase();
+  for (const [section, re] of _AISLE) if (re.test(n)) return section;
+  return "Other";
+}
 /* ── Weekly variety: a plan that repeats the same plate every day is a worse plan, even if
    that plate has the most protein. Least-used first, protein as the tie-break. ── */
 function pickForSlot(poolArr, { slotType, gentleOnly, usedToday, weekCount }) {
@@ -1319,15 +1341,18 @@ export default function App() {
       if (thin.length) curatorNote = `${curatorNote ? curatorNote + " " : ""}Only ${thin.map((x) => `${x.n} ${x.ty}`).join(", ")} recipe${thin.length === 1 && thin[0].n === 1 ? "" : "s"} available, so some days repeat — tap Generate again for a fresh search, or add recipes to your cookbook.`;
       repairDays(built);
       setPlanBusy("grocery list");
-      const groupIngredients = () => { // name -> [{amt, servings}] with prep words stripped
+      const groupIngredients = () => { // merge key -> {name, uses[]} — "Fresh ginger" and "ginger" are one line
         const m = new Map();
         for (const d of built) for (const x of d.slots) for (const ing of (x.ingredients || [])) {
           const [nm, amt] = ing.split("—").map((t) => (t || "").trim());
-          const key = (nm || ing).trim(); if (!key) continue;
-          if (!m.has(key)) m.set(key, []);
-          m.get(key).push({ amt: (amt || "").split(",")[0].trim(), servings: x.servings });
+          const disp = (nm || ing).trim(); if (!disp) continue;
+          const key = _ingKey(disp) || disp.toLowerCase();
+          if (!m.has(key)) m.set(key, { name: disp, uses: [] });
+          const e = m.get(key);
+          if (disp.length > e.name.length) e.name = disp; // keep the most specific wording
+          e.uses.push({ amt: (amt || "").split(",")[0].trim(), servings: x.servings });
         }
-        return m;
+        return new Map([...m.entries()].map(([k, v]) => [v.name, v.uses]));
       };
       const _pkgPhrase = (name, uses) => { // smallest-package heuristics — store language, not kitchen language
         const n = name.toLowerCase();
@@ -1360,12 +1385,14 @@ export default function App() {
         if (allOz && oz > 0) return oz >= 16 ? `~${Math.ceil((oz / 16) * 4) / 4} lb` : `~${Math.ceil(oz)} oz`;
         return "1 pack";
       };
-      const fallbackGrocery = () => [...groupIngredients().entries()].map(([name, uses]) => ({ section: "List", item: name, qty: _pkgPhrase(name, uses), checked: false }));
+      const fallbackGrocery = () => [...groupIngredients().entries()]
+        .map(([name, uses]) => ({ section: grocerySection(name), item: name, qty: _pkgPhrase(name, uses), checked: false }))
+        .sort((a, b) => (["Produce", "Protein & dairy", "Pantry", "Frozen", "Other"].indexOf(a.section) - ["Produce", "Protein & dairy", "Pantry", "Frozen", "Other"].indexOf(b.section)) || a.item.localeCompare(b.item));
       let grocery = [];
       try {
         const lines = [...groupIngredients().entries()].map(([name, uses]) => `${name}: ${uses.map((u) => u.servings === 1 ? u.amt || "1" : `${u.amt || "1"} ×${u.servings}`).join(" + ")}`);
         if (lines.length) {
-          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections — use EXACTLY these five and never invent others: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, 3500, null);
+          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections — use EXACTLY these five and never invent others: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, Math.min(8000, 1200 + lines.length * 45), null);
           grocery = (salvageJSONObject(graw).items || []).map((g) => ({ ...g, checked: false }));
         }
         setGroceryNote("");

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.5.4"
+version: "0.5.5"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.5.4: every recipe in your plan is now cookable inside the app. Searched
-  recipes previously arrived with no ingredients and no steps, so they added
-  nothing to your grocery list and sent you to another website to cook - now
-  the full ingredient list and prep steps come with them, formatted for the
-  grocery list and shown on the recipe card, with the original source kept
-  only as a small credit. Anything that cannot be shown completely is left
-  out of the plan entirely. The recipe net is also wider: twelve candidates
-  per meal type instead of six, filtered to recipes that actually include
-  instructions.
+  v0.5.5: the grocery list gets its aisles back and stops repeating itself.
+  Ingredients now keep the recipe's own wording ("cooked lobster meat", not
+  "lobster"), near-duplicate lines merge into one ("Fresh ginger" and
+  "ginger", "large eggs" and "egg"), and the list is grouped by aisle -
+  Produce, Protein & dairy, Pantry, Frozen, Other - even when the AI
+  consolidation pass fails, which it was doing every time because a full
+  week overflowed its fixed size limit. That limit now scales with your
+  list.
 dependencies: []
 path: ""
 defaultUsername: ""

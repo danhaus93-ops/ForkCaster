@@ -814,7 +814,7 @@ app.get("/api/recipes/search", async (req, res) => {
       const list = rec.extendedIngredients && rec.extendedIngredients.length ? rec.extendedIngredients : [...(rec.usedIngredients || []), ...(rec.missedIngredients || [])];
       const seen = new Set(), out = [];
       for (const i of (list || [])) {
-        const nm = String(i.nameClean || i.name || i.originalName || "").trim();
+        const nm = String(i.originalName || i.name || i.nameClean || "").trim(); // as written in the recipe
         if (!nm || seen.has(nm.toLowerCase())) continue; seen.add(nm.toLowerCase());
         const amt = [i.amount ? Math.round(i.amount * 100) / 100 : null, String(i.unit || "").trim()].filter(Boolean).join(" ").trim();
         out.push(amt ? `${nm} — ${amt}` : nm);
