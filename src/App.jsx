@@ -320,6 +320,51 @@ function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
   } else { flag = "on-track"; detail = `Losing ${ratePctWk.toFixed(1)}%/week — inside the healthy 0.2–1%/week band. No target changes needed.`; }
   return { status: "ok", ratePctWk, flag, detail, suggestion, pts: pts.length, spanDays, leanRatePctWk, leanPts: leanPts.length };
 }
+/* ── Goal contract: turn the forecast picture into numbers every tab can steer by ── */
+function goalContract(input) {
+  const { weightLbs, bodyFatPct, leanMassLbs, goalWeight, sex = "male", ratePctWk = null, todayISO = null } = input || {};
+  const w = +weightLbs || 0, gw = +goalWeight || 0;
+  if (!w || !gw || gw >= w) return { status: "incomplete", reason: !w ? "log a weight" : !gw ? "set a goal weight" : "goal is at or above current weight" };
+  const lean = +leanMassLbs > 30 ? +leanMassLbs : (bodyFatPct ? w * (1 - bodyFatPct / 100) : 0);
+  if (!lean) return { status: "incomplete", reason: "need body fat — sync a scale or fill neck/waist on the Body tab" };
+  const fatNow = w - lean;
+  const fatAtGoal = gw - lean;                       // the render assumes the muscle survives the cut
+  const bfAtGoal = (fatAtGoal / gw) * 100;
+  const fatToLose = Math.max(0, fatNow - fatAtGoal); // identical to weight-to-lose when lean is fully preserved
+  const floorBf = sex === "male" ? 8 : 15;
+  const plausible = bfAtGoal >= floorBf;
+  const proteinFloor = Math.round(lean * 1.0);       // ~1 g per lb of LEAN mass, not scale weight
+  const rateBand = { min: 0.4, target: 0.65, max: 1.0 };  // %/week — above max is where lean mass goes
+  const wkAt = (pct) => (pct > 0 ? Math.ceil(fatToLose / (w * (pct / 100))) : null);
+  const weeksTarget = wkAt(rateBand.target), weeksAtCurrent = ratePctWk && ratePctWk > 0.05 ? wkAt(ratePctWk) : null;
+  const eta = (wks) => { if (!wks || !todayISO) return null; const t = new Date(todayISO + "T12:00:00"); t.setDate(t.getDate() + wks * 7); return t.toISOString().slice(0, 10); };
+  return { status: "ok", lean: Math.round(lean * 10) / 10, fatNow: Math.round(fatNow * 10) / 10,
+    fatToLose: Math.round(fatToLose * 10) / 10, bfAtGoal: Math.round(bfAtGoal * 10) / 10, plausible, floorBf,
+    proteinFloor, rateBand, weeksTarget, weeksAtCurrent, etaTarget: eta(weeksTarget), etaCurrent: eta(weeksAtCurrent),
+    minSessions: 2, line: `Your forecast ≈ ${gw} lb at ${Math.round(bfAtGoal)}% body fat, keeping all ${Math.round(lean)} lb of lean mass — ${Math.round(fatToLose)} lb of fat to go.` };
+}
+function contractScorecard(input) {
+  const { mealLog = [], targets = {}, workoutLog = [], adaptive = {}, contract = {}, todayISO } = input || {};
+  const since = (() => { const t = new Date(todayISO + "T12:00:00"); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })();
+  const byDay = {};
+  for (const m of mealLog) if (m.date >= since) byDay[m.date] = (byDay[m.date] || 0) + (+m.protein || 0);
+  const days = Object.keys(byDay);
+  const goalP = contract.proteinFloor || targets.protein || 0;
+  const hitDays = days.filter((d) => byDay[d] >= goalP * 0.9).length;
+  const sessions = workoutLog.filter((s) => s.date >= since && s.kind !== "cardio").length;
+  const rate = adaptive.ratePctWk;
+  const band = contract.rateBand || { min: 0.4, max: 1.0 };
+  return [
+    { key: "protein", ok: days.length >= 3 && hitDays >= days.length * 0.7, unknown: days.length < 3,
+      label: `protein ≥ ${goalP}g`, detail: days.length ? `${hitDays}/${days.length} days` : "not logged" },
+    { key: "lean", ok: adaptive.leanRatePctWk == null ? null : adaptive.leanRatePctWk <= 0.35, unknown: adaptive.leanRatePctWk == null,
+      label: "lean mass holding", detail: adaptive.leanRatePctWk == null ? "needs scale data" : `${adaptive.leanRatePctWk > 0 ? "−" : "+"}${Math.abs(adaptive.leanRatePctWk).toFixed(1)}%/wk` },
+    { key: "training", ok: sessions >= (contract.minSessions || 2), unknown: false,
+      label: `${contract.minSessions || 2}+ lifting sessions`, detail: `${sessions} this week` },
+    { key: "rate", ok: rate == null ? null : rate >= band.min && rate <= band.max, unknown: rate == null,
+      label: `loss rate ${band.min}–${band.max}%/wk`, detail: rate == null ? "still collecting" : `${rate.toFixed(2)}%/wk` },
+  ];
+}
 /* ── Training engines: routine building, progressive overload, volume, dose-aware scheduling ── */
 const SPLITS = {
   3: [["Full Body A", ["quads", "chest", "back", "shoulders", "core"]], ["Full Body B", ["hamstrings", "back", "chest", "triceps", "core"]], ["Full Body C", ["glutes", "shoulders", "back", "biceps", "calves"]]],
@@ -1286,6 +1331,9 @@ export default function App() {
       const findings = {
         adaptive: adaptiveRead(weightLog, hd, glp, wk.reduce((n, d) => n + (d.strength || 0), 0)),
         doseResp: doseResponseRead(mealLog, glp),
+        contract: (() => { const hd0 = hd; const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
+          const c = goalContract({ weightLbs: curWeight, bodyFatPct: lastBf ? lastBf.bodyFatPct : bodyFat, leanMassLbs: lastLm ? lastLm.leanMassLbs : 0, goalWeight, sex: body.sex, todayISO: todayISO() });
+          return c.status === "ok" ? { line: c.line, proteinFloor: c.proteinFloor, weeksTarget: c.weeksTarget, plausible: c.plausible } : null; })(),
         training: workoutLog.length ? (() => {
           const since = (() => { const t = new Date(); t.setDate(t.getDate() - 28); return t.toISOString().slice(0, 10); })();
           const recent = workoutLog.filter((x) => x.date >= since);
@@ -2576,6 +2624,41 @@ export default function App() {
           {tab === "now" && renderNow()}
           {tab === "today" && renderToday()}
           {tab === "body" && <div>{(() => {
+            const hd0 = healthSync && healthSync.days ? healthSync.days : [];
+            const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null);
+            const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
+            const ct = goalContract({ weightLbs: curWeight, bodyFatPct: lastBf ? lastBf.bodyFatPct : bodyFat, leanMassLbs: lastLm ? lastLm.leanMassLbs : 0,
+              goalWeight, sex: body.sex, ratePctWk: (adaptiveRead(weightLog, hd0, glp, 0) || {}).ratePctWk, todayISO: todayISO() });
+            const fmtETA = (iso) => (iso ? new Date(iso + "T12:00:00").toLocaleDateString(undefined, { month: "long", year: "numeric" }) : null);
+            return card(<div>
+              {sectionTitle("Path to your forecast")}
+              {ct.status !== "ok" ? (
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>Set a goal weight and {ct.reason} — then this turns your forecast picture into the numbers that get you there.</div>
+              ) : (<div>
+                <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 700, lineHeight: 1.5 }}>{ct.line}</div>
+                {!ct.plausible && <div style={{ fontSize: 12, color: C.caution, marginTop: 6, lineHeight: 1.45 }}>That goal implies under {ct.floorBf}% body fat with your current muscle — either the goal is low, or it assumes losing lean mass. Worth a conversation with your prescriber.</div>}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+                  {[["fat to lose", `${Math.round(ct.fatToLose)} lb`], ["lean to protect", `${Math.round(ct.lean)} lb`], ["protein floor", `${ct.proteinFloor} g`]].map(([l, v]) => (
+                    <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 10, padding: "9px 10px" }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{v}</div><div style={{ fontSize: 10.5, color: C.muted }}>{l}</div>
+                    </div>))}
+                </div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 9, lineHeight: 1.5 }}>
+                  At {ct.rateBand.target}%/week that is about {ct.weeksTarget} weeks{fmtETA(ct.etaTarget) ? ` — ${fmtETA(ct.etaTarget)}` : ""}.
+                  {ct.weeksAtCurrent ? ` Your measured rate puts it at ${ct.weeksAtCurrent} weeks${fmtETA(ct.etaCurrent) ? ` (${fmtETA(ct.etaCurrent)})` : ""}.` : " Log a few more weigh-ins and this switches to your real rate."}
+                </div>
+                {targets.protein < ct.proteinFloor && <button onClick={() => setTargets({ ...targets, protein: ct.proteinFloor })} style={{ marginTop: 10, width: "100%", background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Raise protein target to {ct.proteinFloor}g</button>}
+                <div style={{ marginTop: 12 }}>
+                  {contractScorecard({ mealLog, targets, workoutLog, adaptive: adaptiveRead(weightLog, hd0, glp, 0) || {}, contract: ct, todayISO: todayISO() }).map((r, i) => (
+                    <div key={r.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderTop: i ? `1px solid ${C.hair}` : `1px solid ${C.hair}` }}>
+                      <span style={{ fontSize: 12.5, color: C.ink }}>{r.unknown ? "○" : r.ok ? "✓" : "✕"} {r.label}</span>
+                      <span style={{ fontSize: 12, color: r.unknown ? C.faint : r.ok ? C.go : C.caution, fontWeight: 700 }}>{r.detail}</span>
+                    </div>))}
+                </div>
+                <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>The picture is a visualization, not a promise — lighting and genetics are not macros. These four levers are the part you control.</div>
+              </div>)}
+            </div>, { marginBottom: 12 });
+          })()}{(() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const last = hd[hd.length - 1];
             const wk = hd.slice(-7);
