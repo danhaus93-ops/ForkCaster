@@ -69,53 +69,76 @@ const _VID_FILE = path.join(DATA_DIR, "video-cache.json");
 const _vidCache = (() => { try { return JSON.parse(fs.readFileSync(_VID_FILE, "utf8")); } catch { return {}; } })();
 const _saveVid = () => { try { fs.writeFileSync(_VID_FILE, JSON.stringify(_vidCache)); } catch {} };
 let _ytSpend = { day: "", units: 0 };
+async function _ytChannelId(handle, K) { // handle -> UC… id, cached forever (1 unit via forHandle, 100 if we must search)
+  const ck = `_channel:${handle}`;
+  if (_vidCache[ck]) return _vidCache[ck].channelId || null;
+  try {
+    const r = await fetch(`${YT_BASE}/channels?${new URLSearchParams({ key: K, part: "id", forHandle: handle })}`, { signal: AbortSignal.timeout(9000) });
+    _ytSpend.units += 1;
+    if (r.ok) { const d = await r.json(); const id = ((d.items || [])[0] || {}).id; if (id) { _vidCache[ck] = { channelId: id }; _saveVid(); return id; } }
+    const r2 = await fetch(`${YT_BASE}/search?${new URLSearchParams({ key: K, part: "snippet", q: handle, type: "channel", maxResults: "1" })}`, { signal: AbortSignal.timeout(9000) });
+    _ytSpend.units += 100;
+    if (r2.ok) { const d2 = await r2.json(); const id2 = (((d2.items || [])[0] || {}).id || {}).channelId; if (id2) { _vidCache[ck] = { channelId: id2 }; _saveVid(); return id2; } }
+  } catch {}
+  return null;
+}
 const _ytSearchUrl = (name) => `https://www.youtube.com/results?search_query=${encodeURIComponent(name + " exercise form")}&sp=EgIYAQ%253D%253D`; // <4 min filter
 const _iso8601Sec = (d) => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(String(d || "")); return m ? (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0)) : 0; };
 const _TALKY = /podcast|explained|mistakes|top \d|vs\.?\s|full workout|routine|day in the life|reaction|why you|everything you need|guide to|episode/i;
 const _DEMOY = /form|demo|technique|how to|proper|tutorial|execution|setup/i;
-function _scoreVideo(v, name) {
+function _scoreVideo(v, name, opts = {}) {
   const t = String(v.title || ""), sec = v.seconds || 0;
-  if (!v.embeddable) return -Infinity;
+  if (v.privacyStatus && v.privacyStatus !== "public") return -Infinity;
   let s = 0;
   const words = name.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
-  s += words.filter((w) => t.toLowerCase().includes(w)).length * 12;   // it's actually this exercise
-  if (_DEMOY.test(t)) s += 18;
-  if (_TALKY.test(t)) s -= 45;                                          // talking-head content
-  if (sec > 0 && sec <= 90) s += 30; else if (sec <= 180) s += 10; else s -= 25;  // demo-length wins
-  if (sec > 0) s -= Math.min(20, sec / 15);                             // shorter is better, gently
+  s += words.filter((w) => t.toLowerCase().includes(w)).length * 15;    // it's actually this exercise
+  if (_DEMOY.test(t)) s += 18;                                          // form/technique/how-to still helps
+  if (opts.coachChannel) {                                              // a trusted coach: teaching beats brevity
+    if (_TALKY.test(t)) s -= 8;                                         // only mild — his long explanations are the point
+    if (sec > 0 && sec < 25) s -= 15;                                   // a 15-second clip teaches nothing
+    return s;
+  }
+  if (_TALKY.test(t)) s -= 45;
+  if (sec > 0 && sec <= 90) s += 30; else if (sec <= 180) s += 10; else s -= 25;
+  if (sec > 0) s -= Math.min(20, sec / 15);
   return s;
 }
 app.get("/api/exercise-video", async (req, res) => {
   const id = String(req.query.id || "").slice(0, 80), name = String(req.query.name || "").slice(0, 120);
+  const handle = String(req.query.channel || "").replace(/^@/, "").replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 40);
   if (!id || !name) return res.status(400).json({ ok: false });
-  if (_vidCache[id]) return res.json({ ok: true, cached: true, ..._vidCache[id] });
+  const ck = handle ? `${handle}|${id}` : id;   // a channel preference gets its own cache namespace
+  if (_vidCache[ck]) return res.json({ ok: true, cached: true, ..._vidCache[ck] });
   const K = key("YOUTUBE_API_KEY");
   const today = new Date().toISOString().slice(0, 10);
   if (_ytSpend.day !== today) _ytSpend = { day: today, units: 0 };
-  if (!K) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "no-key" });
-  if (_ytSpend.units + 101 > 9000) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "quota-reserve" });
+  const chanSearch = handle ? `https://www.youtube.com/@${handle}/search?query=${encodeURIComponent(name)}` : null;
+  if (!K) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "no-key" });
+  if (_ytSpend.units + 101 > 9000) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "quota-reserve" });
   try {
-    const sq = new URLSearchParams({ key: K, part: "snippet", q: `${name} exercise form demonstration`, type: "video",
-      videoDuration: "short", videoEmbeddable: "true", safeSearch: "strict", maxResults: "10" });
+    const chanId = handle ? await _ytChannelId(handle, K) : null;
+    const sq = new URLSearchParams({ key: K, part: "snippet", type: "video", safeSearch: "strict", maxResults: "10",
+      q: chanId ? `${name}` : `${name} exercise form demonstration`, order: "relevance" });
+    if (chanId) sq.set("channelId", chanId); else sq.set("videoDuration", "short");
     const sr = await fetch(`${YT_BASE}/search?${sq}`, { signal: AbortSignal.timeout(9000) });
     _ytSpend.units += 100;
-    if (!sr.ok) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: `search ${sr.status}` });
+    if (!sr.ok) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: `search ${sr.status}` });
     const sd = await sr.json();
     const ids = (sd.items || []).map((x) => (x.id || {}).videoId).filter(Boolean);
-    if (!ids.length) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "no-results" });
+    if (!ids.length) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "no-results-in-channel" });
     const vr = await fetch(`${YT_BASE}/videos?${new URLSearchParams({ key: K, part: "contentDetails,status,snippet", id: ids.join(",") })}`, { signal: AbortSignal.timeout(9000) });
     _ytSpend.units += 1;
     const vd = vr.ok ? await vr.json() : { items: [] };
     const cands = (vd.items || []).map((v) => ({ videoId: v.id, title: ((v.snippet || {}).title) || "", channel: ((v.snippet || {}).channelTitle) || "",
-      seconds: _iso8601Sec((v.contentDetails || {}).duration), embeddable: !!((v.status || {}).embeddable) && ((v.status || {}).privacyStatus) === "public" }));
-    const best = cands.map((v) => ({ v, s: _scoreVideo(v, name) })).sort((a, b) => b.s - a.s)[0];
-    if (!best || best.s === -Infinity) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "nothing-suitable" });
-    _vidCache[id] = { videoId: best.v.videoId, title: best.v.title, channel: best.v.channel, seconds: best.v.seconds,
-      url: `https://www.youtube.com/watch?v=${best.v.videoId}`, search: _ytSearchUrl(name) };
+      seconds: _iso8601Sec((v.contentDetails || {}).duration), privacyStatus: ((v.status || {}).privacyStatus) || "public" }));
+    const best = cands.map((v) => ({ v, s: _scoreVideo(v, name, { coachChannel: !!chanId }) })).sort((a, b) => b.s - a.s)[0];
+    if (!best || best.s === -Infinity) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "nothing-suitable" });
+    _vidCache[ck] = { videoId: best.v.videoId, title: best.v.title, channel: best.v.channel, seconds: best.v.seconds,
+      url: `https://www.youtube.com/watch?v=${best.v.videoId}`, search: chanSearch || _ytSearchUrl(name) };
     _saveVid();
-    console.log(`[video] ${name} -> ${best.v.seconds}s "${best.v.title.slice(0, 50)}" (units today: ${_ytSpend.units})`);
-    res.json({ ok: true, cached: false, ..._vidCache[id] });
-  } catch (e) { res.json({ ok: true, fallback: _ytSearchUrl(name), reason: String(e).slice(0, 60) }); }
+    console.log(`[video] ${name} -> ${best.v.channel} ${best.v.seconds}s "${best.v.title.slice(0, 50)}" (units today: ${_ytSpend.units})`);
+    res.json({ ok: true, cached: false, ..._vidCache[ck] });
+  } catch (e) { res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: String(e).slice(0, 60) }); }
 });
 /* ── Exercise catalog: public-domain dataset vendored into the image, no external calls ── */
 let _EXERCISES = null;

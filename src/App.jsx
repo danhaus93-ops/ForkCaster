@@ -616,7 +616,7 @@ export default function App() {
   const [planBusy, setPlanBusy] = useState(null);
   const [planErr, setPlanErr] = useState("");
   const [planNote, setPlanNote] = useState(""); // soft: plan built, but something degraded
-  const [trainPrefs, setTrainPrefs] = useState({ days: 4, goal: "preserve", equipment: ["bodyweight", "dumbbell", "barbell"], minutes: 45, nightShift: false });
+  const [trainPrefs, setTrainPrefs] = useState({ days: 4, goal: "preserve", equipment: ["bodyweight", "dumbbell", "barbell"], minutes: 45, nightShift: false, videoChannel: "athleanx" });
   const [routine, setRoutine] = useState(null);
   const [workoutLog, setWorkoutLog] = useState([]);
   const [exCatalog, setExCatalog] = useState([]);
@@ -626,8 +626,9 @@ export default function App() {
     let v = demoVids[exId];
     if (!v) {
       setDemoVids((m) => ({ ...m, [exId]: { loading: true } }));
-      try { v = await fetch(`/api/exercise-video?id=${encodeURIComponent(exId)}&name=${encodeURIComponent(name)}`).then((r) => r.json()); }
-      catch { v = { fallback: `https://www.youtube.com/results?search_query=${encodeURIComponent(name + " exercise form")}&sp=EgIYAQ%253D%253D` }; }
+      const ch = (trainPrefs.videoChannel || "").replace(/^@/, "").trim();
+      try { v = await fetch(`/api/exercise-video?id=${encodeURIComponent(exId)}&name=${encodeURIComponent(name)}${ch ? `&channel=${encodeURIComponent(ch)}` : ""}`).then((r) => r.json()); }
+      catch { v = { fallback: ch ? `https://www.youtube.com/@${ch}/search?query=${encodeURIComponent(name)}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(name + " exercise form")}&sp=EgIYAQ%253D%253D` }; }
       setDemoVids((m) => ({ ...m, [exId]: v }));
     }
     window.open(v.url || v.fallback, "_blank", "noopener");
@@ -635,7 +636,7 @@ export default function App() {
   const demoLink = (exId, name) => {
     const v = demoVids[exId];
     return (<button onClick={() => openDemo(exId, name)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "2px 0", textDecoration: "underline" }}>
-      {v && v.loading ? "finding clip…" : v && v.seconds ? `▶ demo · ${v.seconds}s` : "▶ demo"}
+      {v && v.loading ? "finding clip…" : v && v.channel ? `▶ ${v.channel}${v.seconds ? ` · ${Math.round(v.seconds / 60)}m` : ""}` : "▶ how to do this"}
     </button>);
   };
   const [cardioDraft, setCardioDraft] = useState({ type: "walk", minutes: "30", intensity: "zone 2" });
@@ -2079,6 +2080,10 @@ export default function App() {
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>{["bodyweight", "dumbbell", "barbell", "cable", "machine", "kettlebell", "bands", "ball", "other"].map((e) => {
             const on = trainPrefs.equipment.includes(e);
             return (<button key={e} onClick={() => setTrainPrefs((t) => ({ ...t, equipment: on ? t.equipment.filter((x) => x !== e) : [...t.equipment, e] }))} style={{ background: on ? C.go : C.surfaceAlt, color: on ? C.surface : C.muted, border: "none", borderRadius: 18, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{e}</button>); })}</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Form videos from this YouTube channel</div>
+          <input value={trainPrefs.videoChannel || ""} onChange={(e) => setTrainPrefs((t) => ({ ...t, videoChannel: e.target.value.replace(/^@/, "").replace(/[^A-Za-z0-9_.-]/g, "") }))} placeholder="athleanx" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+            style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 4 }} />
+          <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 12, lineHeight: 1.45 }}>Handle only, no @. Demos are searched inside this channel first — leave blank to search all of YouTube for short clips instead.</div>
           <button onClick={() => { const r = buildRoutine(exCatalog, trainPrefs); setRoutine(r); setTrainView("today"); }} disabled={!exCatalog.length || !trainPrefs.equipment.length}
             style={{ width: "100%", background: exCatalog.length && trainPrefs.equipment.length ? C.go : C.hair, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{routine ? "Rebuild routine" : "Generate routine"}</button>
           {routine && <div style={{ fontSize: 11.5, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>{routine.blurb} Heavy days are kept off your shot day and the day after. Sessions log to Apple Health as strength training, which feeds the lean-mass engine on the Body tab.</div>}
