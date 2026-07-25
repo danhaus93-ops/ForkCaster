@@ -536,6 +536,20 @@ const _AISLE = [ // order matters: the most specific claim on an item wins
   ["Produce", /lettuce|spinach|kale|arugula|onion|scallion|shallot|garlic|ginger|tomato|pepper\b|cucumber|carrot|celery|zucchini|squash|broccoli|cauliflower|mushroom|potato|avocado|lemon|lime|orange|apple|banana|berry|berries|mango|herb|cilantro|parsley|basil|dill|tarragon|chive|mint|thyme|rosemary|sprout|cabbage|asparagus|green bean|pea\b|corn\b|salad/i],
   ["Pantry", /rice|pasta|noodle|orzo|quinoa|couscous|oat|flour|sugar|salt|spice|cumin|paprika|cinnamon|chili|curry|sauce|bean|lentil|chickpea|\bnut\b|almond|walnut|pecan|cashew|peanut|seed|bread|tortilla|cracker|water/i],
 ];
+const AISLE_ORDER = ["Produce", "Protein & dairy", "Pantry", "Frozen", "Other"];
+function reconcileGrocery(aiItems, entries, sectionOf, qtyOf, keyOf) {
+  // A consolidation reply that stops early (token cap) used to throw and fall back; now it parses,
+  // so it must be RECONCILED instead — every grouped ingredient has to appear somewhere on the list.
+  const list = (aiItems || []).filter((g) => g && g.item).map((g) => ({
+    section: AISLE_ORDER.includes(g.section) ? g.section : sectionOf(g.item),
+    item: String(g.item), qty: String(g.qty || "").slice(0, 40), checked: false,
+  }));
+  const covered = new Set(list.map((g) => keyOf(g.item)));
+  const missing = (entries || []).filter(([name]) => !covered.has(keyOf(name)));
+  for (const [name, uses] of missing) list.push({ section: sectionOf(name), item: name, qty: qtyOf(name, uses), checked: false });
+  list.sort((a, b) => (AISLE_ORDER.indexOf(a.section) - AISLE_ORDER.indexOf(b.section)) || a.item.localeCompare(b.item));
+  return { list, added: missing.length };
+}
 function grocerySection(name) {
   const n = String(name || "").toLowerCase();
   for (const [section, re] of _AISLE) if (re.test(n)) return section;
@@ -1632,10 +1646,11 @@ export default function App() {
       try {
         const lines = [...groupIngredients().entries()].map(([name, uses]) => `${name}: ${uses.map((u) => u.servings === 1 ? u.amt || "1" : `${u.amt || "1"} ×${u.servings}`).join(" + ")}`);
         if (lines.length) {
-          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections — use EXACTLY these five and never invent others: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 7000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, Math.min(8000, 1200 + lines.length * 45), null);
-          grocery = (salvageJSONObject(graw).items || []).map((g) => ({ ...g, checked: false }));
-        }
-        setGroceryNote("");
+          const graw = await callClaude(`Turn this week's recipe ingredients into ONE grocery-shopping list. For each ingredient state the SMALLEST PACKAGE(S) to buy that covers the week's total — store language, never meal counts. Examples: "~3.5 lb (family pack)", "1 dozen", "1 tub (32 oz)", "smallest jar", "2 limes", "1 bag". qty must be 5 words or fewer. Sections — use EXACTLY these five and never invent others: Produce, Protein & dairy, Pantry, Frozen, Other. Return ONLY JSON — first character must be {: {"items":[{"section":"Protein & dairy","item":"Chicken breast","qty":"~3.5 lb (family pack)"}]}\n\nINGREDIENTS (amount ×servings, summed across the week):\n${lines.join("\n").slice(0, 14000)}`, "You write practical grocery lists. Smallest sufficient packages, terse.", null, Math.min(8000, 1200 + lines.length * 45), null);
+          const rec = reconcileGrocery(salvageJSONObject(graw).items || [], [...groupIngredients().entries()], grocerySection, _pkgPhrase, _ingKey);
+          grocery = rec.list;
+          setGroceryNote(rec.added ? `${rec.added} item${rec.added === 1 ? "" : "s"} the consolidation pass left out were added back automatically.` : "");
+        } else setGroceryNote("");
       } catch (ge) { grocery = fallbackGrocery(); setGroceryNote(String(ge.message || ge).slice(0, 120)); }
       if (!grocery.length) grocery = fallbackGrocery();
       setPlanBusy("photos");
