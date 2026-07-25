@@ -539,7 +539,7 @@ export default function App() {
   async function saveKeys() {
     setKeyMsg("Saving…");
     const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
-    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim(); if ((keyIn.sp || "").trim()) body.SPOONACULAR_KEY = keyIn.sp.trim();
+    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim(); if ((keyIn.sp || "").trim()) body.SPOONACULAR_KEY = keyIn.sp.trim(); if ((keyIn.yt || "").trim()) body.YOUTUBE_API_KEY = keyIn.yt.trim();
     try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       setKeyIn({ a: "", g: "", fi: "", fs: "", gm: "", sp: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
       if (venues.length && !venues[0].menu) rankVenues(venues); }
@@ -621,6 +621,23 @@ export default function App() {
   const [workoutLog, setWorkoutLog] = useState([]);
   const [exCatalog, setExCatalog] = useState([]);
   const [trainView, setTrainView] = useState("today");
+  const [demoVids, setDemoVids] = useState({}); // exId -> {url, title, seconds} | {fallback}
+  async function openDemo(exId, name) {
+    let v = demoVids[exId];
+    if (!v) {
+      setDemoVids((m) => ({ ...m, [exId]: { loading: true } }));
+      try { v = await fetch(`/api/exercise-video?id=${encodeURIComponent(exId)}&name=${encodeURIComponent(name)}`).then((r) => r.json()); }
+      catch { v = { fallback: `https://www.youtube.com/results?search_query=${encodeURIComponent(name + " exercise form")}&sp=EgIYAQ%253D%253D` }; }
+      setDemoVids((m) => ({ ...m, [exId]: v }));
+    }
+    window.open(v.url || v.fallback, "_blank", "noopener");
+  }
+  const demoLink = (exId, name) => {
+    const v = demoVids[exId];
+    return (<button onClick={() => openDemo(exId, name)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "2px 0", textDecoration: "underline" }}>
+      {v && v.loading ? "finding clip…" : v && v.seconds ? `▶ demo · ${v.seconds}s` : "▶ demo"}
+    </button>);
+  };
   const [cardioDraft, setCardioDraft] = useState({ type: "walk", minutes: "30", intensity: "zone 2" });
   const [liveSession, setLiveSession] = useState(null); // {dayId, name, entries:[{exId,name,group,sets:[{w,reps,rir}]}]}
   useEffect(() => { (async () => { try { const d = await fetch("/api/exercises").then((r) => r.json()); setExCatalog(d.exercises || []); } catch {} })(); }, []);
@@ -1945,7 +1962,8 @@ export default function App() {
           </div>, { marginBottom: 10 }); })()}
         {liveSession.entries.map((e, ei) => card(<div key={ei}>
           <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{e.name}</div>
-          <div style={{ fontSize: 11.5, color: C.muted, margin: "2px 0 7px" }}>{e.group} · {e.equipment} · target {e.repLow}–{e.repHigh} reps · rest {e.restSec}s</div>
+          <div style={{ fontSize: 11.5, color: C.muted, margin: "2px 0 3px" }}>{e.group} · {e.equipment} · target {e.repLow}–{e.repHigh} reps · rest {e.restSec}s</div>
+          <div style={{ marginBottom: 6 }}>{demoLink(e.exId, e.name)}</div>
           <div style={{ fontSize: 12, color: e.advice.action === "deload" ? C.caution : C.go, fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{e.advice.text}</div>
           {e.sets.map((st, si) => (
             <div key={si} style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 6 }}>
@@ -1984,6 +2002,7 @@ export default function App() {
                   <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 700 }}>{x.name}</div>
                   <div style={{ fontSize: 12, color: C.muted, whiteSpace: "nowrap" }}>{x.sets}×{x.repLow}–{x.repHigh}</div>
                 </div>
+                <div style={{ marginTop: 1 }}>{demoLink(x.exId, x.name)}</div>
                 <div style={{ fontSize: 11.5, color: adv.action === "add-weight" ? C.go : adv.action === "deload" ? C.caution : C.faint, marginTop: 2 }}>
                   {last ? `last: ${Math.max(...last.sets.map((y) => +y.w || 0))} lb × ${Math.max(...last.sets.map((y) => +y.reps || 0))} · ` : ""}{adv.action === "add-weight" ? `▲ go to ${adv.suggested} lb` : adv.action === "deload" ? `▼ deload to ${adv.suggested} lb` : adv.action === "start" ? "first time" : "add reps"}
                 </div>
@@ -2941,6 +2960,7 @@ export default function App() {
                 <input value={keyIn.fi} onChange={(e) => setKeyIn({ ...keyIn, fi: e.target.value })} placeholder="FatSecret Client ID — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.fs} onChange={(e) => setKeyIn({ ...keyIn, fs: e.target.value })} placeholder="FatSecret Client Secret — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
                 <input value={keyIn.gm} onChange={(e) => setKeyIn({ ...keyIn, gm: e.target.value })} placeholder="Google AI (Gemini) key — for goal body simulation" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginTop: 8, marginBottom: 8 }} />
+                <input value={keyIn.yt || ""} onChange={(e) => setKeyIn({ ...keyIn, yt: e.target.value })} placeholder="YouTube Data API key (optional) — short exercise demo clips" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.sp || ""} onChange={(e) => setKeyIn({ ...keyIn, sp: e.target.value })} placeholder="Spoonacular key (optional) — recipe discovery for the Plan tab" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !(keyIn.gm || "").trim() && !(keyIn.sp || "").trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !(keyIn.gm || "").trim() && !(keyIn.sp || "").trim() ? 0.5 : 1 }}>Save keys</button>

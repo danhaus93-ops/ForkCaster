@@ -62,6 +62,61 @@ app.post("/api/photo", (req, res) => {
     res.json({ id, url: `/api/photo/${id}.${ext}` });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });
+/* ── Exercise demo clips: YouTube search costs 100 quota units, so results are cached
+   FOREVER per exercise and only fetched when the user actually taps one. ── */
+const YT_BASE = process.env.YOUTUBE_BASE || "https://www.googleapis.com/youtube/v3";
+const _VID_FILE = path.join(DATA_DIR, "video-cache.json");
+const _vidCache = (() => { try { return JSON.parse(fs.readFileSync(_VID_FILE, "utf8")); } catch { return {}; } })();
+const _saveVid = () => { try { fs.writeFileSync(_VID_FILE, JSON.stringify(_vidCache)); } catch {} };
+let _ytSpend = { day: "", units: 0 };
+const _ytSearchUrl = (name) => `https://www.youtube.com/results?search_query=${encodeURIComponent(name + " exercise form")}&sp=EgIYAQ%253D%253D`; // <4 min filter
+const _iso8601Sec = (d) => { const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(String(d || "")); return m ? (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0)) : 0; };
+const _TALKY = /podcast|explained|mistakes|top \d|vs\.?\s|full workout|routine|day in the life|reaction|why you|everything you need|guide to|episode/i;
+const _DEMOY = /form|demo|technique|how to|proper|tutorial|execution|setup/i;
+function _scoreVideo(v, name) {
+  const t = String(v.title || ""), sec = v.seconds || 0;
+  if (!v.embeddable) return -Infinity;
+  let s = 0;
+  const words = name.toLowerCase().split(/\W+/).filter((w) => w.length > 3);
+  s += words.filter((w) => t.toLowerCase().includes(w)).length * 12;   // it's actually this exercise
+  if (_DEMOY.test(t)) s += 18;
+  if (_TALKY.test(t)) s -= 45;                                          // talking-head content
+  if (sec > 0 && sec <= 90) s += 30; else if (sec <= 180) s += 10; else s -= 25;  // demo-length wins
+  if (sec > 0) s -= Math.min(20, sec / 15);                             // shorter is better, gently
+  return s;
+}
+app.get("/api/exercise-video", async (req, res) => {
+  const id = String(req.query.id || "").slice(0, 80), name = String(req.query.name || "").slice(0, 120);
+  if (!id || !name) return res.status(400).json({ ok: false });
+  if (_vidCache[id]) return res.json({ ok: true, cached: true, ..._vidCache[id] });
+  const K = key("YOUTUBE_API_KEY");
+  const today = new Date().toISOString().slice(0, 10);
+  if (_ytSpend.day !== today) _ytSpend = { day: today, units: 0 };
+  if (!K) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "no-key" });
+  if (_ytSpend.units + 101 > 9000) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "quota-reserve" });
+  try {
+    const sq = new URLSearchParams({ key: K, part: "snippet", q: `${name} exercise form demonstration`, type: "video",
+      videoDuration: "short", videoEmbeddable: "true", safeSearch: "strict", maxResults: "10" });
+    const sr = await fetch(`${YT_BASE}/search?${sq}`, { signal: AbortSignal.timeout(9000) });
+    _ytSpend.units += 100;
+    if (!sr.ok) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: `search ${sr.status}` });
+    const sd = await sr.json();
+    const ids = (sd.items || []).map((x) => (x.id || {}).videoId).filter(Boolean);
+    if (!ids.length) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "no-results" });
+    const vr = await fetch(`${YT_BASE}/videos?${new URLSearchParams({ key: K, part: "contentDetails,status,snippet", id: ids.join(",") })}`, { signal: AbortSignal.timeout(9000) });
+    _ytSpend.units += 1;
+    const vd = vr.ok ? await vr.json() : { items: [] };
+    const cands = (vd.items || []).map((v) => ({ videoId: v.id, title: ((v.snippet || {}).title) || "", channel: ((v.snippet || {}).channelTitle) || "",
+      seconds: _iso8601Sec((v.contentDetails || {}).duration), embeddable: !!((v.status || {}).embeddable) && ((v.status || {}).privacyStatus) === "public" }));
+    const best = cands.map((v) => ({ v, s: _scoreVideo(v, name) })).sort((a, b) => b.s - a.s)[0];
+    if (!best || best.s === -Infinity) return res.json({ ok: true, fallback: _ytSearchUrl(name), reason: "nothing-suitable" });
+    _vidCache[id] = { videoId: best.v.videoId, title: best.v.title, channel: best.v.channel, seconds: best.v.seconds,
+      url: `https://www.youtube.com/watch?v=${best.v.videoId}`, search: _ytSearchUrl(name) };
+    _saveVid();
+    console.log(`[video] ${name} -> ${best.v.seconds}s "${best.v.title.slice(0, 50)}" (units today: ${_ytSpend.units})`);
+    res.json({ ok: true, cached: false, ..._vidCache[id] });
+  } catch (e) { res.json({ ok: true, fallback: _ytSearchUrl(name), reason: String(e).slice(0, 60) }); }
+});
 /* ── Exercise catalog: public-domain dataset vendored into the image, no external calls ── */
 let _EXERCISES = null;
 app.get("/api/exercises", (_req, res) => {
@@ -112,6 +167,7 @@ app.get("/api/keys/status", (_req, res) => {
     usda: !!get("USDA_FDC_KEY"),
     fatsecret: !!(get("FATSECRET_CLIENT_ID") && get("FATSECRET_CLIENT_SECRET")),
     gemini: !!get("GEMINI_API_KEY"), geminiTail: tail(get("GEMINI_API_KEY")),
+    youtube: !!get("YOUTUBE_API_KEY"), youtubeTail: tail(get("YOUTUBE_API_KEY")),
     spoonacular: !!get("SPOONACULAR_KEY"), spoonacularTail: tail(get("SPOONACULAR_KEY")),
   });
 });

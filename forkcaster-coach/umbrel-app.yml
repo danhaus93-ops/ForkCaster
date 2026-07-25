@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.6.0"
+version: "0.6.1"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,18 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.6.0: the Train tab - the other half of protecting muscle on a GLP-1.
-  868 exercises ship inside the app with full instructions, no account and no
-  internet needed. Pick 3, 4, 5 or 6 days a week and the equipment you
-  actually own, and it builds the split for you. Log every set with weight,
-  reps and reps-in-reserve, and it tells you when to add weight, when to add
-  reps, and when to deload. Heavy days are kept off your shot day and the day
-  after. Every session opens with ramp sets computed from your working weight
-  plus dynamic warm-up movements, and closes with static stretches for what
-  you just trained. Cardio logs in two taps and gets scheduled onto rest days,
-  backing off before heavy legs. Sessions sync to Apple Health as strength
-  training, so the lean-mass engine sees them, and your prescriber report
-  gains a resistance-training section.
+  v0.6.1: a demo clip for every exercise. Tap the demo link under any lift and
+  it finds a short, demonstration-only video - scoring hard against podcasts,
+  "explained" videos and full workouts, and strongly preferring clips under 90
+  seconds. Results are cached on your node forever, and lookups only happen
+  when you tap, so the free YouTube quota lasts. Add a YouTube Data API key in
+  Settings for exact clips; without one you get a YouTube search already
+  filtered to short videos.
 dependencies: []
 path: ""
 defaultUsername: ""
