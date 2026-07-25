@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.7.4"
+version: "0.7.5"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.7.4: routines now include core work. Trunk exercises sat last in most
-  split lists, so they kept falling off the end of the session - a five-day
-  week could contain a single core movement. Every routine now gets at least
-  three core sessions a week with different movements, and core is prescribed
-  at higher reps with shorter rest rather than the heavy scheme used for main
-  lifts. Rebuild your routine to pick it up.
+  v0.7.5: three from the field. "My preset" now keeps GLP-1-aware ordering -
+  the GLP-1 menu priority, chain GLP-1 menus and fat weighting - while the
+  calorie and protein numbers stay whatever you set, so you no longer have to
+  choose between your targets and the medication logic. Core work gets its own
+  labelled section in the session and in today's preview instead of appearing
+  as an unmarked exercise at the end. And there is a real rest timer: tap the
+  rest link under any exercise for a countdown that sticks to the bottom of
+  the screen, with +30s and skip, and a buzz when it hits zero.
   match found.
 dependencies: []
 path: ""

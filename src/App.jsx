@@ -740,6 +740,12 @@ export default function App() {
     </button>);
   };
   const [cardioDraft, setCardioDraft] = useState({ type: "walk", minutes: "30", intensity: "zone 2" });
+  const [restEnd, setRestEnd] = useState(null);
+  const [, setRestTick] = useState(0);
+  useEffect(() => { if (!restEnd) return; const id = setInterval(() => setRestTick((t) => t + 1), 250); return () => clearInterval(id); }, [restEnd]);
+  const restLeft = restEnd ? Math.max(0, Math.ceil((restEnd - Date.now()) / 1000)) : 0;
+  useEffect(() => { if (restEnd && restLeft === 0) { try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch {} setRestEnd(null); } }, [restLeft, restEnd]);
+  const fmtRest = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
   const [liveSession, setLiveSession] = useState(null); // {dayId, name, entries:[{exId,name,group,sets:[{w,reps,rir}]}]}
   useEffect(() => { (async () => { try { const d = await fetch("/api/exercises").then((r) => r.json()); setExCatalog(d.exercises || []); } catch {} })(); }, []);
   const seedRef = useRef(null);
@@ -941,6 +947,9 @@ export default function App() {
   const nauseaShift = prefs.nauseaSensitivity === "high" ? 1 : prefs.nauseaSensitivity === "low" ? -1 : 0;
   const nauseaAdj = nauseaScore + nauseaShift;
   const nauseaRisk = !onMed ? "none" : nauseaAdj >= 3 ? "high" : nauseaAdj >= 1 ? "moderate" : "low";
+  // "My preset" is how you keep GLP-1 ranking with your own calorie numbers: treat custom as GLP-1
+  // for PICKING (section quota, chain GLP-1 menus, fat weighting) while targets stay whatever you set.
+  const rankMode = mode === "custom" ? "glp1" : mode;
   const doseResp = doseResponseRead(mealLog, glp);
   const personalFatCeil = doseResp.status === "ok" && (nauseaRisk === "moderate" || nauseaRisk === "high") ? doseResp.ceiling : null;
 
@@ -1069,7 +1078,7 @@ export default function App() {
     let liveMenu = null;
     if (!r.menu && r.website) {
       try {
-        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(mode)}&name=${encodeURIComponent(r.name || "")}${opts.skipFs ? "&skipfs=1" : ""}`, { signal: AbortSignal.timeout(150000) });
+        const mres = await fetch(`/api/menu?url=${encodeURIComponent(r.website)}&goal=${encodeURIComponent(rankMode)}&name=${encodeURIComponent(r.name || "")}${opts.skipFs ? "&skipfs=1" : ""}`, { signal: AbortSignal.timeout(150000) });
         const mj = await mres.json();
         if (mj && mj.ok && mj.text) liveMenu = mj;
       } catch {}
@@ -1079,7 +1088,7 @@ export default function App() {
     if (liveMenu && Array.isArray(liveMenu.items) && liveMenu.items.length >= 3) {
       try {
         let rankItems = liveMenu.items;
-        if (liveMenu.method === "fatsecret" && mode === "glp1") {
+        if (liveMenu.method === "fatsecret" && rankMode === "glp1") {
           // the database has the real items but no sections — chain knowledge supplies the missing structure
           try {
             const tagRaw = await callClaude(`Does ${r.name} offer a GLP-1 support / high-protein menu line? If yes, which of THESE items belong to it? Items: ${rankItems.map((i) => i.item).join(" | ")}\nReturn ONLY JSON, first character {: {"glp":["exact item names copied from the list — empty array if none or unsure"]}`, "You know major restaurant chains' menus precisely. Never invent or alter item names.", null, 300, null);
@@ -1087,7 +1096,7 @@ export default function App() {
             if (g.size) rankItems = rankItems.map((i) => g.has(String(i.item).toLowerCase().trim()) ? { ...i, section: i.section + " · GLP-1 line" } : i);
           } catch {}
         }
-        const cleaned = sanitizePicks(composePicks(rankItems, mode, nauseaRisk, proteinLeft, calLeft, personalFatCeil), allergies);
+        const cleaned = sanitizePicks(composePicks(rankItems, rankMode, nauseaRisk, proteinLeft, calLeft, personalFatCeil), allergies);
         cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method; cleaned._menuText = (liveMenu.text || "").slice(0, 6000);
         try {
           const polishPrompt = `User goal: ${MODES[mode] ? MODES[mode].label : mode}. Med context: ${nauseaRisk} nausea risk. Remaining: ${proteinLeft}g protein, ${calLeft} cal. These items were selected (do NOT change them): ${JSON.stringify(cleaned.picks.map((p) => ({ item: p.item, protein: p.protein, cal: p.cal, fat: p.fat })))}. Write one sharp coach line and, for each item, a short why (max 12 words) with a smart tip. On GLP-1 or any nausea risk, fat is the main trigger: never call a 30g+ fat item gentle or light; suggest a lower-fat tweak. If the venue serves alcohol, fold ONE drink line into coach (lower-sugar; alcohol hits harder on GLP-1 — pace slow).`;
@@ -1103,7 +1112,7 @@ export default function App() {
           `Include "carbs" ONLY when a NUTRITION section provides carbohydrate grams — never estimate carbs; omit the key when unknown. Your ENTIRE response must be one JSON array: [{"item":"<name>","section":"<page url or section name>","cal":<int>,"protein":<int>,"fat":<int>,"carbs":<int, optional>}]\nTEXT:\n"""${liveMenu.text.slice(0, 9000)}"""`;
         const items = salvageJSONArray(await callClaude(exPrompt, null, null, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
         if (items.length >= 3) {
-          const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, personalFatCeil);
+          const composed = composePicks(items, rankMode, nauseaRisk, proteinLeft, calLeft, personalFatCeil);
           const cleaned = sanitizePicks(composed, allergies);
           cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method; cleaned._menuText = (liveMenu.text || "").slice(0, 6000);
           try { // intelligence layer: AI annotates picks CODE already locked
@@ -1427,7 +1436,7 @@ export default function App() {
         `List the distinct orderable menu items visible in this photographed menu (max 14). For each: item name, section (menu heading if visible, else "menu"), estimated calories, protein grams, and fat grams. Your ENTIRE response must be one JSON array.`,
         null, { data: b64, media_type: "image/jpeg" }, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
       if (items.length < 2) throw new Error("couldn't read items off that photo \u2014 try closer/straighter");
-      const composed = composePicks(items, mode, nauseaRisk, proteinLeft, calLeft);
+      const composed = composePicks(items, rankMode, nauseaRisk, proteinLeft, calLeft);
       const cleaned = sanitizePicks(composed, allergies);
       cleaned._menuSource = "photo"; cleaned._menuText = items.map((i) => `${i.item} (${i.section}) ~${i.cal} cal ${i.protein}g`).join("\n");
       setResult(cleaned); setLoggedPicks([]); setMenuA(null);
@@ -2067,7 +2076,11 @@ export default function App() {
             </div>}
             {dyn.map((x, i) => <div key={i} style={{ fontSize: 12.5, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
           </div>, { marginBottom: 10 }); })()}
-        {liveSession.entries.map((e, ei) => card(<div key={ei}>
+        {liveSession.entries.map((e, ei) => (<div key={ei}>
+          {e.group === "core" && (ei === 0 || liveSession.entries[ei - 1].group !== "core") && (
+            <div style={{ fontSize: 11, letterSpacing: 1.6, color: C.muted, fontWeight: 800, margin: "16px 0 8px" }}>CORE · higher reps, shorter rest</div>
+          )}
+          {card(<div>
           <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{e.name}</div>
           <div style={{ fontSize: 11.5, color: C.muted, margin: "2px 0 3px" }}>{e.group} · {e.equipment} · target {e.repLow}–{e.repHigh} reps · rest {e.restSec}s</div>
           <div style={{ marginBottom: 6 }}>{demoLink(e.exId, e.name)}</div>
@@ -2081,14 +2094,25 @@ export default function App() {
               ))}
             </div>
           ))}
-          <button onClick={() => setLiveSession((L) => ({ ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: [...x.sets, { w: x.sets[x.sets.length - 1]?.w || "", reps: "", rir: "" }] } : x) }))} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>+ add set</button>
-        </div>, { marginBottom: 10 }))}
+          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            <button onClick={() => setLiveSession((L) => ({ ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: [...x.sets, { w: x.sets[x.sets.length - 1]?.w || "", reps: "", rir: "" }] } : x) }))} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>+ add set</button>
+            <button onClick={() => setRestEnd(Date.now() + (e.restSec || 90) * 1000)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>⏱ start {e.restSec}s rest</button>
+          </div>
+        </div>, { marginBottom: 10 })}</div>))}
         {(() => { const cd = cooldownBlock(exCatalog, [...new Set(liveSession.entries.map((e) => e.group))]);
           return cd.length ? card(<div>
             {sectionTitle("Cool-down · hold these after, not before")}
             {cd.map((x, i) => <div key={i} style={{ fontSize: 12.5, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
           </div>, { marginBottom: 10 }) : null; })()}
         <button onClick={saveSession} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Finish &amp; log session ✓</button>
+        {restEnd && (
+          <div style={{ position: "fixed", left: 12, right: 12, bottom: 84, zIndex: 300, background: C.ink, color: C.surface, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmtRest(restLeft)}</div>
+            <div style={{ fontSize: 12, opacity: .8, flex: 1 }}>rest</div>
+            <button onClick={() => setRestEnd((t) => (t || Date.now()) + 30000)} style={{ background: "rgba(255,255,255,.15)", border: "none", color: C.surface, borderRadius: 9, padding: "8px 11px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+30s</button>
+            <button onClick={() => setRestEnd(null)} style={{ background: "none", border: "none", color: C.surface, opacity: .75, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>skip</button>
+          </div>
+        )}
       </div>
     );
     return (
@@ -2104,7 +2128,9 @@ export default function App() {
             <div style={{ fontSize: 12, color: C.muted, marginBottom: nextSlot.note ? 7 : 10 }}>{nextSlot.day.exercises.length} exercises · {nextSlot.day.focus.join(", ")}</div>
             {nextSlot.note && <div style={{ fontSize: 12, color: C.violet, fontWeight: 700, marginBottom: 10, lineHeight: 1.45 }}>{nextSlot.note}</div>}
             {nextSlot.day.exercises.map((x, i) => { const h = exHistory(x.exId); const last = h[h.length - 1]; const adv = progressionAdvice(h, x);
+              const startsCore = x.group === "core" && (i === 0 || nextSlot.day.exercises[i - 1].group !== "core");
               return (<div key={i} style={{ padding: "8px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
+                {startsCore && <div style={{ fontSize: 10.5, letterSpacing: 1.4, color: C.muted, fontWeight: 800, marginBottom: 5 }}>CORE</div>}
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 700 }}>{x.name}</div>
                   <div style={{ fontSize: 12, color: C.muted, whiteSpace: "nowrap" }}>{x.sets}×{x.repLow}–{x.repHigh}</div>
