@@ -403,7 +403,7 @@ function buildRoutine(catalog, opts = {}) {
   const pick = (group, wantCompound, daySt = [], mainLift = false) => {
     const all = pool.filter((e) => e.group === group && (wantCompound ? e.mechanic === "compound" : true));
     if (!all.length) return null;
-    const cands = all.filter((e) => !daySt.includes(stimulus(e))); // two horizontal presses in one session is redundant; a press and a row is not
+    const cands = all.filter((e) => group === "core" || !daySt.includes(stimulus(e))); // two horizontal presses in one session is redundant; a press and a row is not
     const byUse = (a, b) => (used.get(a.id) || 0) - (used.get(b.id) || 0);
     const loadable = (e) => (e.equipment === "bodyweight" ? 1 : 0); // the progression engine adds weight — a push-up can't take +5 lb
     const byGood = (a, b) => ((b.mechanic === "compound") - (a.mechanic === "compound")) || (mainLift ? loadable(a) - loadable(b) : 0) || (canonical(a) - canonical(b)) || a.name.localeCompare(b.name);
@@ -412,7 +412,15 @@ function buildRoutine(catalog, opts = {}) {
     // twice a week is normal programming and gives the progression engine more data. Accessories rotate.
     return cands.sort(mainLift ? ((a, b) => byGood(a, b) || byUse(a, b)) : ((a, b) => byUse(a, b) || byGood(a, b)))[0];
   };
-  const CORE_TARGET = Math.min(3, days); // trunk work recovers fast — 2-3 sessions a week is the standard
+  const CORE_TARGET = Math.min(3, days);
+  const CORE_PER_DAY = 3;   // a core section, not a token crunch
+  const CORE_PATTERNS = [
+    ["antiExtension", /plank|hollow|ab wheel|rollout|dead bug|bird dog|body-?saw/i],
+    ["rotation", /oblique|twist|russian|side|woodchop|chop|windshield/i],
+    ["lowerAb", /leg raise|knee raise|hanging|reverse crunch|scissor|flutter|hip lift|toes to bar/i],
+    ["flexion", /crunch|sit-?up|jackknife|v-?up|curl-?up/i],
+  ];
+  const corePattern = (e) => (CORE_PATTERNS.find(([, re]) => re.test(e.name)) || ["other"])[0]; // trunk work recovers fast — 2-3 sessions a week is the standard
   const out = split.map(([name, groups], di) => {
     const exercises = [];
     for (let i = 0; i < perDay; i++) {
@@ -424,25 +432,37 @@ function buildRoutine(catalog, opts = {}) {
       used.set(e.id, (used.get(e.id) || 0) + 1);
       const isCore = e.group === "core"; // trunk work responds to time under tension, not heavy triples
       exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic, force: e.force || null,
-        sets: sch.sets, repLow: isCore ? Math.max(10, sch.repLow) : sch.repLow, repHigh: isCore ? Math.max(20, sch.repHigh) : sch.repHigh, restSec: isCore ? 60 : sch.rest });
+        sets: isCore ? 2 : sch.sets, repLow: isCore ? 10 : sch.repLow, repHigh: isCore ? 20 : sch.repHigh, restSec: isCore ? 60 : sch.rest });
     }
     const heavy = exercises.filter((x) => x.mechanic === "compound").length >= 2;
     return { id: `d${di}`, name, focus: groups, heavy, exercises };
   });
   // Core is last in most split group lists, so it kept falling off the end of the session. Guarantee it.
-  let coreDays = out.filter((d) => d.exercises.some((x) => x.group === "core")).length;
-  if (coreDays < CORE_TARGET) {
-    for (const d of [...out].sort((a, b) => a.exercises.length - b.exercises.length)) {
-      if (coreDays >= CORE_TARGET) break;
-      if (d.exercises.some((x) => x.group === "core")) continue;
-      const daySt = d.exercises.map((x) => `${x.group}|${x.force || "?"}|${x.mechanic}`);
-      const e = pick("core", false, daySt, false);
-      if (!e) continue;
+  const corePool = pool.filter((e) => e.group === "core");
+  const addCore = (d, n) => {
+    const have = d.exercises.filter((x) => x.group === "core");
+    const haveIds = new Set(have.map((x) => x.exId));
+    const havePatterns = new Set(have.map((x) => corePattern({ name: x.name })));
+    for (let k = have.length; k < n; k++) {
+      const fresh = corePool.filter((e) => !haveIds.has(e.id));
+      if (!fresh.length) break;
+      const unseenPattern = fresh.filter((e) => !havePatterns.has(corePattern(e)));
+      const from = unseenPattern.length ? unseenPattern : fresh;   // pattern variety first, then anything new
+      const e = from.sort((a, b) => ((used.get(a.id) || 0) - (used.get(b.id) || 0)) || (canonical(a) - canonical(b)))[0];
+      haveIds.add(e.id); havePatterns.add(corePattern(e));
       used.set(e.id, (used.get(e.id) || 0) + 1);
       d.exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic, force: e.force || null,
-        sets: sch.sets, repLow: Math.max(10, sch.repLow), repHigh: Math.max(20, sch.repHigh), restSec: 60 });
-      coreDays++;
+        sets: 2, repLow: 10, repHigh: 20, restSec: 60 });   // 3 movements x 2 sets keeps the block short
     }
+  };
+  const coreDayList = [...out].sort((a, b) => (b.exercises.filter((x) => x.group === "core").length - a.exercises.filter((x) => x.group === "core").length) || (a.exercises.length - b.exercises.length));
+  let coreDays = 0;
+  for (const d of coreDayList) {
+    if (coreDays >= CORE_TARGET) { // days beyond the target keep whatever core the split already gave them
+      continue;
+    }
+    addCore(d, CORE_PER_DAY);
+    if (d.exercises.some((x) => x.group === "core")) coreDays++;
   }
   return { generatedAt: Date.now(), goal, days, minutes, equipment, blurb: sch.blurb, coreDays, days_: out };
 }
