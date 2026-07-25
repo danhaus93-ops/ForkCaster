@@ -112,7 +112,7 @@ app.get("/api/exercise-video", async (req, res) => {
   const K = key("YOUTUBE_API_KEY");
   const today = new Date().toISOString().slice(0, 10);
   if (_ytSpend.day !== today) _ytSpend = { day: today, units: 0 };
-  const chanSearch = handle ? `https://www.youtube.com/@${handle}/search?query=${encodeURIComponent(name)}` : null;
+  const chanSearch = handle ? `https://www.youtube.com/results?search_query=${encodeURIComponent(`${name} ${handle}`)}` : null; // app-safe: keeps the query
   if (!K) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "no-key" });
   if (_ytSpend.units + 101 > 9000) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "quota-reserve" });
   try {
@@ -124,14 +124,22 @@ app.get("/api/exercise-video", async (req, res) => {
     _ytSpend.units += 100;
     if (!sr.ok) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: `search ${sr.status}` });
     const sd = await sr.json();
-    const ids = (sd.items || []).map((x) => (x.id || {}).videoId).filter(Boolean);
-    if (!ids.length) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "no-results-in-channel" });
+    const _ids = (sd.items || []).map((x) => (x.id || {}).videoId).filter(Boolean);
+    let ids = _ids;
+    let fromChannel = !!chanId;
+    if (!ids.length && chanId && _ytSpend.units + 101 <= 9000) { // coach has no video for this lift — widen to all of YouTube
+      const gq = new URLSearchParams({ key: K, part: "snippet", type: "video", safeSearch: "strict", maxResults: "10", q: `${name} exercise form how to` });
+      const gr = await fetch(`${YT_BASE}/search?${gq}`, { signal: AbortSignal.timeout(9000) });
+      _ytSpend.units += 100;
+      if (gr.ok) { const gd = await gr.json(); ids = (gd.items || []).map((x) => (x.id || {}).videoId).filter(Boolean); fromChannel = false; }
+    }
+    if (!ids.length) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "no-results" });
     const vr = await fetch(`${YT_BASE}/videos?${new URLSearchParams({ key: K, part: "contentDetails,status,snippet", id: ids.join(",") })}`, { signal: AbortSignal.timeout(9000) });
     _ytSpend.units += 1;
     const vd = vr.ok ? await vr.json() : { items: [] };
     const cands = (vd.items || []).map((v) => ({ videoId: v.id, title: ((v.snippet || {}).title) || "", channel: ((v.snippet || {}).channelTitle) || "",
       seconds: _iso8601Sec((v.contentDetails || {}).duration), privacyStatus: ((v.status || {}).privacyStatus) || "public" }));
-    const best = cands.map((v) => ({ v, s: _scoreVideo(v, name, { coachChannel: !!chanId }) })).sort((a, b) => b.s - a.s)[0];
+    const best = cands.map((v) => ({ v, s: _scoreVideo(v, name, { coachChannel: fromChannel }) })).sort((a, b) => b.s - a.s)[0];
     if (!best || best.s === -Infinity) return res.json({ ok: true, fallback: chanSearch || _ytSearchUrl(name), reason: "nothing-suitable" });
     _vidCache[ck] = { videoId: best.v.videoId, title: best.v.title, channel: best.v.channel, seconds: best.v.seconds,
       url: `https://www.youtube.com/watch?v=${best.v.videoId}`, search: chanSearch || _ytSearchUrl(name) };

@@ -637,6 +637,7 @@ export default function App() {
     const v = demoVids[exId];
     return (<button onClick={() => openDemo(exId, name)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "2px 0", textDecoration: "underline" }}>
       {v && v.loading ? "finding clip…" : v && v.channel ? `▶ ${v.channel}${v.seconds ? ` · ${Math.round(v.seconds / 60)}m` : ""}` : "▶ how to do this"}
+      {v && v.fallback && v.reason && <span style={{ color: C.faint, fontWeight: 500, textDecoration: "none" }}> · {v.reason === "no-key" ? "add a YouTube key in Settings for exact clips" : v.reason === "quota-reserve" ? "daily video quota used — search only" : v.reason === "no-results" ? "no match found — search only" : "search only"}</span>}
     </button>);
   };
   const [cardioDraft, setCardioDraft] = useState({ type: "walk", minutes: "30", intensity: "zone 2" });

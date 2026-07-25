@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.6.3"
+version: "0.6.4"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.6.3: form videos now come from a coach you choose. Set a YouTube channel
-  in the Train tab (ATHLEAN-X by default) and every exercise link searches
-  inside that channel first, preferring the video that actually teaches the
-  movement rather than the shortest clip. Leave the field blank to go back to
-  short demonstration clips from anywhere on YouTube. Without an API key the
-  link still works - it opens that channel's own search for the exercise.
+  v0.6.4: exercise links now open the exercise, not a channel page. When a
+  video cannot be identified the app used to hand off a channel search URL,
+  which the YouTube app opens at the channel home with the search discarded -
+  it now hands off a normal YouTube search that keeps the exercise name. If
+  your chosen coach has no video for a particular lift, it widens the search
+  to the rest of YouTube instead of giving up. And when a link is only a
+  search, it says why right next to the link: no API key, quota used, or no
+  match found.
 dependencies: []
 path: ""
 defaultUsername: ""
