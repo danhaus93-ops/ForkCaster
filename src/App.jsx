@@ -831,7 +831,9 @@ export default function App() {
         if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
-        if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) })); // shipped default reverted if (s.routine) setRoutine(s.routine); if (s.workoutLog) setWorkoutLog(s.workoutLog);
+        if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) }));
+        if (s.routine) setRoutine(s.routine);
+        if (s.workoutLog) setWorkoutLog(s.workoutLog);
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog);
         if (s.photos) { const alive = s.photos.filter((p) => p && p.url && !p.url.startsWith("blob:")); const real = alive.filter((p) => !p.sim); const legacySims = alive.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
@@ -2167,8 +2169,8 @@ export default function App() {
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>{["bodyweight", "dumbbell", "barbell", "cable", "machine", "kettlebell", "bands", "ball", "other"].map((e) => {
             const on = trainPrefs.equipment.includes(e);
             return (<button key={e} onClick={() => setTrainPrefs((t) => ({ ...t, equipment: on ? t.equipment.filter((x) => x !== e) : [...t.equipment, e] }))} style={{ background: on ? C.go : C.surfaceAlt, color: on ? C.surface : C.muted, border: "none", borderRadius: 18, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{e}</button>); })}</div>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Form videos from this YouTube channel</div>
-          <input value={trainPrefs.videoChannel || ""} onChange={(e) => setTrainPrefs((t) => ({ ...t, videoChannel: e.target.value.replace(/^@/, "").replace(/[^A-Za-z0-9_.-]/g, "") }))} placeholder="athleanx" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Prefer one coach's channel for form videos (optional)</div>
+          <input value={trainPrefs.videoChannel || ""} onChange={(e) => setTrainPrefs((t) => ({ ...t, videoChannel: e.target.value.replace(/^@/, "").replace(/[^A-Za-z0-9_.-]/g, "") }))} placeholder="leave blank — searches all of YouTube" autoCapitalize="none" autoCorrect="off" spellCheck={false}
             style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 4 }} />
           <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 12, lineHeight: 1.45 }}>Handle only, no @. Demos are searched inside this channel first — leave blank to search all of YouTube for short clips instead.</div>
           <button onClick={() => { const r = buildRoutine(exCatalog, trainPrefs); setRoutine(r); setTrainView("today"); }} disabled={!exCatalog.length || !trainPrefs.equipment.length}
