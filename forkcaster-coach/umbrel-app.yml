@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.6.6"
+version: "0.6.7"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,16 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.6.6: fixes the YouTube key never actually saving. The server only stored
-  key names on an internal list, and the new YouTube one was missing from it -
-  so the app reported "Saved" while the server discarded the key, and every
-  exercise link stayed a plain search. Re-enter the key in Settings and it
-  will stick. Unknown key names are now logged instead of dropped in silence.
+  v0.6.7: routines now read like a program a coach would write. Exercise
+  choice is ranked by movement pattern - bench press, squat, deadlift, row,
+  pull-up and overhead press lead sessions, while curls, shrugs and flyes fill
+  accessory slots - and main lifts must be loadable, since the progression
+  engine adds weight. Variety is judged by stimulus (muscle, direction, type)
+  rather than by exercise names, so a press, a row and an overhead press can
+  share a session while two horizontal presses cannot. Main lifts may now
+  repeat across the week, which is normal training and gives progression
+  tracking more data. Also moves good mornings and deadlift variants off upper
+  body days, where the source data had filed them.
   match found.
 dependencies: []
 path: ""

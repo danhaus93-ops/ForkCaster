@@ -342,32 +342,41 @@ function buildRoutine(catalog, opts = {}) {
   const pool = (catalog || []).filter((e) => equipment.includes(e.equipment) && !avoid.includes(e.id) && LIFT_CATS.includes(e.category || "strength"));
   const used = new Map();
   const LEVEL_RANK = { beginner: 0, intermediate: 1, expert: 2 };
-  const canonical = (e) => { // plain, well-known lifts before exotic variations
+  const CLASSIC_MAIN = /\b(bench press|incline press|squat|front squat|deadlift|romanian deadlift|overhead press|military press|shoulder press|push press|barbell row|bent[- ]over row|dumbbell row|seated row|lat pulldown|pulldown|pull-?up|chin-?up|dip|lunge|split squat|leg press|hip thrust)\b/i;
+  const CLASSIC_ACCESSORY = /\b(leg curl|leg extension|glute bridge|calf raise|curl|triceps? (extension|pushdown)|skullcrusher|lateral raise|face pull|shrug|fly(es)?|plank|crunch|hanging leg raise|pullover)\b/i;
+  const canonical = (e) => { // rank by movement pattern, not by how the name is spelled
     let s2 = 0;
+    if (CLASSIC_MAIN.test(e.name)) s2 -= 20;                               // squat, press, row, deadlift, pull-up…
+    else if (CLASSIC_ACCESSORY.test(e.name)) s2 -= 8;                      // curls and shrugs are real work, just not main lifts
     s2 += (LEVEL_RANK[e.level] ?? 1) * 3;
-    s2 += Math.min(6, Math.max(0, e.name.split(/\s+/).length - 2)) * 2;   // "Barbell Squat" beats "Bottoms-Up Clean From The Hang Position"
-    if (/alternating|bottoms-up|around the world|behind the back|single-arm|one-arm|iso|band |suspended|smith/i.test(e.name)) s2 += 4;
+    s2 += Math.max(0, e.name.split(/\s+/).length - 2) * 1;                 // gentle nudge toward the plain version of a lift
+    if (/bottoms-up|around the world|behind the back|from the hang|suspended|iso |lever |smith|anti-gravity|bradford/i.test(e.name)) s2 += 6;
     if (["barbell", "dumbbell", "bodyweight"].includes(e.equipment)) s2 -= 2;
     return s2;
   };
-  const firstWord = (n) => String(n || "").split(/[\s/]+/)[0].toLowerCase();
-  const pick = (group, wantCompound, dayWords = []) => {
+  const stimulus = (e) => `${e.group}|${e.force || "?"}|${e.mechanic}`; // same muscle, same direction, same type = same stimulus
+  const pick = (group, wantCompound, daySt = [], mainLift = false) => {
     const all = pool.filter((e) => e.group === group && (wantCompound ? e.mechanic === "compound" : true));
     if (!all.length) return null;
-    const heavy = dayWords.reduce((m, w) => ((m[w] = (m[w] || 0) + 1), m), {});
-    const cands = all.filter((e) => (heavy[firstWord(e.name)] || 0) < 2); // three "Dumbbell …" lifts in one day reads like a bug
-    if (!cands.length) return all.sort((a, b) => ((used.get(a.id) || 0) - (used.get(b.id) || 0)) || (canonical(a) - canonical(b)))[0];
-    return cands.sort((a, b) => ((used.get(a.id) || 0) - (used.get(b.id) || 0)) || ((b.mechanic === "compound") - (a.mechanic === "compound")) || (canonical(a) - canonical(b)) || a.name.localeCompare(b.name))[0];
+    const cands = all.filter((e) => !daySt.includes(stimulus(e))); // two horizontal presses in one session is redundant; a press and a row is not
+    const byUse = (a, b) => (used.get(a.id) || 0) - (used.get(b.id) || 0);
+    const loadable = (e) => (e.equipment === "bodyweight" ? 1 : 0); // the progression engine adds weight — a push-up can't take +5 lb
+    const byGood = (a, b) => ((b.mechanic === "compound") - (a.mechanic === "compound")) || (mainLift ? loadable(a) - loadable(b) : 0) || (canonical(a) - canonical(b)) || a.name.localeCompare(b.name);
+    if (!cands.length) return all.sort((a, b) => byUse(a, b) || byGood(a, b))[0];
+    // main lifts: the best movement wins even if it already appeared this week — repeating a squat
+    // twice a week is normal programming and gives the progression engine more data. Accessories rotate.
+    return cands.sort(mainLift ? ((a, b) => byGood(a, b) || byUse(a, b)) : ((a, b) => byUse(a, b) || byGood(a, b)))[0];
   };
   const out = split.map(([name, groups], di) => {
     const exercises = [];
     for (let i = 0; i < perDay; i++) {
       const group = groups[i % groups.length];
-      const dayWords = exercises.map((x) => firstWord(x.name));
-      const e = pick(group, i < Math.ceil(perDay / 2), dayWords) || pick(group, false, dayWords);
+      const daySt = exercises.map((x) => `${x.group}|${x.force || "?"}|${x.mechanic}`);
+      const isMain = i < 2;
+      const e = pick(group, i < Math.ceil(perDay / 2), daySt, isMain) || pick(group, false, daySt, isMain);
       if (!e || exercises.find((x) => x.exId === e.id)) continue;
       used.set(e.id, (used.get(e.id) || 0) + 1);
-      exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic,
+      exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic, force: e.force || null,
         sets: sch.sets, repLow: sch.repLow, repHigh: sch.repHigh, restSec: sch.rest });
     }
     const heavy = exercises.filter((x) => x.mechanic === "compound").length >= 2;
