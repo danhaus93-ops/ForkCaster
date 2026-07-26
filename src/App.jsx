@@ -1126,6 +1126,11 @@ export default function App() {
   const [photos, setPhotos] = useState([]);
   const [compareA, setCompareA] = useState(0);
   const [compareB, setCompareB] = useState(0);
+  // Back view keeps its own pair. These indices point into the SAME photos array — one array with a
+  // `view` tag, not two lists, so the persisted shape of `photos` never changes.
+  const [compareABack, setCompareABack] = useState(0);
+  const [compareBBack, setCompareBBack] = useState(0);
+  const [activeSideBack, setActiveSideBack] = useState("A");
   const [activeSide, setActiveSide] = useState("B");
   const [simBusy, setSimBusy] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
@@ -1665,7 +1670,59 @@ export default function App() {
     const filtered = weightLog.filter((w) => w.date !== todayISO());
     setWeightLog([...filtered, { date: todayISO(), lbs: v }].sort((a, b) => a.date.localeCompare(b.date))); setNewWeight("");
   }
-  async function addPhotos(e) {
+  const fileRefBack = useRef(null);
+  const [simSelBack, setSimSelBack] = useState(-1);
+  const viewOf = (p) => (p && p.view) === "back" ? "back" : "front";   // untagged = front
+  const photosOf = (v) => photos.map((p, i) => ({ p, i })).filter((x) => viewOf(x.p) === v);
+  const photoPanes = (view, label, a, setA, b, setB, side, setSide, ref) => {
+    const list = photosOf(view);
+    const pa = photos[a], pb = photos[b];
+    const inView = (i) => photos[i] && viewOf(photos[i]) === view;
+    return (
+      <div style={{ marginTop: view === "back" ? 18 : 10 }}>
+        <div style={{ fontSize: 11, letterSpacing: 1.2, color: C.muted, fontWeight: 800, marginBottom: 7 }}>{label.toUpperCase()}</div>
+        {list.length === 0 ? (
+          <div style={{ fontSize: 12, color: C.faint, marginBottom: 8 }}>No {label.toLowerCase()} photos yet.</div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 10 }}>
+              {[["Before", "A", a], ["After", "B", b]].map(([lbl, sd, idx]) => {
+                const shown = inView(idx) ? photos[idx] : null;
+                const w = shown ? nearestWeight(shown.date) : null;
+                return (
+                  <div key={lbl} style={{ flex: 1 }}>
+                    <button onClick={() => setSide(sd)} style={{ fontSize: 11, marginBottom: 5, fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: side === sd ? C.go : C.muted, padding: 0 }}>{side === sd ? "● " : ""}{lbl}</button>
+                    <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${side === sd ? C.go : C.hair}` }}>
+                      {shown && <img src={shown.url} alt={lbl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      {shown && <button onClick={() => deletePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4, textAlign: "center" }}>{shown ? fmtDate(shown.date) : ""}{w ? ` · ${fmtWt(w.lbs)} ${wtU}` : ""}</div>
+                  </div>
+                );
+              })}
+            </div>
+            {(() => {
+              if (!inView(a) || !inView(b) || a === b) return null;
+              const wa = pa && nearestWeight(pa.date), wb = pb && nearestWeight(pb.date);
+              if (!wa || !wb) return null;
+              const d = wb.lbs - wa.lbs;
+              return <div style={{ textAlign: "center", marginTop: 8, fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: d <= 0 ? C.go : C.caution }}>{d > 0 ? "+" : "−"}{fmtWt(Math.abs(d))} {wtU} between these photos</div>;
+            })()}
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 10, paddingBottom: 4 }}>
+              {list.map(({ p, i }) => (
+                <img key={p.id || i} src={p.url} onClick={() => (side === "A" ? setA(i) : setB(i))} alt="" style={{ width: 44, height: 58, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === a ? C.violet : i === b ? C.go : "transparent"}`, opacity: i === a || i === b ? 1 : 0.65 }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Tap a pane label to choose which side the strip sets · purple = Before, green = After</div>
+            {list.length >= 2 && a !== b && inView(a) && inView(b) && <button onClick={() => shareComparison(a, b)} style={{ width: "100%", marginTop: 10, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share this {label.toLowerCase()} comparison →</button>}
+          </>
+        )}
+        <input ref={ref} type="file" accept="image/*" multiple onChange={(e) => addPhotos(e, view)} style={{ display: "none" }} />
+        <button onClick={() => ref.current && ref.current.click()} style={{ width: "100%", marginTop: 8, background: C.surfaceAlt, color: C.ink, border: `1px dashed ${C.faint}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+ Add {label.toLowerCase()} photo</button>
+      </div>
+    );
+  };
+  async function addPhotos(e, view = "front") {
     const files = Array.from(e.target.files || []);
     for (const f of files) {
       try {
@@ -1685,7 +1742,7 @@ export default function App() {
         const res = await fetch("/api/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: b64, media: "image/jpeg" }) });
         const j = await res.json();
         if (!res.ok || !j.url) throw new Error(j.error || "node rejected the photo");
-        setPhotos((p) => { const all = [...p, { id: j.id, url: j.url, date: todayISO() }]; setCompareB(all.length - 1); return all; });
+        setPhotos((p) => { const all = [...p, { id: j.id, url: j.url, date: todayISO(), view }]; (view === "back" ? setCompareBBack : setCompareB)(all.length - 1); return all; });
       } catch (e) {
         alert("Couldn't save that photo to your node — it was NOT kept. (" + (e && e.message ? e.message : e) + ")");
       }
@@ -1708,18 +1765,39 @@ export default function App() {
       return next;
     });
   }
+  /* PAIRED forecast: front and back render as ONE set sharing a pairId, so a re-forecast can never
+     leave a front from today beside a back from three weeks ago. If either angle fails, neither is
+     kept — a half-set is worse than none, because it looks complete. */
   async function simulateGoal() {
-    const srcP = photos[simSel];
-    if (!srcP || simBusy) return;
-    if (!srcP.url || !srcP.url.startsWith("/api/photo/")) { alert("This photo isn't stored on your node yet — re-add it first."); return; }
+    const srcF = photos[simSel], srcB = simSelBack >= 0 ? photos[simSelBack] : null;
+    if (!srcF || simBusy) return;
+    const stored = (p) => p && p.url && p.url.startsWith("/api/photo/");
+    if (!stored(srcF) || (srcB && !stored(srcB))) { alert("That photo isn't stored on your node yet — re-add it first."); return; }
     setSimBusy(true);
-    try {
+    const render = async (src) => {
       const r = await fetch("/api/goalsim", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoUrl: srcP.url, currentLbs: curWeight || 0, goalLbs: goalWeight, heightIn: body.heightIn, sex: body.sex }) });
+        body: JSON.stringify({ photoUrl: src.url, currentLbs: curWeight || 0, goalLbs: goalWeight, heightIn: body.heightIn, sex: body.sex }) });
       const j = await r.json();
       if (!r.ok || j.error) throw new Error(j.error || "simulation failed");
-      setSimShots((all) => [...all, { id: j.id, url: j.url, date: todayISO(), srcUrl: srcP.url, sim: true }]);
-    } catch (e) { alert("Goal simulation failed: " + (e && e.message ? e.message : e)); }
+      return j;
+    };
+    const made = [];
+    try {
+      const pairId = uid();
+      const jf = await render(srcF);
+      made.push(jf);
+      const shots = [{ id: jf.id, url: jf.url, date: todayISO(), srcUrl: srcF.url, sim: true, view: "front", pairId }];
+      if (srcB) {
+        const jb = await render(srcB);
+        made.push(jb);
+        shots.push({ id: jb.id, url: jb.url, date: todayISO(), srcUrl: srcB.url, sim: true, view: "back", pairId });
+      }
+      setSimShots((all) => [...all, ...shots]);
+    } catch (e) {
+      // roll back anything that DID render, so a failed pair leaves nothing behind
+      for (const j of made) { try { const f = (j.url || "").split("/").pop(); if (f) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {} }
+      alert("Goal forecast failed: " + (e && e.message ? e.message : e));
+    }
     setSimBusy(false);
   }
   async function deleteSim(idx) {
@@ -1767,8 +1845,8 @@ export default function App() {
       const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "forkcaster-goal.jpg"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
     } catch (e) { alert("Share failed: " + (e && e.message ? e.message : e)); }
   }
-  async function shareComparison() {
-    const pa = photos[compareA], pb = photos[compareB];
+  async function shareComparison(ai = compareA, bi = compareB) {
+    const pa = photos[ai], pb = photos[bi];
     if (!pa || !pb) return;
     const load = (u) => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = u; });
     try {
@@ -2851,39 +2929,12 @@ export default function App() {
       {card(
         <>
           {sectionTitle("Progress photos")}
-          {photos.length === 0 ? (
+          {photos.length === 0 && (
             <div style={{ textAlign: "center", padding: "24px 12px", color: C.faint, fontSize: 13, lineHeight: 1.5 }}>Add photos to build a visual transformation timeline.<br /><span style={{ fontSize: 11 }}>Stored privately on your node.</span></div>
-          ) : (
-            <>
-            <div style={{ display: "flex", gap: 10 }}>
-              {[["Before", "A", compareA], ["After", "B", compareB]].map(([lbl, side, idx]) => {
-                const w = photos[idx] ? nearestWeight(photos[idx].date) : null;
-                return (
-                <div key={lbl} style={{ flex: 1 }}>
-                  <button onClick={() => setActiveSide(side)} style={{ fontSize: 11, marginBottom: 5, fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: activeSide === side ? C.go : C.muted, padding: 0 }}>{activeSide === side ? "● " : ""}{lbl}</button>
-                  <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${activeSide === side ? C.go : C.hair}` }}>
-                    {photos[idx] && <img src={photos[idx].url} alt={lbl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                    {photos[idx] && <button onClick={() => deletePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
-                  </div>
-                  <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4, textAlign: "center" }}>{photos[idx] ? fmtDate(photos[idx].date) : ""}{w ? ` · ${fmtWt(w.lbs)} ${wtU}` : ""}</div>
-                </div>
-              ); })}
-            </div>
-            {(() => { const wa = photos[compareA] && nearestWeight(photos[compareA].date), wb = photos[compareB] && nearestWeight(photos[compareB].date);
-              if (!wa || !wb || compareA === compareB) return null; const d = wb.lbs - wa.lbs;
-              return <div style={{ textAlign: "center", marginTop: 8, fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: d <= 0 ? C.go : C.caution }}>{d > 0 ? "+" : "−"}{fmtWt(Math.abs(d))} {wtU} between these photos</div>; })()}
-            <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 10, paddingBottom: 4 }}>
-              {photos.map((p, i) => (
-                <img key={p.id || i} src={p.url} onClick={() => (activeSide === "A" ? setCompareA(i) : setCompareB(i))} alt="" style={{ width: 44, height: 58, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === compareA ? C.violet : i === compareB ? C.go : "transparent"}`, opacity: i === compareA || i === compareB ? 1 : 0.65 }} />
-              ))}
-            </div>
-            <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>Tap a pane label to choose which side the strip sets · purple = Before, green = After</div>
-            {photos.length >= 2 && compareA !== compareB && <button onClick={shareComparison} style={{ width: "100%", marginTop: 10, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share this comparison →</button>}
-            {photos.length > 0 && <button onClick={() => { setSimSel(photos.length - 1); setSimOpen(true); }} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>✨ Body Forecaster →</button>}
-            </>
           )}
-          <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: "none" }} />
-          <button onClick={() => fileRef.current && fileRef.current.click()} style={{ width: "100%", marginTop: 12, background: C.surfaceAlt, color: C.ink, border: `1px dashed ${C.faint}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>+ Add progress photo</button>
+          {photoPanes("front", "Front", compareA, setCompareA, compareB, setCompareB, activeSide, setActiveSide, fileRef)}
+          {photoPanes("back", "Back", compareABack, setCompareABack, compareBBack, setCompareBBack, activeSideBack, setActiveSideBack, fileRefBack)}
+          {photos.length > 0 && <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 12, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>✨ Body Forecaster →</button>}
         </>)}
     </div>
   );
@@ -3556,31 +3607,53 @@ export default function App() {
                 <button onClick={() => setSimOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 16, width: 32, height: 32, color: C.muted, fontSize: 15, cursor: "pointer" }}>×</button>
               </div>
               <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 12 }}>Photorealistic preview of you at {fmtWt(goalWeight, 0)} {wtU}. Your real Before/After photos stay untouched.</div>
-              <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Source photo</div>
-              <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 12 }}>
-                {photos.map((p, i) => (
-                  <img key={p.id || i} src={p.url} onClick={() => setSimSel(i)} alt="" style={{ width: 48, height: 64, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === simSel ? C.violet : "transparent"}`, opacity: i === simSel ? 1 : 0.6 }} />
-                ))}
-              </div>
-              {(() => { const srcP = photos[simSel]; const mine = simShots.filter((s2) => !s2.srcUrl || (srcP && s2.srcUrl === srcP.url)); const latest = mine[mine.length - 1];
+              {[["front", "Front source", simSel, setSimSel], ["back", "Back source", simSelBack, setSimSelBack]].map(([v, lbl, sel, setSel]) => {
+                const list = photosOf(v);
+                if (!list.length) return null;
+                return (
+                  <div key={v}>
+                    <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>{lbl}{v === "back" ? " · optional" : ""}</div>
+                    <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 12 }}>
+                      {v === "back" && <button onClick={() => setSimSelBack(-1)} style={{ width: 48, height: 64, flexShrink: 0, borderRadius: 8, background: C.surfaceAlt, color: sel === -1 ? C.violet : C.faint, border: `2px solid ${sel === -1 ? C.violet : "transparent"}`, fontSize: 10, cursor: "pointer" }}>none</button>}
+                      {list.map(({ p, i }) => (
+                        <img key={p.id || i} src={p.url} onClick={() => setSel(i)} alt="" style={{ width: 48, height: 64, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === sel ? C.violet : "transparent"}`, opacity: i === sel ? 1 : 0.6 }} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {(() => {
+                const srcF = photos[simSel], srcB = simSelBack >= 0 ? photos[simSelBack] : null;
+                // a forecast belongs to the pair whose SOURCES match what is selected now
+                const setsFor = (src, v) => simShots.filter((s2) => src && s2.srcUrl === src.url && (s2.view || "front") === v);
+                const lf = setsFor(srcF, "front").slice(-1)[0];
+                const lb = srcB ? setsFor(srcB, "back").slice(-1)[0] : null;
+                const paired = lf && lb && lf.pairId && lf.pairId === lb.pairId;
+                const rows = [["Front", srcF, lf]].concat(srcB ? [["Back", srcB, lb]] : []);
                 return (
                   <div>
-                    <div style={{ display: "flex", gap: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600 }}>Now</div>
-                        <div style={{ aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1px solid ${C.hair}` }}>{srcP && <img src={srcP.url} alt="Now" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: C.violet, marginBottom: 5, fontWeight: 600 }}>At goal · AI preview</div>
-                        <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${C.violet}66` }}>
-                          {latest ? <img src={latest.url} alt="Goal" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 11, padding: 12, textAlign: "center" }}>{simBusy ? "Forecasting… ≈15s" : "No forecast yet for this photo"}</div>}
-                          {latest && <button onClick={() => deleteSim(simShots.indexOf(latest))} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
+                    {rows.map(([lbl, src, shot]) => (
+                      <div key={lbl} style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 4, fontWeight: 700, letterSpacing: 0.6 }}>{lbl.toUpperCase()}</div>
+                        <div style={{ display: "flex", gap: 10 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, color: C.muted, marginBottom: 5, fontWeight: 600 }}>Now</div>
+                            <div style={{ aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1px solid ${C.hair}` }}>{src && <img src={src.url} alt="Now" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, color: C.violet, marginBottom: 5, fontWeight: 600 }}>At goal · AI preview</div>
+                            <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${C.violet}66` }}>
+                              {shot ? <img src={shot.url} alt="Goal" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 11, padding: 12, textAlign: "center" }}>{simBusy ? "Forecasting… ≈15s" : "No forecast yet"}</div>}
+                              {shot && <button onClick={() => deleteSim(simShots.indexOf(shot))} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 13, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer" }}>✕</button>}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <button onClick={simulateGoal} disabled={simBusy || !srcP} style={{ width: "100%", marginTop: 12, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: simBusy ? 0.6 : 1 }}>{simBusy ? "Forecasting…" : latest ? "✨ Re-forecast" : "✨ Forecast at goal"}</button>
-                    {latest && srcP && <button onClick={() => shareSim(srcP, latest)} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share Now vs Goal →</button>}
-                    <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Same person, same clothing — only body composition changes, computed from your logged weight vs goal. A visualization, not a prediction. Gemini key required · ~7¢ per render.</div>
+                    ))}
+                    {srcB && lf && lb && !paired && <div style={{ fontSize: 11, color: C.caution, marginBottom: 8, lineHeight: 1.4 }}>These two were forecast separately, not as a set — re-forecast to render them together.</div>}
+                    <button onClick={simulateGoal} disabled={simBusy || !srcF} style={{ width: "100%", marginTop: 4, background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: simBusy ? 0.6 : 1 }}>{simBusy ? "Forecasting…" : (lf ? "✨ Re-forecast" : "✨ Forecast at goal")}{srcB ? " (both angles)" : ""}</button>
+                    {lf && srcF && <button onClick={() => shareSim(srcF, lf)} style={{ width: "100%", marginTop: 8, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Share Now vs Goal →</button>}
+                    <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Same person, same clothing — only body composition changes, computed from your logged weight vs goal. A visualization, not a prediction. Gemini key required · ~7¢ per render{srcB ? ", two renders per set" : ""}.</div>
                   </div>
                 ); })()}
             </div>
