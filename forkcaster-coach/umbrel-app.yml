@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.8.4"
+version: "0.8.5"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,19 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.8.4: grocery lists finally read like a shopping list. Item names came
-  straight from recipe wording, so "Celery", "Celery hearts" and "finely
-  chopped celery" were three separate lines, as were "whey", "Vanilla whey"
-  and "Vanilla whey protein". Names are now normalised properly - prep
-  instructions, stray quantities, parentheses and garnish notes are stripped
-  for matching, and near-identical entries merge into one line under the
-  cleanest name, keeping any checkmark. Variety words are protected, so black
-  and green beans, white and black pepper, brown and jasmine rice stay
-  separate. Lines also display cleanly now: "or 2 Tablespoons orange juice"
-  becomes "Orange juice", while product words like shredded, part-skim and
-  ground are kept.
-  pepper.
-  match found.
+  v0.8.5: removed the "This chain lists a GLP-1 menu? Check their live site
+  instead" link. It appeared on every venue whose nutrition came from the
+  FatSecret database rather than on chains that actually publish a GLP-1
+  menu, and tapping it bypassed the published nutrition and fell through to
+  generic AI-estimated plates - the same three suggestions everywhere. Chains
+  with a real published GLP-1 menu, such as Smoothie King, are unaffected:
+  those are served ahead of everything else whenever the GLP-1 goal is set.
+  Snapping a paper menu still works as before.
 dependencies: []
 path: ""
 defaultUsername: ""
