@@ -1275,6 +1275,8 @@ export default function App() {
     }
   }
   function stopCam() { try { camControlsRef.current && camControlsRef.current.stop(); } catch {} setCamOn(false); }
+  const [quick, setQuick] = useState(null);   // {field,label,unit,kcalPerG} — tapped tile awaiting a number
+  const [quickVal, setQuickVal] = useState("");
   const [scan, setScan] = useState({ status: "idle" }); // idle|loading|found|miss|error + food
   useEffect(() => { if (scan.status === "found" && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [scan.status]);
 
@@ -2188,7 +2190,7 @@ export default function App() {
     const slot = mealPlan.days[di].slots[si];
     if (slot.logged) return;
     const f = { protein: Math.round(slot.perServing.protein * slot.servings), calories: Math.round(slot.perServing.calories * slot.servings), fat: Math.round((slot.perServing.fat || 0) * slot.servings), carbs: Math.round((slot.perServing.carbs || 0) * slot.servings) };
-    setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat }));
+    setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat, fiber: (e.fiber || 0) + (+f.fiber || 0) }));
     setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: slot.name, fat: f.fat, protein: f.protein, calories: f.calories }]);
     setMealPlan((pl) => { const d = pl.days.map((day, i) => i !== di ? day : { ...day, slots: day.slots.map((x, j) => j !== si ? x : { ...x, logged: true }) }); return { ...pl, days: d }; });
   }
@@ -2243,6 +2245,29 @@ export default function App() {
     </div>
   );
 
+  /* Tap a number, type what you ate. Protein/carbs/fat also add their own calories (4/4/9 per gram),
+     because a carb entry that left the calorie budget untouched would quietly overstate what is left.
+     Calories entered directly add no macros; water and fiber carry none either. */
+  const QUICK_KCAL = { protein: 4, carbs: 4, fat: 9 };
+  const commitQuick = () => {
+    const v = +quickVal;
+    if (quick && Number.isFinite(v) && v > 0) {
+      const f = quick.field, kcal = QUICK_KCAL[f] || 0;
+      setEaten((e) => ({ ...e, [f]: (+e[f] || 0) + v, ...(kcal ? { calories: (+e.calories || 0) + v * kcal } : {}) }));
+    }
+    setQuick(null); setQuickVal("");
+  };
+  const openQuick = (field, label, unit) => { setQuick({ field, label, unit }); setQuickVal(""); };
+  const quickRow = () => quick && (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 12px" }}>
+      <span style={{ fontSize: 12.5, color: C.muted, whiteSpace: "nowrap" }}>add {quick.label}</span>
+      <input autoFocus type="number" inputMode="decimal" value={quickVal} onChange={(e) => setQuickVal(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") commitQuick(); if (e.key === "Escape") { setQuick(null); setQuickVal(""); } }}
+        placeholder={quick.unit} style={{ flex: 1, minWidth: 0, fontFamily: BODY, fontSize: 15, color: C.ink, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 9, padding: "9px 11px", outline: "none" }} />
+      <button onClick={commitQuick} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 9, padding: "9px 15px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
+      <button onClick={() => { setQuick(null); setQuickVal(""); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 17, cursor: "pointer", padding: "0 2px" }}>✕</button>
+    </div>
+  );
   const renderNow = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2251,8 +2276,8 @@ export default function App() {
       </div>
 
       <div style={{ marginTop: 16, display: "flex", alignItems: "baseline", gap: 10 }}>
-        <div style={{ fontFamily: DISPLAY, fontSize: 54, fontWeight: 700, color: C.ink, lineHeight: 0.9, fontVariantNumeric: "tabular-nums" }}>{proteinLeft}<span style={{ fontSize: 22, color: C.muted }}>g</span></div>
-        <div style={{ paddingBottom: 6 }}><div style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>protein to go</div><div style={{ fontSize: 13, color: C.muted }}>{calLeft} cal left today</div></div>
+        <div onClick={() => openQuick("protein", "protein", "g")} style={{ fontFamily: DISPLAY, fontSize: 54, fontWeight: 700, color: C.ink, lineHeight: 0.9, fontVariantNumeric: "tabular-nums", cursor: "pointer" }}>{proteinLeft}<span style={{ fontSize: 22, color: C.muted }}>g</span></div>
+        <div style={{ paddingBottom: 6 }}><div onClick={() => openQuick("protein", "protein", "g")} style={{ fontSize: 15, fontWeight: 600, color: C.ink, cursor: "pointer" }}>protein to go</div><div onClick={() => openQuick("calories", "calories", "cal")} style={{ fontSize: 13, color: C.muted, cursor: "pointer" }}>{calLeft} cal left today</div></div>
       </div>
 
       <div style={{ marginTop: 14 }}>
@@ -2265,12 +2290,12 @@ export default function App() {
       {/* Remaining today — carbs, fat budget, hydration, fiber */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
         {[
-          { label: "carbs to go", left: Math.max(0, (targets.carbs || 0) - (eaten.carbs || 0)), unit: "g", pct: Math.min(100, ((eaten.carbs || 0) / Math.max(1, targets.carbs || 1)) * 100), col: C.ink },
-          { label: "fat budget left", left: Math.max(0, (targets.fat || 0) - (eaten.fat || 0)), unit: "g", pct: Math.min(100, ((eaten.fat || 0) / Math.max(1, targets.fat || 1)) * 100), col: C.avoid },
-          { label: "water to go", left: waterLeft, unit: "oz", pct: waterPct, col: C.blue },
-          { label: "fiber to go", left: fiberLeft, unit: "g", pct: fiberPct, col: C.caution },
+          { field: "carbs", short: "carbs", label: "carbs to go", left: Math.max(0, (targets.carbs || 0) - (eaten.carbs || 0)), unit: "g", pct: Math.min(100, ((eaten.carbs || 0) / Math.max(1, targets.carbs || 1)) * 100), col: C.ink },
+          { field: "fat", short: "fat", label: "fat budget left", left: Math.max(0, (targets.fat || 0) - (eaten.fat || 0)), unit: "g", pct: Math.min(100, ((eaten.fat || 0) / Math.max(1, targets.fat || 1)) * 100), col: C.avoid },
+          { field: "waterOz", short: "water", label: "water to go", left: waterLeft, unit: "oz", pct: waterPct, col: C.blue },
+          { field: "fiber", short: "fiber", label: "fiber to go", left: fiberLeft, unit: "g", pct: fiberPct, col: C.caution },
         ].map((m) => (
-          <div key={m.label} style={{ flex: "1 1 45%", background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 14, padding: "12px 14px" }}>
+          <div key={m.label} onClick={() => openQuick(m.field, m.short, m.unit)} style={{ flex: "1 1 45%", background: C.surface, border: `1px solid ${quick && quick.field === m.field ? C.go : C.hair}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
               <span style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{Math.round(m.left)}</span>
               <span style={{ fontSize: 13, color: C.muted }}>{m.unit}</span>
@@ -2281,7 +2306,10 @@ export default function App() {
         ))}
       </div>
 
-      <button onClick={() => setEditing((e) => !e)} style={linkBtn}>{editing ? "Done" : "Adjust today's numbers →"}</button>
+      {quickRow()}
+      <div style={{ fontSize: 11, color: C.faint, marginTop: 8, textAlign: "center" }}>Tap any number above to log intake by hand</div>
+
+      <button onClick={() => setEditing((e) => !e)} style={linkBtn}>{editing ? "Done" : "Change today's goals →"}</button>
       {editing && card(
         <>
           <div style={{ display: "flex", gap: 10 }}>{numField("Protein goal", targets.protein, (v) => setTargets({ ...targets, protein: +v }))}{numField("Calorie goal", targets.calories, (v) => setTargets({ ...targets, calories: +v }))}</div>
@@ -2394,7 +2422,7 @@ export default function App() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{p.why}</div></div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal{p.carbs != null ? ` · ${p.carbs}g carb` : ""}{p.fat != null ? ` · ${p.fat}g fat` : ""}</div></div>
-                <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0, fa = p.fat == null ? 0 : +p.fat || 0, cb = p.carbs == null ? 0 : +p.carbs || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca, carbs: (e.carbs || 0) + cb, fat: (e.fat || 0) + fa })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: fa, carbs: cb }]); setLoggedPicks((l) => [...l, nm]); }}
+                <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0, fa = p.fat == null ? 0 : +p.fat || 0, cb = p.carbs == null ? 0 : +p.carbs || 0, fb = +p.fiber || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca, carbs: (e.carbs || 0) + cb, fat: (e.fat || 0) + fa, fiber: (e.fiber || 0) + fb })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: fa, carbs: cb, fiber: fb }]); setLoggedPicks((l) => [...l, nm]); }}
                   style={{ marginLeft: 10, flexShrink: 0, alignSelf: "center", background: loggedPicks.includes(p.item || p.name) ? C.goSoft : "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 9, padding: "7px 10px", fontFamily: BODY, fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>{loggedPicks.includes(p.item || p.name) ? "✓" : "Log"}</button>
               </div>
             ))}
@@ -2481,7 +2509,7 @@ export default function App() {
         {mealLog.filter((m) => m.date === dayISOAt(prefs.rolloverHour)).map((m) => (
           <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
             <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div><div style={{ fontSize: 11, color: C.faint }}>{m.protein}g protein · {m.calories} cal</div></div>
-            <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button>
+            <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button>
           </div>
         ))}
       </>)}</div>}
