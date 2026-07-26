@@ -391,6 +391,30 @@ function contractScorecard(input) {
   ];
 }
 /* ── Training engines: routine building, progressive overload, volume, dose-aware scheduling ── */
+/* Trunk work splits two ways. Anti-extension and anti-rotation movements — plank, hollow hold,
+   ab wheel, dead bug, bird dog — are ISOMETRIC: the working unit is time under tension, and
+   "10-20 reps of Plank" is meaningless. Everything else (crunch, leg raise, twist) is dynamic
+   and stays in reps. Held separately from CORE_PATTERNS because that classifies for VARIETY,
+   this classifies for PRESCRIPTION. NOTE the deliberate near-misses: ab wheel / barbell ROLLOUTS
+   travel through a range and come back, and dead bug / bird dog alternate sides — all three are
+   anti-extension but they are DYNAMIC, so they stay in reps. Only genuinely static positions
+   (plank family, hollow hold, L-sit, wall sit, anything named "hold") get seconds. */
+const ISO_CORE = /\bplank\b|side bridge|hollow (?:hold|body)|\bl-?sit\b|wall sit|\bhold\b|isometric|\bbridge hold\b/i;
+const DYN_IN_STATIC = /jack|walk|up-?down|row|reach|tap|climber|mountain|to push|twist|rotat|crunch|raise|kick/i;
+const isIsoCore = (name) => ISO_CORE.test(String(name || "")) && !DYN_IN_STATIC.test(String(name || ""));
+const CORE_HOLD = { secLow: 20, secHigh: 45 };
+const CORE_REPS = { repLow: 10, repHigh: 20 };
+const coreScheme = (name) => (isIsoCore(name)
+  ? { sets: 2, holdLow: CORE_HOLD.secLow, holdHigh: CORE_HOLD.secHigh, restSec: 45 }
+  : { sets: 2, repLow: CORE_REPS.repLow, repHigh: CORE_REPS.repHigh, restSec: 60 });
+/* A core DAY runs as a circuit: rounds through the movements with a short gap between them and a
+   longer one between rounds. Same total work, less standing around — the 4-8 minute block format. */
+const prescription = (e) => (e && e.holdLow != null
+  ? `${e.holdLow}\u2013${e.holdHigh}s hold`
+  : `${(e && e.repLow) || 10}\u2013${(e && e.repHigh) || 20} reps`);
+const coreCircuit = (moveCount, sets) => (moveCount >= 3 && sets >= 2
+  ? { rounds: sets, betweenSec: 15, roundRestSec: 60 }   // rounds ARE the set count — one number, so they cannot disagree
+  : null);
 const SPLITS = {
   3: [["Full Body A", ["quads", "chest", "back", "shoulders", "core"]], ["Full Body B", ["hamstrings", "back", "chest", "triceps", "core"]], ["Full Body C", ["glutes", "shoulders", "back", "biceps", "calves"]]],
   4: [["Upper A", ["chest", "back", "shoulders", "triceps"]], ["Lower A", ["quads", "hamstrings", "glutes", "calves"]], ["Upper B", ["back", "chest", "shoulders", "biceps"]], ["Lower B", ["hamstrings", "quads", "glutes", "core"]]],
@@ -457,7 +481,7 @@ function buildRoutine(catalog, opts = {}) {
       used.set(e.id, (used.get(e.id) || 0) + 1);
       const isCore = e.group === "core"; // trunk work responds to time under tension, not heavy triples
       exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic, force: e.force || null,
-        sets: isCore ? 2 : sch.sets, repLow: isCore ? 10 : sch.repLow, repHigh: isCore ? 20 : sch.repHigh, restSec: isCore ? 60 : sch.rest });
+        ...(isCore ? coreScheme(e.name) : { sets: sch.sets, repLow: sch.repLow, repHigh: sch.repHigh, restSec: sch.rest }) });
     }
     const heavy = exercises.filter((x) => x.mechanic === "compound").length >= 2;
     return { id: `d${di}`, name, focus: groups, heavy, exercises };
@@ -477,8 +501,14 @@ function buildRoutine(catalog, opts = {}) {
       haveIds.add(e.id); havePatterns.add(corePattern(e));
       used.set(e.id, (used.get(e.id) || 0) + 1);
       d.exercises.push({ exId: e.id, name: e.name, group: e.group, equipment: e.equipment, mechanic: e.mechanic, force: e.force || null,
-        sets: 2, repLow: 10, repHigh: 20, restSec: 60 });   // 3 movements x 2 sets keeps the block short
+        ...coreScheme(e.name) });   // holds in seconds, dynamic work in reps
     }
+  };
+  const attachCircuit = (d) => {
+    const core = d.exercises.filter((x) => x.group === "core");
+    const c = coreCircuit(core.length, Math.min(...core.map((x) => x.sets || 0)));
+    if (c) d.coreCircuit = c;
+    return d;
   };
   const coreDayList = [...out].sort((a, b) => (b.exercises.filter((x) => x.group === "core").length - a.exercises.filter((x) => x.group === "core").length) || (a.exercises.length - b.exercises.length));
   let coreDays = 0;
@@ -489,6 +519,7 @@ function buildRoutine(catalog, opts = {}) {
     addCore(d, CORE_PER_DAY);
     if (d.exercises.some((x) => x.group === "core")) coreDays++;
   }
+  out.forEach(attachCircuit);
   return { generatedAt: Date.now(), goal, days, minutes, equipment, blurb: sch.blurb, coreDays, days_: out };
 }
 const LEG_GROUPS = ["quads", "hamstrings", "glutes"];
@@ -525,6 +556,12 @@ function cardioSchedule(weekPlan) { // cardio fills rest days, and backs off the
 const cardioMinutes = (workoutLog, sinceISO) => (workoutLog || []).filter((s) => s.kind === "cardio" && (!sinceISO || s.date >= sinceISO)).reduce((n, s) => n + (+s.minutes || 0), 0);
 const est1RM = (w, reps) => (w > 0 && reps > 0 ? Math.round(w * (1 + Math.min(reps, 12) / 30)) : 0);
 function progressionAdvice(entries, plan) {
+  if (plan && plan.holdLow != null) {   // isometrics progress by time under tension, not load
+    const best = list.length ? Math.max(...list.flatMap((x) => (x.sets || []).map((y) => +y.secs || +y.reps || 0))) : 0;
+    if (!best) return { action: "start", text: `Hold for ${plan.holdLow}s with clean position, and stop the set when form breaks — not when the timer does.` };
+    if (best >= plan.holdHigh) return { action: "harder", text: `You are holding ${best}s. Past ${plan.holdHigh}s the set trains endurance more than tension — make it harder (longer lever, add load) and drop back to ${plan.holdLow}s.` };
+    return { action: "add-time", suggested: Math.min(plan.holdHigh, best + 5), text: `Add about 5s — aim for ${Math.min(plan.holdHigh, best + 5)}s this session, working toward ${plan.holdHigh}s.` };
+  }
   const repHigh = (plan && plan.repHigh) || 10, repLow = (plan && plan.repLow) || 6;
   const lower = LOWER_GROUPS.includes((plan && plan.group) || "");
   const step = lower ? 10 : 5;
@@ -2299,6 +2336,16 @@ export default function App() {
       <div style={{ padding: "14px 18px 96px" }}>
         <button onClick={() => { setLiveSession(null); setTrainView("today"); }} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Cancel session</button>
         <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink, marginBottom: 12 }}>{liveSession.name}</div>
+        {(() => {   // a core day runs as a circuit — say so once, at the top, instead of per-exercise
+          const cc = ((routine && (routine.days_ || []).find((d) => d.id === liveSession.dayId)) || {}).coreCircuit;
+          if (!cc) return null;
+          return (
+            <div style={{ marginBottom: 12, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 13px" }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, fontFamily: BODY }}>Core runs as a circuit</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 3, lineHeight: 1.45 }}>{cc.rounds} rounds through the core movements — about {cc.betweenSec}s between movements, {cc.roundRestSec}s between rounds. Same work as straight sets, less standing around.</div>
+            </div>
+          );
+        })()}
         {(() => { const first = liveSession.entries.find((e) => e.mechanic === "compound") || liveSession.entries[0];
           const seed = first ? +(first.sets[0] || {}).w || 0 : 0;
           const ramp = rampSets(seed, first && first.equipment === "bodyweight");
@@ -2316,7 +2363,7 @@ export default function App() {
           )}
           {card(<div>
           <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{e.name}</div>
-          <div style={{ fontSize: 11.5, color: C.muted, margin: "2px 0 3px" }}>{e.group} · {e.equipment} · target {e.repLow}–{e.repHigh} reps · rest {e.restSec}s</div>
+          <div style={{ fontSize: 11.5, color: C.muted, margin: "2px 0 3px" }}>{e.group} · {e.equipment} · target {prescription(e)} · rest {e.restSec}s</div>
           <div style={{ marginBottom: 6 }}>{demoLink(e.exId, e.name)}</div>
           <div style={{ fontSize: 12, color: e.advice.action === "deload" ? C.caution : C.go, fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{e.advice.text}</div>
           {e.sets.map((st, si) => (
@@ -2331,6 +2378,9 @@ export default function App() {
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
             <button onClick={() => setLiveSession((L) => ({ ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: [...x.sets, { w: x.sets[x.sets.length - 1]?.w || "", reps: "", rir: "" }] } : x) }))} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>+ add set</button>
             <button onClick={() => setRestEnd(Date.now() + (e.restSec || 90) * 1000)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>⏱ start {e.restSec}s rest</button>
+            {e.holdLow != null && (
+              <button onClick={() => setRestEnd(Date.now() + e.holdHigh * 1000)} style={{ background: "none", border: "none", color: C.violet, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0 4px 12px" }}>▶ time a {e.holdHigh}s hold</button>
+            )}
           </div>
         </div>, { marginBottom: 10 })}</div>))}
         {(() => { const cd = cooldownBlock(exCatalog, [...new Set(liveSession.entries.map((e) => e.group))]);
@@ -2367,7 +2417,7 @@ export default function App() {
                 {startsCore && <div style={{ fontSize: 10.5, letterSpacing: 1.4, color: C.muted, fontWeight: 800, marginBottom: 5 }}>CORE</div>}
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 700 }}>{x.name}</div>
-                  <div style={{ fontSize: 12, color: C.muted, whiteSpace: "nowrap" }}>{x.sets}×{x.repLow}–{x.repHigh}</div>
+                  <div style={{ fontSize: 12, color: C.muted, whiteSpace: "nowrap" }}>{x.sets}×{prescription(x).replace(" hold", "").replace(" reps", "")}</div>
                 </div>
                 <div style={{ marginTop: 1 }}>{demoLink(x.exId, x.name)}</div>
                 <div style={{ fontSize: 11.5, color: adv.action === "add-weight" ? C.go : adv.action === "deload" ? C.caution : C.faint, marginTop: 2 }}>
