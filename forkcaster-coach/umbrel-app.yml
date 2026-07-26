@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.0"
+version: "0.9.1"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,17 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.0: core training is prescribed properly. Holds such as the plank were
-  being given a rep range - "10 to 20 reps of Plank" - because every core
-  movement got the same scheme. Static positions are now prescribed in
-  seconds with their own timer, while movements that travel (rollouts, dead
-  bugs, crunches, leg raises) correctly stay in reps. Core days also run as a
-  circuit: rounds through the movements with a short gap between them,
-  roughly a four to five minute block for the same work as straight sets.
-  Progression understands time too, adding seconds toward the ceiling and
-  then suggesting a harder variation rather than a longer hold. Rebuild the
-  routine in Train to pick this up; existing routines and logged history are
-  unaffected.
+  v0.9.1: every core movement is now timed, not just the holds. v0.9.0 only
+  put static positions on the clock and left crunches, leg raises and twists
+  counting reps, which misses the point of a core circuit - you work the
+  interval and get as many clean reps as it allows. Dynamic movements run 30
+  to 45 seconds, static holds 30 to 60, with 45 seconds of rest, putting a
+  core block at roughly six minutes. The timer button now appears on every
+  core movement, and progression adds seconds toward the ceiling before
+  suggesting a harder variation. Rebuild the routine in Train to pick it up.
 dependencies: []
 path: ""
 defaultUsername: ""

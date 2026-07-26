@@ -402,16 +402,24 @@ function contractScorecard(input) {
 const ISO_CORE = /\bplank\b|side bridge|hollow (?:hold|body)|\bl-?sit\b|wall sit|\bhold\b|isometric|\bbridge hold\b/i;
 const DYN_IN_STATIC = /jack|walk|up-?down|row|reach|tap|climber|mountain|to push|twist|rotat|crunch|raise|kick/i;
 const isIsoCore = (name) => ISO_CORE.test(String(name || "")) && !DYN_IN_STATIC.test(String(name || ""));
-const CORE_HOLD = { secLow: 20, secHigh: 45 };
-const CORE_REPS = { repLow: 10, repHigh: 20 };
-const coreScheme = (name) => (isIsoCore(name)
-  ? { sets: 2, holdLow: CORE_HOLD.secLow, holdHigh: CORE_HOLD.secHigh, restSec: 45 }
-  : { sets: 2, repLow: CORE_REPS.repLow, repHigh: CORE_REPS.repHigh, restSec: 60 });
+/* EVERY core movement is TIMED, not just the statics. In a core circuit you work the clock and get
+   as many clean reps as the interval allows — counting reps is the thing the format removes. A
+   static holds the position for the interval; a dynamic movement repeats through it. isIsoCore now
+   only chooses the BAND and the wording, never reps-vs-time. */
+const CORE_WORK = { dynamic: { low: 30, high: 45 }, static: { low: 30, high: 60 } };
+const coreScheme = (name) => {
+  const b = isIsoCore(name) ? CORE_WORK.static : CORE_WORK.dynamic;
+  return { sets: 2, workLow: b.low, workHigh: b.high, hold: isIsoCore(name), restSec: 45 };
+};
 /* A core DAY runs as a circuit: rounds through the movements with a short gap between them and a
    longer one between rounds. Same total work, less standing around — the 4-8 minute block format. */
-const prescription = (e) => (e && e.holdLow != null
-  ? `${e.holdLow}\u2013${e.holdHigh}s hold`
-  : `${(e && e.repLow) || 10}\u2013${(e && e.repHigh) || 20} reps`);
+const prescription = (e) => {
+  if (!e) return "10\u201320 reps";
+  const lo = e.workLow != null ? e.workLow : e.holdLow;      // holdLow: routines saved by v0.9.0
+  const hi = e.workHigh != null ? e.workHigh : e.holdHigh;
+  if (lo != null) return `${lo}\u2013${hi}s${e.hold ? " hold" : ""}`;
+  return `${e.repLow || 10}\u2013${e.repHigh || 20} reps`;
+};
 const coreCircuit = (moveCount, sets) => (moveCount >= 3 && sets >= 2
   ? { rounds: sets, betweenSec: 15, roundRestSec: 60 }   // rounds ARE the set count — one number, so they cannot disagree
   : null);
@@ -556,11 +564,14 @@ function cardioSchedule(weekPlan) { // cardio fills rest days, and backs off the
 const cardioMinutes = (workoutLog, sinceISO) => (workoutLog || []).filter((s) => s.kind === "cardio" && (!sinceISO || s.date >= sinceISO)).reduce((n, s) => n + (+s.minutes || 0), 0);
 const est1RM = (w, reps) => (w > 0 && reps > 0 ? Math.round(w * (1 + Math.min(reps, 12) / 30)) : 0);
 function progressionAdvice(entries, plan) {
-  if (plan && plan.holdLow != null) {   // isometrics progress by time under tension, not load
+  const _wLo = plan && (plan.workLow != null ? plan.workLow : plan.holdLow);
+  const _wHi = plan && (plan.workHigh != null ? plan.workHigh : plan.holdHigh);
+  if (_wLo != null) {   // timed work progresses on the clock, not the bar
     const best = list.length ? Math.max(...list.flatMap((x) => (x.sets || []).map((y) => +y.secs || +y.reps || 0))) : 0;
-    if (!best) return { action: "start", text: `Hold for ${plan.holdLow}s with clean position, and stop the set when form breaks — not when the timer does.` };
-    if (best >= plan.holdHigh) return { action: "harder", text: `You are holding ${best}s. Past ${plan.holdHigh}s the set trains endurance more than tension — make it harder (longer lever, add load) and drop back to ${plan.holdLow}s.` };
-    return { action: "add-time", suggested: Math.min(plan.holdHigh, best + 5), text: `Add about 5s — aim for ${Math.min(plan.holdHigh, best + 5)}s this session, working toward ${plan.holdHigh}s.` };
+    const verb = plan.hold ? "Hold" : "Work";
+    if (!best) return { action: "start", text: `${verb} for ${_wLo}s. Stop when form breaks, not when the timer does — clean reps inside the interval, not as many as possible.` };
+    if (best >= _wHi) return { action: "harder", text: `You are at ${best}s. Past ${_wHi}s this trains endurance more than tension — make it harder (longer lever, add load, slower tempo) and drop back to ${_wLo}s.` };
+    return { action: "add-time", suggested: Math.min(_wHi, best + 5), text: `Add about 5s — aim for ${Math.min(_wHi, best + 5)}s this session, working toward ${_wHi}s.` };
   }
   const repHigh = (plan && plan.repHigh) || 10, repLow = (plan && plan.repLow) || 6;
   const lower = LOWER_GROUPS.includes((plan && plan.group) || "");
@@ -2378,9 +2389,9 @@ export default function App() {
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
             <button onClick={() => setLiveSession((L) => ({ ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: [...x.sets, { w: x.sets[x.sets.length - 1]?.w || "", reps: "", rir: "" }] } : x) }))} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>+ add set</button>
             <button onClick={() => setRestEnd(Date.now() + (e.restSec || 90) * 1000)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>⏱ start {e.restSec}s rest</button>
-            {e.holdLow != null && (
-              <button onClick={() => setRestEnd(Date.now() + e.holdHigh * 1000)} style={{ background: "none", border: "none", color: C.violet, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0 4px 12px" }}>▶ time a {e.holdHigh}s hold</button>
-            )}
+            {(e.workHigh != null || e.holdHigh != null) && (() => { const w = e.workHigh != null ? e.workHigh : e.holdHigh; return (
+              <button onClick={() => setRestEnd(Date.now() + w * 1000)} style={{ background: "none", border: "none", color: C.violet, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "4px 0 4px 12px" }}>▶ time a {w}s {e.hold ? "hold" : "set"}</button>
+            ); })()}
           </div>
         </div>, { marginBottom: 10 })}</div>))}
         {(() => { const cd = cooldownBlock(exCatalog, [...new Set(liveSession.entries.map((e) => e.group))]);
