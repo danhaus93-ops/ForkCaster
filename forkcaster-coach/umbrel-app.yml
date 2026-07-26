@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.8.1"
+version: "0.8.2"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.8.1: three grocery list fixes from one screenshot. Egg noodles were being
-  sold by the dozen - the package rule matched "egg" at the start of any name,
-  so egg noodles, egg roll wrappers and anything similar inherited the carton
-  of eggs. Plural handling was also wrong: "egg whites" normalised to "egg
-  whit", which is why egg whites, liquid egg whites and egg white each got
-  their own line; tomatoes and berries had the same problem. And the
-  consolidation step can now list the same item twice without it reaching your
-  list - duplicates collapse to the clearest name, keeping the quantity.
+  v0.8.2: the grocery list you already have fixes itself. The previous release
+  corrected duplicate items and wrong package sizes, but only for lists
+  generated afterwards - an existing list kept its "Egg white / Egg whites /
+  Liquid egg whites" rows and its egg noodles by the dozen until you
+  regenerated. Now the list is cleaned when it loads: duplicates merge into the
+  clearest name, any item you had already ticked stays ticked, and a package
+  size that only makes sense for eggs is recalculated for whatever the item
+  actually is.
   match found.
 dependencies: []
 path: ""

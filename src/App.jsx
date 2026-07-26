@@ -675,6 +675,34 @@ function _pkgPhrase(name, uses) { // smallest-package heuristics — store langu
         if (allOz && oz > 0) return oz >= 16 ? `~${Math.ceil((oz / 16) * 4) / 4} lb` : `~${Math.ceil(oz)} oz`;
         return "1 pack";
       }
+function dedupeGrocery(items, keyOf) {
+  // Runs on the STORED list too, so a plan generated before the merge rules existed still cleans up
+  // without regenerating. Keeps the clearest name, the most specific quantity, and any checkmark.
+  const seen = new Map();
+  for (const g of (items || [])) {
+    if (!g || !g.item) continue;
+    const k = keyOf(g.item) || String(g.item).toLowerCase();
+    const prev = seen.get(k);
+    if (!prev) { seen.set(k, { ...g }); continue; }
+    const keep = String(g.item).length > String(prev.item).length ? { ...g } : { ...prev };
+    const qa = String(prev.qty || ""), qb = String(g.qty || "");
+    keep.qty = qa.length >= qb.length ? qa : qb;
+    keep.checked = !!(prev.checked || g.checked);
+    keep.section = prev.section || g.section;
+    seen.set(k, keep);
+  }
+  return [...seen.values()];
+}
+function repairGroceryQty(items, keyOf, pkgOf) {
+  // A stored list carries quantities from whatever rules existed when it was built. Only repair
+  // what is demonstrably wrong for the item — a dozen of anything that is not eggs.
+  return (items || []).map((g) => {
+    if (!g || !g.item) return g;
+    const looksEgg = keyOf(g.item) === "egg" || /hard-?boiled egg/i.test(g.item);
+    if (/dozen/i.test(String(g.qty || "")) && !looksEgg) return { ...g, qty: pkgOf(g.item, []) };
+    return g;
+  });
+}
 function grocerySection(name) {
   const n = String(name || "").toLowerCase();
   for (const [section, re] of _AISLE) if (re.test(n)) return section;
@@ -889,6 +917,13 @@ export default function App() {
   // food logging / barcode scan
   const [logOpen, setLogOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  useEffect(() => {   // one-time cleanup of lists built before the merge rules existed
+    if (!mealPlan || !Array.isArray(mealPlan.grocery) || !mealPlan.grocery.length) return;
+    const cleaned = repairGroceryQty(dedupeGrocery(mealPlan.grocery, _ingKey), _ingKey, _pkgPhrase);
+    const changed = cleaned.length !== mealPlan.grocery.length
+      || cleaned.some((g, i) => !mealPlan.grocery[i] || g.item !== mealPlan.grocery[i].item || g.qty !== mealPlan.grocery[i].qty);
+    if (changed) setMealPlan({ ...mealPlan, grocery: cleaned });
+  }, [mealPlan]);
   const [backups, setBackups] = useState(null);
   const [photoUsage, setPhotoUsage] = useState(null); // {count, bytes} of images stored on the node
   useEffect(() => { (async () => { try { setPhotoUsage(await fetch("/api/photos/usage").then((r) => r.json())); } catch {} })(); }, []);
