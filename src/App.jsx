@@ -268,6 +268,25 @@ const MEDS = {
     note: "Phase 3 (TRIUMPH), not FDA-approved. Trial/clinician-directed dosing only — no schedule shown." },
 };
 
+/* Delivery hand-off. These are UNIVERSAL LINKS: plain https URLs that iOS/Android intercept and
+   route into the installed app. They only fire on a real user tap of an <a> — a window.open() or a
+   JS redirect is ignored by iOS and lands in Safari instead, so these must never be wired to a
+   <button onClick>. Store-page URLs need each platform's internal store id, which Google Places
+   does not give us, so these are name searches. */
+/* Brand colours are the PUBLISHED values, not sampled from a screenshot: DoorDash Red #FF3008 and
+   Uber Eats Green #06C167 are documented, and both photos of them came in dimmed. Grubhub publishes
+   no hex, so #ED622B is sampled from the real wordmark. All three brand faces are proprietary
+   (custom DoorDash sans, Uber Move, Grubhub's own), so the LETTERING is approximated with the
+   already-loaded Inter: tracked-out caps for DoorDash, heavy tight caps for Grubhub, tight
+   sentence case for Uber Eats. */
+const DELIVERY_APPS = [
+  { label: "DOORDASH", url: (q) => `https://www.doordash.com/search/store/${encodeURIComponent(q)}/`,
+    bg: "#FF3008", fg: "#FFFFFF", weight: 700, spacing: 1.2, size: 12.5 },
+  { label: "Uber Eats", url: (q) => `https://www.ubereats.com/search?q=${encodeURIComponent(q)}`,
+    bg: "#06C167", fg: "#000000", weight: 800, spacing: -0.4, size: 13 },
+  { label: "GRUBHUB", url: (q) => `https://www.grubhub.com/search?queryText=${encodeURIComponent(q)}`,
+    bg: "#ED622B", fg: "#FFFFFF", weight: 900, spacing: -0.2, size: 13 },
+];
 const uid = () => Math.random().toString(36).slice(2, 9);
 const log10 = (x) => Math.log(x) / Math.LN10;
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -2136,8 +2155,23 @@ export default function App() {
             ))}
             {result.picks && result.picks[0] && (
               <>
-                <button style={{ width: "100%", marginTop: 6, background: C.go, color: C.surface, border: "none", borderRadius: 13, padding: "15px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Send "{result.picks[0] && (result.picks[0].item || (result.picks[0].item || result.picks[0].name || "") || "").split("(")[0].trim()}" to a delivery app →</button>
-                <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 7 }}>Hands off to DoorDash / Uber Eats / Grubhub with the order pre-built</div>
+                {(() => {
+                  const _item = String(result.picks[0].item || result.picks[0].name || "").split("(")[0].trim();
+                  const _venue = ((venues.find((v) => v.id === selected) || {}).name) || _item;
+                  return (
+                    <>
+                      <div style={{ marginTop: 10, fontSize: 12.5, color: C.muted, fontFamily: BODY }}>Order "{_item}" from</div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                        {DELIVERY_APPS.map((a) => (
+                          <a key={a.label} href={a.url(_venue)} rel="noopener"
+                            onClick={() => { try { if (navigator.clipboard) navigator.clipboard.writeText(_item); } catch {} }}
+                            style={{ flex: 1, textAlign: "center", textDecoration: "none", background: a.bg, color: a.fg, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: a.size, fontWeight: a.weight, letterSpacing: a.spacing, whiteSpace: "nowrap" }}>{a.label}</a>
+                        ))}
+                      </div>
+                      <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 7 }}>Opens the app at {_venue} and copies the item name — paste it in their search</div>
+                    </>
+                  );
+                })()}
               </>
             )}
             {(result.avoid || []).length > 0 && (
