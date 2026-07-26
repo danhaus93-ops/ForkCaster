@@ -2,3 +2,4 @@ node_modules/
 dist/app.js
 data/
 .env
+.smoke-entry.jsx

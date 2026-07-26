@@ -564,6 +564,7 @@ function cardioSchedule(weekPlan) { // cardio fills rest days, and backs off the
 const cardioMinutes = (workoutLog, sinceISO) => (workoutLog || []).filter((s) => s.kind === "cardio" && (!sinceISO || s.date >= sinceISO)).reduce((n, s) => n + (+s.minutes || 0), 0);
 const est1RM = (w, reps) => (w > 0 && reps > 0 ? Math.round(w * (1 + Math.min(reps, 12) / 30)) : 0);
 function progressionAdvice(entries, plan) {
+  const list = (entries || []).filter((e) => (e.sets || []).length);   // declared FIRST: every branch below reads it
   const _wLo = plan && (plan.workLow != null ? plan.workLow : plan.holdLow);
   const _wHi = plan && (plan.workHigh != null ? plan.workHigh : plan.holdHigh);
   if (_wLo != null) {   // timed work progresses on the clock, not the bar
@@ -576,7 +577,6 @@ function progressionAdvice(entries, plan) {
   const repHigh = (plan && plan.repHigh) || 10, repLow = (plan && plan.repLow) || 6;
   const lower = LOWER_GROUPS.includes((plan && plan.group) || "");
   const step = lower ? 10 : 5;
-  const list = (entries || []).filter((e) => (e.sets || []).length);
   if (!list.length) return { action: "start", text: `First time on this lift — pick a weight you could get ${repHigh} clean reps with, leaving about 2 in the tank.` };
   const last = list[list.length - 1];
   const w = Math.max(...last.sets.map((x) => +x.w || 0));
