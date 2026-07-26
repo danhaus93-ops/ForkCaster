@@ -319,6 +319,42 @@ app.post("/api/health/sync", (req, res) => {
   console.log(`[health] sync: ${touched.size} day(s) updated`);
   res.json({ ok: true, daysUpdated: touched.size });
 });
+/* Same-origin write for values the user has CONFIRMED on screen (currently the scanned scale
+   report). No token: this is the local UI, same trust level as /api/state — the token exists to
+   authenticate the phone shortcut reaching in from outside. Merges into the same day store the
+   sync writes to, so adaptiveRead and goalContract pick it up with no extra wiring. */
+app.post("/api/health/manual", (req, res) => {
+  try {
+    const rec = req.body || {};
+    const d = String(rec.date || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return res.status(400).json({ ok: false, error: "need a YYYY-MM-DD date" });
+    const RANGES = { weightLbs: [40, 900], bodyFatPct: [3, 70], leanMassLbs: [30, 500], muscleMassLbs: [20, 400], bodyWaterLbs: [20, 400], skeletalMuscleLbs: [10, 300], visceralFat: [1, 59], subcutaneousFatPct: [1, 70] };
+    const clean = {};
+    for (const [k, [lo, hi]] of Object.entries(RANGES)) {
+      const v = +rec[k];
+      if (Number.isFinite(v) && v >= lo && v <= hi) clean[k] = Math.round(v * 10) / 10;
+    }
+    if (rec.segmental && typeof rec.segmental === "object") {
+      const seg = {};
+      for (const kind of ["fat", "muscle"]) {
+        const src = rec.segmental[kind]; if (!src || typeof src !== "object") continue;
+        const part = {};
+        for (const limb of ["leftArm", "rightArm", "trunk", "leftLeg", "rightLeg"]) { const v = +src[limb]; if (Number.isFinite(v) && v >= 0 && v <= 200) part[limb] = Math.round(v * 10) / 10; }
+        if (Object.keys(part).length) seg[kind] = part;
+      }
+      if (Object.keys(seg).length) clean.segmental = seg;
+    }
+    if (!Object.keys(clean).length) return res.status(400).json({ ok: false, error: "nothing usable in that payload" });
+    clean.source = "scan";
+    const h = _loadHealth();
+    h.days = h.days || {};
+    h.days[d] = { ...h.days[d], ...clean };
+    const kk = Object.keys(h.days).sort(); while (kk.length > 400) delete h.days[kk.shift()];
+    _saveHealth(h);
+    console.log(`[health] manual/scan write for ${d}: ${Object.keys(clean).filter((k) => k !== "source").join(", ")}`);
+    res.json({ ok: true, date: d, saved: clean });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
 app.delete("/api/health/data", (req, res) => { // wipe synced days; the token survives so the phone keeps working
   try {
     const h = _loadHealth();

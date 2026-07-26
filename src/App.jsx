@@ -432,6 +432,68 @@ const prescription = (e) => {
    by name. If Shortcuts does not take over the page, we fall back to the App Store, which is where
    an uninstalled app should land anyway. Custom schemes are exempt from the universal-link rule
    about JS navigation, so the timed fallback here is correct rather than a workaround. */
+/* ---- Body composition report scan -------------------------------------------------------------
+   The Wyze scale exports its report as a PNG only, and HealthKit has no fields for half of what is
+   on it, so the picture IS the integration. Vision reads it; THIS function decides what is
+   believable. Nothing here is trusted straight from the model: every value is range-clamped, and
+   the three that must agree (weight, body fat %, lean mass) are cross-checked against each other —
+   a single misread digit is the likely failure mode (135.8 -> 1358) and arithmetic catches it when
+   a range check would not. */
+const BODYSCAN_RANGES = {
+  weightLbs: [40, 900], bodyFatPct: [3, 70], leanMassLbs: [30, 500],
+  muscleMassLbs: [20, 400], bodyWaterLbs: [20, 400], skeletalMuscleLbs: [10, 300],
+  visceralFat: [1, 59], subcutaneousFatPct: [1, 70],
+};
+const BODYSCAN_SCHEMA = {
+  type: "object",
+  properties: {
+    date: { type: "string", description: "YYYY-MM-DD from the report's own testing time, not today" },
+    weightLbs: { type: "number" }, bodyFatPct: { type: "number" }, leanMassLbs: { type: "number" },
+    muscleMassLbs: { type: "number" }, bodyWaterLbs: { type: "number" }, skeletalMuscleLbs: { type: "number" },
+    visceralFat: { type: "number" }, subcutaneousFatPct: { type: "number" },
+    segmental: {
+      type: "object",
+      properties: {
+        fat: { type: "object", properties: { leftArm: { type: "number" }, rightArm: { type: "number" }, trunk: { type: "number" }, leftLeg: { type: "number" }, rightLeg: { type: "number" } } },
+        muscle: { type: "object", properties: { leftArm: { type: "number" }, rightArm: { type: "number" }, trunk: { type: "number" }, leftLeg: { type: "number" }, rightLeg: { type: "number" } } },
+      },
+    },
+  },
+};
+function parseBodyScan(raw) {
+  const out = {}, rejected = [];
+  const r = raw && typeof raw === "object" ? raw : {};
+  const d = String(r.date || "").slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) out.date = d; else rejected.push("date");
+  for (const [k, [lo, hi]] of Object.entries(BODYSCAN_RANGES)) {
+    const v = +r[k];
+    if (!Number.isFinite(v)) continue;
+    if (v >= lo && v <= hi) out[k] = Math.round(v * 10) / 10; else rejected.push(k);
+  }
+  // segmental is DISPLAY ONLY — the limb masses come back perfectly symmetric even when the raw
+  // impedance differs side to side, so they are modelled, not measured. Never feed an engine.
+  const seg = {};
+  for (const kind of ["fat", "muscle"]) {
+    const src = (r.segmental || {})[kind];
+    if (!src || typeof src !== "object") continue;
+    const part = {};
+    for (const limb of ["leftArm", "rightArm", "trunk", "leftLeg", "rightLeg"]) {
+      const v = +src[limb];
+      if (Number.isFinite(v) && v >= 0 && v <= 200) part[limb] = Math.round(v * 10) / 10;
+    }
+    if (Object.keys(part).length) seg[kind] = part;
+  }
+  if (Object.keys(seg).length) out.segmental = seg;
+  // the arithmetic guard: weight x (1 - bf) should land on lean
+  let warning = null;
+  if (out.weightLbs && out.bodyFatPct && out.leanMassLbs) {
+    const implied = out.weightLbs * (1 - out.bodyFatPct / 100);
+    const off = Math.abs(implied - out.leanMassLbs);
+    if (off > Math.max(3, out.weightLbs * 0.03)) warning = `weight and body fat imply ${implied.toFixed(1)} lb lean but the scan read ${out.leanMassLbs} lb — check those three before saving`;
+  }
+  const usable = out.bodyFatPct != null || out.leanMassLbs != null;
+  return { ok: usable, values: out, rejected, warning };
+}
 const SIXPACK = {
   label: "6 Pack Promise",
   shortcut: "Abs",                                              // rename here if he names it differently
@@ -984,7 +1046,15 @@ export default function App() {
   const [error, setError] = useState(null);
   const [now, setNow] = useState(new Date());
 
-  const [body, setBody] = useState({ sex: "male", heightIn: 71, neck: 16, waist: 35, hip: 40 });
+  // NO placeholder measurements. Shipping heightIn:71 / neck:16 / waist:35 meant the Navy tile
+  // computed a plausible-looking body fat from numbers nobody had entered — and goalContract took
+  // that as lean mass, setting a protein floor off a fiction. Empty means unknown, and every
+  // consumer already renders "—" for a falsy value.
+  const [body, setBody] = useState({ sex: "male", heightIn: 0, neck: 0, waist: 0, hip: 0 });
+  const [bodyScan, setBodyScan] = useState(null);  // { values, rejected, warning } awaiting HIS confirmation
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanErr, setScanErr] = useState("");
+  const scanRef = useRef(null);
   const [weightLog, setWeightLog] = useState([]);
   const [newWeight, setNewWeight] = useState("");
   const [goalWeight, setGoalWeight] = useState(185);
@@ -1226,6 +1296,12 @@ export default function App() {
   const startWeight = weightLog[0]?.lbs || curWeight;
   const bmi = curWeight && body.heightIn ? (703 * curWeight) / (body.heightIn * body.heightIn) : 0;
   const bodyFat = calcBodyFat(body, curWeight);
+  // A scale reading beats a tape-measure estimate. Label whichever one is on screen so a derived
+  // number is never mistaken for a measurement.
+  const bfMeasured = (() => { const d = [...((healthSync && healthSync.days) || [])].reverse().find((x) => x.bodyFatPct != null); return d ? +d.bodyFatPct : 0; })();
+  const bfShown = bfMeasured || bodyFat;
+  const bfSource = bfMeasured ? "measured" : (bodyFat ? "Navy estimate" : (!body.neck || !body.waist || !body.heightIn) ? "add height, neck & waist" : "—");
+  const leanShown = bfShown && curWeight ? curWeight * (1 - bfShown / 100) : 0;
   const leanMass = bodyFat ? curWeight * (1 - bodyFat / 100) : 0;
   const lost = startWeight - curWeight;
 
@@ -1333,6 +1409,36 @@ export default function App() {
   function toggleIn(list, setList, v) { setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]); }
   const restrictions = [...allergies.map((a) => `ALLERGY: ${a}`), ...diets.map((d) => `DIET: ${d}`)];
 
+  /* Read a body-composition report photo. The vision call only PROPOSES — parseBodyScan clamps and
+     cross-checks, and nothing reaches the health store until he taps Save on the confirmation card. */
+  async function scanBodyReport(file) {
+    setScanErr(""); setBodyScan(null); setScanBusy(true);
+    try {
+      const b64 = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(",")[1]); r.onerror = () => no(new Error("could not read that file")); r.readAsDataURL(file); });
+      const media = file.type && file.type.startsWith("image/") ? file.type : "image/png";
+      const text = await callClaude(
+        "This is a body composition analysis report from a smart scale. Read the printed numbers and return JSON only. Use the report's OWN testing date, not today. Weights in POUNDS — convert if the report is in kg. Omit any field you cannot read clearly rather than guessing. Do not calculate values that are not printed.",
+        "You transcribe numbers from an image exactly as printed. Never estimate, never infer, never fill a gap.",
+        { data: b64, media_type: media }, 1600, BODYSCAN_SCHEMA, 0);
+      const raw = salvageJSONObject(text);
+      if (!raw) { setScanErr("Could not read that image. A full-page screenshot of the report works best."); return; }
+      const parsed = parseBodyScan(raw);
+      if (!parsed.ok) { setScanErr("No body fat or lean mass found in that image — is it the composition report?"); return; }
+      setBodyScan(parsed);
+    } catch (e) { setScanErr(String(e && e.message ? e.message : e)); }
+    finally { setScanBusy(false); }
+  }
+  async function saveBodyScan() {
+    if (!bodyScan) return;
+    try {
+      const r = await fetch("/api/health/manual", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyScan.values) }).then((x) => x.json());
+      if (!r.ok) { setScanErr(r.error || "save failed"); return; }
+      const sm = await fetch("/api/health/summary").then((x) => x.json());
+      setHealthSync((x) => ({ ...(x || {}), days: sm.days || [] }));
+      if (bodyScan.values.weightLbs) setWeightLog((w) => [...w.filter((e) => e.date !== bodyScan.values.date), { date: bodyScan.values.date, lbs: bodyScan.values.weightLbs }].sort((a, b) => a.date.localeCompare(b.date)));
+      setBodyScan(null);
+    } catch (e) { setScanErr(String(e)); }
+  }
   async function callClaude(prompt, sys, image, maxTokens, schema, temperature) {
     const styleLine = { concise: " Keep replies very brief.", balanced: "", detailed: " Be thorough and explain reasoning.", "tough-love": " Be direct, no sugarcoating, drill-sergeant energy." }[prefs.coachStyle] || "";
     const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, system: (sys || "") + styleLine, image, model: prefs.aiModel, max_tokens: maxTokens, schema, temperature }) });
@@ -2600,9 +2706,41 @@ export default function App() {
 
       <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
         {card(<>{stat("BMI", bmi ? bmi.toFixed(1) : "—", "")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>{bmiBand(bmi)}</div></>, { flex: 1 })}
-        {card(<>{stat("Body fat", bodyFat ? bodyFat.toFixed(1) : "—", "%")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>Navy method</div></>, { flex: 1 })}
-        {card(<>{stat("Lean", leanMass ? leanMass.toFixed(0) : "—", " lb")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>fat-free mass</div></>, { flex: 1 })}
+        {card(<>{stat("Body fat", bfShown ? bfShown.toFixed(1) : "—", "%")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>{bfSource}</div></>, { flex: 1 })}
+        {card(<>{stat("Lean", leanShown ? leanShown.toFixed(0) : "—", " lb")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>{leanShown ? (bfMeasured ? "measured" : "fat-free mass") : "needs body fat"}</div></>, { flex: 1 })}
       </div>
+
+      <div style={{ marginBottom: 14 }}>{card(<>
+        {sectionTitle("Scale report")}
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.45, marginBottom: 9 }}>A body-composition report carries more than Apple Health can store — visceral fat, body water and per-limb figures have no HealthKit fields. Snap or upload the report and the numbers come across.</div>
+        <input ref={scanRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanBodyReport(e.target.files[0]); e.target.value = ""; }} />
+        <button onClick={() => scanRef.current && scanRef.current.click()} disabled={scanBusy}
+          style={{ width: "100%", background: C.surfaceAlt, border: `1.5px dashed ${C.hair}`, color: C.ink, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: scanBusy ? 0.6 : 1 }}>
+          {scanBusy ? "Reading the report…" : "Scan a scale report"}
+        </button>
+        {scanErr && <div style={{ marginTop: 8, fontSize: 12, color: C.avoid, lineHeight: 1.45 }}>{scanErr}</div>}
+        {bodyScan && (() => {
+          const v = bodyScan.values;
+          const ROWS = [["Date", v.date, ""], ["Weight", v.weightLbs, " lb"], ["Body fat", v.bodyFatPct, "%"], ["Lean mass", v.leanMassLbs, " lb"], ["Muscle mass", v.muscleMassLbs, " lb"], ["Skeletal muscle", v.skeletalMuscleLbs, " lb"], ["Body water", v.bodyWaterLbs, " lb"], ["Visceral fat", v.visceralFat, ""], ["Subcutaneous fat", v.subcutaneousFatPct, "%"]].filter((r) => r[1] != null);
+          return (
+            <div style={{ marginTop: 11, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px" }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 7 }}>Check these before saving</div>
+              {ROWS.map(([k, val, u]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13 }}>
+                  <span style={{ color: C.muted }}>{k}</span><span style={{ color: C.ink, fontWeight: 600 }}>{val}{u}</span>
+                </div>
+              ))}
+              {v.segmental && <div style={{ marginTop: 6, fontSize: 11, color: C.faint, lineHeight: 1.4 }}>Per-limb figures captured for reference. Scales model these rather than measuring each limb, so they are shown but never used to judge left/right balance.</div>}
+              {bodyScan.warning && <div style={{ marginTop: 8, fontSize: 12, color: C.avoid, lineHeight: 1.45 }}>⚠ {bodyScan.warning}</div>}
+              {!!bodyScan.rejected.length && <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>Skipped as unreadable or out of range: {bodyScan.rejected.join(", ")}</div>}
+              <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
+                <button onClick={saveBodyScan} style={{ flex: 1, background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                <button onClick={() => setBodyScan(null)} style={{ flex: 1, background: "none", color: C.muted, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Discard</button>
+              </div>
+            </div>
+          );
+        })()}
+      </>)}</div>
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
