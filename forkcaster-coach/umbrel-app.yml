@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.10"
+version: "0.9.11"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.10: fixes the Before and After panes. Each view kept its own pair of
-  slots, but they pointed at positions in one shared photo list and both
-  started at the first photo - so a back pane could be pointing at a front
-  photo and show nothing, and a view with one photo could show it on both
-  sides. Adding a photo also only ever filled the After slot, leaving the
-  other one stale. Each view now sets its own oldest photo as Before and
-  newest as After, adding to one view never disturbs the other, and any
-  slot pointing at the wrong view is corrected on load. Panes chosen by
-  hand are left alone.
+  v0.9.11: core training is fixed across every split. It was capped at three
+  sessions a week no matter the split, so a six-day week trained trunk on
+  half its days and the rest had none at all. Core movements could also end
+  up scattered through a session rather than grouped, which is why the CORE
+  heading appeared twice with a barbell lift between the two halves. Core
+  now appears on every training day, as one block at the end of the session,
+  with eight movements instead of three. Rebuild the routine in Train to
+  pick it up.
 dependencies: []
 path: ""
 defaultUsername: ""

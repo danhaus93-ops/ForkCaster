@@ -617,8 +617,10 @@ function buildRoutine(catalog, opts = {}) {
     // twice a week is normal programming and gives the progression engine more data. Accessories rotate.
     return cands.sort(mainLift ? ((a, b) => byGood(a, b) || byUse(a, b)) : ((a, b) => byUse(a, b) || byGood(a, b)))[0];
   };
-  const CORE_TARGET = Math.min(3, days);
-  const CORE_PER_DAY = 3;   // a core section, not a token crunch
+  // EVERY training day gets core. min(3, days) meant a 5-day split trained trunk on 3 sessions and
+  // a 6-day split left HALF the week with none — he opened Push and Pull A and found nothing.
+  const CORE_TARGET = days;
+  const CORE_PER_DAY = 8;   // his ask; fits his 60-minute setting — see the measurement in the rig
   const CORE_PATTERNS = [
     ["antiExtension", /plank|hollow|ab wheel|rollout|dead bug|bird dog|body-?saw/i],
     ["rotation", /oblique|twist|russian|side|woodchop|chop|windshield/i],
@@ -660,6 +662,15 @@ function buildRoutine(catalog, opts = {}) {
         ...coreScheme(e.name) });   // holds in seconds, dynamic work in reps
     }
   };
+  /* Core has to be ONE contiguous block at the end of the session. The split's own group rotation
+     can drop a core movement mid-list, and addCore appends more at the end — so the session had two
+     separate runs of core and the UI drew the CORE heading twice with a barbell lift between them. */
+  const groupCore = (d) => {
+    const core = d.exercises.filter((x) => x.group === "core");
+    if (!core.length) return d;
+    d.exercises = d.exercises.filter((x) => x.group !== "core").concat(core);
+    return d;
+  };
   const attachCircuit = (d) => {
     const core = d.exercises.filter((x) => x.group === "core");
     const c = coreCircuit(core.length, Math.min(...core.map((x) => x.sets || 0)));
@@ -675,6 +686,7 @@ function buildRoutine(catalog, opts = {}) {
     addCore(d, CORE_PER_DAY);
     if (d.exercises.some((x) => x.group === "core")) coreDays++;
   }
+  out.forEach(groupCore);
   out.forEach(attachCircuit);
   return { generatedAt: Date.now(), goal, days, minutes, equipment, blurb: sch.blurb, coreDays, days_: out };
 }
