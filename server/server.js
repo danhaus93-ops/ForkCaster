@@ -914,11 +914,45 @@ async function renderPage(startUrl, opts = {}) {
     return { text: text.replace(/\s+/g, " ").trim(), source: src, dataPdfs, html: fullHtml2, jsonBlobs };
   } finally { try { await browser.close(); } catch {} }
 }
+/* Generic-food text search. TWO defects fixed here: (1) the catch swallowed EVERY failure —
+   timeout, rate limit, OFF returning an HTML error page — and returned the exact shape of a
+   genuine no-match, so the client said "try fewer words" when the truth was "the lookup died";
+   (2) Open Food Facts was the ONLY source, and OFF is a packaged-product database — generic
+   queries like "chicken breast" are exactly what USDA FoodData Central exists for, and the key
+   slot is already provisioned (DEMO_KEY works unkeyed at low volume). FDC first, OFF fallback,
+   and an error field the client can distinguish. */
+const FDC_BASE = process.env.FDC_BASE || "https://api.nal.usda.gov";
+const OFF_BASE = process.env.OFF_BASE || "https://world.openfoodfacts.org";
 app.get("/api/foodsearch", async (req, res) => {
   const q = String(req.query.q || "").trim();
   if (!q) return res.json({ results: [] });
+  const errs = [];
+  // 1) USDA FDC — the right source for generic foods
   try {
-    const r = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,brands,nutriments,serving_size`, { headers: { "User-Agent": "ForkCaster/0.2 personal nutrition app" }, signal: AbortSignal.timeout(9000) });
+    const key2 = key("USDA_FDC_KEY") || "DEMO_KEY";
+    const r = await fetch(`${FDC_BASE}/fdc/v1/foods/search?api_key=${key2}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q, dataType: ["Foundation", "SR Legacy", "Branded"], pageSize: 8 }),
+      signal: AbortSignal.timeout(9000),
+    });
+    if (!r.ok) throw new Error(`FDC ${r.status}`);
+    const d = await r.json();
+    const results = (d.foods || []).map((f) => {
+      const by = {}; (f.foodNutrients || []).forEach((x) => { by[x.nutrientId] = x.value; });
+      return {
+        found: true, source: "USDA FoodData Central",
+        name: f.description || "Unnamed", brand: f.brandOwner || f.brandName || "",
+        basis: "100 g",
+        calories: Math.round(by[1008] || 0), protein: Math.round(by[1003] || 0),
+        carbs: Math.round(by[1005] || 0), fat: Math.round(by[1004] || 0), fiber: Math.round(by[1079] || 0),
+      };
+    }).filter((x) => x.name !== "Unnamed" && (x.calories || x.protein));
+    if (results.length) return res.json({ results: results.slice(0, 6) });
+  } catch (e) { errs.push(`FDC: ${e.message}`); }
+  // 2) Open Food Facts — packaged products
+  try {
+    const r = await fetch(`${OFF_BASE}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=8&fields=product_name,brands,nutriments,serving_size`, { headers: { "User-Agent": "ForkCaster/0.2 personal nutrition app" }, signal: AbortSignal.timeout(9000) });
+    if (!r.ok) throw new Error(`OFF ${r.status}`);
     const j = await r.json();
     const results = (j.products || []).map((p) => {
       const n = p.nutriments || {};
@@ -929,8 +963,10 @@ app.get("/api/foodsearch", async (req, res) => {
         carbs: Math.round(n.carbohydrates_100g || 0), fat: Math.round(n.fat_100g || 0), fiber: Math.round(n.fiber_100g || 0),
       };
     }).filter((x) => x.name !== "Unnamed" && (x.calories || x.protein));
-    res.json({ results: results.slice(0, 6) });
-  } catch { res.json({ results: [] }); }
+    return res.json({ results: results.slice(0, 6) });
+  } catch (e) { errs.push(`OFF: ${e.message}`); }
+  console.error("[foodsearch] all sources failed:", errs.join(" | "));
+  res.json({ results: [], error: "unreachable", detail: errs.join(" | ") });
 });
 
 const MENU_CACHE = new Map(); // url+goal -> { t, obj }

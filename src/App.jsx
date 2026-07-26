@@ -1075,13 +1075,13 @@ export default function App() {
   const [appVer, setAppVer] = useState("");
   useEffect(() => { fetch("/api/version").then((r) => r.json()).then((j) => j && j.version && setAppVer(j.version)).catch(() => {}); }, []);
   const [keyStatus, setKeyStatus] = useState(null);
-  const [keyIn, setKeyIn] = useState({ a: "", g: "", fi: "", fs: "", gm: "", sp: "" });
+  const [keyIn, setKeyIn] = useState({ a: "", g: "", fi: "", fs: "", gm: "", sp: "", fdc: "" });
   const [keyMsg, setKeyMsg] = useState("");
   useEffect(() => { if (settingsOpen) fetch("/api/keys/status").then((r) => r.json()).then(setKeyStatus).catch(() => {}); }, [settingsOpen]);
   async function saveKeys() {
     setKeyMsg("Saving…");
     const body = {}; if (keyIn.a.trim()) body.ANTHROPIC_API_KEY = keyIn.a.trim(); if (keyIn.g.trim()) body.GOOGLE_PLACES_KEY = keyIn.g.trim();
-    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim(); if ((keyIn.sp || "").trim()) body.SPOONACULAR_KEY = keyIn.sp.trim(); if ((keyIn.yt || "").trim()) body.YOUTUBE_API_KEY = keyIn.yt.trim();
+    if (keyIn.fi.trim()) body.FATSECRET_CLIENT_ID = keyIn.fi.trim(); if (keyIn.fs.trim()) body.FATSECRET_CLIENT_SECRET = keyIn.fs.trim(); if (keyIn.gm.trim()) body.GEMINI_API_KEY = keyIn.gm.trim(); if ((keyIn.sp || "").trim()) body.SPOONACULAR_KEY = keyIn.sp.trim(); if ((keyIn.yt || "").trim()) body.YOUTUBE_API_KEY = keyIn.yt.trim(); if ((keyIn.fdc || "").trim()) body.USDA_FDC_KEY = keyIn.fdc.trim();
     try { await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       setKeyIn({ a: "", g: "", fi: "", fs: "", gm: "", sp: "", yt: "" }); const st = await (await fetch("/api/keys/status")).json(); setKeyStatus(st); setKeyMsg("Saved ✓");
       if (venues.length && !venues[0].menu) rankVenues(venues); }
@@ -2060,8 +2060,9 @@ export default function App() {
     try {
       const res = await fetch(`/api/foodsearch?q=${encodeURIComponent(q)}`);
       const j = await res.json();
-      setFoodResults(Array.isArray(j.results) ? j.results : []);
-    } catch { setFoodResults([]); }
+      // An outage is NOT a no-match — keep the error signal so the message can tell the truth.
+      setFoodResults(j.error ? { error: true } : (Array.isArray(j.results) ? j.results : []));
+    } catch { setFoodResults({ error: true }); }
   }
   // Real Open Food Facts lookup (keyless, CORS-friendly). Camera decode is stubbed;
   // in production a scanner lib feeds the same barcode into this same call.
@@ -3582,6 +3583,7 @@ export default function App() {
                 <button onClick={logByDescription} disabled={nlBusy} style={{ background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "0 14px", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: nlBusy ? 0.6 : 1 }}>{nlBusy ? "…" : "Log it"}</button>
               </div>
               {foodResults === "loading" && <div style={{ fontSize: 12.5, color: C.faint, padding: "8px 2px" }}>Searching…</div>}
+              {foodResults && foodResults.error && <div style={{ fontSize: 12.5, color: C.avoid, padding: "8px 2px", lineHeight: 1.45 }}>Food search couldn't reach its sources — the node may be offline or the databases are down. The barcode and describe-it paths still work.</div>}
               {Array.isArray(foodResults) && foodResults.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, padding: "8px 2px" }}>No matches — try fewer words.</div>}
               {Array.isArray(foodResults) && foodResults.length > 0 && (
                 <div style={{ marginTop: 8 }}>
@@ -3811,7 +3813,7 @@ export default function App() {
               <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("API keys")}
                 <div style={{ fontSize: 11.5, color: C.muted, marginTop: -4, marginBottom: 10, lineHeight: 1.45 }}>
-                  Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b> · FatSecret: <b style={{ color: keyStatus && keyStatus.fatsecret ? C.go : C.avoid }}>{keyStatus ? (keyStatus.fatsecret ? "set" : "not set") : "…"}</b>
+                  Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b> · FatSecret: <b style={{ color: keyStatus && keyStatus.fatsecret ? C.go : C.avoid }}>{keyStatus ? (keyStatus.fatsecret ? "set" : "not set") : "…"}</b> · USDA: <b style={{ color: keyStatus && keyStatus.usda ? C.go : C.muted }}>{keyStatus ? (keyStatus.usda ? "set" : "DEMO_KEY") : "…"}</b>
                 </div>
                 <input value={keyIn.a} onChange={(e) => setKeyIn({ ...keyIn, a: e.target.value })} placeholder="Anthropic key (sk-ant-…)" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.g} onChange={(e) => setKeyIn({ ...keyIn, g: e.target.value })} placeholder="Google Places key (AIza…) — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 10 }} />
@@ -3820,6 +3822,7 @@ export default function App() {
                 <input value={keyIn.gm} onChange={(e) => setKeyIn({ ...keyIn, gm: e.target.value })} placeholder="Google AI (Gemini) key — for goal body simulation" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginTop: 8, marginBottom: 8 }} />
                 <input value={keyIn.yt || ""} onChange={(e) => setKeyIn({ ...keyIn, yt: e.target.value })} placeholder="YouTube Data API key (optional) — short exercise demo clips" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.sp || ""} onChange={(e) => setKeyIn({ ...keyIn, sp: e.target.value })} placeholder="Spoonacular key (optional) — recipe discovery for the Plan tab" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
+                <input value={keyIn.fdc || ""} onChange={(e) => setKeyIn({ ...keyIn, fdc: e.target.value })} placeholder="USDA FoodData Central key (optional) — food search; free at api.data.gov, works without one at low volume" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={saveKeys} disabled={!keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !(keyIn.gm || "").trim() && !(keyIn.sp || "").trim() && !(keyIn.yt || "").trim()} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !keyIn.a.trim() && !keyIn.g.trim() && !keyIn.fi.trim() && !keyIn.fs.trim() && !(keyIn.gm || "").trim() && !(keyIn.sp || "").trim() && !(keyIn.yt || "").trim() ? 0.5 : 1 }}>Save keys</button>
                   <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Test AI key</button>

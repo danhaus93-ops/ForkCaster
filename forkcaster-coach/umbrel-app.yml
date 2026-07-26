@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.12"
+version: "0.9.13"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,17 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.12: sets the core block to six movements. The previous release went
-  out with eight, which was not the intended figure. Everything else from
-  that release stands: core work now appears on every training day rather
-  than only three of them, and it is grouped into a single block at the end
-  of the session instead of being split in two with a barbell lift in
-  between, which is why the CORE heading was appearing twice on one day.
-  Six movements is roughly a twelve minute block, so rebuild the routine in
-  Train and check the session still fits the time you have.
+  v0.9.13: food search works again, and tells the truth when it cannot. It
+  had a single source wrapped in error handling that turned every failure -
+  a timeout, a rate limit, the database being down - into the same "No
+  matches, try fewer words" as a genuine miss, so nothing typed changed the
+  answer. Search now asks USDA FoodData Central first, which is the right
+  database for generic foods like chicken breast, and falls back to Open
+  Food Facts for packaged items. When neither can be reached it says so in
+  plain terms instead of blaming the query. Settings also gains the USDA
+  key field - the server supported the key all along but there was nowhere
+  to enter it; a free key from api.data.gov lifts the shared rate limit,
+  and search works without one at low volume.
 dependencies: []
 path: ""
 defaultUsername: ""
