@@ -832,6 +832,7 @@ export default function App() {
   // food logging / barcode scan
   const [logOpen, setLogOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [backups, setBackups] = useState(null);
   const [photoUsage, setPhotoUsage] = useState(null); // {count, bytes} of images stored on the node
   useEffect(() => { (async () => { try { setPhotoUsage(await fetch("/api/photos/usage").then((r) => r.json())); } catch {} })(); }, []);
   const [healthSync, setHealthSync] = useState(null); // {token, days:[...]} from the node
@@ -3235,6 +3236,23 @@ export default function App() {
                   <label style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>Restore…<input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) restoreJSON(e.target.files[0]); e.target.value = ""; }} /></label>
                 </div>
                 <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>The PDF is a clean, organized report (doses &amp; sites, weight, side effects, nutrition) you can email or AirDrop to your care team. JSON is the full-fidelity backup for restore.</div>
+                <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 11, padding: "11px 12px" }}>
+                  <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 700 }}>Restore a previous save</div>
+                  <div style={{ fontSize: 11, color: C.faint, marginTop: 3, lineHeight: 1.45 }}>Your node keeps recent snapshots of your data. If a save ever comes back emptier than it should, restore the one before it.</div>
+                  <button onClick={async () => { try { const d = await fetch("/api/state/backups").then((r) => r.json()); setBackups(d.backups || []); } catch { setBackups([]); } }}
+                    style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Show snapshots</button>
+                  {backups && backups.map((b) => (
+                    <div key={b.file} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "8px 0", borderTop: `1px solid ${C.hair}`, marginTop: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 12, color: C.ink, fontWeight: 700 }}>{b.when.replace("T", " ")}{b.reason === "shrink" ? <span style={{ color: C.caution }}> · save shrank</span> : ""}</div>
+                        <div style={{ fontSize: 10.5, color: C.muted }}>{b.counts.meals} meals · {b.counts.weights} weigh-ins · {b.counts.workouts} workouts · {b.counts.doses} doses</div>
+                      </div>
+                      <button onClick={async () => { if (!window.confirm(`Restore this snapshot? Everything logged since then is replaced. A copy of your current data is kept first.`)) return;
+                        try { await fetch("/api/state/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file: b.file }) }); window.location.reload(); } catch {} }}
+                        style={{ background: C.surface, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "7px 11px", fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>Restore</button>
+                    </div>))}
+                  {backups && backups.length === 0 && <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>No snapshots yet — one is kept the first time your data changes after an update.</div>}
+                </div>
                 {prefs.hideHealthCard && <button onClick={() => setPrefs({ ...prefs, hideHealthCard: false })} style={{ width: "100%", marginBottom: 12, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>Show the Apple Health card again</button>}
                 <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 11, padding: "11px 12px" }}>
                   <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 700 }}>Images on your node</div>

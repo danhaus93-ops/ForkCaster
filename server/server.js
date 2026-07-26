@@ -46,9 +46,63 @@ app.delete("/api/state", (req, res) => {
     res.json({ ok: true, photosDeleted: photos });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });
+/* ── Rolling state backups: the failure mode that matters is the app saving something EMPTY over
+   good data (a broken loader, a half-written file, a mis-tap). Cheap insurance: snapshot before
+   overwrite, and ALWAYS snapshot when the incoming save has materially fewer records. ── */
+const BK_DIR = path.join(DATA_DIR, "state-backups");
+const _counts = (o) => ({ meals: ((o || {}).mealLog || []).length, weights: ((o || {}).weightLog || []).length,
+  workouts: ((o || {}).workoutLog || []).length, doses: (((o || {}).glp || {}).doseLog || []).length, photos: ((o || {}).photos || []).length });
+const _shrank = (prev, next) => {
+  const a = _counts(prev), b = _counts(next);
+  return Object.keys(a).some((k) => a[k] >= 3 && b[k] < Math.ceil(a[k] / 2));   // half or worse = suspicious
+};
+function _snapshot(prevRaw, reason) {
+  try {
+    fs.mkdirSync(BK_DIR, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    fs.writeFileSync(path.join(BK_DIR, `state-${stamp}-${reason}.json`), prevRaw);
+    const files = fs.readdirSync(BK_DIR).filter((f) => f.endsWith(".json")).sort();
+    const keep = new Set(files.slice(-10));                                     // last 10 saves
+    const perDay = new Map();
+    for (const f of files) { const day = f.slice(6, 16); if (!perDay.has(day)) perDay.set(day, f); }
+    for (const f of [...perDay.values()].slice(-7)) keep.add(f);                 // plus one a day for a week
+    for (const f of files) if (!keep.has(f)) { try { fs.rmSync(path.join(BK_DIR, f), { force: true }); } catch {} }
+  } catch (e) { console.log(`[state] snapshot failed: ${String(e).slice(0, 80)}`); }
+}
+let _lastSnap = 0;
 app.post("/api/state", (req, res) => {
-  try { fs.writeFileSync(STATE_FILE, JSON.stringify(req.body)); res.json({ ok: true }); }
-  catch (e) { res.status(500).json({ error: String(e) }); }
+  try {
+    let prevRaw = null, prev = null;
+    try { prevRaw = fs.readFileSync(STATE_FILE, "utf8"); prev = JSON.parse(prevRaw); } catch {}
+    if (prevRaw) {
+      const shrank = _shrank(prev, req.body);
+      if (shrank) { _snapshot(prevRaw, "shrink"); console.log(`[state] SAVE SHRANK — snapshot kept. before=${JSON.stringify(_counts(prev))} after=${JSON.stringify(_counts(req.body))}`); }
+      else if (Date.now() - _lastSnap > 10 * 60 * 1000) { _snapshot(prevRaw, "auto"); _lastSnap = Date.now(); }
+    }
+    fs.writeFileSync(STATE_FILE, JSON.stringify(req.body));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: String(e) }); }
+});
+app.get("/api/state/backups", (_req, res) => {
+  try {
+    const files = fs.existsSync(BK_DIR) ? fs.readdirSync(BK_DIR).filter((f) => f.endsWith(".json")).sort().reverse() : [];
+    res.json({ ok: true, backups: files.map((f) => {
+      let c = {}; let size = 0;
+      try { const raw = fs.readFileSync(path.join(BK_DIR, f), "utf8"); size = raw.length; c = _counts(JSON.parse(raw)); } catch {}
+      return { file: f, reason: f.includes("-shrink") ? "shrink" : "auto", when: f.slice(6, 25).replace(/-/g, (m, i) => (i === 13 || i === 16 ? ":" : m)), size, counts: c };
+    }) });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
+app.post("/api/state/restore", (req, res) => {
+  try {
+    const f = path.basename(String((req.body || {}).file || ""));
+    const src = path.join(BK_DIR, f);
+    if (!f.endsWith(".json") || !fs.existsSync(src)) return res.status(404).json({ ok: false, error: "no such backup" });
+    try { _snapshot(fs.readFileSync(STATE_FILE, "utf8"), "prerestore"); } catch {}
+    fs.copyFileSync(src, STATE_FILE);
+    console.log(`[state] restored from ${f}`);
+    res.json({ ok: true, restored: f, counts: _counts(JSON.parse(fs.readFileSync(STATE_FILE, "utf8"))) });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
 });
 
 /* ── progress photos (stored on-node, private) ── */
