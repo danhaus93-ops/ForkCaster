@@ -588,32 +588,47 @@ function reconcileGrocery(aiItems, entries, sectionOf, qtyOf, keyOf) {
   return { list, added: missing.length };
 }
 function estimateGroceryCost(list, priceLog, keyOf, todayISO) {
-  // Only YOUR remembered prices — nothing invented. Coverage climbs as Shop Mode fills the price book.
-  const newest = new Map();
+  // Only YOUR remembered prices, kept SEPARATE per store — Aldi and a big-chain price for the same
+  // item are not interchangeable, so they never average or compete on recency across stores.
+  const ageDays = (d) => (d && todayISO ? Math.round((new Date(todayISO + "T12:00:00") - new Date(d + "T12:00:00")) / 86400000) : 0);
+  const perStore = new Map();
   for (const p of (priceLog || [])) {
     if (!p || !p.name || !(p.price > 0)) continue;
-    const k = keyOf(p.name);
-    const prev = newest.get(k);
-    if (!prev || String(p.d || "") > String(prev.d || "")) newest.set(k, p);
+    const store = String(p.store || "").trim() || "unknown";
+    const k = keyOf(p.name); if (!k) continue;
+    if (!perStore.has(store)) perStore.set(store, new Map());
+    const m = perStore.get(store), prev = m.get(k);
+    if (!prev || String(p.d || "") > String(prev.d || "")) m.set(k, p);   // newest wins WITHIN a store
   }
-  const pairs = [...newest.entries()];
-  const priced = {}; let total = 0, matched = 0, stale = 0;
-  const ageDays = (d) => (d && todayISO ? Math.round((new Date(todayISO + "T12:00:00") - new Date(d + "T12:00:00")) / 86400000) : 0);
-  for (const g of (list || [])) {
-    const gk = keyOf(g.item);
-    if (!gk) continue;
-    let hit = newest.get(gk);
-    if (!hit) { // barcode names are branded ("Tyson Boneless Skinless Chicken Breast") — match by containment
-      const cands = pairs.filter(([k]) => k && (k.includes(gk) || gk.includes(k)));
-      hit = cands.sort((a, b) => String(b[1].d || "").localeCompare(String(a[1].d || "")))[0];
-      hit = hit ? hit[1] : null;
+  const matchIn = (m, gk) => {
+    const exact = m.get(gk);
+    if (exact) return exact;
+    const cands = [...m.entries()].filter(([k]) => k && (k.includes(gk) || gk.includes(k)));   // branded names
+    const best = cands.sort((a, b) => String(b[1].d || "").localeCompare(String(a[1].d || "")))[0];
+    return best ? best[1] : null;
+  };
+  const items = list || [];
+  const stores = [...perStore.entries()].map(([store, m]) => {
+    let total = 0, matched = 0, stale = 0; const priced = {};
+    for (const g of items) {
+      const gk = keyOf(g.item); if (!gk) continue;
+      const hit = matchIn(m, gk); if (!hit) continue;
+      total += hit.price; matched++; if (ageDays(hit.d) > 90) stale++;
+      priced[g.item] = hit;
     }
-    if (!hit) continue;
-    total += hit.price; matched++;
-    if (ageDays(hit.d) > 90) stale++;
-    priced[g.item] = hit;
+    return { store, total: Math.round(total * 100) / 100, matched, unpriced: Math.max(0, items.length - matched), stale, priced };
+  }).filter((x) => x.matched > 0).sort((a, b) => b.matched - a.matched || a.total - b.total);
+  // for the item rows: the cheapest price you have seen anywhere, with the store that had it
+  const priced = {};
+  for (const g of items) {
+    const opts = stores.map((x) => x.priced[g.item]).filter(Boolean);
+    if (opts.length) priced[g.item] = opts.reduce((a, b) => (b.price < a.price ? b : a));
   }
-  return { total: Math.round(total * 100) / 100, matched, unpriced: Math.max(0, (list || []).length - matched), stale, priced };
+  const matched = Object.keys(priced).length;
+  const cheapest = stores.length > 1 ? [...stores].sort((a, b) => a.total - b.total)[0] : null;
+  return { stores, priced, matched, unpriced: Math.max(0, items.length - matched),
+    total: Math.round(Object.values(priced).reduce((n, p) => n + p.price, 0) * 100) / 100,
+    stale: stores.reduce((n, x) => n + x.stale, 0), cheapest };
 }
 function grocerySection(name) {
   const n = String(name || "").toLowerCase();
@@ -2585,16 +2600,17 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}><b style={{ color: C.ink }}>{done} of {mealPlan.grocery.length} gathered</b><span style={{ color: C.muted }}>consolidated across all meals</span></div>
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6 }}><div style={{ height: 6, width: `${mealPlan.grocery.length ? (done / mealPlan.grocery.length) * 100 : 0}%`, background: C.go, borderRadius: 6, transition: "width .25s" }} /></div>
           {(() => { const est = groceryEst;
-            return est.matched ? (
-              <div style={{ marginTop: 9 }}>
-                <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 800 }}>≈ ${est.total.toFixed(2)} <span style={{ fontSize: 11.5, color: C.muted, fontWeight: 500 }}>for {est.matched} of {mealPlan.grocery.length} items</span></div>
-                <div style={{ fontSize: 11, color: C.faint, marginTop: 3, lineHeight: 1.45 }}>
-                  From your own price book{est.stale ? ` · ${est.stale} price${est.stale > 1 ? "s" : ""} over 3 months old` : ""}{est.unpriced ? ` · ${est.unpriced} not priced yet — scan them in Shop Mode` : ""}
-                </div>
+            if (!est.matched) return (<div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.45 }}>No cost estimate yet — prices you save in Shop Mode build a price book per store, and this totals only what you have actually paid.</div>);
+            return (<div style={{ marginTop: 9 }}>
+              {est.stores.map((st) => (
+                <div key={st.store} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, padding: "3px 0" }}>
+                  <span style={{ fontSize: 12.5, color: C.ink, fontWeight: 700, textTransform: "capitalize" }}>{st.store}{est.cheapest && est.cheapest.store === st.store ? <span style={{ color: C.go, fontWeight: 700 }}> · cheapest</span> : ""}</span>
+                  <span style={{ fontSize: 13, color: C.ink, fontWeight: 800, whiteSpace: "nowrap" }}>≈ ${st.total.toFixed(2)} <span style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>· {st.matched}/{mealPlan.grocery.length}</span></span>
+                </div>))}
+              <div style={{ fontSize: 11, color: C.faint, marginTop: 5, lineHeight: 1.45 }}>
+                From your own price book, kept separate per store{est.stale ? ` · ${est.stale} price${est.stale > 1 ? "s" : ""} over 3 months old` : ""}{est.unpriced ? ` · ${est.unpriced} item${est.unpriced > 1 ? "s" : ""} not priced anywhere yet` : ""}
               </div>
-            ) : (
-              <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.45 }}>No cost estimate yet — prices you save in Shop Mode build a price book, and this totals only what you have actually paid.</div>
-            ); })()}
+            </div>); })()}
           {groceryNote && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 7 }}>Built-in package math shown — AI consolidation hiccup: {groceryNote}</div>}
         </div>, { marginBottom: 12 })}
         {sections.map((sec) => card(<div key={sec}>
@@ -2602,7 +2618,7 @@ export default function App() {
           {mealPlan.grocery.map((g, i) => g.section !== sec ? null : (
             <div key={i} onClick={() => toggleGroceryItem(i)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0", borderTop: `1px solid ${C.hair}`, cursor: "pointer" }}>
               <div style={{ width: 21, height: 21, borderRadius: 6, flexShrink: 0, border: `2px solid ${g.checked ? C.go : C.hair}`, background: g.checked ? C.go : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: C.surface, fontSize: 13, fontWeight: 800 }}>{g.checked ? "✓" : ""}</div>
-              <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600, color: g.checked ? C.faint : C.ink, textDecoration: g.checked ? "line-through" : "none" }}>{g.item}</div>{g.qty ? <div style={{ fontSize: 12, color: C.muted }}>{g.qty}{groceryEst.priced[g.item] ? <span style={{ color: C.faint }}> · ${groceryEst.priced[g.item].price.toFixed(2)} last time</span> : null}</div> : null}</div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 14, fontWeight: 600, color: g.checked ? C.faint : C.ink, textDecoration: g.checked ? "line-through" : "none" }}>{g.item}</div>{g.qty ? <div style={{ fontSize: 12, color: C.muted }}>{g.qty}{groceryEst.priced[g.item] ? <span style={{ color: C.faint }}> · ${groceryEst.priced[g.item].price.toFixed(2)} at {groceryEst.priced[g.item].store || "?"}</span> : null}</div> : null}</div>
             </div>
           ))}
         </div>, { marginBottom: 12 }))}
