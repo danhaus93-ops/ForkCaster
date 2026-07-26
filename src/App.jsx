@@ -1367,7 +1367,10 @@ export default function App() {
   const bfShown = bfMeasured || bodyFat;
   const bfSource = bfMeasured ? "measured" : (bodyFat ? "Navy estimate" : (!body.neck || !body.waist || !body.heightIn) ? "add height, neck & waist" : "—");
   const leanShown = bfShown && curWeight ? curWeight * (1 - bfShown / 100) : 0;
-  const leanMass = bodyFat ? curWeight * (1 - bodyFat / 100) : 0;
+  // Every consumer reads leanShown, which prefers the MEASURED body fat. This was derived from the
+  // Navy estimate while the tiles beside it showed the measured value, so the Journey card said
+  // 174 lb next to a LEAN tile reading 136. One source, or they drift apart again.
+  const leanMass = leanShown;
   const lost = startWeight - curWeight;
 
   const medObj = MEDS[glp.med];
@@ -1641,7 +1644,8 @@ export default function App() {
     setCoachMsgs(next); setCoachInput(""); setCoachLoading(true);
     const ctx = { remaining: { protein_g: proteinLeft, calories: calLeft }, targets, eaten, mode: MODES[mode].label,
       weight_lbs: curWeight, goal_lbs: goalWeight, weekly_loss_lbs: +recentRate.toFixed(2),
-      body_fat_pct: bodyFat ? +bodyFat.toFixed(1) : null,
+      body_fat_pct: bfShown ? +bfShown.toFixed(1) : null, body_fat_source: bfMeasured ? "measured" : (bodyFat ? "tape-measure estimate" : null),
+      lean_mass_lbs: leanShown ? +leanShown.toFixed(1) : null,
       medication: medObj ? `${medObj.label} ${glp.dose}${medObj.unit} weekly, week ${glp.weeksOn}` : "none", allergies, diets };
     const sys = "You are ForkCaster, a concise, encouraging nutrition and GLP-1 coach. Use the user's live stats. " + (restrictions.length ? `HARD SAFETY RULE: user has ${restrictions.join("; ")} — never suggest foods containing these. ` : "") +
       "NEVER recommend any food containing the user's listed allergies; respect their diet. " +
