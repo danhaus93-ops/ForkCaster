@@ -2179,19 +2179,23 @@ export default function App() {
                 {sectionTitle("Skip today", C.avoid)}
                 {result.avoid.map((a, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderBottom: i < result.avoid.length - 1 ? `1px solid ${C.hair}` : "none" }}>
-                    <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 500 }}>{a.name}</span><span style={{ fontSize: 12.5, color: C.muted, textAlign: "right", maxWidth: "48%" }}>{a.reason}</span>
+                    <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 500 }}>{a.item || a.name}</span><span style={{ fontSize: 12.5, color: C.muted, textAlign: "right", maxWidth: "48%" }}>{a.reason}</span>
                   </div>
                 ))}
-                <div style={{ marginTop: 14, paddingBottom: 96 }}>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input value={menuQ} onChange={(e) => setMenuQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askMenu(); }} placeholder="Ask about this menu… (swaps, carbs, drinks)"
-                      style={{ flex: 1, fontFamily: BODY, fontSize: 13.5, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px", outline: "none" }} />
-                    <button onClick={askMenu} disabled={menuQBusy} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "0 14px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: menuQBusy ? 0.6 : 1 }}>{menuQBusy ? "…" : "Ask"}</button>
-                  </div>
-                  {menuA && <div style={{ marginTop: 8, fontSize: 13, color: C.ink2, lineHeight: 1.5, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px" }}>{menuA}</div>}
-                </div>
               </div>
             )}
+            {/* Ask-this-menu and the bottom clearance sit OUTSIDE the Skip-today block. They were
+                nested inside it, so a menu with no Skip-today list — every curated chain menu since
+                v0.8.6 emptied that list — silently lost BOTH the Ask feature and the 96px clearance,
+                which is why the caption clipped under the tab bar. */}
+            <div style={{ marginTop: 14, paddingBottom: 96 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={menuQ} onChange={(e) => setMenuQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askMenu(); }} placeholder="Ask about this menu… (swaps, carbs, drinks)"
+                  style={{ flex: 1, fontFamily: BODY, fontSize: 13.5, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px", outline: "none" }} />
+                <button onClick={askMenu} disabled={menuQBusy} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "0 14px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: menuQBusy ? 0.6 : 1 }}>{menuQBusy ? "…" : "Ask"}</button>
+              </div>
+              {menuA && <div style={{ marginTop: 8, fontSize: 13, color: C.ink2, lineHeight: 1.5, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px" }}>{menuA}</div>}
+            </div>
           </div>
         )}
       </div>

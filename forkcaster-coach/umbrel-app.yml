@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.8.8"
+version: "0.8.9"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.8.8: fixes the release script's safety check. It confirmed a version had
-  reached the local registry using a substring match, so it would have
-  reported version 0.8.1 as present when the registry only held 0.8.10 -
-  giving the all-clear for an update that was never actually pushed. It now
-  matches the exact version. The success message also prints a count of
-  stored image tags instead of listing all ninety of them; the full list
-  still prints on failure, which is when it is useful.
+  v0.8.9: fixes two things on the venue screen. The last line of text could
+  be clipped by the tab bar, and the "Ask about this menu" box was missing
+  entirely, on any venue that had no Skip Today list - which is every chain
+  with its own published GLP-1 menu, such as Smoothie King. Both were nested
+  inside the Skip Today section, so both disappeared whenever that section
+  did; they now render for every venue. Skip Today rows also show the item
+  name again - the list was drawing the reason with a blank name beside it.
 dependencies: []
 path: ""
 defaultUsername: ""
