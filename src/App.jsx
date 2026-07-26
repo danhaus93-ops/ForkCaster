@@ -115,7 +115,7 @@ const EXTRACT_SCHEMA = { type: "array", items: { type: "object", properties: { i
 const NL_SCHEMA = { type: "object", properties: { name: { type: "string" }, calories: { type: "integer" }, protein: { type: "integer" }, carbs: { type: "integer" }, fat: { type: "integer" }, fiber: { type: "integer" } }, required: ["name", "calories", "protein", "carbs", "fat", "fiber"] };
 const POLISH_SCHEMA = { type: "object", properties: { coach: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { item: { type: "string" }, why: { type: "string" } }, required: ["item", "why"] } } }, required: ["coach", "notes"] };
 /* Deterministic pick selection: AI only extracts items; code enforces goal rules. */
-function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil) {
+function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil, opts = {}) {
   const glpTag = (it) => /glp/i.test(String(it.section || ""));
   const queasy = nauseaRisk === "moderate" || nauseaRisk === "high";
   const FAT_HI = fatCeil != null ? Math.max(8, Math.min(30, Math.round(fatCeil))) : 15; // personal dose-window ceiling when learned
@@ -123,7 +123,10 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil) {
     const p = +it.protein || 0, c = +it.cal || 400, f = it.fat == null ? null : +it.fat || 0;
     if (mode === "gain") return p * 3 + c * 0.1;
     let s = p * 4 - Math.max(0, c - Math.max(300, calLeft * 0.4)) * 0.05;
-    if (mode === "glp1") s += (c <= 400 ? 20 : 0) + (glpTag(it) ? 60 : 0);
+    // Small volume genuinely matters on GLP-1 (delayed gastric emptying), but a hard step at 400 cal
+    // made ONE calorie worth 6g of protein — a 450 cal 24g item ranked below a 210 cal 19g one.
+    // Taper instead: full credit at a small portion (<=300), none at a full meal (>=700), linear between.
+    if (mode === "glp1") s += 20 * Math.max(0, Math.min(1, (700 - c) / 400)) + (glpTag(it) ? 60 : 0);
     // Fat is the primary GLP-1 nausea trigger (delays gastric emptying) — penalize it above ~15g,
     // hardest on dose/nausea weeks. Keeps greasy items off the top and makes "gentle" mean gentle.
     if (f != null) s -= Math.max(0, f - FAT_HI) * (queasy ? 1.4 : mode === "glp1" ? 0.7 : 0.2);
@@ -134,9 +137,12 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil) {
   // One card per blend/sandwich family — flavor variants of the same item shouldn't fill all three slots.
   const famKey = (it) => String(it.item || "").toLowerCase().split(/\s[—–-]\s|\(|,/)[0].replace(/[^a-z0-9]+/g, " ").trim();
   const takeDistinct = (list, n) => { const seen = new Set(), out = []; for (const it of list) { const k = famKey(it); if (k && seen.has(k)) continue; seen.add(k); out.push(it); if (out.length >= n) break; } return out; };
-  let picks = takeDistinct(sorted, 3);
-  if (picks.length < 3) picks = sorted.slice(0, 3);
-  if (mode === "glp1") {
+  // A curated published chain menu (Stage -1) is a FINITE, verified list — show every item, ranked.
+  // Truncating it hides real options, and the family collapse would fold its flavor variants together.
+  const full = !!opts.full;
+  let picks = full ? sorted : takeDistinct(sorted, 3);
+  if (!full && picks.length < 3) picks = sorted.slice(0, 3);
+  if (!full && mode === "glp1") {
     const glp = sorted.filter(glpTag);
     if (glp.length >= 2) {
       const q = takeDistinct([...glp, ...sorted], 3); // quota by construction: GLP-1 items fill first
@@ -154,7 +160,7 @@ function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil) {
       gentle ? "gentle volume" : heavyFat ? "higher fat — go slow" : null,
     ].filter(Boolean).join(" · ") || (mode === "glp1" ? "protein-first pick" : mode === "gain" ? "high-protein pick" : "protein-dense pick");
   };
-  const avoid = sorted.slice(-2).reverse().map((it) => ({ item: it.item, reason: (+it.cal || 0) > 500 ? "calorie-heavy" : "low protein density" }));
+  const avoid = full ? [] : sorted.slice(-2).reverse().map((it) => ({ item: it.item, reason: (+it.cal || 0) > 500 ? "calorie-heavy" : "low protein density" }));
   const coach = mode === "glp1"
     ? (queasy ? "Dose week: small-volume, protein-first — sip slowly." : "Protein-first, small volume — GLP-1 friendly picks up top.")
     : mode === "gain" ? "Max protein first — upsize and add whey where offered."
@@ -1314,11 +1320,11 @@ export default function App() {
             if (g.size) rankItems = rankItems.map((i) => g.has(String(i.item).toLowerCase().trim()) ? { ...i, section: i.section + " · GLP-1 line" } : i);
           } catch {}
         }
-        const cleaned = sanitizePicks(composePicks(rankItems, rankMode, nauseaRisk, proteinLeft, calLeft, personalFatCeil), allergies);
+        const cleaned = sanitizePicks(composePicks(rankItems, rankMode, nauseaRisk, proteinLeft, calLeft, personalFatCeil, { full: liveMenu.method === "chain" }), allergies);
         cleaned._menuSource = "live"; cleaned._menuMethod = liveMenu.method; cleaned._menuText = (liveMenu.text || "").slice(0, 6000);
         try {
           const polishPrompt = `User goal: ${MODES[mode] ? MODES[mode].label : mode}. Med context: ${nauseaRisk} nausea risk. Remaining: ${proteinLeft}g protein, ${calLeft} cal. These items were selected (do NOT change them): ${JSON.stringify(cleaned.picks.map((p) => ({ item: p.item, protein: p.protein, cal: p.cal, fat: p.fat })))}. Write one sharp coach line and, for each item, a short why (max 12 words) with a smart tip. On GLP-1 or any nausea risk, fat is the main trigger: never call a 30g+ fat item gentle or light; suggest a lower-fat tweak. If the venue serves alcohol, fold ONE drink line into coach (lower-sugar; alcohol hits harder on GLP-1 — pace slow).`;
-          const pol = salvageJSONObject(await callClaude(polishPrompt, null, null, 900, POLISH_SCHEMA));
+          const pol = salvageJSONObject(await callClaude(polishPrompt, null, null, Math.max(900, 250 + cleaned.picks.length * 90), POLISH_SCHEMA));
           if (pol && Array.isArray(pol.notes)) { cleaned.picks = cleaned.picks.map((p) => { const n = pol.notes.find((x) => x.item && p.item && x.item.toLowerCase().slice(0, 12) === p.item.toLowerCase().slice(0, 12)); return n && n.why ? { ...p, why: n.why } : p; }); if (pol.coach) cleaned.coach = pol.coach; }
         } catch {}
         setResult(cleaned); doneViaExtraction = true;
@@ -1337,7 +1343,7 @@ export default function App() {
             const polishPrompt = `User goal: ${MODES[mode] ? MODES[mode].label : mode}. Med context: ${nauseaRisk} nausea risk. Remaining: ${proteinLeft}g protein, ${calLeft} cal. ` +
               `These items were selected (do NOT change them): ${JSON.stringify(cleaned.picks.map((p) => ({ item: p.item, protein: p.protein, cal: p.cal, fat: p.fat })))}. ` +
               `Write one sharp coach line for this visit and, for each item, a short why (max 12 words) including a smart customization tip when one exists (add whey, sugar-free base, dressing on side). On GLP-1 or any nausea risk, fat is the main nausea trigger: never call a high-fat item (~30g+ fat) "gentle" or "light" — flag it as richer/heavier and suggest a lower-fat tweak. If this venue is a bar or serves alcohol, fold ONE short drink-guidance line into coach (lower-sugar picks; alcohol hits harder on GLP-1 — pace slow).`;
-            const pol = salvageJSONObject(await callClaude(polishPrompt, null, null, 900, POLISH_SCHEMA));
+            const pol = salvageJSONObject(await callClaude(polishPrompt, null, null, Math.max(900, 250 + cleaned.picks.length * 90), POLISH_SCHEMA));
             if (pol && Array.isArray(pol.notes)) {
               cleaned.picks = cleaned.picks.map((p) => { const n = pol.notes.find((x) => x.item && p.item && x.item.toLowerCase().slice(0, 12) === p.item.toLowerCase().slice(0, 12)); return n && n.why ? { ...p, why: n.why } : p; });
               if (pol.coach) cleaned.coach = pol.coach;
