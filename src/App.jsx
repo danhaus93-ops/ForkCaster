@@ -1722,6 +1722,20 @@ export default function App() {
       </div>
     );
   };
+  /* A pair may hold an index belonging to the OTHER view (renders an empty pane) or, on a fresh
+     install, both sides on 0 showing one photo twice. Repair only what is invalid, so a selection
+     he made by hand is never yanked out from under him. */
+  useEffect(() => {
+    const fix = (list, a, setA, b, setB) => {
+      if (!list.length) return;
+      const has = (i) => list.some((e) => e.i === i);
+      if (!has(a)) setA(list[0].i);
+      if (!has(b)) setB(list[list.length - 1].i);
+      if (list.length > 1 && a === b) setA(list[0].i);
+    };
+    fix(photosOf("front"), compareA, setCompareA, compareB, setCompareB);
+    fix(photosOf("back"), compareABack, setCompareABack, compareBBack, setCompareBBack);
+  }, [photos]);
   async function addPhotos(e, view = "front") {
     const files = Array.from(e.target.files || []);
     for (const f of files) {
@@ -1742,7 +1756,13 @@ export default function App() {
         const res = await fetch("/api/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: b64, media: "image/jpeg" }) });
         const j = await res.json();
         if (!res.ok || !j.url) throw new Error(j.error || "node rejected the photo");
-        setPhotos((p) => { const all = [...p, { id: j.id, url: j.url, date: todayISO(), view }]; (view === "back" ? setCompareBBack : setCompareB)(all.length - 1); return all; });
+        setPhotos((p) => {
+          const all = [...p, { id: j.id, url: j.url, date: todayISO(), view }];
+          const mine = all.map((x, i) => ({ x, i })).filter((e) => ((e.x.view === "back") ? "back" : "front") === view);
+          const [setA, setB] = view === "back" ? [setCompareABack, setCompareBBack] : [setCompareA, setCompareB];
+          setA(mine[0].i); setB(mine[mine.length - 1].i);   // oldest -> Before, newest -> After
+          return all;
+        });
       } catch (e) {
         alert("Couldn't save that photo to your node — it was NOT kept. (" + (e && e.message ? e.message : e) + ")");
       }

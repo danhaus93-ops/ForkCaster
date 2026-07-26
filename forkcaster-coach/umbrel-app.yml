@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.9"
+version: "0.9.10"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.9: progress photos now cover front and back. A Back section sits
-  below the existing one with its own Before and After panes, its own
-  thumbnails and its own add button, so the two angles stay separate.
-  Photos taken before this update are treated as front views and are
-  unchanged. The Body Forecaster renders both angles together as a set
-  rather than one at a time, and if either angle fails neither is kept, so
-  a forecast is never half finished. A back photo is optional - front-only
-  forecasting works exactly as before.
+  v0.9.10: fixes the Before and After panes. Each view kept its own pair of
+  slots, but they pointed at positions in one shared photo list and both
+  started at the first photo - so a back pane could be pointing at a front
+  photo and show nothing, and a view with one photo could show it on both
+  sides. Adding a photo also only ever filled the After slot, leaving the
+  other one stale. Each view now sets its own oldest photo as Before and
+  newest as After, adding to one view never disturbs the other, and any
+  slot pointing at the wrong view is corrected on load. Panes chosen by
+  hand are left alone.
 dependencies: []
 path: ""
 defaultUsername: ""
