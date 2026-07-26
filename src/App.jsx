@@ -460,31 +460,77 @@ const BODYSCAN_SCHEMA = {
     },
   },
 };
+/* ALIASES: the prompt asks the model to transcribe what is PRINTED, so it naturally answers with
+   the report's own labels ("Body Fat", "Lean Body Mass") rather than my schema's key names, and
+   with the printed units attached ("37.4%", "135.8lb"). Accepting only exact keys and bare numbers
+   threw every value away and reported "nothing found" on a report that plainly had it. */
+const BODYSCAN_ALIASES = {
+  weightLbs: ["weight", "weightlb", "weightlbs", "bodyweight"],
+  bodyFatPct: ["bodyfat", "bodyfatpct", "bodyfatpercent", "bodyfatpercentage", "fatpercent"],
+  leanMassLbs: ["lean", "leanmass", "leanbodymass", "leanmasslb", "leanmasslbs", "fatfreemass"],
+  muscleMassLbs: ["muscle", "musclemass", "musclemasslb"],
+  bodyWaterLbs: ["water", "bodywater", "totalbodywater"],
+  skeletalMuscleLbs: ["skeletalmuscle", "skeletalmusclemass"],
+  visceralFat: ["visceral", "visceralfat", "visceralfatlevel", "visceralfatindex"],
+  subcutaneousFatPct: ["subcutaneous", "subcutaneousfat", "subcutaneousfatpct"],
+};
+const _bsNum = (v) => {
+  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+  if (typeof v !== "string") return NaN;
+  const m = v.replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);   // "37.4%" / "135.8 lb" / "1,358"
+  return m ? +m[0] : NaN;
+};
+const _bsKey = (k) => String(k).toLowerCase().replace(/[^a-z]/g, "");
+/* Flatten one level so a model that groups values the way the report lays them out
+   ({otherMetrics: {bodyFat: 37.4}}) is still read. */
+const _bsFlat = (o) => {
+  const flat = {};
+  for (const [k, v] of Object.entries(o || {})) {
+    if (v && typeof v === "object" && !Array.isArray(v)) { for (const [k2, v2] of Object.entries(v)) if (!(k2 in flat)) flat[k2] = v2; }
+    else flat[k] = v;
+  }
+  for (const [k, v] of Object.entries(o || {})) if (!(v && typeof v === "object")) flat[k] = v;   // top level wins
+  return flat;
+};
+const _bsDate = (v) => {
+  const str = String(v || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str.slice(0, 10))) return str.slice(0, 10);
+  const t = Date.parse(str);                                  // "Jul 26, 2026" / "8:43 am, Jul 26, 2026"
+  if (!Number.isNaN(t)) { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+  return null;
+};
 function parseBodyScan(raw) {
   const out = {}, rejected = [];
   const r = raw && typeof raw === "object" ? raw : {};
-  const d = String(r.date || "").slice(0, 10);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) out.date = d; else rejected.push("date");
+  const flat = _bsFlat(r);
+  const byKey = {};
+  for (const [k, v] of Object.entries(flat)) byKey[_bsKey(k)] = v;
+  const pick = (field) => {
+    const names = [_bsKey(field), ...(BODYSCAN_ALIASES[field] || [])];
+    for (const n of names) if (n in byKey) { const v = _bsNum(byKey[n]); if (Number.isFinite(v)) return v; }
+    return NaN;
+  };
+  const d = _bsDate(flat.date || flat.testingTime || flat.testDate || flat.testingDate);
+  if (d) out.date = d; else rejected.push("date");
   for (const [k, [lo, hi]] of Object.entries(BODYSCAN_RANGES)) {
-    const v = +r[k];
+    const v = pick(k);
     if (!Number.isFinite(v)) continue;
     if (v >= lo && v <= hi) out[k] = Math.round(v * 10) / 10; else rejected.push(k);
   }
-  // segmental is DISPLAY ONLY — the limb masses come back perfectly symmetric even when the raw
-  // impedance differs side to side, so they are modelled, not measured. Never feed an engine.
+  // a body fat given as a fraction (0.374) rather than a percentage
+  if (out.bodyFatPct == null) { const v = pick("bodyFatPct"); if (Number.isFinite(v) && v > 0 && v < 1) out.bodyFatPct = Math.round(v * 1000) / 10; }
   const seg = {};
   for (const kind of ["fat", "muscle"]) {
-    const src = (r.segmental || {})[kind];
+    const src = (r.segmental || {})[kind] || (flat.segmental || {})[kind];
     if (!src || typeof src !== "object") continue;
     const part = {};
     for (const limb of ["leftArm", "rightArm", "trunk", "leftLeg", "rightLeg"]) {
-      const v = +src[limb];
+      const v = _bsNum(src[limb]);
       if (Number.isFinite(v) && v >= 0 && v <= 200) part[limb] = Math.round(v * 10) / 10;
     }
     if (Object.keys(part).length) seg[kind] = part;
   }
   if (Object.keys(seg).length) out.segmental = seg;
-  // the arithmetic guard: weight x (1 - bf) should land on lean
   let warning = null;
   if (out.weightLbs && out.bodyFatPct && out.leanMassLbs) {
     const implied = out.weightLbs * (1 - out.bodyFatPct / 100);
@@ -492,7 +538,9 @@ function parseBodyScan(raw) {
     if (off > Math.max(3, out.weightLbs * 0.03)) warning = `weight and body fat imply ${implied.toFixed(1)} lb lean but the scan read ${out.leanMassLbs} lb — check those three before saving`;
   }
   const usable = out.bodyFatPct != null || out.leanMassLbs != null;
-  return { ok: usable, values: out, rejected, warning };
+  // when nothing lands, say WHAT came back — a bare "not found" on a report that plainly has the
+  // numbers sent me chasing the wrong thing once already
+  return { ok: usable, values: out, rejected, warning, sawKeys: Object.keys(flat).slice(0, 12) };
 }
 const SIXPACK = {
   label: "6 Pack Promise",
@@ -1423,7 +1471,7 @@ export default function App() {
       const raw = salvageJSONObject(text);
       if (!raw) { setScanErr("Could not read that image. A full-page screenshot of the report works best."); return; }
       const parsed = parseBodyScan(raw);
-      if (!parsed.ok) { setScanErr("No body fat or lean mass found in that image — is it the composition report?"); return; }
+      if (!parsed.ok) { setScanErr(`No body fat or lean mass found in that image. Read back: ${(parsed.sawKeys || []).join(", ") || "nothing"}. A full-page screenshot of the report reads best.`); return; }
       setBodyScan(parsed);
     } catch (e) { setScanErr(String(e && e.message ? e.message : e)); }
     finally { setScanBusy(false); }

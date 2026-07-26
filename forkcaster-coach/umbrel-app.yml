@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.4"
+version: "0.9.5"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,17 +20,16 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.4: scan a scale report. The Body tab can now read a body composition
-  report photo and bring the numbers in - body fat, lean mass, muscle mass,
-  body water, visceral fat and per-limb figures, most of which Apple Health
-  has no field for. Nothing saves until the parsed values are shown and
-  confirmed, and readings that contradict each other are flagged rather than
-  stored. Also removes the placeholder body measurements: the app shipped a
-  default height, neck and waist, so the body fat tile computed a
-  plausible-looking number from figures nobody had entered, and the goal
-  contract set a protein floor from it. Those fields now start empty, a
-  measured reading outranks the tape-measure estimate, and the tile says
-  which one it is showing.
+  v0.9.5: fixes the scale-report scan, which reported finding nothing on a
+  report that plainly showed the numbers. The reader asks for the values
+  exactly as printed, so it answered with the report's own labels - Body
+  Fat, Lean Body Mass - and with the units attached, like "37.4%" and
+  "135.8lb". The parser only accepted its own field names holding bare
+  numbers, so it discarded everything. It now accepts the printed labels,
+  values with units or commas, a percentage written as a fraction, dates in
+  the report's own format, and values grouped the way the page groups them.
+  When it genuinely cannot find the data it now lists what it did read,
+  instead of only saying it found nothing.
 dependencies: []
 path: ""
 defaultUsername: ""
