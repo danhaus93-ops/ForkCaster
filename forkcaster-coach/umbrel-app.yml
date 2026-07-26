@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.11"
+version: "0.9.12"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.11: core training is fixed across every split. It was capped at three
-  sessions a week no matter the split, so a six-day week trained trunk on
-  half its days and the rest had none at all. Core movements could also end
-  up scattered through a session rather than grouped, which is why the CORE
-  heading appeared twice with a barbell lift between the two halves. Core
-  now appears on every training day, as one block at the end of the session,
-  with eight movements instead of three. Rebuild the routine in Train to
-  pick it up.
+  v0.9.12: sets the core block to six movements. The previous release went
+  out with eight, which was not the intended figure. Everything else from
+  that release stands: core work now appears on every training day rather
+  than only three of them, and it is grouped into a single block at the end
+  of the session instead of being split in two with a barbell lift in
+  between, which is why the CORE heading was appearing twice on one day.
+  Six movements is roughly a twelve minute block, so rebuild the routine in
+  Train and check the session still fits the time you have.
 dependencies: []
 path: ""
 defaultUsername: ""

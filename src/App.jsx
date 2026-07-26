@@ -620,7 +620,7 @@ function buildRoutine(catalog, opts = {}) {
   // EVERY training day gets core. min(3, days) meant a 5-day split trained trunk on 3 sessions and
   // a 6-day split left HALF the week with none — he opened Push and Pull A and found nothing.
   const CORE_TARGET = days;
-  const CORE_PER_DAY = 8;   // his ask; fits his 60-minute setting — see the measurement in the rig
+  const CORE_PER_DAY = 6;   // he explicitly rejected a fixed 8 ("dont really need a set 8 everytime")
   const CORE_PATTERNS = [
     ["antiExtension", /plank|hollow|ab wheel|rollout|dead bug|bird dog|body-?saw/i],
     ["rotation", /oblique|twist|russian|side|woodchop|chop|windshield/i],
