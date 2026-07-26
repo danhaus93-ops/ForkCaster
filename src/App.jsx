@@ -492,11 +492,15 @@ const _bsFlat = (o) => {
   for (const [k, v] of Object.entries(o || {})) if (!(v && typeof v === "object")) flat[k] = v;   // top level wins
   return flat;
 };
+const BODYSCAN_DATE_KEYS = ["date", "testingtime", "testtime", "testdate", "testingdate", "measurementdate", "measureddate", "reportdate", "datetime", "timestamp", "scandate"];
 const _bsDate = (v) => {
-  const str = String(v || "").trim();
+  const str = String(v == null ? "" : v).trim();
+  if (!str) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(str.slice(0, 10))) return str.slice(0, 10);
   const t = Date.parse(str);                                  // "Jul 26, 2026" / "8:43 am, Jul 26, 2026"
   if (!Number.isNaN(t)) { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+  const m = str.match(/([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})/);   // last resort: pull the date out of a longer line
+  if (m) { const t2 = Date.parse(`${m[1]} ${m[2]}, ${m[3]}`); if (!Number.isNaN(t2)) { const d = new Date(t2); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; } }
   return null;
 };
 function parseBodyScan(raw) {
@@ -510,8 +514,14 @@ function parseBodyScan(raw) {
     for (const n of names) if (n in byKey) { const v = _bsNum(byKey[n]); if (Number.isFinite(v)) return v; }
     return NaN;
   };
-  const d = _bsDate(flat.date || flat.testingTime || flat.testDate || flat.testingDate);
-  if (d) out.date = d; else rejected.push("date");
+  // The date went through RAW key names while every number went through the normalised map — so a
+  // model answering with "Testing time" was missed and the save was blocked on a report that
+  // printed the date plainly. Look it up the same way as everything else.
+  let d = null;
+  for (const k of BODYSCAN_DATE_KEYS) { if (k in byKey) { d = _bsDate(byKey[k]); if (d) break; } }
+  if (!d) for (const v of Object.values(byKey)) { if (typeof v === "string" && /\d{4}/.test(v)) { d = _bsDate(v); if (d) break; } }
+  if (d) { out.date = d; }
+  else { out.date = todayISO(); out.dateAssumed = true; }   // never block a save on the date — say so instead
   for (const [k, [lo, hi]] of Object.entries(BODYSCAN_RANGES)) {
     const v = pick(k);
     if (!Number.isFinite(v)) continue;
@@ -536,6 +546,13 @@ function parseBodyScan(raw) {
     const implied = out.weightLbs * (1 - out.bodyFatPct / 100);
     const off = Math.abs(implied - out.leanMassLbs);
     if (off > Math.max(3, out.weightLbs * 0.03)) warning = `weight and body fat imply ${implied.toFixed(1)} lb lean but the scan read ${out.leanMassLbs} lb — check those three before saving`;
+  }
+  // Lean is the number goalContract actually wants. When the scan reads weight and body fat but not
+  // lean, the identity gives it exactly — this is the same arithmetic the engine would do anyway,
+  // so deriving it here costs nothing and is flagged so the card can say where it came from.
+  if (out.leanMassLbs == null && out.weightLbs && out.bodyFatPct) {
+    out.leanMassLbs = Math.round(out.weightLbs * (1 - out.bodyFatPct / 100) * 10) / 10;
+    out.leanDerived = true;
   }
   const usable = out.bodyFatPct != null || out.leanMassLbs != null;
   // when nothing lands, say WHAT came back — a bare "not found" on a report that plainly has the
@@ -1479,7 +1496,8 @@ export default function App() {
   async function saveBodyScan() {
     if (!bodyScan) return;
     try {
-      const r = await fetch("/api/health/manual", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bodyScan.values) }).then((x) => x.json());
+      const { dateAssumed, leanDerived, ...payload } = bodyScan.values;   // UI flags, not stored fields
+      const r = await fetch("/api/health/manual", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).then((x) => x.json());
       if (!r.ok) { setScanErr(r.error || "save failed"); return; }
       const sm = await fetch("/api/health/summary").then((x) => x.json());
       setHealthSync((x) => ({ ...(x || {}), days: sm.days || [] }));
@@ -2769,7 +2787,7 @@ export default function App() {
         {scanErr && <div style={{ marginTop: 8, fontSize: 12, color: C.avoid, lineHeight: 1.45 }}>{scanErr}</div>}
         {bodyScan && (() => {
           const v = bodyScan.values;
-          const ROWS = [["Date", v.date, ""], ["Weight", v.weightLbs, " lb"], ["Body fat", v.bodyFatPct, "%"], ["Lean mass", v.leanMassLbs, " lb"], ["Muscle mass", v.muscleMassLbs, " lb"], ["Skeletal muscle", v.skeletalMuscleLbs, " lb"], ["Body water", v.bodyWaterLbs, " lb"], ["Visceral fat", v.visceralFat, ""], ["Subcutaneous fat", v.subcutaneousFatPct, "%"]].filter((r) => r[1] != null);
+          const ROWS = [["Date", v.date + (v.dateAssumed ? "  (not read — using today)" : ""), ""], ["Weight", v.weightLbs, " lb"], ["Body fat", v.bodyFatPct, "%"], ["Lean mass", v.leanMassLbs, v.leanDerived ? " lb  (from weight & body fat)" : " lb"], ["Muscle mass", v.muscleMassLbs, " lb"], ["Skeletal muscle", v.skeletalMuscleLbs, " lb"], ["Body water", v.bodyWaterLbs, " lb"], ["Visceral fat", v.visceralFat, ""], ["Subcutaneous fat", v.subcutaneousFatPct, "%"]].filter((r) => r[1] != null);
           return (
             <div style={{ marginTop: 11, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px" }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 7 }}>Check these before saving</div>
