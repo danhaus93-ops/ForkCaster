@@ -559,12 +559,17 @@ function fuelWarning(mealLog, targets, todayISO) {
 /* ── Grocery shaping: aisle sections and a merge key, so the list is usable even when the
    AI consolidation pass fails. Prep words are stripped for MERGING only — display keeps the
    recipe's own wording. ── */
-const _INGR_PREP = /^(fresh|freshly|frozen|cooked|raw|chopped|diced|minced|sliced|shredded|grated|ground|crushed|large|small|medium|ripe|boneless|skinless|low[- ]sodium|reduced[- ]fat|unsalted|whole|organic|extra[- ]virgin)\s+/i;
+const _INGR_PREP = /^(fresh|freshly|frozen|cooked|raw|chopped|diced|minced|sliced|shredded|grated|ground|crushed|large|small|medium|ripe|boneless|skinless|low[- ]sodium|reduced[- ]fat|unsalted|whole|organic|extra[- ]virgin|liquid|light|plain|nonfat|non[- ]fat)\s+/i;
 function _ingKey(name) {
   let n = String(name || "").toLowerCase().replace(/\(.*?\)/g, " ").replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
   for (let i = 0; i < 3; i++) n = n.replace(_INGR_PREP, "");
   n = n.replace(/\b(meat|breasts?|fillets?|leaves)\b/g, "").replace(/\s+/g, " ").trim();
-  return n.endsWith("es") && n.length > 4 ? n.slice(0, -2) : n.endsWith("s") && n.length > 3 ? n.slice(0, -1) : n;
+  // singularise properly: "egg whites" must not become "egg whit", "berries" must reach "berry"
+  if (/ies$/.test(n) && n.length > 4) return n.slice(0, -3) + "y";        // berries -> berry
+  if (/(?:ch|sh|ss|s|x|z)es$/.test(n) && n.length > 4) return n.slice(0, -2);  // boxes, dishes
+  if (/oes$/.test(n) && n.length > 4) return n.slice(0, -2);              // tomatoes, potatoes
+  if (n.endsWith("s") && !n.endsWith("ss") && n.length > 3) return n.slice(0, -1);
+  return n;
 }
 const _AISLE = [ // order matters: the most specific claim on an item wins
   ["Frozen", /\bfrozen\b|ice cream|popsicle/i],
@@ -581,6 +586,15 @@ function reconcileGrocery(aiItems, entries, sectionOf, qtyOf, keyOf) {
     section: AISLE_ORDER.includes(g.section) ? g.section : sectionOf(g.item),
     item: String(g.item), qty: String(g.qty || "").slice(0, 40), checked: false,
   }));
+  const seen = new Map();   // the consolidation reply itself can list "Egg white" and "Egg whites"
+  for (const g of list) {
+    const k = keyOf(g.item) || g.item.toLowerCase();
+    const prev = seen.get(k);
+    if (!prev) { seen.set(k, g); continue; }
+    if (g.item.length > prev.item.length) { g.qty = prev.qty || g.qty; seen.set(k, g); }   // keep the clearer name
+    else if (!prev.qty && g.qty) prev.qty = g.qty;
+  }
+  list.length = 0; list.push(...seen.values());
   const covered = new Set(list.map((g) => keyOf(g.item)));
   const missing = (entries || []).filter(([name]) => !covered.has(keyOf(name)));
   for (const [name, uses] of missing) list.push({ section: sectionOf(name), item: name, qty: qtyOf(name, uses), checked: false });
@@ -630,6 +644,37 @@ function estimateGroceryCost(list, priceLog, keyOf, todayISO) {
     total: Math.round(Object.values(priced).reduce((n, p) => n + p.price, 0) * 100) / 100,
     stale: stores.reduce((n, x) => n + x.stale, 0), cheapest };
 }
+function _pkgPhrase(name, uses) { // smallest-package heuristics — store language, not kitchen language
+        const n = name.toLowerCase();
+        let oz = 0, allOz = uses.length > 0, count = 0, cups = 0;
+        for (const u of uses) {
+          const mo = u.amt.match(/^([\d.]+)\s*oz/i); if (mo) oz += +mo[1] * u.servings; else allOz = false;
+          const mc = u.amt.match(/^([\d.\/]+)\s*cups?/i); if (mc) { const f = mc[1].split("/"); cups += (f.length === 2 ? +f[0] / +f[1] : +mc[1]) * u.servings; }
+          const mn = u.amt.match(/^(\d+)(?:\s|,|$)/); if (mn) count += +mn[1] * u.servings;
+        }
+        if (/chicken|turkey|beef|sirloin|steak|pork|salmon|cod|tilapia|shrimp|tenderloin|flank|jerky|deli/.test(n) && allOz && oz > 0) {
+          const lb = Math.ceil((oz / 16) * 4) / 4;
+          return lb <= 1.25 ? "one 1-lb pack" : lb <= 2.75 ? `~${lb} lb — one large pack` : `~${lb} lb — family pack`;
+        }
+        if (/egg white|egg beater/.test(n)) return "1 carton liquid whites";
+        if (_ingKey(n) === "egg" || /hard-?boiled egg/.test(n)) return count > 12 ? "2 dozen" : "1 dozen";   // NOT egg noodles, egg rolls, eggplant
+        if (/yogurt|skyr|cottage/.test(n)) return cups > 4 || uses.length > 4 ? "2 tubs" : "1 tub (32 oz)";
+        if (/broth/.test(n)) return `${Math.max(1, Math.ceil(cups / 4))} carton${cups > 4 ? "s" : ""}`;
+        if (/milk/.test(n)) return "1 half-gallon";
+        if (/kidney beans|black beans|white beans|chickpea/.test(n)) return `${Math.max(1, Math.ceil((cups || uses.length * 0.5) / 1.5))} can(s)`;
+        if (/bread|toast/.test(n)) return "1 loaf";
+        if (/tortilla|wrap|pita|bun/.test(n)) return "1 pack";
+        if (/protein bar/.test(n)) return "1 box";
+        if (/whey|protein powder/.test(n)) return "1 tub — lasts weeks";
+        if (/honey|mayo|mustard|dijon|soy|sriracha|salsa|marinara|vinaigrette|dressing|oil\b|paste|capers|chiles|tzatziki/.test(n)) return "smallest jar/bottle";
+        if (/seasoning|cinnamon|paprika|cumin|oregano|chili powder|salt|pepper|flakes|rosemary|garlic powder|baking powder/.test(n)) return "1 small jar — pantry staple";
+        if (/oats|rice|quinoa|panko|granola|noodle|pasta|spaghetti|linguine|crackers|croutons|almonds|chia|lentil/.test(n)) return "1 bag/box";
+        if (/berries|blueberr|strawberr|pineapple|edamame|green beans|broccoli|brussels|snap peas|spinach|greens|slaw|lettuce/.test(n)) return "1 bag";
+        if (/cheese|mozzarella|feta|cheddar|parmesan/.test(n)) return "1 pack";
+        if (/banana|lemon|lime|apple|avocado|potato|onion|cucumber|zucchini|carrot|tomato|scallion|celery|ginger|garlic\b|bell pepper/.test(n)) return count > 0 ? `${Math.ceil(count)} ct` : "1 bag";
+        if (allOz && oz > 0) return oz >= 16 ? `~${Math.ceil((oz / 16) * 4) / 4} lb` : `~${Math.ceil(oz)} oz`;
+        return "1 pack";
+      }
 function grocerySection(name) {
   const n = String(name || "").toLowerCase();
   for (const [section, re] of _AISLE) if (re.test(n)) return section;
@@ -1712,37 +1757,6 @@ export default function App() {
           e.uses.push({ amt: (amt || "").split(",")[0].trim(), servings: x.servings });
         }
         return new Map([...m.entries()].map(([k, v]) => [v.name, v.uses]));
-      };
-      const _pkgPhrase = (name, uses) => { // smallest-package heuristics — store language, not kitchen language
-        const n = name.toLowerCase();
-        let oz = 0, allOz = uses.length > 0, count = 0, cups = 0;
-        for (const u of uses) {
-          const mo = u.amt.match(/^([\d.]+)\s*oz/i); if (mo) oz += +mo[1] * u.servings; else allOz = false;
-          const mc = u.amt.match(/^([\d.\/]+)\s*cups?/i); if (mc) { const f = mc[1].split("/"); cups += (f.length === 2 ? +f[0] / +f[1] : +mc[1]) * u.servings; }
-          const mn = u.amt.match(/^(\d+)(?:\s|,|$)/); if (mn) count += +mn[1] * u.servings;
-        }
-        if (/chicken|turkey|beef|sirloin|steak|pork|salmon|cod|tilapia|shrimp|tenderloin|flank|jerky|deli/.test(n) && allOz && oz > 0) {
-          const lb = Math.ceil((oz / 16) * 4) / 4;
-          return lb <= 1.25 ? "one 1-lb pack" : lb <= 2.75 ? `~${lb} lb — one large pack` : `~${lb} lb — family pack`;
-        }
-        if (/egg white/.test(n)) return "1 carton liquid whites";
-        if (/^eggs?\b|hard-boiled/.test(n)) return count > 12 ? "2 dozen" : "1 dozen";
-        if (/yogurt|skyr|cottage/.test(n)) return cups > 4 || uses.length > 4 ? "2 tubs" : "1 tub (32 oz)";
-        if (/broth/.test(n)) return `${Math.max(1, Math.ceil(cups / 4))} carton${cups > 4 ? "s" : ""}`;
-        if (/milk/.test(n)) return "1 half-gallon";
-        if (/kidney beans|black beans|white beans|chickpea/.test(n)) return `${Math.max(1, Math.ceil((cups || uses.length * 0.5) / 1.5))} can(s)`;
-        if (/bread|toast/.test(n)) return "1 loaf";
-        if (/tortilla|wrap|pita|bun/.test(n)) return "1 pack";
-        if (/protein bar/.test(n)) return "1 box";
-        if (/whey|protein powder/.test(n)) return "1 tub — lasts weeks";
-        if (/honey|mayo|mustard|dijon|soy|sriracha|salsa|marinara|vinaigrette|dressing|oil\b|paste|capers|chiles|tzatziki/.test(n)) return "smallest jar/bottle";
-        if (/seasoning|cinnamon|paprika|cumin|oregano|chili powder|salt|pepper|flakes|rosemary|garlic powder|baking powder/.test(n)) return "1 small jar — pantry staple";
-        if (/oats|rice|quinoa|panko|granola|noodle|pasta|spaghetti|linguine|crackers|croutons|almonds|chia|lentil/.test(n)) return "1 bag/box";
-        if (/berries|blueberr|strawberr|pineapple|edamame|green beans|broccoli|brussels|snap peas|spinach|greens|slaw|lettuce/.test(n)) return "1 bag";
-        if (/cheese|mozzarella|feta|cheddar|parmesan/.test(n)) return "1 pack";
-        if (/banana|lemon|lime|apple|avocado|potato|onion|cucumber|zucchini|carrot|tomato|scallion|celery|ginger|garlic\b|bell pepper/.test(n)) return count > 0 ? `${Math.ceil(count)} ct` : "1 bag";
-        if (allOz && oz > 0) return oz >= 16 ? `~${Math.ceil((oz / 16) * 4) / 4} lb` : `~${Math.ceil(oz)} oz`;
-        return "1 pack";
       };
       const fallbackGrocery = () => [...groupIngredients().entries()]
         .map(([name, uses]) => ({ section: grocerySection(name), item: name, qty: _pkgPhrase(name, uses), checked: false }))
