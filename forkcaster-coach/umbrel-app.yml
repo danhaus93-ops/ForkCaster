@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.8.3"
+version: "0.8.4"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,17 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.8.3: the real cause of duplicate grocery lines. Recipes often name several
-  foods in one ingredient - "Bell pepper & onion", "Garlic powder, salt,
-  pepper" - and each of those was becoming its own grocery line, sitting right
-  next to the plain "Bell pepper" and "Salt" lines from other recipes. Those
-  are now split into separate ingredients before the list is built, so they
-  merge with the lines they belong to. Sea salt, kosher salt and black pepper
-  also stop being their own lines, while bell pepper stays distinct from
+  v0.8.4: grocery lists finally read like a shopping list. Item names came
+  straight from recipe wording, so "Celery", "Celery hearts" and "finely
+  chopped celery" were three separate lines, as were "whey", "Vanilla whey"
+  and "Vanilla whey protein". Names are now normalised properly - prep
+  instructions, stray quantities, parentheses and garnish notes are stripped
+  for matching, and near-identical entries merge into one line under the
+  cleanest name, keeping any checkmark. Variety words are protected, so black
+  and green beans, white and black pepper, brown and jasmine rice stay
+  separate. Lines also display cleanly now: "or 2 Tablespoons orange juice"
+  becomes "Orange juice", while product words like shredded, part-skim and
+  ground are kept.
   pepper.
   match found.
 dependencies: []

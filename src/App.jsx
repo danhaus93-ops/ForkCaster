@@ -559,17 +559,32 @@ function fuelWarning(mealLog, targets, todayISO) {
 /* ── Grocery shaping: aisle sections and a merge key, so the list is usable even when the
    AI consolidation pass fails. Prep words are stripped for MERGING only — display keeps the
    recipe's own wording. ── */
-const _INGR_PREP = /^(fresh|freshly|frozen|cooked|raw|chopped|diced|minced|sliced|shredded|grated|ground|crushed|large|small|medium|ripe|boneless|skinless|low[- ]sodium|reduced[- ]fat|unsalted|whole|organic|extra[- ]virgin|liquid|light|plain|nonfat|non[- ]fat|sea|kosher|table|coarse|fine|granulated|freshly[- ]ground|black)\s+/i;
+const _PREP = "fresh|freshly|frozen|cooked|uncooked|raw|chopped|diced|minced|sliced|shredded|grated|crushed|ground|mashed|large|small|medium|jumbo|ripe|boneless|skinless|low[- ]sodium|reduced[- ]fat|fat[- ]free|low[- ]fat|part[- ]skim|whole[- ]milk|skim|unsalted|salted|whole|organic|extra[- ]virgin|virgin|liquid|light|plain|nonfat|non[- ]fat|sea|kosher|table|coarse|fine|finely|coarsely|thinly|thickly|roughly|lightly|granulated|steamed|roasted|grilled|baked|boiled|saut[eé]ed|pan[- ]fried|fried|blanched|braised|seared|toasted|dried|canned|jarred|bottled|store[- ]bought|homemade|home[- ]made|home|prepared|peeled|seeded|stemmed|pitted|halved|quartered|cubed|julienned|shaved|packed|drained|rinsed|softened|melted|chilled|warm|cold|hot|good|quality|best";
+const _PREP_LEAD = new RegExp(`^(?:${_PREP})\\s+`, "i");
+const _PREP_TRAIL = new RegExp(`\\s+(?:${_PREP})$`, "i");
+const _LEAD_QTY = /^(?:or\s+)?(?:about\s+|approx\.?\s+)?(?:\d+[\d./\s-]*)?\s*(?:tablespoons?|teaspoons?|tbsps?|tsps?|cups?|ounces?|oz|pounds?|lbs?|grams?|g|kg|ml|l|liters?|cloves?|pinch(?:es)?|dash(?:es)?|handfuls?|slices?|pieces?|cans?|jars?|packs?|bunch(?:es)?|sprigs?|stalks?|heads?)\s+(?:of\s+)?/i;
+const _TRAIL_JUNK = /\s*(?:,|-|—)?\s*\b(?:as|for)\s+(?:garnish|serving|topping|dusting|drizzling)\b.*$|\s*\b(?:to taste|optional|divided|if desired|recipe below|plus more.*|or more.*|as needed)\b.*$/i;
+const _FORM_WORDS = /\b(meat|breasts?|fillets?|leaves|hearts?|stalks?|ribs?|cloves?|sprigs?|florets?|spears?)\b/g;
 function _ingKey(name) {
-  let n = String(name || "").toLowerCase().replace(/\(.*?\)/g, " ").replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
-  for (let i = 0; i < 3; i++) n = n.replace(_INGR_PREP, "");
-  n = n.replace(/\b(meat|breasts?|fillets?|leaves)\b/g, "").replace(/\s+/g, " ").trim();
-  // singularise properly: "egg whites" must not become "egg whit", "berries" must reach "berry"
-  if (/ies$/.test(n) && n.length > 4) return n.slice(0, -3) + "y";        // berries -> berry
-  if (/(?:ch|sh|ss|s|x|z)es$/.test(n) && n.length > 4) return n.slice(0, -2);  // boxes, dishes
-  if (/oes$/.test(n) && n.length > 4) return n.slice(0, -2);              // tomatoes, potatoes
-  if (n.endsWith("s") && !n.endsWith("ss") && n.length > 3) return n.slice(0, -1);
-  return n;
+  let n = String(name || "").toLowerCase();
+  n = n.replace(/\([^)]*\)/g, " ");            // "(because it's healthy!)"
+  const openParen = n.indexOf("(");
+  if (openParen >= 0) n = n.slice(0, openParen); // "protein powder (hemp" — unbalanced, cut it
+  n = n.replace(_TRAIL_JUNK, " ");               // "chives as garnish"
+  n = n.replace(/[^a-z\s-]/g, " ").replace(/\s+/g, " ").trim();
+  for (let i = 0; i < 3; i++) n = n.replace(_LEAD_QTY, "").trim();   // "or 2 Tablespoons orange juice"
+  n = n.replace(/\bblack pepper\b/g, "pepper"); // black pepper is pepper; black beans are not beans
+  for (let i = 0; i < 4; i++) n = n.replace(_PREP_LEAD, "").trim();  // "finely chopped celery"
+  for (let i = 0; i < 3; i++) n = n.replace(_PREP_TRAIL, "").trim(); // "onion finely chopped"
+  n = n.replace(_FORM_WORDS, " ").replace(/\s+/g, " ").trim();      // "celery hearts", "garlic cloves"
+  n = n.replace(/\b(lemon|lime|orange|grapefruit)\s+(juice|zest)\b/g, "$1");   // buying the fruit covers both
+  n = n.replace(/\bwhey protein\b/g, "whey");                                  // one tub either way
+  n = n.replace(/^(.+)\s+cheese$/, "$1");                                       // mozzarella cheese -> mozzarella
+  if (/ies$/.test(n) && n.length > 4) n = n.slice(0, -3) + "y";
+  else if (/(?:ch|sh|ss|s|x|z)es$/.test(n) && n.length > 4) n = n.slice(0, -2);
+  else if (/oes$/.test(n) && n.length > 4) n = n.slice(0, -2);
+  else if (n.endsWith("s") && !n.endsWith("ss") && n.length > 3) n = n.slice(0, -1);
+  return n.trim();
 }
 const _AISLE = [ // order matters: the most specific claim on an item wins
   ["Frozen", /\bfrozen\b|ice cream|popsicle/i],
@@ -676,6 +691,20 @@ function _pkgPhrase(name, uses) { // smallest-package heuristics — store langu
         return "1 pack";
       }
 const _NOT_INGREDIENT = /^(no heat|to taste|optional|divided|for garnish|as needed|plus more|if desired|room temperature|separated|rinsed|drained|melted|softened|warm|cold|hot|any|other|etc)\b/i;
+const _PRETTY_STRIP = /^(?:finely|coarsely|roughly|thinly|thickly|freshly|lightly|well)\s+|^(?:chopped|minced|diced|julienned)\s+|^(?:pinch|dash|handful)\s+(?:of\s+)?/i;
+function prettyIngredient(name) {
+  // A shopping list wants "Chives", not "finely chopped chives as garnish". Product-defining words
+  // (shredded, part-skim, ground, russet) stay; recipe instructions and stray quantities go.
+  let n = String(name || "").replace(/\([^)]*\)/g, " ");
+  const open = n.indexOf("(");
+  if (open >= 0) n = n.slice(0, open);
+  n = n.replace(_TRAIL_JUNK, " ").replace(/\s+/g, " ").trim();
+  for (let i = 0; i < 3; i++) n = n.replace(_LEAD_QTY, "").trim();
+  for (let i = 0; i < 3; i++) n = n.replace(_PRETTY_STRIP, "").trim();
+  n = n.replace(/^(?:or|and|plus)\s+/i, "").replace(/[,;:\-–—\s]+$/, "").trim();
+  if (!n) return String(name || "").trim();
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
 function splitIngredientNames(raw) {
   // Recipes write several items in one line — "Bell pepper & onion", "Garlic powder, salt, pepper".
   // Each becomes its own grocery line; otherwise it duplicates the single-item line for the same food.
@@ -692,15 +721,39 @@ function dedupeGrocery(items, keyOf) {
     if (!g || !g.item) continue;
     const k = keyOf(g.item) || String(g.item).toLowerCase();
     const prev = seen.get(k);
-    if (!prev) { seen.set(k, { ...g }); continue; }
-    const keep = String(g.item).length > String(prev.item).length ? { ...g } : { ...prev };
+    if (!prev) { seen.set(k, { ...g, item: prettyIngredient(g.item) }); continue; }
+    const noiseOf = (nm) => String(nm).length - (keyOf(nm) || "").length;
+    const keep = noiseOf(g.item) < noiseOf(prev.item) ? { ...g } : { ...prev };
+    keep.item = prettyIngredient(keep.item);
     const qa = String(prev.qty || ""), qb = String(g.qty || "");
     keep.qty = qa.length >= qb.length ? qa : qb;
     keep.checked = !!(prev.checked || g.checked);
     keep.section = prev.section || g.section;
     seen.set(k, keep);
   }
-  return [...seen.values()];
+  const out = [...seen.values()];
+  // For some foods the modifier IS the product: black vs green beans, white vs black pepper,
+  // brown vs jasmine rice. Never merge on those heads.
+  const VARIETY_HEAD = /^(bean|pepper|rice|lentil|potato|sugar|flour|chocolate|vinegar|olive|mushroom|apple|grape|tea|miso|noodle|pasta|oil|milk|onion)$/;
+  const head = (k) => (k.split(" ").pop() || k);
+  const words = (k) => new Set(k.split(" ").filter(Boolean));
+  for (let i = out.length - 1; i >= 0; i--) {
+    const ki = keyOf(out[i].item);
+    const host = out.find((g, j) => {
+      if (j === i) return false;
+      const kj = keyOf(g.item);
+      if (kj === ki || head(kj) !== head(ki) || VARIETY_HEAD.test(head(ki))) return false;
+      const wi = words(ki), wj = words(kj);
+      return [...wi].every((w) => wj.has(w)) || [...wj].every((w) => wi.has(w));   // one is a modifier of the other
+    });
+    if (!host) continue;
+    const noise = (nm) => String(nm).length - (keyOf(nm) || "").length;   // how much prep wording rides along
+    host.item = prettyIngredient(noise(out[i].item) < noise(host.item) ? out[i].item : host.item);
+    host.qty = String(host.qty || "").length >= String(out[i].qty || "").length ? host.qty : out[i].qty;
+    host.checked = !!(host.checked || out[i].checked);
+    out.splice(i, 1);
+  }
+  return out;
 }
 function repairGroceryQty(items, keyOf, pkgOf) {
   // A stored list carries quantities from whatever rules existed when it was built. Only repair
