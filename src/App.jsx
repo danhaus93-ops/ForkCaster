@@ -559,7 +559,7 @@ function fuelWarning(mealLog, targets, todayISO) {
 /* ── Grocery shaping: aisle sections and a merge key, so the list is usable even when the
    AI consolidation pass fails. Prep words are stripped for MERGING only — display keeps the
    recipe's own wording. ── */
-const _INGR_PREP = /^(fresh|freshly|frozen|cooked|raw|chopped|diced|minced|sliced|shredded|grated|ground|crushed|large|small|medium|ripe|boneless|skinless|low[- ]sodium|reduced[- ]fat|unsalted|whole|organic|extra[- ]virgin|liquid|light|plain|nonfat|non[- ]fat)\s+/i;
+const _INGR_PREP = /^(fresh|freshly|frozen|cooked|raw|chopped|diced|minced|sliced|shredded|grated|ground|crushed|large|small|medium|ripe|boneless|skinless|low[- ]sodium|reduced[- ]fat|unsalted|whole|organic|extra[- ]virgin|liquid|light|plain|nonfat|non[- ]fat|sea|kosher|table|coarse|fine|granulated|freshly[- ]ground|black)\s+/i;
 function _ingKey(name) {
   let n = String(name || "").toLowerCase().replace(/\(.*?\)/g, " ").replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
   for (let i = 0; i < 3; i++) n = n.replace(_INGR_PREP, "");
@@ -675,6 +675,15 @@ function _pkgPhrase(name, uses) { // smallest-package heuristics — store langu
         if (allOz && oz > 0) return oz >= 16 ? `~${Math.ceil((oz / 16) * 4) / 4} lb` : `~${Math.ceil(oz)} oz`;
         return "1 pack";
       }
+const _NOT_INGREDIENT = /^(no heat|to taste|optional|divided|for garnish|as needed|plus more|if desired|room temperature|separated|rinsed|drained|melted|softened|warm|cold|hot|any|other|etc)\b/i;
+function splitIngredientNames(raw) {
+  // Recipes write several items in one line — "Bell pepper & onion", "Garlic powder, salt, pepper".
+  // Each becomes its own grocery line; otherwise it duplicates the single-item line for the same food.
+  const parts = String(raw || "").split(/\s*&\s*|\s+and\s+|\s*,\s*|\s*\+\s*/i)
+    .map((t) => t.replace(/\s+/g, " ").trim())
+    .filter((t) => t.length > 2 && !_NOT_INGREDIENT.test(t) && /[a-z]/i.test(t));
+  return parts.length ? parts : [String(raw || "").trim()].filter(Boolean);
+}
 function dedupeGrocery(items, keyOf) {
   // Runs on the STORED list too, so a plan generated before the merge rules existed still cleans up
   // without regenerating. Keeps the clearest name, the most specific quantity, and any checkmark.
@@ -1784,12 +1793,14 @@ export default function App() {
         const m = new Map();
         for (const d of built) for (const x of d.slots) for (const ing of (x.ingredients || [])) {
           const [nm, amt] = ing.split("—").map((t) => (t || "").trim());
-          const disp = (nm || ing).trim(); if (!disp) continue;
-          const key = _ingKey(disp) || disp.toLowerCase();
-          if (!m.has(key)) m.set(key, { name: disp, uses: [] });
-          const e = m.get(key);
-          if (disp.length > e.name.length) e.name = disp; // keep the most specific wording
-          e.uses.push({ amt: (amt || "").split(",")[0].trim(), servings: x.servings });
+          const whole = (nm || ing).trim(); if (!whole) continue;
+          for (const disp of splitIngredientNames(whole)) {          // "Bell pepper & onion" -> two lines
+            const key = _ingKey(disp) || disp.toLowerCase();
+            if (!m.has(key)) m.set(key, { name: disp, uses: [] });
+            const e = m.get(key);
+            if (disp.length > e.name.length) e.name = disp; // keep the most specific wording
+            e.uses.push({ amt: (amt || "").split(",")[0].trim(), servings: x.servings });
+          }
         }
         return new Map([...m.entries()].map(([k, v]) => [v.name, v.uses]));
       };
