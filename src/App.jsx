@@ -657,15 +657,27 @@ function diversifyWeek(days, poolArr, slotTypeOf, maxRepeats = 2) {
 }
 /* ── Dose-response engine: learn YOUR dose-window fat ceiling from your own logs (v0.4.2) ── */
 function doseResponseRead(mealLog, glp) {
-  const doses = ((glp && glp.doseLog) || []).map((d) => d.date).filter(Boolean);
+  /* Evidence is per-MEDICATION. Semaglutide and retatrutide have different GI profiles, so a fat
+     ceiling learned on one is not evidence about the other. Doses recorded before this existed
+     carry no medication stamp: they count while you have only ever used one drug, and are dropped
+     as ambiguous once a different medication appears. Never-switchers see no change at all. */
+  const log = ((glp && glp.doseLog) || []).filter((d) => d && d.date);
+  const cur = (glp && glp.med) || null;
+  const stamped = [...new Set(log.map((d) => d.med).filter(Boolean))];
+  const switched = stamped.length > 1 || (stamped.length === 1 && cur && stamped[0] !== cur);
+  const mine = log.filter((d) => (d.med ? d.med === cur : !switched));
+  const switchDate = switched ? mine.map((d) => d.date).sort()[0] || null : null;
+  const doses = mine.map((d) => d.date).filter(Boolean);
   const t = (d) => new Date(d + "T12:00:00").getTime();
   const inWindow = (date) => doses.some((dd) => { const dt = t(date) - t(dd); return dt >= 0 && dt <= 48 * 3600 * 1000; });
   const days = new Map();
   for (const m of (mealLog || [])) { if (!m.date) continue; const r = days.get(m.date) || { maxFat: 0, meals: 0 }; r.maxFat = Math.max(r.maxFat, +m.fat || 0); r.meals++; days.set(m.date, r); }
-  const gi = new Set(((glp && glp.sideEffects) || []).filter((x) => /nausea|vomit|reflux|heartburn|queas/i.test(x.symptom || "")).map((x) => x.date));
-  const rows = [...days.entries()].map(([date, r]) => ({ date, maxFat: r.maxFat, sym: gi.has(date), win: inWindow(date) }));
+  const gi = new Set(((glp && glp.sideEffects) || []).filter((x) => /nausea|vomit|reflux|heartburn|queas/i.test(x.symptom || "") && (!switchDate || String(x.date) >= switchDate)).map((x) => x.date));
+  const rows = [...days.entries()].filter(([date]) => !switchDate || date >= switchDate)
+    .map(([date, r]) => ({ date, maxFat: r.maxFat, sym: gi.has(date), win: inWindow(date) }));
   const winRows = rows.filter((r) => r.win);
-  if (gi.size < 5 || rows.length < 10 || winRows.length < 3) return { status: "collecting", sym: gi.size, days: rows.length, inWin: winRows.length };
+  const medInfo = { med: cur, switched, switchDate, prevMeds: stamped.filter((m) => m !== cur) };
+  if (gi.size < 5 || rows.length < 10 || winRows.length < 3) return { status: "collecting", sym: gi.size, days: rows.length, inWin: winRows.length, ...medInfo };
   const pool = winRows.filter((r) => r.sym).length >= 3 ? winRows : rows;
   const scope = pool === winRows ? "within 48h of your shot" : "across all logged days";
   const fats = [...new Set(pool.map((r) => r.maxFat))].sort((a, b) => a - b);
@@ -677,8 +689,8 @@ function doseResponseRead(mealLog, glp) {
     const sep = above.filter((r) => r.sym).length / above.length - below.filter((r) => r.sym).length / below.length;
     if (!best || sep > best.sep) best = { T: Math.round(T), sep, aboveSym: above.filter((r) => r.sym).length, above: above.length, belowSym: below.filter((r) => r.sym).length, below: below.length };
   }
-  if (!best || best.sep < 0.3) return { status: "no-pattern", sym: gi.size, days: rows.length, inWin: winRows.length };
-  return { status: "ok", ceiling: best.T, scope, ...best };
+  if (!best || best.sep < 0.3) return { status: "no-pattern", sym: gi.size, days: rows.length, inWin: winRows.length, ...medInfo };
+  return { status: "ok", ceiling: best.T, scope, sym: gi.size, days: rows.length, inWin: winRows.length, ...best, ...medInfo };
 }
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const fmtDate = (d) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" });
@@ -1400,7 +1412,7 @@ export default function App() {
     setGlp((g) => {
       const today = todayISO();
       const log = (g.doseLog || []).filter((d) => d.date !== today);
-      return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, mg: g.dose || 0, site: pendingSite || undefined }] };
+      return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, mg: g.dose || 0, site: pendingSite || undefined, med: g.med }] };
     });
     setDoseLogged(true); setPendingSite(null); setTimeout(() => setDoseLogged(false), 2500);
   }
@@ -1437,6 +1449,7 @@ export default function App() {
       const findings = {
         adaptive: adaptiveRead(weightLog, hd, glp, wk.reduce((n, d) => n + (d.strength || 0), 0)),
         doseResp: doseResponseRead(mealLog, glp),
+        medication: { current: glp.med || null, label: (MEDS[glp.med] || {}).label || glp.med || null },
         contract: (() => { const hd0 = hd; const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
           const c = goalContract({ weightLbs: curWeight, bodyFatPct: lastBf ? lastBf.bodyFatPct : bodyFat, leanMassLbs: lastLm ? lastLm.leanMassLbs : 0, goalWeight, sex: body.sex, todayISO: todayISO() });
           return c.status === "ok" ? { line: c.line, proteinFloor: c.proteinFloor, weeksTarget: c.weeksTarget, plausible: c.plausible } : null; })(),
@@ -2864,7 +2877,9 @@ export default function App() {
             return card(<div>
               {sectionTitle("Dose response · your body's own data")}
               {dr.status === "collecting" ? (
-                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>Learning quietly — {dr.sym}/5 GI symptom entries · {dr.days}/10 days with meals logged · {dr.inWin}/3 dose-window days. Log symptoms on the GLP-1 tab and meals daily; this engine learns YOUR fat ceiling, not the textbook's.</div>
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>
+                  {dr.switched && <span style={{ color: C.violet, fontWeight: 700 }}>Restarted for {(MEDS[dr.med] || {}).label || dr.med}{dr.prevMeds && dr.prevMeds.length ? ` — your ${(MEDS[dr.prevMeds[0]] || {}).label || dr.prevMeds[0]} evidence is kept separately, not blended in` : ""}. </span>}
+                  Learning quietly — {dr.sym}/5 GI symptom entries · {dr.days}/10 days with meals logged · {dr.inWin}/3 dose-window days. Log symptoms on the GLP-1 tab and meals daily; this engine learns YOUR fat ceiling, not the textbook's.</div>
               ) : dr.status === "no-pattern" ? (
                 <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>No clear fat↔symptom pattern in {dr.days} logged days ({dr.inWin} in dose windows) — either good tolerance or thin data. Keep logging; the picture sharpens itself.</div>
               ) : (
