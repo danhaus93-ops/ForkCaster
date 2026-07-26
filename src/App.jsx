@@ -420,6 +420,27 @@ const prescription = (e) => {
   if (lo != null) return `${lo}\u2013${hi}s${e.hold ? " hold" : ""}`;
   return `${e.repLow || 10}\u2013${e.repHigh || 20} reps`;
 };
+/* An escape hatch to an app he already owns, not a recommendation and not content: on a day the
+   generated core block does not appeal, hand off to 6 Pack Promise. The App Store link is the
+   reliable route — that app last shipped in 2021 and advertises no universal link or URL scheme,
+   so a custom scheme would risk a dead tap. Since he has it installed, the store page shows Open. */
+/* Opening a third-party app directly needs either a universal link (the app must claim a domain) or
+   a registered URL scheme. 6 Pack Promise last shipped in 2021 and has NEITHER — seven candidate
+   schemes were tested on device and all failed, which is normal: registering a scheme is optional
+   and a standalone app with no login or sharing has no reason to. The documented way in is the
+   Shortcuts URL scheme: he makes a one-action shortcut (Open App -> 6 Pack Promise) and we run it
+   by name. If Shortcuts does not take over the page, we fall back to the App Store, which is where
+   an uninstalled app should land anyway. Custom schemes are exempt from the universal-link rule
+   about JS navigation, so the timed fallback here is correct rather than a workaround. */
+const SIXPACK = {
+  label: "6 Pack Promise",
+  shortcut: "Abs",                                              // rename here if he names it differently
+  store: "https://apps.apple.com/app/id633815621",
+};
+const sixpackUrl = () => `shortcuts://run-shortcut?name=${encodeURIComponent(SIXPACK.shortcut)}`;
+/* Returns the ms delay after which the store fallback should fire, or 0 to cancel. Kept pure so the
+   rig can assert the fallback logic without a browser. */
+const sixpackFallbackDelay = (hidden) => (hidden ? 0 : 1400);
 const coreCircuit = (moveCount, sets) => (moveCount >= 3 && sets >= 2
   ? { rounds: sets, betweenSec: 15, roundRestSec: 60 }   // rounds ARE the set count — one number, so they cannot disagree
   : null);
@@ -2370,7 +2391,10 @@ export default function App() {
           </div>, { marginBottom: 10 }); })()}
         {liveSession.entries.map((e, ei) => (<div key={ei}>
           {e.group === "core" && (ei === 0 || liveSession.entries[ei - 1].group !== "core") && (
-            <div style={{ fontSize: 11, letterSpacing: 1.6, color: C.muted, fontWeight: 800, margin: "16px 0 8px" }}>CORE · higher reps, shorter rest</div>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, margin: "16px 0 8px" }}>
+              <div style={{ fontSize: 11, letterSpacing: 1.6, color: C.muted, fontWeight: 800 }}>CORE · timed circuit</div>
+              <a href={sixpackUrl()} rel="noopener" onClick={() => { const t = setTimeout(() => { if (!document.hidden) window.location.href = SIXPACK.store; }, sixpackFallbackDelay(document.hidden)); const stop = () => clearTimeout(t); document.addEventListener("visibilitychange", stop, { once: true }); window.addEventListener("pagehide", stop, { once: true }); }} style={{ fontSize: 11, color: C.violet, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>or use {SIXPACK.label} →</a>
+            </div>
           )}
           {card(<div>
           <div style={{ fontSize: 14.5, fontWeight: 800, color: C.ink }}>{e.name}</div>
@@ -2425,7 +2449,12 @@ export default function App() {
             {nextSlot.day.exercises.map((x, i) => { const h = exHistory(x.exId); const last = h[h.length - 1]; const adv = progressionAdvice(h, x);
               const startsCore = x.group === "core" && (i === 0 || nextSlot.day.exercises[i - 1].group !== "core");
               return (<div key={i} style={{ padding: "8px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
-                {startsCore && <div style={{ fontSize: 10.5, letterSpacing: 1.4, color: C.muted, fontWeight: 800, marginBottom: 5 }}>CORE</div>}
+                {startsCore && (
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
+                    <div style={{ fontSize: 10.5, letterSpacing: 1.4, color: C.muted, fontWeight: 800 }}>CORE</div>
+                    <a href={sixpackUrl()} rel="noopener" onClick={() => { const t = setTimeout(() => { if (!document.hidden) window.location.href = SIXPACK.store; }, sixpackFallbackDelay(document.hidden)); const stop = () => clearTimeout(t); document.addEventListener("visibilitychange", stop, { once: true }); window.addEventListener("pagehide", stop, { once: true }); }} style={{ fontSize: 10.5, color: C.violet, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>or use {SIXPACK.label} →</a>
+                  </div>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ fontSize: 13.5, color: C.ink, fontWeight: 700 }}>{x.name}</div>
                   <div style={{ fontSize: 12, color: C.muted, whiteSpace: "nowrap" }}>{x.sets}×{prescription(x).replace(" hold", "").replace(" reps", "")}</div>
