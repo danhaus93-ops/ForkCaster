@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.8.7"
+version: "0.8.8"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.8.7: the delivery hand-off is real. The old "send to a delivery app"
-  button had no action behind it at all and claimed to pre-build the order,
-  which no delivery platform actually allows from outside their own app. It
-  is replaced by three brand-coloured buttons - DoorDash, Uber Eats and
-  Grubhub - that open the installed app at the venue and copy the item name
-  so it can be pasted into that app's search. These are real links rather
-  than scripted navigation, which is what lets a phone hand off to the app
-  instead of a browser tab.
+  v0.8.8: fixes the release script's safety check. It confirmed a version had
+  reached the local registry using a substring match, so it would have
+  reported version 0.8.1 as present when the registry only held 0.8.10 -
+  giving the all-clear for an update that was never actually pushed. It now
+  matches the exact version. The success message also prints a count of
+  stored image tags instead of listing all ninety of them; the full list
+  still prints on failure, which is when it is useful.
 dependencies: []
 path: ""
 defaultUsername: ""

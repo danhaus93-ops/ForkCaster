@@ -18,16 +18,22 @@ sudo docker push "$IMG"
 
 echo ""
 TAGS=$(curl -s http://127.0.0.1:5000/v2/forkcaster/tags/list)
-if echo "$TAGS" | grep -q "v$VER"; then
+# EXACT tag match. A bare `grep "v$VER"` is a SUBSTRING test: it reports v0.8.1 as present
+# when the registry only holds v0.8.10, which would green-light an update that was never pushed.
+# Match the JSON-quoted tag and escape the dots so they are not regex wildcards.
+VER_RE=$(printf '%s' "$VER" | sed 's/\./\\./g')
+COUNT=$(printf '%s' "$TAGS" | tr ',' '\n' | grep -c '"v[0-9]')
+if printf '%s' "$TAGS" | grep -q "\"v${VER_RE}\""; then
   echo "=================================================="
   echo " ✅ SAFE TO TAP — v$VER verified in local registry"
-  echo "    Registry says: $TAGS"
+  echo "    Registry holds $COUNT tags of forkcaster."
   echo " -> Refresh the App Store page, confirm it offers v$VER, tap Update."
   echo "=================================================="
 else
   echo "=================================================="
   echo " ⛔ DO NOT TAP UPDATE — v$VER NOT found in registry!"
-  echo "    Registry says: $TAGS"
+  echo "    Registry holds $COUNT tags, none of them v$VER."
+  echo "    Full list: $TAGS"
   echo "    Re-run this script or check the registry container."
   echo "=================================================="
   exit 1
