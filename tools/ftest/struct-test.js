@@ -177,5 +177,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/ok: false, count: null, bytes: null/.test(SRV),'usage failure is failure-shaped');
   ok(/storage unreadable/.test(SRC),'the client renders the failure instead of 0 files');
 }
+// v0.9.19: the rank cache must be consulted through the synchronous ref, after hydration
+{
+  const A=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/savedRankRef\.current \|\| savedRank/.test(A),'rank gate reads the ref mirror, not the stale closure');
+  ok(/if \(s\.savedRank\) \{ savedRankRef\.current = s\.savedRank;/.test(A),'loader writes the ref synchronously');
+  ok(/!hydrated\.current; w\+\+\) await new Promise/.test(A),'ranking waits for hydration when GPS wins the race');
+  ok(/savedRankRef\.current = \{ key, at: now, arr \}/.test(A),'saving keeps ref and state in sync');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

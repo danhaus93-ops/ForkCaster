@@ -1138,6 +1138,9 @@ export default function App() {
   const fmtVol = (oz) => (isMetric ? Math.round(oz * ML_PER_OZ) : Math.round(oz));
   const [eaten, setEaten] = useState({ protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
   const [savedRank, setSavedRank] = useState(null); // persisted rank cache — must precede stateBlob
+  const savedRankRef = useRef(null); // synchronous mirror: rankVenues MUST read this, never the state —
+                                     // the state value is a stale closure during load and the cache read
+                                     // raced the async /api/state fetch, refetching scores on EVERY open
   const [editing, setEditing] = useState(false);
 
   const [geo, setGeo] = useState({ status: "idle" });
@@ -1361,7 +1364,7 @@ export default function App() {
           const newest = last ? aliveSims.filter((p) => p === last || (last.pairId && p.pairId === last.pairId)) : [];
           setSimShots((x) => [...x.filter((p) => !newest.find((q) => q.id === p.id)), ...newest]);
         }
-        if (s.savedRank) setSavedRank(s.savedRank);
+        if (s.savedRank) { savedRankRef.current = s.savedRank; setSavedRank(s.savedRank); }
         if (Array.isArray(s.coachMsgs) && s.coachMsgs.length) setCoachMsgs(s.coachMsgs);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
       }
@@ -1576,11 +1579,14 @@ export default function App() {
       .sort((a, b) => (b.match ?? -1) - (a.match ?? -1)));
   }
   async function rankVenues(vs, force) {
+    // GPS can lock before /api/state returns — wait (bounded) so the persisted cache gets its chance
+    for (let w = 0; w < 50 && !hydrated.current; w++) await new Promise((r) => setTimeout(r, 100));
     const key = vs.map((v) => v.id).sort().join(",") + `|${mode}|${targets.protein}|${targets.calories}`;
     const now = Date.now();
+    const cached = savedRankRef.current || savedRank;
     if (!force) {
-      if (savedRank && savedRank.key === key && now - savedRank.at < (prefs.rankCacheHours || 4) * 3600000) {
-        applyRank(vs, savedRank.arr); setRankState("ranked"); return; // reuse persisted scores: stable + free
+      if (cached && cached.key === key && now - cached.at < (prefs.rankCacheHours || 4) * 3600000) {
+        applyRank(vs, cached.arr); setRankState("ranked"); return; // reuse persisted scores: stable + free
       }
       if (key === lastRank.current.key && now - lastRank.current.at < 30 * 60000) return;
       if (now - lastRank.current.at < 120000) return;
@@ -1601,7 +1607,7 @@ export default function App() {
       const text = await callClaude(prompt, null, null, 2400, RANK_SCHEMA, 0);
       const arr = salvageJSONArray(text);
       applyRank(vs, arr);
-      setSavedRank({ key, at: now, arr });
+      savedRankRef.current = { key, at: now, arr }; setSavedRank(savedRankRef.current);
       setRankState("ranked");
     } catch (e) { setRankState((e && e.message) || "ranking failed"); }
   }

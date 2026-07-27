@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.18"
+version: "0.9.19"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.18: the Body Forecaster no longer hoards old renders. Generating a
-  new forecast replaces the previous one instead of stacking behind it
-  forever, and on first launch the app trims its stored history down to
-  your newest front-and-back set. After updating, open the app once, then
-  tap Sweep orphaned images in Settings - the old renders are now true
-  orphans and the sweep reclaims them. Your progress photos are untouched.
+  v0.9.19: venue health scores now respect the score-refresh window. The
+  saved scores were being checked before they had loaded from your node,
+  so every app open re-ranked from scratch and spent an AI call. Scores
+  now appear instantly from the cache and hold until the refresh window
+  you set in Settings genuinely expires. Moving to a new area or changing
+  your targets still triggers a fresh ranking, as it should.
 dependencies: []
 path: ""
 defaultUsername: ""
