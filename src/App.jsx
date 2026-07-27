@@ -1173,6 +1173,7 @@ export default function App() {
   const [rankState, setRankState] = useState("idle"); // idle | ranking | ranked | <error string>
   const hydrated = useRef(false);
   const blobRef = useRef("");
+  const revRef = useRef(0); // revision this client loaded — every save presents it; stale writers bounce
 
   const [selected, setSelected] = useState(null);
   const [result, setResult] = useState(null);
@@ -1351,7 +1352,7 @@ export default function App() {
   function stopCam() { try { camControlsRef.current && camControlsRef.current.stop(); } catch {} setCamOn(false); }
   const [quick, setQuick] = useState(null);
   useEffect(() => {
-    const flush = () => { if (!hydrated.current || !blobRef.current) return; try { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: blobRef.current, keepalive: true }); } catch {} };
+    const flush = () => { if (!hydrated.current || !blobRef.current) return; try { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + blobRef.current.slice(1), keepalive: true }); } catch {} };
     const onVis = () => { if (document.visibilityState === "hidden") flush(); };
     window.addEventListener("pagehide", flush);
     document.addEventListener("visibilitychange", onVis);
@@ -1401,6 +1402,7 @@ export default function App() {
         if (Array.isArray(s.coachMsgs) && s.coachMsgs.length) setCoachMsgs(s.coachMsgs);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
       }
+      revRef.current = (s && +s._rev) || 0;
       hydrated.current = true;
       _splashReady();
     }).catch(() => { hydrated.current = true; _splashReady(); });
@@ -1419,7 +1421,15 @@ export default function App() {
   useEffect(() => {
     if (!hydrated.current) return;
     blobRef.current = stateBlob; // the flush hook below reads this — always current, no closure lag
-    const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
+    const t = setTimeout(() => {
+      fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + stateBlob.slice(1) })
+        .then((r) => r.json())
+        .then((j) => {
+          if (j && j.ok && j.rev != null) revRef.current = j.rev;
+          else if (j && j.stale) { console.warn("[state] this instance is stale — reloading fresh state"); window.location.reload(); }
+        })
+        .catch(() => {});
+    }, 800);
     return () => clearTimeout(t);
   }, [stateBlob]);
 
@@ -2088,7 +2098,7 @@ export default function App() {
       if (!parsed || parsed.saved !== true) throw new Error("not a ForkCaster backup");
       if (!window.confirm("Replace ALL current data with this backup?")) return;
       hydrated.current = false;
-      await fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: text });
+      await fetch("/api/state?force=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: text });
       window.location.reload();
     } catch (e) { alert("Restore failed: " + e.message); }
   }

@@ -74,13 +74,24 @@ app.post("/api/state", (req, res) => {
   try {
     let prevRaw = null, prev = null;
     try { prevRaw = fs.readFileSync(STATE_FILE, "utf8"); prev = JSON.parse(prevRaw); } catch {}
+    /* Optimistic concurrency. Every writer must present the revision it loaded; a stale
+       instance (a forgotten Safari tab, a suspended old copy) gets REJECTED instead of
+       silently overwriting — the clobber that ate a logged symptom on Jul 27. Clients
+       without _baseRev (mid-update) and ?force=1 (backup restore) are accepted. */
+    const curRev = (prev && +prev._rev) || 0;
+    const baseRev = req.body ? req.body._baseRev : null;
+    if (req.query.force !== "1" && baseRev != null && +baseRev !== curRev) {
+      console.log(`[state] STALE WRITE REJECTED — writer at rev ${baseRev}, server at ${curRev}`);
+      return res.json({ ok: false, stale: true, rev: curRev });
+    }
+    if (req.body) { delete req.body._baseRev; req.body._rev = curRev + 1; }
     if (prevRaw) {
       const shrank = _shrank(prev, req.body);
       if (shrank) { _snapshot(prevRaw, "shrink"); console.log(`[state] SAVE SHRANK — snapshot kept. before=${JSON.stringify(_counts(prev))} after=${JSON.stringify(_counts(req.body))}`); }
       else if (Date.now() - _lastSnap > 10 * 60 * 1000) { _snapshot(prevRaw, "auto"); _lastSnap = Date.now(); }
     }
     fs.writeFileSync(STATE_FILE, JSON.stringify(req.body));
-    res.json({ ok: true });
+    res.json({ ok: true, rev: (req.body && req.body._rev) || 0 });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });
 app.get("/api/state/backups", (_req, res) => {

@@ -52,6 +52,21 @@ const off=http.createServer((q,r)=>{
   fdcMode='empty'; offMode='empty'; j=await q('zzzz not a food');
   ok(j.results.length===0&&!j.error,'a real no-match carries no error flag');
 
+  // v0.9.25: optimistic concurrency — a stale writer must BOUNCE, never clobber (the Jul 27 symptom-eater)
+  {
+    const post = (body, q) => fetch('http://127.0.0.1:3996/api/state' + (q || ''), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+    const r0 = (await fetch('http://127.0.0.1:3996/api/state').then(r => r.json())._rev) || (await fetch('http://127.0.0.1:3996/api/state').then(r => r.json()))._rev || 0;
+    const j1 = await post({ saved: true, note: 'first' });                       // legacy client: no _baseRev
+    ok(j1.ok === true && j1.rev === r0 + 1, 'no-baseRev write accepted (mid-update compat), rev increments');
+    const j2 = await post({ _baseRev: r0 + 1, saved: true, note: 'second' });
+    ok(j2.ok === true && j2.rev === r0 + 2, 'correct baseRev accepted, rev increments again');
+    const j3 = await post({ _baseRev: r0 + 1, saved: true, note: 'STALE CLOBBER' });
+    ok(j3.ok === false && j3.stale === true && j3.rev === r0 + 2, 'STALE writer rejected with the current rev');
+    const cur = await fetch('http://127.0.0.1:3996/api/state').then(r => r.json());
+    ok(cur.note === 'second' && cur._rev === r0 + 2, 'the stale write changed NOTHING on disk');
+    const j4 = await post({ _baseRev: 99, saved: true, note: 'restore' }, '?force=1');
+    ok(j4.ok === true, 'force=1 (backup restore) bypasses the gate deliberately');
+  }
   p.kill(); fdc.close(); off.close();
 
   // 5) the client renders the two states differently

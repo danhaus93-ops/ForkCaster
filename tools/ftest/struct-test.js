@@ -195,5 +195,14 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/Couldn't reach the AI/.test(A2),'describe-it distinguishes an outage from a parse failure');
   ok(!/alert\("Couldn't parse that/.test(A2),'the undifferentiated catch-all alert is gone');
 }
+// v0.9.25: every client writer presents its revision; restore is the one deliberate overwrite
+{
+  const A3=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok((A3.match(/"_baseRev":\$\{revRef\.current\}/g) || []).length === 2, 'BOTH writers (debounced save + flush) inject _baseRev');
+  ok(/revRef\.current = j\.rev/.test(A3), 'the client adopts the server rev after each accepted save');
+  ok(/j\.stale\) \{ console\.warn/.test(A3) && /window\.location\.reload\(\)/.test(A3), 'a stale ACTIVE instance re-syncs instead of fighting');
+  ok(/api\/state\?force=1/.test(A3), 'backup restore uses the force path');
+  ok(/revRef\.current = \(s && \+s\._rev\) \|\| 0/.test(A3), 'the loader adopts the revision it loaded');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

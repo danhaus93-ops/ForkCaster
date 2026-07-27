@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.24"
+version: "0.9.25"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.24: the titration tracker counts honestly past four. Holding a dose
-  beyond the standard four weeks now shows the true running count (four
-  pips plus a growing counter) and, after two extra weeks, the card's
-  framing shifts to acknowledge a deliberate hold - a valid choice many
-  people make - rather than implying the schedule is waiting on you. The
-  next rung stays visible without ever becoming a demand.
+  v0.9.25: your data can no longer be overwritten by a stale copy of the
+  app. Every save now carries a revision number checked by your node - if
+  ForkCaster is somehow open in two places (say an old Safari tab plus the
+  installed app), an out-of-date copy's save is rejected instead of
+  silently erasing newer entries, and that copy refreshes itself. This
+  closes the bug where a logged side effect could vanish. Restoring a
+  backup still works as a deliberate overwrite.
 dependencies: []
 path: ""
 defaultUsername: ""
