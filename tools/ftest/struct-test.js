@@ -218,5 +218,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/d\.date === tk/.test(A5) && /dayKeyAt\(Date\.now\(\), prefs\)/.test(A5),'synced lookup uses the unified day clock, not UTC');
   ok(/"synced \\u00b7 goal 10,000"/.test(A5),'the tile says when the number came from sync');
 }
+// v0.9.28: foreground refresh — resume re-pulls synced health data and re-renders time-dependent surfaces
+{
+  const A6=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/document\.visibilityState !== "visible"\) return/.test(A6),'refresh fires only on becoming visible, not on hide');
+  ok(/setFgTick\(\(t\) => t \+ 1\)/.test(A6),'a tick re-renders clocks even when data is unchanged');
+  ok(/setHealthSync\(\(h\) => \(\{ \.\.\.\(h \|\| \{\}\), days: sm\.days \}\)\)/.test(A6),'the summary re-pull keeps the token and replaces days');
+  ok(/addEventListener\("pageshow", refresh\)/.test(A6),'iOS back-forward-cache resume is covered too');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

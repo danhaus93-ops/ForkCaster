@@ -1295,6 +1295,18 @@ export default function App() {
   useEffect(() => { (async () => { try { setPhotoUsage(await fetch("/api/photos/usage").then((r) => r.json())); } catch {} })(); }, []);
   const [healthSync, setHealthSync] = useState(null); // {token, days:[...]} from the node
   useEffect(() => { (async () => { try { const su = await fetch("/api/health/setup").then((r) => r.json()); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ token: su.token, days: sm.days || [] }); } catch {} })(); }, []);
+  // Returning to the foreground re-pulls synced health data and re-renders clocks (PK "now", steps tile).
+  const [, setFgTick] = useState(0);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      setFgTick((t) => t + 1); // re-render time-dependent surfaces even if data is unchanged
+      fetch("/api/health/summary").then((r) => r.json()).then((sm) => { if (sm && sm.days) setHealthSync((h) => ({ ...(h || {}), days: sm.days })); }).catch(() => {});
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("pageshow", refresh);
+    return () => { document.removeEventListener("visibilitychange", refresh); window.removeEventListener("pageshow", refresh); };
+  }, []);
   const [barcode, setBarcode] = useState("");
   const [camOn, setCamOn] = useState(false);
   const [camErr, setCamErr] = useState("");
