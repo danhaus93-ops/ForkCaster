@@ -1,0 +1,16 @@
+global.window = global; global.self = global;
+global.localStorage = { getItem:()=>null, setItem:()=>{}, removeItem:()=>{} };
+global.sessionStorage = global.localStorage;
+global.navigator = { userAgent:"node", vibrate:()=>{}, clipboard:{writeText:()=>{}}, geolocation:{getCurrentPosition:()=>{}} };
+global.document = { documentElement:{style:{}}, head:{appendChild:()=>{}}, createElement:()=>({style:{},setAttribute:()=>{},appendChild:()=>{}}), addEventListener:()=>{}, querySelector:()=>null, body:{appendChild:()=>{}} };
+global.matchMedia = () => ({ matches:false, addListener:()=>{}, removeListener:()=>{}, addEventListener:()=>{} });
+global.fetch = () => Promise.resolve({ ok:true, json:()=>Promise.resolve({}), text:()=>Promise.resolve("") });
+global.AbortSignal = { timeout:()=>undefined };
+global.requestAnimationFrame = (f)=>setTimeout(f,0);
+global.devicePixelRatio = 1;
+global.screen = { deviceXDPI: 96, logicalXDPI: 96, width: 390, height: 844 };
+global.location = { href:"https://node/", protocol:"https:", hostname:"node", search:"" };
+global.history = { pushState:()=>{}, replaceState:()=>{} };
+global.Image = function(){};
+global.HTMLElement = function(){};
+global.SVGElement = function(){};

@@ -3,3 +3,5 @@ dist/app.js
 data/
 .env
 .smoke-entry.jsx
+tools/ftest/smoke/bundle.cjs
+tools/ftest/smoke/bundle.css

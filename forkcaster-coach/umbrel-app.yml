@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.15"
+version: "0.9.16"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.15: reliability pass from a full-code audit. Every call the server
-  makes to an outside service now carries a timeout, so a stalled provider
-  can no longer hang the app for minutes. All runtime dependencies are
-  pinned to exact versions and the build installs exactly what the lockfile
-  records, so a rebuild months from now produces the same image as today.
-  The photo-storage meter now says when it cannot read the photo folder
-  instead of reporting zero files. Documentation brought up to date.
+  v0.9.16: the test suite now lives in the repository (tools/ftest) instead
+  of only in the development sandbox. Ten suites, several hundred checks,
+  and a full render smoke - the gate every release must pass - are now
+  version-controlled alongside the code they protect, runnable anywhere
+  with npm install and one command. No app behavior changes; updating is
+  optional.
 dependencies: []
 path: ""
 defaultUsername: ""

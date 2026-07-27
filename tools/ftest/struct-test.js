@@ -1,0 +1,181 @@
+const __FCROOT = require("path").resolve(__dirname, "..", "..");
+const fs=require('fs');
+const SRC=fs.readFileSync(__FCROOT + '/src/App.jsx','utf8');
+const SRV=fs.readFileSync(__FCROOT + '/server/server.js','utf8');
+let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
+
+// CHECK 47 — every key name the CLIENT can send must be in the server's KNOWN_KEYS
+const knownSet=new Set([...(SRV.match(/const KNOWN_KEYS = \[(.*?)\];/s)||['',''])[1].matchAll(/"([A-Z0-9_]+)"/g)].map(m=>m[1]));
+ok(knownSet.size===8,'KNOWN_KEYS parsed, got '+knownSet.size+': '+[...knownSet].join(', '));
+const clientKeys=new Set([...SRC.matchAll(/body\.([A-Z][A-Z0-9_]{5,})\s*=/g)].map(m=>m[1])
+  .filter(k=>/_KEY$|_API_KEY$|_CLIENT_(ID|SECRET)$/.test(k)));
+ok(clientKeys.size>0,'client key names found: '+[...clientKeys].join(', '));
+for(const k of clientKeys) ok(knownSet.has(k),'client sends "'+k+'" but server KNOWN_KEYS lacks it — silently discarded');
+
+// CHECK 51 — every field in stateBlob must be read back in the load handler
+const blob=(SRC.match(/const stateBlob = JSON\.stringify\(\{(.*?)\}\);/s)||['',''])[1];
+const fields=[...blob.matchAll(/(?:^|,)\s*([a-zA-Z_$][\w$]*)\s*(?=[,:}]|$)/g)].map(m=>m[1])
+  .filter(f=>!['true','saved'].includes(f));
+ok(fields.length>15,'stateBlob fields parsed: '+fields.length);
+const missing=fields.filter(f=>!new RegExp('s\\.'+f+'\\b').test(SRC));
+ok(missing.length===0,'stateBlob fields never read back on load: '+missing.join(', '));
+console.log('  stateBlob ('+fields.length+' fields) all round-trip: '+fields.join(' '));
+
+// negative-test the round-trip check itself: delete a loader and it MUST fail
+{
+  const broken=SRC.replace(/s\.routine\b/g,'s.__gone__');
+  const stillOk=fields.filter(f=>!new RegExp('s\\.'+f+'\\b').test(broken));
+  ok(stillOk.includes('routine'),'NEGATIVE TEST: removing the routine loader must be detected');
+}
+
+// v0.7.3 tripwire — a trailing // comment on a line holding more than one loader
+const risky=SRC.split('\n').map((l,i)=>[i+1,l]).filter(([,l])=>/\/\//.test(l)&&(l.match(/if \(s\./g)||[]).length>1);
+ok(risky.length===0,'line holds >1 loader AND a trailing // comment: '+risky.map(r=>r[0]).join(','));
+
+// --- release.sh: the gate must be an EXACT tag match, not a substring ---
+const RS=fs.readFileSync(__FCROOT + '/release.sh','utf8');
+ok(!/grep -q "v\$VER"/.test(RS),'gate must not substring-match the bare version (v0.8.1 matches v0.8.10)');
+ok(/VER_RE=/.test(RS)&&/sed .s\/\\\.\//.test(RS),'gate escapes dots so they are not regex wildcards');
+ok(RS.includes('${VER_RE}')&&/grep -q .*VER_RE/.test(RS),'gate matches on the escaped, quoted tag');
+ok(!/SAFE TO TAP[\s\S]{0,200}Registry says: \$TAGS/.test(RS),'success path must not dump the whole tag list');
+ok(/Full list: \$TAGS/.test(RS),'failure path still prints the full list — that is when you need it');
+ok(/COUNT=/.test(RS),'success path reports a tag count instead');
+
+// --- Ask-this-menu and bottom clearance must NOT depend on the Skip-today list ---
+// v0.8.6 emptied `avoid` for curated chain menus; both were nested inside that block and vanished.
+{
+  const i=SRC.indexOf('(result.avoid || []).length > 0');
+  ok(i>0,'found the Skip-today gate');
+  const close=SRC.indexOf(')}', SRC.indexOf('result.avoid.map', i));
+  const block=SRC.slice(i, close);
+  ok(!/Ask about this menu/.test(block),'Ask-this-menu must not be nested inside the Skip-today block');
+  ok(!/paddingBottom: 96/.test(block),'the 96px bottom clearance must not be nested inside the Skip-today block');
+  const after=SRC.slice(close, close+1600);
+  ok(/Ask about this menu/.test(after),'Ask-this-menu renders unconditionally after it');
+  // (the per-view 96px clearance is gone — the scroll container now reserves bar height + safe-area)
+}
+// clearance is now UNIVERSAL: the scroll container reserves bar height + safe-area, so no view
+// may carry its own 96px band-aid (they stack into dead space and drift out of sync)
+// (flex-basis "0 0 96px" on the severity select is a WIDTH, not clearance — excluded)
+ok((SRC.match(/paddingBottom: 96|padding: "[^"]*96px"/g)||[]).length===0,'no per-view 96px clearance remains anywhere');
+ok(/padding: "20px 20px calc\(24px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(SRC),'the bottom sheet uses the safe-area pattern like the other sheets');
+
+// --- Skip-today rows: the renderer must read the field the producers emit ---
+// composePicks and sanitizePicks both emit {item, reason}; the row read a.name and rendered blank.
+// AI-supplied entries may carry `name`, so the row accepts either.
+{
+  const row=SRC.match(/<span[^>]*>\{a\.[^}]*\}<\/span><span[^>]*>\{a\.reason\}/);
+  ok(!!row,'found the Skip-today row');
+  if(row){
+    ok(/a\.item/.test(row[0]),'row must read a.item — both producers emit it: '+row[0].slice(0,80));
+  }
+  const prods=[...SRC.matchAll(/reason: (?:\(|`)/g)].length;
+  ok(prods>=2,'found both avoid producers ('+prods+')');
+  // neither producer may emit ONLY a name field
+  ok(!/moved\.push\(\{ name:/.test(SRC)&&!/=> \(\{ name: it\.item/.test(SRC),'no avoid producer emits name-only');
+}
+
+// --- no placeholder body measurements may ever ship again ---
+{
+  const m=SRC.match(/useState\(\{ sex: "male",([^}]*)\}\)/);
+  ok(!!m,'found the body state initialiser');
+  if(m){
+    const init=m[1];
+    for(const f of ['heightIn','neck','waist','hip']){
+      const v=(init.match(new RegExp(f+':\\s*([0-9]+)'))||[])[1];
+      ok(v==='0',f+' must initialise to 0 (unknown), got '+v+' — a non-zero default makes the Navy tile invent a body fat from numbers nobody entered');
+    }
+  }
+  // the formula must refuse to compute on missing inputs
+  ok(/if \(!heightIn \|\| !neck \|\| !waist\) return 0;/.test(SRC),'calcBodyFat returns 0 when any measurement is missing');
+  // every tile falls back to an em dash rather than a number
+  ok(/bmi \? bmi\.toFixed\(1\) : "—"/.test(SRC),'BMI tile shows — when height is unknown');
+  ok(/bfShown \? bfShown\.toFixed\(1\) : "—"/.test(SRC),'body fat tile shows — when nothing is known');
+  ok(/leanShown \? leanShown\.toFixed\(0\) : "—"/.test(SRC),'lean tile shows — when nothing is known');
+  // a measured reading must outrank the tape-measure estimate, and be labelled as such
+  ok(/const bfShown = bfMeasured \|\| bodyFat/.test(SRC),'measured body fat outranks the Navy estimate');
+  ok(/bfMeasured \? "measured"/.test(SRC),'the tile says "measured" when it is');
+  ok(/"Navy estimate"/.test(SRC),'an estimate is labelled an estimate, not just a method name');
+  ok(!/>Navy method</.test(SRC),'the bare "Navy method" label is gone — it read as a measurement');
+  ok(/add height, neck & waist/.test(SRC),'when nothing is entered the tile says what to enter');
+}
+
+// --- ONE source for body composition: measured beats the tape-measure estimate EVERYWHERE ---
+// The Journey card read 174 lb (Navy) while the LEAN tile beside it read 136 (measured).
+{
+  ok(/const leanShown = bfShown/.test(SRC),'leanShown derives from bfShown');
+  ok(/const bfShown = bfMeasured \|\| bodyFat/.test(SRC),'bfShown prefers the measured reading');
+  ok(/const leanMass = leanShown;/.test(SRC),'leanMass IS leanShown — not a second derivation');
+  ok(!/const leanMass = bodyFat \?/.test(SRC),'leanMass must never re-derive from the raw estimate');
+  ok(/body_fat_pct: bfShown/.test(SRC),'the coach is briefed with the measured value');
+  ok(/body_fat_source:/.test(SRC),'the coach is told whether it is measured or estimated');
+  ok(/lean_mass_lbs: leanShown/.test(SRC),'the coach gets lean mass too');
+  // sweep: nothing else may consume the raw estimate
+  // sweep WHOLE LINES — matchAll truncates at the match, so "const bodyFat = calcBodyFat(...)"
+  // arrives as "const bodyFat" and slips past a filter looking for the assignment.
+  const NOCOMMENT=SRC.replace(/\/\*[\s\S]*?\*\//g,'').split('\n').map(l=>l.replace(/\/\/.*$/,'')).join('\n');
+  const raw=NOCOMMENT.split('\n').filter(l=>/[^a-zA-Z_](bodyFat|leanMass)[^a-zA-Z(]/.test(l))
+    .map(l=>l.trim())
+    .filter(l=>!/^\/\/|^\*|^\/\*/.test(l))                              // comments
+    .filter(l=>!/^const bodyFat = calcBodyFat/.test(l))                  // the definition itself
+    .filter(l=>!/^const leanMass = leanShown;/.test(l))                  // the single source
+    .filter(l=>!/bfMeasured|bfShown|leanShown/.test(l))                  // already on the right value
+    .filter(l=>!/lastBf \?/.test(l))                                      // goalContract: measured first, estimate only as fallback
+    .filter(l=>!/\{leanMass \? leanMass\.toFixed/.test(l));               // renders leanShown via leanMass
+  ok(raw.length===0,'no consumer reads the raw Navy estimate: '+raw.map(l=>l.slice(0,70)).join(' | '));
+}
+
+// --- intake bookkeeping: what ADD puts in, DELETE must take out ---
+{
+  const del=(SRC.match(/setEaten\(\(e\) => \(\{ \.\.\.e, protein: Math\.max\(0[^;]*\}\)\);/)||[])[0]||'';
+  ok(!!del,'found the meal-delete path');
+  for(const f of ['protein','calories','carbs','fat','fiber'])
+    ok(new RegExp(f+': Math\\.max\\(0').test(del),'delete must subtract '+f+' — it was leaving carbs and fiber on the day forever');
+  // every add path carries fiber, or delete can never balance
+  const adds=SRC.split('\n').filter(l=>/setEaten\(\(e\) => \(\{ \.\.\.e, protein: e\.protein \+/.test(l));
+  ok(adds.length>=2,'found the add paths ('+adds.length+')');
+  for(const a of adds) ok(/fiber:/.test(a),'an add path drops fiber: '+a.trim().slice(0,90));
+  // tap-to-log
+  ok(/const commitQuick =/.test(SRC),'quick-add commit exists');
+  // the four tiles share ONE call inside .map, so source occurrences are 4: number, label, calories, tiles
+  ok((SRC.match(/openQuick\(/g)||[]).length>=4,'headline, label, calories and the tile map are tappable, got '+(SRC.match(/openQuick\(/g)||[]).length);
+  ok(/onClick=\{\(\) => openQuick\(m\.field, m\.short, m\.unit\)\}/.test(SRC),'the tile card itself is the tap target, driven by its own field');
+  ok(/openQuick\("protein"/.test(SRC)&&/openQuick\("calories"/.test(SRC),'protein and calories are reachable from the headline');
+  for(const f of ['carbs','fat','waterOz','fiber']) ok(new RegExp('field: "'+f+'"').test(SRC),'tile carries field '+f);
+  ok(/QUICK_KCAL = \{ protein: 4, carbs: 4, fat: 9 \}/.test(SRC),'macro entries carry their own calories');
+  ok(/Tap any number above to log intake by hand/.test(SRC),'the caption says the numbers are tappable');
+  ok(/Change today's goals/.test(SRC),'the goals link no longer reads like it edits intake');
+}
+
+// --- bottom clearance: content must never hide behind the fixed tab bar ---
+// The bar is ~62px PLUS env(safe-area-inset-bottom) (~34px installed on iPhone). A fixed
+// paddingBottom covered Safari and clipped the PWA; per-view 96px band-aids papered over it
+// inconsistently, which is exactly the screen-by-screen clipping he screenshotted.
+ok(/overflowY: "auto", paddingBottom: "calc\(88px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(SRC),'the universal scroll container reserves bar height + safe-area');
+ok(!/overflowY: "auto", paddingBottom: 76/.test(SRC),'the fixed 76 is gone');
+ok(!/paddingBottom: 96 \}\}>/.test(SRC),'no per-view band-aid paddings remain to stack or drift');
+ok(/bottom: "calc\(72px \+ env\(safe-area-inset-bottom, 0px\)\)", zIndex: 300/.test(SRC),'the floating toast clears the bar in installed mode too');
+ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(SRC),'the bar itself still pads for the home indicator');
+
+// --- v0.9.15 audit findings, locked in ---
+{
+  const SRV=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  const DOCK=require('fs').readFileSync(__FCROOT + '/Dockerfile','utf8');
+  const PKG=JSON.parse(require('fs').readFileSync(__FCROOT + '/package.json','utf8'));
+  const LOCK=JSON.parse(require('fs').readFileSync(__FCROOT + '/package-lock.json','utf8'));
+  // every upstream fetch carries a timeout (signal within a 9-line window)
+  const lines=SRV.split('\n'); let naked=0;
+  lines.forEach((l,i)=>{ if(/await fetch\(/.test(l)&&!/AbortSignal\.timeout|signal:/.test(lines.slice(i,i+9).join('\n'))) naked++; });
+  ok(naked===0,'every server fetch carries a timeout, '+naked+' naked');
+  // lock and manifest agree on the historically-pinned dep, and Docker pins exactly
+  ok(PKG.dependencies['pdf-parse']==='1.1.1','manifest pins pdf-parse exactly');
+  ok(LOCK.packages['node_modules/pdf-parse'].version==='1.1.1','lock matches the manifest pin');
+  ok(/npm ci --no-audit/.test(DOCK),'build stage installs from the lockfile');
+  ok(/COPY package\.json package-lock\.json/.test(DOCK),'the lockfile is actually copied in');
+  ok(/express@4\.22\.2 pdf-parse@1\.1\.1 puppeteer-core@25\.3\.0 web-push@3\.6\.7/.test(DOCK),'runtime deps pinned exact');
+  // the usage endpoint is honest both sides
+  ok(/ok: false, count: null, bytes: null/.test(SRV),'usage failure is failure-shaped');
+  ok(/storage unreadable/.test(SRC),'the client renders the failure instead of 0 files');
+}
+console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
+process.exit(fail?1:0);
