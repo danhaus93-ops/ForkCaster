@@ -211,5 +211,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/"apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH"/.test(A4),'the chip names known platforms');
   ok(/: "SYNCED"/.test(A4),'untagged synced days still fall back to the generic SYNCED chip');
 }
+// v0.9.27: the Today steps tile agrees with Body — shows today's synced count when it beats the manual tap counter
+{
+  const A5=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/Math\.max\(\+eaten\.steps \|\| 0, syn\)/.test(A5),'the tile shows the larger of manual and synced-today');
+  ok(/d\.date === tk/.test(A5) && /dayKeyAt\(Date\.now\(\), prefs\)/.test(A5),'synced lookup uses the unified day clock, not UTC');
+  ok(/"synced \\u00b7 goal 10,000"/.test(A5),'the tile says when the number came from sync');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

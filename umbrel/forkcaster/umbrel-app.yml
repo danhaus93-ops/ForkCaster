@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.26"
+version: "0.9.27"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.26: health data now shows where it came from. Synced days can carry
-  a source tag (add &source=apple-health to your Health Auto Export URL, or
-  &source=google-health from an Android bridge), and synced weigh-ins in
-  the Body list are labeled APPLE HEALTH or GOOGLE HEALTH instead of a
-  generic SYNCED chip. Groundwork for Android support: the sync endpoint
-  already speaks one neutral format for both platforms.
+  v0.9.27: the Today steps tile now shows your synced step count. It
+  displays whichever is larger - your manual taps or today's steps synced
+  from Apple Health - with a small "synced" note when the number came from
+  your phone or wearable. Today and Body finally agree on steps, and the
+  lookup respects your night-shift day boundaries.
 dependencies: []
 path: ""
 defaultUsername: ""

@@ -2734,7 +2734,12 @@ export default function App() {
           </>)}</div>
 
         <div style={{ display: "flex", gap: 12, marginTop: 14 }}>
-          {card(<>{stat("Steps", eaten.steps.toLocaleString(), "")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>goal 10,000</div></>, { flex: 1 })}
+          {card(<>{(() => {
+            const tk = dayKeyAt(Date.now(), prefs);
+            const syn = (((healthSync && healthSync.days) || []).find((d) => d.date === tk) || {}).steps || 0;
+            const shown = Math.max(+eaten.steps || 0, syn);
+            return <>{stat("Steps", shown.toLocaleString(), "")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>{syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"}</div></>;
+          })()}</>, { flex: 1 })}
           {card(<>{stat("Exercise", eaten.exerciseCal, " cal")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>burned today</div></>, { flex: 1 })}
         </div>
 
