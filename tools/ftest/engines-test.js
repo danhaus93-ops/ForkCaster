@@ -84,5 +84,27 @@ console.log('  glp1 picks:',JSON.stringify(picks.map(p=>p.item||p.name||p.id)));
   ok(/const weeksToGoal = projReady &&/.test(SRC3), 'the goal date is gated on the floor');
   ok(/Collecting — log ~2 weeks of weigh-ins/.test(SRC3), 'the card explains itself instead of guessing');
 }
+// v0.9.23: titration tracker — informs, never prescribes
+{
+  const M = build(slice('const MEDS = {', '/* Titration position') + slice('function titrationRead(', '/* Delivery hand-off'), ['titrationRead']);
+  const w = (mg, n) => Array.from({ length: n }, (_, i) => ({ date: '2026-07-' + (i + 1), mg }));
+  const t1 = M.titrationRead(w(0.25, 3), 'semaglutide');
+  ok(t1 && t1.n === 3 && !t1.due && t1.next === 0.5, 'sema 3 of 4 at 0.25 — not yet due, next rung shown');
+  const t2 = M.titrationRead(w(0.25, 4), 'semaglutide');
+  ok(t2 && t2.due && t2.next === 0.5 && !t2.investigational, 'sema 4 doses — step to 0.5 due, approved schedule');
+  const t3 = M.titrationRead([...w(0.25, 4), ...w(0.5, 2)], 'semaglutide');
+  ok(t3 && t3.cur === 0.5 && t3.n === 2 && !t3.due && t3.next === 1, 'mixed history counts CONSECUTIVE at current mg only');
+  const t4 = M.titrationRead(w(2, 4), 'retatrutide');
+  ok(t4 && t4.due && t4.next === 4 && t4.investigational === true, 'reta 4x2mg — TRIUMPH ladder steps to 4, flagged investigational');
+  const t5 = M.titrationRead(w(2.4, 5), 'semaglutide');
+  ok(t5 && t5.atTop && !t5.due, 'maintenance dose: at top, never due');
+  const t6 = M.titrationRead(w(0.3, 4), 'semaglutide');
+  ok(t6 && t6.custom && t6.next === 0.5, 'custom compounded dose: flagged, next rung above shown');
+  ok(M.titrationRead([], 'semaglutide') === null && M.titrationRead(w(1, 3), 'nope') === null, 'empty log or unknown med is null');
+  const SRC4 = require('fs').readFileSync(__FCROOT + '/src/App.jsx', 'utf8');
+  ok(/RETATRUTIDE IS INVESTIGATIONAL/.test(SRC4), 'the trial-protocol warning is unmissable on the card');
+  ok(/Confirm with your prescriber; log whatever you actually take/.test(SRC4), 'the card defers the decision, always');
+  ok(/steps: \[2, 4, 8, 12\]/.test(SRC4), 'the TRIUMPH escalation ladder is the reta data');
+}
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

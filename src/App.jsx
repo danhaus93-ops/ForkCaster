@@ -288,9 +288,26 @@ const MEDS = {
     steps: [3, 12, 24, 36], unit: "mg",
     note: "FDA-approved Apr 2026. Take any time of day — no food or water restrictions. Step up per your prescriber." },
   retatrutide: { label: "Retatrutide", brand: "Investigational (Lilly)", cadence: "weekly", investigational: true,
-    steps: [], unit: "mg",
-    note: "Phase 3 (TRIUMPH), not FDA-approved. Trial/clinician-directed dosing only — no schedule shown." },
+    steps: [2, 4, 8, 12], unit: "mg",
+    note: "NOT FDA-approved. This ladder is the TRIUMPH Phase 2/3 trial escalation (4-week rungs) — a trial protocol, not medical guidance." },
 };
+
+/* Titration position. Counts CONSECUTIVE logged doses at the current mg and reads the med's
+   ladder. INFORMS, NEVER PRESCRIBES: the card says what the published schedule (or, for
+   investigational meds, the trial protocol) does next, and always defers the decision.
+   Weekly meds: 4 doses per rung. Daily meds: 30 days per rung. */
+function titrationRead(doseLog, med) {
+  const m = MEDS[med];
+  const log = (doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+  if (!m || !m.steps || !m.steps.length || !log.length) return null;
+  const cur = +log[log.length - 1].mg;
+  let n = 0;
+  for (let i = log.length - 1; i >= 0 && +log[i].mg === cur; i--) n++;
+  const need = m.cadence === "daily" ? 30 : 4;
+  const idx = m.steps.indexOf(cur);
+  const next = idx >= 0 ? (m.steps[idx + 1] ?? null) : (m.steps.find((x) => x > cur) ?? null);
+  return { cur, n, need, next, atTop: next == null, custom: idx < 0, due: n >= need && next != null, investigational: !!m.investigational, unit: m.unit, steps: m.steps };
+}
 
 /* Delivery hand-off. These are UNIVERSAL LINKS: plain https URLs that iOS/Android intercept and
    route into the installed app. They only fire on a real user tap of an <a> — a window.open() or a
@@ -3130,6 +3147,23 @@ export default function App() {
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} />)}</div>}
 
       {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
+      {(() => { const t = titrationRead(glp.doseLog, glp.med); if (!t) return null; return (
+        <div style={{ marginBottom: 14 }}>{card(
+          <>
+            {sectionTitle("Titration tracker", C.go)}
+            {t.investigational && <div style={{ background: C.caution + "22", border: `1.5px solid ${C.caution}`, borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 12, color: C.caution, fontWeight: 700 }}>RETATRUTIDE IS INVESTIGATIONAL — this ladder is the TRIUMPH trial escalation, not an approved schedule. The stepping decision is yours and your prescriber's.</div>}
+            <div style={{ display: "flex", gap: 6, marginBottom: 9, flexWrap: "wrap" }}>
+              {t.steps.map((mg) => (<span key={mg} style={{ padding: "5px 11px", borderRadius: 18, fontSize: 12.5, fontWeight: 800, border: `1.5px solid ${mg === t.cur ? C.go : C.hair}`, color: mg === t.cur ? C.go : C.muted, background: mg === t.cur ? C.go + "1A" : "transparent" }}>{mg} {t.unit}</span>))}
+              {t.custom && <span style={{ padding: "5px 11px", borderRadius: 18, fontSize: 12.5, fontWeight: 800, border: `1.5px solid ${C.go}`, color: C.go }}>{t.cur} {t.unit} (custom)</span>}
+            </div>
+            {t.need === 4 && <div style={{ display: "flex", gap: 7, marginBottom: 8 }}>{Array.from({ length: 4 }, (_, i) => (<span key={i} style={{ width: 13, height: 13, borderRadius: "50%", background: i < Math.min(t.n, 4) ? C.go : "transparent", border: `2px solid ${i < Math.min(t.n, 4) ? C.go : C.hair}` }} />))}</div>}
+            <div style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.5 }}>
+              {t.due ? <><b>{t.n} {t.need === 4 ? "weekly doses" : "days"} completed at {t.cur} {t.unit}.</b> {t.investigational ? "The trial protocol escalated to" : "The published schedule steps to"} <b>{t.next} {t.unit}</b> next — if this stretch went well (side effects tolerable, no red flags), that's the usual move. Confirm with your prescriber; log whatever you actually take.</>
+               : t.atTop ? <>You're at the top of the ladder — <b>{t.cur} {t.unit}</b> is the maintenance dose. Holding here is the plan.</>
+               : <><b>{t.need === 4 ? "Dose" : "Day"} {Math.min(t.n, t.need)} of {t.need}</b> at {t.cur} {t.unit}.{t.next != null && <> Next rung when complete: {t.next} {t.unit}.</>} Holding a dose longer is always valid — plenty of people never need the top of the ladder.</>}
+            </div>
+          </>
+        )}</div>); })()}
       <div style={{ marginBottom: 14 }}>{card(
         <>
           {sectionTitle("On-med nudges", C.violet)}

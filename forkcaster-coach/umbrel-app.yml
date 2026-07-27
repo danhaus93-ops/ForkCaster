@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.22"
+version: "0.9.23"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.22: three logging fixes. Describe-a-meal works again - it was the
-  only AI call that depended solely on the structured-output field, so when
-  that field failed the model answered in prose and every request looked
-  like a wording problem; the prompt now demands JSON directly, and error
-  messages distinguish an unreachable AI from a genuine parse failure.
-  Quick-adds from the Now tiles now write a visible entry in Today instead
-  of only bumping the counter. And the app saves immediately when closed
-  or backgrounded, so taps made just before swiping away can no longer be
-  lost.
+  v0.9.23: titration tracker on the GLP-1 tab. Shows your medication's dose
+  ladder with your current rung highlighted, counts your logged doses at
+  that rung (4 weekly doses, or 30 days for daily meds), and when a rung is
+  complete it tells you what the published schedule does next - always
+  deferring the decision to you and your prescriber. Works for every
+  medication in the app; retatrutide shows the TRIUMPH trial escalation
+  under a permanent banner marking it as a trial protocol, not an approved
+  schedule. Custom compounded doses are recognized and tracked too.
 dependencies: []
 path: ""
 defaultUsername: ""
