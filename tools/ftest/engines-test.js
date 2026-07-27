@@ -1,3 +1,4 @@
+const __FCROOT = require("path").resolve(__dirname, "..", "..");
 const {slice,build}=require('./lib.js');
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const iso=(d)=>new Date(Date.now()-d*864e5).toISOString().slice(0,10);
@@ -56,5 +57,20 @@ const cut=CP.composePicks(items,'cut','none',60,900,null).picks;
 ok(cut[0].item!=='Gladiator GLP-1'||true,'cut mode runs; order: '+cut.map(p=>p.item).join(' · '));
 console.log('  glp1 picks:',JSON.stringify(picks.map(p=>p.item||p.name||p.id)));
 
+// v0.9.20: the display merge — manual wins per date, synced fills gaps, sorted
+{
+  const M = build(slice('function mergeWeightSeries(', 'function adaptiveRead('), ['mergeWeightSeries']);
+  const manual = [{ date: '2026-07-25', lbs: 216.9 }];
+  const hd = [{ date: '2026-07-24', weightLbs: 217.4 }, { date: '2026-07-25', weightLbs: 999 }, { date: '2026-07-26', weightLbs: 216.5 }];
+  const out = M.mergeWeightSeries(manual, hd);
+  ok(out.length === 3, 'merged series covers manual + synced days');
+  ok(out[1].lbs === 216.9 && !out[1].synced, 'manual entry BEATS the synced value on the same date');
+  ok(out[0].synced === true && out[0].lbs === 217.4, 'synced-only days fill in, tagged');
+  ok(out.map(w => w.date).join(',') === '2026-07-24,2026-07-25,2026-07-26', 'sorted by date');
+  ok(M.mergeWeightSeries([], []).length === 0 && M.mergeWeightSeries(null, null).length === 0, 'empty and null inputs are safe');
+  const SRC2 = require('fs').readFileSync(__FCROOT + '/src/App.jsx', 'utf8');
+  ok(/weightSeries\.length > 1 \? lineChart\(weightSeries/.test(SRC2), 'the Body chart reads the merged series');
+  ok(/w\.synced \? <span/.test(SRC2), 'synced rows are tagged and cannot be deleted from the list');
+}
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

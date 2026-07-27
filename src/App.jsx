@@ -317,6 +317,14 @@ const log10 = (x) => Math.log(x) / Math.LN10;
 // tomorrow while the meal LIST filtered by the local clock. One clock now; the UTC boundary is dead.
 const todayISO = () => dayKeyAt(Date.now(), _dayPrefs);
 /* ── Adaptive targets: read the real weight trend against dose context (v0.4.1) ── */
+/* The display-layer twin of adaptiveRead's merge: manual/scan entries are authoritative per date,
+   Apple Health-synced weights fill the remaining days (tagged synced:true for the UI). */
+function mergeWeightSeries(weightLog, healthDays) {
+  const byDate = new Map();
+  for (const d of (healthDays || [])) if (d.weightLbs) byDate.set(d.date, { date: d.date, lbs: d.weightLbs, synced: true });
+  for (const w of (weightLog || [])) if (w.lbs) byDate.set(w.date, { date: w.date, lbs: w.lbs });
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
 function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
   const byDate = new Map();
   for (const d of (healthDays || [])) if (d.weightLbs) byDate.set(d.date, d.weightLbs);
@@ -1413,8 +1421,9 @@ export default function App() {
   const fiberPct = targets.fiber ? Math.min(100, (eaten.fiber / targets.fiber) * 100) : 0;
   const proteinPct = Math.min(100, (eaten.protein / targets.protein) * 100);
   const timeStr = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  const curWeight = weightLog[weightLog.length - 1]?.lbs || 0;
-  const startWeight = weightLog[0]?.lbs || curWeight;
+  const weightSeries = mergeWeightSeries(weightLog, (healthSync && healthSync.days) || []);
+  const curWeight = weightSeries[weightSeries.length - 1]?.lbs || 0;
+  const startWeight = weightSeries[0]?.lbs || curWeight;
   const bmi = curWeight && body.heightIn ? (703 * curWeight) / (body.heightIn * body.heightIn) : 0;
   const bodyFat = calcBodyFat(body, curWeight);
   // A scale reading beats a tape-measure estimate. Label whichever one is on screen so a derived
@@ -1447,7 +1456,7 @@ export default function App() {
   })();
   const daysToInjection = Math.max(0, Math.ceil((nextInjection - new Date()) / 86400000));
   const dueISO = nextInjection.toLocaleDateString("sv-SE");
-  const recentRate = weeklyRate(weightLog);
+  const recentRate = weeklyRate(weightSeries);
   const weeksToGoal = recentRate > 0.05 && curWeight > goalWeight ? Math.ceil((curWeight - goalWeight) / recentRate) : null;
   const goalDate = weeksToGoal ? addDays(new Date(), weeksToGoal * 7) : null;
 
@@ -1821,9 +1830,9 @@ export default function App() {
     }
   }
   function nearestWeight(dateISO) {
-    if (!weightLog.length || !dateISO) return null;
+    if (!weightSeries.length || !dateISO) return null;
     let best = null, bd = Infinity;
-    for (const w of weightLog) { const d = Math.abs(new Date(w.date) - new Date(dateISO)); if (d < bd) { bd = d; best = w; } }
+    for (const w of weightSeries) { const d = Math.abs(new Date(w.date) - new Date(dateISO)); if (d < bd) { bd = d; best = w; } }
     return bd <= 10 * 86400000 ? best : null; // within 10 days or don't claim it
   }
   async function deletePhoto(idx) {
@@ -2918,18 +2927,18 @@ export default function App() {
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Body</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
 
-      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightLog} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />)}</div>
+      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />)}</div>
       <div style={{ marginBottom: 14 }}>{card(
         <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <div style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{fmtWt(curWeight)}<span style={{ fontSize: 16, color: C.muted }}> {wtU}</span></div>
             <div style={{ textAlign: "right" }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.go }}>−{lost.toFixed(1)} lbs</div><div style={{ fontSize: 11, color: C.faint }}>since start</div></div>
           </div>
-          {weightLog.length > 1 ? lineChart(weightLog.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
-          {weightLog.length > 0 && <div style={{ marginTop: 8 }}>{[...weightLog].slice(-3).reverse().map((w, i) => (
+          {weightSeries.length > 1 ? lineChart(weightSeries.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
+          {weightSeries.length > 0 && <div style={{ marginTop: 8 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
             <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ fontSize: 12.5, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
-              <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>
+              {w.synced ? <span style={{ fontSize: 10, fontWeight: 800, color: C.faint, letterSpacing: 0.4, padding: 4 }}>SYNCED</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>}
             </div>
           ))}</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
