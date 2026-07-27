@@ -306,7 +306,7 @@ function titrationRead(doseLog, med) {
   const need = m.cadence === "daily" ? 30 : 4;
   const idx = m.steps.indexOf(cur);
   const next = idx >= 0 ? (m.steps[idx + 1] ?? null) : (m.steps.find((x) => x > cur) ?? null);
-  return { cur, n, need, next, atTop: next == null, custom: idx < 0, due: n >= need && next != null, investigational: !!m.investigational, unit: m.unit, steps: m.steps };
+  return { cur, n, need, next, atTop: next == null, custom: idx < 0, due: n >= need && next != null, holding: n >= need + 2 && next != null, investigational: !!m.investigational, unit: m.unit, steps: m.steps };
 }
 
 /* Delivery hand-off. These are UNIVERSAL LINKS: plain https URLs that iOS/Android intercept and
@@ -3156,9 +3156,10 @@ export default function App() {
               {t.steps.map((mg) => (<span key={mg} style={{ padding: "5px 11px", borderRadius: 18, fontSize: 12.5, fontWeight: 800, border: `1.5px solid ${mg === t.cur ? C.go : C.hair}`, color: mg === t.cur ? C.go : C.muted, background: mg === t.cur ? C.go + "1A" : "transparent" }}>{mg} {t.unit}</span>))}
               {t.custom && <span style={{ padding: "5px 11px", borderRadius: 18, fontSize: 12.5, fontWeight: 800, border: `1.5px solid ${C.go}`, color: C.go }}>{t.cur} {t.unit} (custom)</span>}
             </div>
-            {t.need === 4 && <div style={{ display: "flex", gap: 7, marginBottom: 8 }}>{Array.from({ length: 4 }, (_, i) => (<span key={i} style={{ width: 13, height: 13, borderRadius: "50%", background: i < Math.min(t.n, 4) ? C.go : "transparent", border: `2px solid ${i < Math.min(t.n, 4) ? C.go : C.hair}` }} />))}</div>}
+            {t.need === 4 && <div style={{ display: "flex", gap: 7, marginBottom: 8, alignItems: "center" }}>{Array.from({ length: 4 }, (_, i) => (<span key={i} style={{ width: 13, height: 13, borderRadius: "50%", background: i < Math.min(t.n, 4) ? C.go : "transparent", border: `2px solid ${i < Math.min(t.n, 4) ? C.go : C.hair}` }} />))}{t.n > 4 && <span style={{ fontSize: 12, fontWeight: 800, color: C.go, marginLeft: 3 }}>+{t.n - 4}</span>}</div>}
             <div style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.5 }}>
-              {t.due ? <><b>{t.n} {t.need === 4 ? "weekly doses" : "days"} completed at {t.cur} {t.unit}.</b> {t.investigational ? "The trial protocol escalated to" : "The published schedule steps to"} <b>{t.next} {t.unit}</b> next — if this stretch went well (side effects tolerable, no red flags), that's the usual move. Confirm with your prescriber; log whatever you actually take.</>
+              {t.holding ? <><b>You're holding at {t.cur} {t.unit} — {t.n} {t.need === 4 ? "weekly doses" : "days"} and counting.</b> A valid choice many people make; losing well at a lower dose needs no fixing. The next rung remains {t.next} {t.unit} whenever you and your prescriber decide.</>
+               : t.due ? <><b>{t.n} {t.need === 4 ? "weekly doses" : "days"} completed at {t.cur} {t.unit}.</b> {t.investigational ? "The trial protocol escalated to" : "The published schedule steps to"} <b>{t.next} {t.unit}</b> next — if this stretch went well (side effects tolerable, no red flags), that's the usual move. Confirm with your prescriber; log whatever you actually take.</>
                : t.atTop ? <>You're at the top of the ladder — <b>{t.cur} {t.unit}</b> is the maintenance dose. Holding here is the plan.</>
                : <><b>{t.need === 4 ? "Dose" : "Day"} {Math.min(t.n, t.need)} of {t.need}</b> at {t.cur} {t.unit}.{t.next != null && <> Next rung when complete: {t.next} {t.unit}.</>} Holding a dose longer is always valid — plenty of people never need the top of the ladder.</>}
             </div>
