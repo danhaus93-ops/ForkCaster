@@ -67,6 +67,19 @@ const off=http.createServer((q,r)=>{
     const j4 = await post({ _baseRev: 99, saved: true, note: 'restore' }, '?force=1');
     ok(j4.ok === true, 'force=1 (backup restore) bypasses the gate deliberately');
   }
+  // v0.9.26: health-day provenance — the source tag survives ingest -> storage -> summary
+  {
+    const setup = await fetch('http://127.0.0.1:3996/api/health/setup').then(r => r.json());
+    const sj = await fetch('http://127.0.0.1:3996/api/health/sync?token=' + setup.token + '&source=google-health', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: '2026-07-27', steps: 4321, weightLbs: 216.1 }) }).then(r => r.json());
+    ok(sj.ok === true && sj.daysUpdated === 1, 'simple sync accepted with a source tag');
+    const sum = await fetch('http://127.0.0.1:3996/api/health/summary').then(r => r.json());
+    const day = (sum.days || []).find(d => d.date === '2026-07-27');
+    ok(day && day.source === 'google-health' && day.steps === 4321, 'summary carries the provenance tag through');
+    const sj2 = await fetch('http://127.0.0.1:3996/api/health/sync?token=' + setup.token + '&source=<bad$src>', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: '2026-07-26', steps: 100 }) }).then(r => r.json());
+    const sum2 = await fetch('http://127.0.0.1:3996/api/health/summary').then(r => r.json());
+    const day2 = (sum2.days || []).find(d => d.date === '2026-07-26');
+    ok(sj2.ok === true && day2 && day2.source == null, 'a malformed source tag is dropped, never stored');
+  }
   p.kill(); fdc.close(); off.close();
 
   // 5) the client renders the two states differently

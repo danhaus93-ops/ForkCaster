@@ -279,6 +279,9 @@ app.get("/api/health/setup", (req, res) => {
 app.post("/api/health/sync", (req, res) => {
   const h = _loadHealth();
   if (!h.token || String(req.query.token || "") !== h.token) return res.status(403).json({ ok: false, error: "bad token" });
+  // provenance: which platform fed this day (apple-health, google-health, a device name). Optional, sanitized.
+  const _src = String(req.query.source || "").toLowerCase();
+  const okSrc = /^[a-z0-9-]{2,24}$/.test(_src) ? _src : null;
   // SIMPLE shape (Apple Shortcuts-friendly): {"date":"YYYY-MM-DD","steps":N,"weightLbs":N,...} or an array of such — no HAE required
   const _simple = Array.isArray(req.body) ? req.body : (req.body && req.body.date ? [req.body] : null);
   if (_simple) {
@@ -295,7 +298,7 @@ app.post("/api/health/sync", (req, res) => {
       const w = +rec.weightLbs; if (Number.isFinite(w) && w > 40 && w < 900) clean.weightLbs = Math.round(w * 10) / 10;
       const wkg = +rec.weightKg; if (clean.weightLbs == null && Number.isFinite(wkg) && wkg > 18) clean.weightLbs = Math.round(wkg * 2.20462 * 10) / 10;
       if (!Object.keys(clean).length) continue;
-      h.days[d] = { ...h.days[d], ...clean }; n++;
+      h.days[d] = { ...h.days[d], ...clean, ...(okSrc ? { source: okSrc } : {}) }; n++;
     }
     const kk = Object.keys(h.days).sort(); while (kk.length > 400) delete h.days[kk.shift()];
     _saveHealth(h);
@@ -324,7 +327,7 @@ app.post("/api/health/sync", (req, res) => {
     if (/strength|weight|functional|core|resistance/i.test(String(w.name || ""))) rec.strength = (rec.strength || 0) + 1;
   }
   // REPLACE each touched day's fields with this payload's totals — re-sent exports overwrite instead of double-counting
-  for (const [d, rec] of Object.entries(acc)) h.days[d] = { ...h.days[d], ...rec };
+  for (const [d, rec] of Object.entries(acc)) h.days[d] = { ...h.days[d], ...rec, ...(okSrc ? { source: okSrc } : {}) };
   const keys = Object.keys(h.days).sort(); while (keys.length > 400) delete h.days[keys.shift()]; // cap history
   _saveHealth(h);
   console.log(`[health] sync: ${touched.size} day(s) updated`);

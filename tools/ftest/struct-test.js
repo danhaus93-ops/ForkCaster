@@ -204,5 +204,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/api\/state\?force=1/.test(A3), 'backup restore uses the force path');
   ok(/revRef\.current = \(s && \+s\._rev\) \|\| 0/.test(A3), 'the loader adopts the revision it loaded');
 }
+// v0.9.26: provenance labeling end to end on the client
+{
+  const A4=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/synced: true, source: d\.source/.test(A4),'mergeWeightSeries carries the source tag');
+  ok(/"apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH"/.test(A4),'the chip names known platforms');
+  ok(/: "SYNCED"/.test(A4),'untagged synced days still fall back to the generic SYNCED chip');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

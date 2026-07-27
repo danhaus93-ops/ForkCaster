@@ -338,7 +338,7 @@ const todayISO = () => dayKeyAt(Date.now(), _dayPrefs);
    Apple Health-synced weights fill the remaining days (tagged synced:true for the UI). */
 function mergeWeightSeries(weightLog, healthDays) {
   const byDate = new Map();
-  for (const d of (healthDays || [])) if (d.weightLbs) byDate.set(d.date, { date: d.date, lbs: d.weightLbs, synced: true });
+  for (const d of (healthDays || [])) if (d.weightLbs) byDate.set(d.date, { date: d.date, lbs: d.weightLbs, synced: true, source: d.source });
   for (const w of (weightLog || [])) if (w.lbs) byDate.set(w.date, { date: w.date, lbs: w.lbs });
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -2989,7 +2989,7 @@ export default function App() {
           {weightSeries.length > 0 && <div style={{ marginTop: 8 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
             <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ fontSize: 12.5, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
-              {w.synced ? <span style={{ fontSize: 10, fontWeight: 800, color: C.faint, letterSpacing: 0.4, padding: 4 }}>SYNCED</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>}
+              {w.synced ? <span style={{ fontSize: 10, fontWeight: 800, color: C.faint, letterSpacing: 0.4, padding: 4 }}>{w.source ? ({ "apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH" }[w.source] || w.source.toUpperCase().replace(/-/g, " ")) : "SYNCED"}</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>}
             </div>
           ))}</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
