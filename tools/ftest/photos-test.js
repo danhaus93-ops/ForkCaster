@@ -73,5 +73,10 @@ ok(/if \(!has\(a\)\) setA/.test(SRC)&&/if \(!has\(b\)\) setB/.test(SRC),'only IN
   ok(pane(A,'front')==='f1'&&pane(B,'front')==='f2','the back add left the front pair alone');
 }
 
+// retention: forecasts REPLACE, never accumulate — his 13-files-in-use complaint
+ok(/setSimShots\(shots\);/.test(SRC),'a new forecast replaces the previous set');
+ok(!/setSimShots\(\(all\) => \[\.\.\.all, \.\.\.shots\]\)/.test(SRC),'the append-forever pattern is gone');
+ok(/aliveSims\.filter\(\(p\) => p === last \|\| \(last\.pairId && p\.pairId === last\.pairId\)\)/.test(SRC),'load trims history to the newest set (front+back share a pairId)');
+
 console.log('\nPHOTOS: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

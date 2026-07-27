@@ -1354,7 +1354,13 @@ export default function App() {
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog);
         if (s.photos) { const alive = s.photos.filter((p) => p && p.url && !p.url.startsWith("blob:")); const real = alive.filter((p) => !p.sim); const legacySims = alive.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
-        if (Array.isArray(s.simShots) && s.simShots.length) { const aliveSims = s.simShots.filter((p) => p && p.url && !p.url.startsWith("blob:")); setSimShots((x) => [...x.filter((p) => !aliveSims.find((q) => q.id === p.id)), ...aliveSims]); }
+        if (Array.isArray(s.simShots) && s.simShots.length) {
+          const aliveSims = s.simShots.filter((p) => p && p.url && !p.url.startsWith("blob:"));
+          // keep only the NEWEST set: the last entry plus anything sharing its pairId (front+back)
+          const last = aliveSims[aliveSims.length - 1];
+          const newest = last ? aliveSims.filter((p) => p === last || (last.pairId && p.pairId === last.pairId)) : [];
+          setSimShots((x) => [...x.filter((p) => !newest.find((q) => q.id === p.id)), ...newest]);
+        }
         if (s.savedRank) setSavedRank(s.savedRank);
         if (Array.isArray(s.coachMsgs) && s.coachMsgs.length) setCoachMsgs(s.coachMsgs);
         if (s.savedGeo && s.savedGeo.lat != null) { setSavedGeo(s.savedGeo); setGeo((g) => (g.status === "ok" ? g : { status: "ok", lat: s.savedGeo.lat, lng: s.savedGeo.lng, manual: true })); }
@@ -1852,7 +1858,10 @@ export default function App() {
         made.push(jb);
         shots.push({ id: jb.id, url: jb.url, date: todayISO(), srcUrl: srcB.url, sim: true, view: "back", pairId });
       }
-      setSimShots((all) => [...all, ...shots]);
+      // REPLACE, not append: only the newest render set stays referenced. The files of every
+      // older forecast become orphans, and "Sweep orphaned images" reclaims them — his ask:
+      // keep exactly what is on screen, nothing else.
+      setSimShots(shots);
     } catch (e) {
       // roll back anything that DID render, so a failed pair leaves nothing behind
       for (const j of made) { try { const f = (j.url || "").split("/").pop(); if (f) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {} }
