@@ -2572,7 +2572,7 @@ export default function App() {
                 nested inside it, so a menu with no Skip-today list — every curated chain menu since
                 v0.8.6 emptied that list — silently lost BOTH the Ask feature and the 96px clearance,
                 which is why the caption clipped under the tab bar. */}
-            <div style={{ marginTop: 14, paddingBottom: 96 }}>
+            <div style={{ marginTop: 14 }}>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={menuQ} onChange={(e) => setMenuQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askMenu(); }} placeholder="Ask about this menu… (swaps, carbs, drinks)"
                   style={{ flex: 1, fontFamily: BODY, fontSize: 13.5, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px", outline: "none" }} />
@@ -2680,7 +2680,7 @@ export default function App() {
       </div>
     );
     if (trainView === "session" && liveSession) return (
-      <div style={{ padding: "14px 18px 96px" }}>
+      <div style={{ padding: "14px 18px" }}>
         <button onClick={() => { setLiveSession(null); setTrainView("today"); }} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Cancel session</button>
         <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink, marginBottom: 12 }}>{liveSession.name}</div>
         {(() => {   // a core day runs as a circuit — say so once, at the top, instead of per-exercise
@@ -2740,7 +2740,7 @@ export default function App() {
           </div>, { marginBottom: 10 }) : null; })()}
         <button onClick={saveSession} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Finish &amp; log session ✓</button>
         {restEnd && (
-          <div style={{ position: "fixed", left: 12, right: 12, bottom: 84, zIndex: 300, background: C.ink, color: C.surface, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
+          <div style={{ position: "fixed", left: 12, right: 12, bottom: "calc(72px + env(safe-area-inset-bottom, 0px))", zIndex: 300, background: C.ink, color: C.surface, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
             <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmtRest(restLeft)}</div>
             <div style={{ fontSize: 12, opacity: .8, flex: 1 }}>rest</div>
             <button onClick={() => setRestEnd((t) => (t || Date.now()) + 30000)} style={{ background: "rgba(255,255,255,.15)", border: "none", color: C.surface, borderRadius: 9, padding: "8px 11px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+30s</button>
@@ -2750,7 +2750,7 @@ export default function App() {
       </div>
     );
     return (
-      <div style={{ padding: "14px 18px 96px" }}>
+      <div style={{ padding: "14px 18px" }}>
         <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Train</div>
         <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Lifting is the half of muscle protection food can't do</div>
         {nav}
@@ -3138,7 +3138,7 @@ export default function App() {
     const doseDayName = { SU: "Sunday", MO: "Monday", TU: "Tuesday", WE: "Wednesday", TH: "Thursday", FR: "Friday", SA: "Saturday" }[glp.injectionDay] || "your shot day";
     const busyLabel = planBusy ? { cookbook: "Opening the cookbook…", searching: "Searching recipes for your macros…", curating: "Composing your week…", balancing: "Balancing protein targets…", "grocery list": "Writing the grocery list…", photos: "Finding dish photos…" }[planBusy] : null;
     if (planView === "setup" || !mealPlan) return (
-      <div style={{ paddingBottom: 96 }}>
+      <div>
         {sectionTitle("Plan your week")}
         {onMed && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.5, marginBottom: 3 }}>DOSE-SYNCED PREP</div>
@@ -3174,7 +3174,7 @@ export default function App() {
     );
     if (planView === "grocery") { const done = mealPlan.grocery.filter((g) => g.checked).length; const sections = [...new Set(mealPlan.grocery.map((g) => g.section))];
       const groceryEst = estimateGroceryCost(mealPlan.grocery, priceLog, _ingKey, todayISO()); return (
-      <div style={{ paddingBottom: 96 }}>
+      <div>
         <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Your week</button>
         {sectionTitle(`Grocery · ${mealPlan.days.length} days`)}
         {card(<div>
@@ -3242,7 +3242,7 @@ export default function App() {
       </div>
     ); }
     if (planView === "meal") { const [di, si] = planMealRef; const day = mealPlan.days[di]; const slot = day && day.slots[si]; if (!slot) { setPlanView("week"); return null; } const img = slot.photo || slot.image; return (
-      <div style={{ paddingBottom: 96 }}>
+      <div>
         <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← {day.label} · Your week</button>
         <div style={{ borderRadius: 16, overflow: "hidden", position: "relative", height: 170, marginBottom: 12, background: C.surfaceAlt }}>
           {img ? <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 13, fontFamily: BODY }}>No photo yet — yours goes here</div>}
@@ -3265,7 +3265,7 @@ export default function App() {
     const day = mealPlan.days[Math.min(planSel, mealPlan.days.length - 1)];
     const tot = planTotals(day); const hit = tot.p >= day.target.protein;
     return (
-      <div style={{ paddingBottom: 96 }}>
+      <div>
         {sectionTitle("Your week")}
         {onMed && <div style={{ fontSize: 12.5, fontWeight: 700, color: C.go, marginBottom: 10 }}>✓ Synced to your dose calendar — shot {doseDayName}</div>}
         <div style={{ display: "flex", gap: 5, marginBottom: 12 }}>
@@ -3337,7 +3337,7 @@ export default function App() {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 76 }}>
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: "calc(88px + env(safe-area-inset-bottom, 0px))" }}>
           {tab === "now" && renderNow()}
           {tab === "today" && renderToday()}
           {tab === "body" && <div>{(() => {
@@ -3486,7 +3486,7 @@ export default function App() {
           )}
           {infoOpen && (
             <div onClick={() => setInfoOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(30,20,10,0.5)", zIndex: 90, display: "flex", alignItems: "flex-end" }}>
-              <div onClick={(e) => e.stopPropagation()} style={{ background: C.surface, borderRadius: "22px 22px 0 0", width: "100%", maxHeight: "86vh", overflowY: "auto", padding: "20px 20px 96px" }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ background: C.surface, borderRadius: "22px 22px 0 0", width: "100%", maxHeight: "86vh", overflowY: "auto", padding: "20px 20px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 800, color: C.ink }}>How ForkCaster gets its numbers</div>
                   <button onClick={() => setInfoOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 18, width: 34, height: 34, fontSize: 16, color: C.ink, cursor: "pointer" }}>×</button>

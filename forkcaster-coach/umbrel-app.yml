@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.13"
+version: "0.9.14"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,17 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.13: food search works again, and tells the truth when it cannot. It
-  had a single source wrapped in error handling that turned every failure -
-  a timeout, a rate limit, the database being down - into the same "No
-  matches, try fewer words" as a genuine miss, so nothing typed changed the
-  answer. Search now asks USDA FoodData Central first, which is the right
-  database for generic foods like chicken breast, and falls back to Open
-  Food Facts for packaged items. When neither can be reached it says so in
-  plain terms instead of blaming the query. Settings also gains the USDA
-  key field - the server supported the key all along but there was nowhere
-  to enter it; a free key from api.data.gov lifts the shared rate limit,
-  and search works without one at low volume.
+  v0.9.14: nothing hides behind the bottom tab bar any more. The content
+  area reserved a fixed amount of space, but on a phone with a home
+  indicator the bar is taller when the app is installed to the Home Screen,
+  so the last stretch of several screens - the side-effect journal note,
+  bottom links and buttons - sat clipped underneath it. A few screens had
+  their own hardcoded workaround padding, which is why the clipping was
+  inconsistent. The content area now measures the bar's real height
+  including the home-indicator zone, every per-screen workaround is
+  removed, and the pop-up toast and bottom sheets clear the bar too.
 dependencies: []
 path: ""
 defaultUsername: ""
