@@ -1299,8 +1299,12 @@ export default function App() {
   // Returning to the foreground re-pulls synced health data and re-renders clocks (PK "now", steps tile).
   const [, setFgTick] = useState(0);
   useEffect(() => {
+    let lastRefresh = 0;
     const refresh = () => {
       if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastRefresh < 2000) return; // visibilitychange + pageshow both fire on resume — one refresh is plenty
+      lastRefresh = now;
       setFgTick((t) => t + 1); // re-render time-dependent surfaces even if data is unchanged
       fetch("/api/health/summary").then((r) => r.json()).then((sm) => { if (sm && sm.days) setHealthSync((h) => ({ ...(h || {}), days: sm.days })); }).catch(() => {});
     };
@@ -1365,7 +1369,17 @@ export default function App() {
   function stopCam() { try { camControlsRef.current && camControlsRef.current.stop(); } catch {} setCamOn(false); }
   const [quick, setQuick] = useState(null);
   useEffect(() => {
-    const flush = () => { if (!hydrated.current || !blobRef.current) return; if (blobRef.current === lastSavedRef.current) return; /* unchanged — the teardown flush of just-loaded data was the reload loop's fuel */ try { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + blobRef.current.slice(1), keepalive: true }); } catch {} };
+    const flush = () => {
+      if (!hydrated.current || !blobRef.current) return;
+      if (blobRef.current === lastSavedRef.current) return; // unchanged — the teardown flush of just-loaded data was the reload loop's fuel
+      const sent = blobRef.current;
+      try {
+        fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + sent.slice(1), keepalive: true })
+          .then((r) => r.json())
+          .then((j) => { if (j && j.ok && j.rev != null) { revRef.current = j.rev; lastSavedRef.current = sent; } })
+          .catch(() => {}); // page torn down before the reply = fine; the next load GETs the fresh rev anyway
+      } catch {}
+    };
     const onVis = () => { if (document.visibilityState === "hidden") flush(); };
     window.addEventListener("pagehide", flush);
     document.addEventListener("visibilitychange", onVis);

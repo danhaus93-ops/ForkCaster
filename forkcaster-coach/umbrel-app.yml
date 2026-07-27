@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.29"
+version: "0.9.30"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.29: fixes the app restarting every few seconds after the last
-  update. Two protections (the save-on-close flush and the stale-writer
-  guard) could chase each other through a reload. The app now never
-  re-saves data that hasn't changed, which removes the loop entirely.
-  Update immediately if your app is restarting on its own.
+  v0.9.30: fixes occasional freeze-and-restart when quickly switching
+  between apps. If you made a change and left the app within a second,
+  the app could reload itself when you returned; it now tracks its saves
+  correctly across app switches. Also, returning to the app refreshes
+  data once instead of twice. Normal use should now never trigger a
+  self-reload.
 dependencies: []
 path: ""
 defaultUsername: ""

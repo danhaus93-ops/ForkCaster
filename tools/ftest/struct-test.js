@@ -235,5 +235,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/revRef\.current = j\.rev; lastSavedRef\.current = stateBlob;/.test(A7),'an accepted save updates BOTH the rev and the saved baseline');
   ok(/window\.location\.reload\(\)/.test(A7),'genuinely-divergent stale saves still re-sync by reload');
 }
+// v0.9.30: the flush learns the revision its write produced — edit + quick-background no longer strands the client one rev behind
+{
+  const A8=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/const sent = blobRef\.current;/.test(A8) && /revRef\.current = j\.rev; lastSavedRef\.current = sent;/.test(A8),'an accepted FLUSH advances the rev and the saved baseline, same as a save');
+  ok(/now - lastRefresh < 2000\) return;/.test(A8),'resume refreshes once, not once per event');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
