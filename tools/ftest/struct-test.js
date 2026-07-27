@@ -226,5 +226,14 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/setHealthSync\(\(h\) => \(\{ \.\.\.\(h \|\| \{\}\), days: sm\.days \}\)\)/.test(A6),'the summary re-pull keeps the token and replaces days');
   ok(/addEventListener\("pageshow", refresh\)/.test(A6),'iOS back-forward-cache resume is covered too');
 }
+// v0.9.29: never write unchanged data — the echo save + teardown flush + stale-reload chased each other into a restart loop
+{
+  const A7=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/lastSavedRef\.current === null\) \{ lastSavedRef\.current = stateBlob; return; \}/.test(A7),'first post-hydration blob is the as-loaded baseline, not a save');
+  ok(/if \(stateBlob === lastSavedRef\.current\) return;/.test(A7),'an unchanged blob is never saved');
+  ok(/blobRef\.current === lastSavedRef\.current\) return;/.test(A7),'an unchanged blob is never flushed at teardown');
+  ok(/revRef\.current = j\.rev; lastSavedRef\.current = stateBlob;/.test(A7),'an accepted save updates BOTH the rev and the saved baseline');
+  ok(/window\.location\.reload\(\)/.test(A7),'genuinely-divergent stale saves still re-sync by reload');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -1174,6 +1174,7 @@ export default function App() {
   const hydrated = useRef(false);
   const blobRef = useRef("");
   const revRef = useRef(0); // revision this client loaded — every save presents it; stale writers bounce
+  const lastSavedRef = useRef(null); // the state the server already has — NEVER re-post unchanged data (the v0.9.28 reload-loop lesson)
 
   const [selected, setSelected] = useState(null);
   const [result, setResult] = useState(null);
@@ -1364,7 +1365,7 @@ export default function App() {
   function stopCam() { try { camControlsRef.current && camControlsRef.current.stop(); } catch {} setCamOn(false); }
   const [quick, setQuick] = useState(null);
   useEffect(() => {
-    const flush = () => { if (!hydrated.current || !blobRef.current) return; try { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + blobRef.current.slice(1), keepalive: true }); } catch {} };
+    const flush = () => { if (!hydrated.current || !blobRef.current) return; if (blobRef.current === lastSavedRef.current) return; /* unchanged — the teardown flush of just-loaded data was the reload loop's fuel */ try { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + blobRef.current.slice(1), keepalive: true }); } catch {} };
     const onVis = () => { if (document.visibilityState === "hidden") flush(); };
     window.addEventListener("pagehide", flush);
     document.addEventListener("visibilitychange", onVis);
@@ -1433,11 +1434,13 @@ export default function App() {
   useEffect(() => {
     if (!hydrated.current) return;
     blobRef.current = stateBlob; // the flush hook below reads this — always current, no closure lag
+    if (lastSavedRef.current === null) { lastSavedRef.current = stateBlob; return; } // as-loaded baseline: the server already has this — echo saves fed the reload loop
+    if (stateBlob === lastSavedRef.current) return; // nothing changed — nothing to write
     const t = setTimeout(() => {
       fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + stateBlob.slice(1) })
         .then((r) => r.json())
         .then((j) => {
-          if (j && j.ok && j.rev != null) revRef.current = j.rev;
+          if (j && j.ok && j.rev != null) { revRef.current = j.rev; lastSavedRef.current = stateBlob; }
           else if (j && j.stale) { console.warn("[state] this instance is stale — reloading fresh state"); window.location.reload(); }
         })
         .catch(() => {});
