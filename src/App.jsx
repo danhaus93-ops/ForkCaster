@@ -1175,6 +1175,23 @@ export default function App() {
   const blobRef = useRef("");
   const revRef = useRef(0); // revision this client loaded — every save presents it; stale writers bounce
   const lastSavedRef = useRef(null); // the state the server already has — NEVER re-post unchanged data (the v0.9.28 reload-loop lesson)
+  const saveBusyRef = useRef(false); // one save in flight at a time — two rapid edits on slow LTE raced each other to an off-by-one stale (the doctor's finding)
+  const pendingSaveRef = useRef(null); // the newest blob waiting its turn; latest wins
+  const postState = (blob, keepalive) => {
+    saveBusyRef.current = true;
+    fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + blob.slice(1), ...(keepalive ? { keepalive: true } : {}) })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j && j.ok && j.rev != null) { revRef.current = j.rev; lastSavedRef.current = blob; }
+        else if (j && j.stale) { console.warn("[state] this instance is stale — reloading fresh state"); window.location.reload(); return; }
+      })
+      .catch(() => {})
+      .finally(() => {
+        saveBusyRef.current = false;
+        const next = pendingSaveRef.current; pendingSaveRef.current = null;
+        if (next && next !== lastSavedRef.current) postState(next, false); // the queued newest state goes out the moment the line is clear
+      });
+  };
 
   const [selected, setSelected] = useState(null);
   const [result, setResult] = useState(null);
@@ -1372,13 +1389,8 @@ export default function App() {
     const flush = () => {
       if (!hydrated.current || !blobRef.current) return;
       if (blobRef.current === lastSavedRef.current) return; // unchanged — the teardown flush of just-loaded data was the reload loop's fuel
-      const sent = blobRef.current;
-      try {
-        fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + sent.slice(1), keepalive: true })
-          .then((r) => r.json())
-          .then((j) => { if (j && j.ok && j.rev != null) { revRef.current = j.rev; lastSavedRef.current = sent; } })
-          .catch(() => {}); // page torn down before the reply = fine; the next load GETs the fresh rev anyway
-      } catch {}
+      if (saveBusyRef.current) { pendingSaveRef.current = blobRef.current; return; } // in-flight save owns the rev — racing it with an old rev was the off-by-one; if the page survives, the queue sends it, and a teardown only costs a sub-second delta
+      try { postState(blobRef.current, true); } catch {}
     };
     const onVis = () => { if (document.visibilityState === "hidden") flush(); };
     window.addEventListener("pagehide", flush);
@@ -1451,13 +1463,8 @@ export default function App() {
     if (lastSavedRef.current === null) { lastSavedRef.current = stateBlob; return; } // as-loaded baseline: the server already has this — echo saves fed the reload loop
     if (stateBlob === lastSavedRef.current) return; // nothing changed — nothing to write
     const t = setTimeout(() => {
-      fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: `{"_baseRev":${revRef.current},` + stateBlob.slice(1) })
-        .then((r) => r.json())
-        .then((j) => {
-          if (j && j.ok && j.rev != null) { revRef.current = j.rev; lastSavedRef.current = stateBlob; }
-          else if (j && j.stale) { console.warn("[state] this instance is stale — reloading fresh state"); window.location.reload(); }
-        })
-        .catch(() => {});
+      if (saveBusyRef.current) { pendingSaveRef.current = stateBlob; return; } // a save is mid-flight — queue, don't race it
+      postState(stateBlob, false);
     }, 800);
     return () => clearTimeout(t);
   }, [stateBlob]);

@@ -198,8 +198,8 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.25: every client writer presents its revision; restore is the one deliberate overwrite
 {
   const A3=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
-  ok((A3.match(/"_baseRev":\$\{revRef\.current\}/g) || []).length === 2, 'BOTH writers (debounced save + flush) inject _baseRev');
-  ok(/revRef\.current = j\.rev/.test(A3), 'the client adopts the server rev after each accepted save');
+  ok((A3.match(/"_baseRev":\$\{revRef\.current\}/g) || []).length === 1, 'the ONE writer (postState) injects _baseRev — both callers route through it (v0.9.31)');
+  ok(/revRef\.current = j\.rev; lastSavedRef\.current = blob;/.test(A3), 'an accepted post advances the rev AND the saved baseline in one place');
   ok(/j\.stale\) \{ console\.warn/.test(A3) && /window\.location\.reload\(\)/.test(A3), 'a stale ACTIVE instance re-syncs instead of fighting');
   ok(/api\/state\?force=1/.test(A3), 'backup restore uses the force path');
   ok(/revRef\.current = \(s && \+s\._rev\) \|\| 0/.test(A3), 'the loader adopts the revision it loaded');
@@ -232,14 +232,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/lastSavedRef\.current === null\) \{ lastSavedRef\.current = stateBlob; return; \}/.test(A7),'first post-hydration blob is the as-loaded baseline, not a save');
   ok(/if \(stateBlob === lastSavedRef\.current\) return;/.test(A7),'an unchanged blob is never saved');
   ok(/blobRef\.current === lastSavedRef\.current\) return;/.test(A7),'an unchanged blob is never flushed at teardown');
-  ok(/revRef\.current = j\.rev; lastSavedRef\.current = stateBlob;/.test(A7),'an accepted save updates BOTH the rev and the saved baseline');
+  ok(/revRef\.current = j\.rev; lastSavedRef\.current = blob;/.test(A7),'an accepted save updates BOTH the rev and the saved baseline (via the single writer)');
   ok(/window\.location\.reload\(\)/.test(A7),'genuinely-divergent stale saves still re-sync by reload');
 }
 // v0.9.30: the flush learns the revision its write produced — edit + quick-background no longer strands the client one rev behind
 {
   const A8=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
-  ok(/const sent = blobRef\.current;/.test(A8) && /revRef\.current = j\.rev; lastSavedRef\.current = sent;/.test(A8),'an accepted FLUSH advances the rev and the saved baseline, same as a save');
+  ok(/postState\(blobRef\.current, true\)/.test(A8),'the flush routes through the single writer with keepalive');
   ok(/now - lastRefresh < 2000\) return;/.test(A8),'resume refreshes once, not once per event');
+}
+// v0.9.31: saves are SERIALIZED — a client can never race itself into an off-by-one stale
+{
+  const A9=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/if \(saveBusyRef\.current\) \{ pendingSaveRef\.current = stateBlob; return; \}/.test(A9),'a debounced save queues instead of racing an in-flight one');
+  ok(/if \(saveBusyRef\.current\) \{ pendingSaveRef\.current = blobRef\.current; return; \}/.test(A9),'the flush queues too instead of racing with an old rev');
+  ok(/if \(next && next !== lastSavedRef\.current\) postState\(next, false\);/.test(A9),'the queued newest state ships the moment the line clears, latest wins');
+  ok((A9.match(/fetch\("\/api\/state", \{ method: "POST"/g) || []).length === 1,'exactly ONE code path posts state — postState is the single writer');
 }
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

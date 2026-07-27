@@ -40,7 +40,8 @@ sudo docker exec "$CID" node -e '
   try {
     const raw=fs.readFileSync(p+"/state.json","utf8"); const s=JSON.parse(raw);
     console.log("  ✅ state.json valid ("+(raw.length/1024).toFixed(1)+" KB) · rev "+(s._rev??"none"));
-    console.log("  ✅ side effects: "+((s.sideEffects&&JSON.parse(JSON.stringify(s.sideEffects)).length)??(s.glpSideEffects?s.glpSideEffects.length:"n/a"))+" · meals logged: "+((s.mealLog||[]).length)+" · weigh-ins: "+((s.weightLog||[]).length)+" · doses: "+((s.doseLog||[]).length));
+    const g=s.glp||{};
+    console.log("  ✅ side effects: "+((g.sideEffects||s.sideEffects||[]).length)+" · meals logged: "+((s.mealLog||[]).length)+" · weigh-ins: "+((s.weightLog||[]).length)+" · doses: "+((g.doseLog||s.doseLog||[]).length));
   } catch(e){ console.log("  ⚠️  state.json problem: "+e.message); }
   try {
     const h=JSON.parse(fs.readFileSync(p+"/health.json","utf8"));
