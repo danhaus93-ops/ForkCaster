@@ -1457,7 +1457,8 @@ export default function App() {
   const daysToInjection = Math.max(0, Math.ceil((nextInjection - new Date()) / 86400000));
   const dueISO = nextInjection.toLocaleDateString("sv-SE");
   const recentRate = weeklyRate(weightSeries);
-  const weeksToGoal = recentRate > 0.05 && curWeight > goalWeight ? Math.ceil((curWeight - goalWeight) / recentRate) : null;
+  const projReady = projectionReady(weightSeries);
+  const weeksToGoal = projReady && recentRate > 0.05 && curWeight > goalWeight ? Math.ceil((curWeight - goalWeight) / recentRate) : null;
   const goalDate = weeksToGoal ? addDays(new Date(), weeksToGoal * 7) : null;
 
   // ── med-aware signals (WHITE SPACE #1) ──
@@ -3122,10 +3123,10 @@ export default function App() {
         <>
           {sectionTitle("Projection")}
           <div style={{ display: "flex", gap: 14, alignItems: "baseline" }}>
-            <div><div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.ink }}>{recentRate.toFixed(1)} lb/wk</div><div style={{ fontSize: 11, color: C.faint }}>recent avg</div></div>
+            <div><div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.ink }}>{projReady ? `${recentRate.toFixed(1)} lb/wk` : "—"}</div><div style={{ fontSize: 11, color: C.faint }}>{projReady ? "recent avg" : "collecting"}</div></div>
             <div><div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.go }}>{goalDate ? fmtDate(goalDate) : "—"}</div><div style={{ fontSize: 11, color: C.faint }}>{weeksToGoal ? `${goalWeight} lb in ~${weeksToGoal} wks` : "log more to project"}</div></div>
           </div>
-          {goalDate && lineChart(projection(curWeight, goalWeight, recentRate), { color: C.violet, goal: goalWeight, goalLabel: `${goalWeight}`, dashed: true }, C)}
+          {goalDate ? lineChart(projection(curWeight, goalWeight, recentRate), { color: C.violet, goal: goalWeight, goalLabel: `${goalWeight}`, dashed: true }, C) : <div style={{ padding: "22px 0", textAlign: "center", color: C.faint, fontSize: 13, lineHeight: 1.5 }}>Collecting — log ~2 weeks of weigh-ins for a real projection.<br/>A rate needs at least 4 weigh-ins across 12+ days.</div>}
         </>)}</div>
 
       {fatCorrelation && (
@@ -4278,6 +4279,14 @@ function weeklyRate(log) {
   const days = (new Date(last.date) - new Date(first.date)) / 86400000;
   if (days <= 0) return 0;
   return Math.max(0, ((first.lbs - last.lbs) / days) * 7);
+}
+/* The projection card obeys the SAME honesty floor as adaptiveRead: a rate needs ≥4 weigh-ins
+   spanning ≥12 days. Two points a day apart is scale noise ×7, not a rate — it once showed
+   2.8 lb/wk and a December goal date off a single 0.4 lb overnight dip. */
+function projectionReady(log) {
+  if (!log || log.length < 4) return false;
+  const days = (new Date(log[log.length - 1].date) - new Date(log[0].date)) / 86400000;
+  return days >= 12;
 }
 function projection(cur, goal, rate) {
   const pts = []; let w = cur; const r = Math.max(0.3, Math.min(rate, 2));

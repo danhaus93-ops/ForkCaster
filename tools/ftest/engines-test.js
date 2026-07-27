@@ -72,5 +72,17 @@ console.log('  glp1 picks:',JSON.stringify(picks.map(p=>p.item||p.name||p.id)));
   ok(/weightSeries\.length > 1 \? lineChart\(weightSeries/.test(SRC2), 'the Body chart reads the merged series');
   ok(/w\.synced \? <span/.test(SRC2), 'synced rows are tagged and cannot be deleted from the list');
 }
+// v0.9.21: the projection honesty floor — same rule adaptiveRead lives by
+{
+  const M = build(slice('function projectionReady(', 'function projection(cur'), ['projectionReady']);
+  const d = (n) => ({ date: new Date(2026, 6, n).toLocaleDateString('sv-SE'), lbs: 217 - n * 0.1 });
+  ok(M.projectionReady([d(25), d(26)]) === false, 'two points a day apart is NOT a projection');
+  ok(M.projectionReady([d(1), d(5), d(9), d(14)]) === true, '4 points across 13 days qualifies');
+  ok(M.projectionReady([d(1), d(2), d(3), d(4)]) === false, '4 points but only 3 days of span does not');
+  ok(M.projectionReady(null) === false && M.projectionReady([]) === false, 'null and empty are safe');
+  const SRC3 = require('fs').readFileSync(__FCROOT + '/src/App.jsx', 'utf8');
+  ok(/const weeksToGoal = projReady &&/.test(SRC3), 'the goal date is gated on the floor');
+  ok(/Collecting — log ~2 weeks of weigh-ins/.test(SRC3), 'the card explains itself instead of guessing');
+}
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.20"
+version: "0.9.21"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.20: weights synced from Apple Health now show up everywhere. Synced
-  weigh-ins previously reached the app's learning engines but never the
-  Body chart, the weight list, or the weekly numbers - only typed and
-  scanned entries did. The display now merges both: your own entries win
-  on any date they exist, synced weights fill the gaps and carry a SYNCED
-  tag in the list. Delete stays available for your own entries only.
+  v0.9.21: the weight projection now earns its confidence. It had been
+  willing to project a goal date from as little as two weigh-ins a day
+  apart - multiplying one night's scale noise into a weekly rate. The
+  projection card now follows the same rule as the app's learning engines:
+  no rate or goal date until at least 4 weigh-ins spanning 12+ days, and
+  until then it says it is collecting and what it needs. With daily scale
+  syncs it graduates to a real projection on its own in about two weeks.
 dependencies: []
 path: ""
 defaultUsername: ""
