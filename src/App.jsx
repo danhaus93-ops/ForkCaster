@@ -179,6 +179,9 @@ function sanitizePicks(parsed, allergies) {
 }
 const DEFAULT_PREFS = {
   rolloverHour: 0,          // hour of day when "today" resets (0 = midnight; night shift might use 4)
+  shiftMode: "days",        // "days" | "nights" (fixed nocturnal) | "varies" (mark specific work nights)
+  nightRollHour: 11,        // night modes: the day belongs to the previous date until this hour
+  workNights: [],           // "varies" mode: ISO dates of marked work nights
   units: "imperial",        // imperial | metric
   injIntervalDays: 7,       // injection cadence
   proteinFloor: 30,         // per-meal protein floor (g) used in nudges/ordering
@@ -197,7 +200,28 @@ const DEFAULT_PREFS = {
   customTargets: null,      // saved personal macro preset
 };
 const KG = 0.45359237, ML_PER_OZ = 29.5735, CM_PER_IN = 2.54;
-function dayISOAt(rolloverHour) { return new Date(Date.now() - (rolloverHour || 0) * 3600000).toLocaleDateString("sv-SE"); }
+/* ONE CLOCK for the whole app. Every consumer asks this; the mode only changes the answer.
+   "days"   — the app as it always was: local date, rolled back by rolloverHour (his v0.2.0 preference).
+   "nights" — fixed night worker: the day belongs to the previous date until nightRollHour (default 11 AM),
+              every day, no marking. One toggle, zero maintenance.
+   "varies" — rotating shifts: the shifted key applies ONLY when the candidate previous date is a marked
+              work night, so days off behave completely normally whether or not the user flips back.
+   Doses and the PK chart stay calendar-anchored on purpose — medical records don't shift. */
+function dayKeyAt(now, prefsLike) {
+  const p = prefsLike || {};
+  const mode = p.shiftMode || "days";
+  const local = (ms) => new Date(ms).toLocaleDateString("sv-SE");
+  const t = now instanceof Date ? now.getTime() : (now || Date.now());
+  const plain = local(t - (p.rolloverHour || 0) * 3600000);
+  if (mode === "days") return plain;
+  const cand = local(t - (p.nightRollHour == null ? 11 : p.nightRollHour) * 3600000);
+  if (mode === "nights") return cand;
+  return cand !== plain && (p.workNights || []).includes(cand) ? cand : plain;
+}
+function dayISOAt(rolloverHour) { return dayKeyAt(Date.now(), { rolloverHour }); }
+// module-level callers (engines, todayISO) share the component's prefs through this bridge
+let _dayPrefs = null;
+const setDayPrefs = (p) => { _dayPrefs = p; };
 const MODES = {
   glp1: { label: "GLP-1", targets: { protein: 160, calories: 1400, carbs: 110, fat: 45, waterOz: 110, fiber: 28 } },
   cut: { label: "Cutting", targets: { protein: 170, calories: 1900, carbs: 150, fat: 55, waterOz: 100, fiber: 30 } },
@@ -289,7 +313,9 @@ const DELIVERY_APPS = [
 ];
 const uid = () => Math.random().toString(36).slice(2, 9);
 const log10 = (x) => Math.log(x) / Math.LN10;
-const todayISO = () => new Date().toISOString().slice(0, 10);
+// WAS UTC (toISOString) — which rolled the day at 7 PM Central, stamping every evening meal onto
+// tomorrow while the meal LIST filtered by the local clock. One clock now; the UTC boundary is dead.
+const todayISO = () => dayKeyAt(Date.now(), _dayPrefs);
 /* ── Adaptive targets: read the real weight trend against dose context (v0.4.1) ── */
 function adaptiveRead(weightLog, healthDays, glp, strengthWk) {
   const byDate = new Map();
@@ -764,7 +790,8 @@ function scheduleWeek(routineDays, dates) {
   const plan = dates.map((d) => ({ ...d, day: null, note: "" }));
   const order = [...routineDays];
   // heavy sessions dodge the shot window; if everything lands in it, the day gets a lighter note
-  const gentleIdx = new Set(plan.map((d, i) => ((d.dose || d.after) ? i : -1)).filter((i) => i >= 0));
+  const gentleIdx = new Set(plan.map((d, i) => ((d.dose || d.after || d.night || d.postNights) ? i : -1)).filter((i) => i >= 0));
+  const easeWords = (d) => d.night ? "Work night — if you train, make it before shift and keep it light." : d.postNights ? "Post-nights recovery — sleep first; a light session at most." : null;
   const chosen = [...slots];
   for (let k = 0; k < chosen.length; k++) {
     const dayDef = order[k];
@@ -773,8 +800,8 @@ function scheduleWeek(routineDays, dates) {
     if (dayDef.heavy && gentleIdx.has(idx)) {
       const alt = plan.findIndex((d, i) => !gentleIdx.has(i) && !chosen.slice(0, k).includes(i) && !chosen.slice(k + 1).includes(i));
       if (alt >= 0) { chosen[k] = alt; idx = alt; }
-      else plan[idx].note = "Shot window — drop one set per exercise and keep the weights honest.";
-    } else if (gentleIdx.has(idx)) plan[idx].note = "Shot window — lighter session, stop early if your stomach says so.";
+      else plan[idx].note = easeWords(plan[idx]) || "Shot window — drop one set per exercise and keep the weights honest.";
+    } else if (gentleIdx.has(idx)) plan[idx].note = easeWords(plan[idx]) || "Shot window — lighter session, stop early if your stomach says so.";
     plan[idx].day = dayDef;
   }
   return plan;
@@ -1100,6 +1127,7 @@ export default function App() {
 
   const [targets, setTargets] = useState(MODES.cut.targets);
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  useEffect(() => { setDayPrefs(prefs); }, [prefs]);
   const isMetric = prefs.units === "metric";
   const wtU = isMetric ? "kg" : "lbs";
   const fmtWt = (lb, d = 1) => (isMetric ? (lb * KG).toFixed(d) : (+lb).toFixed(d));
@@ -1315,9 +1343,9 @@ export default function App() {
       if (s && s.saved) {
         if (s.theme) setTheme(s.theme); if (s.mode) { setMode(s.mode); }
         if (s.targets) setTargets(s.targets); if (s.mealPlan) { setMealPlan(s.mealPlan); setPlanView("week"); } if (s.priceLog) setPriceLog(s.priceLog); if (s.lastStore) setShopStore(s.lastStore);
-        const roll = (s.prefs && s.prefs.rolloverHour) || 0;
+        const roll = s.prefs || {};
         if (s.prefs) setPrefs({ ...DEFAULT_PREFS, ...s.prefs });
-        if (s.eaten) setEaten(s.eatenDate === dayISOAt(roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
+        if (s.eaten) setEaten(s.eatenDate === dayKeyAt(Date.now(), roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) }));
@@ -1345,7 +1373,7 @@ export default function App() {
   }
   const [savedGeo, setSavedGeo] = useState(null);
   useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayISOAt(prefs.rolloverHour), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore, trainPrefs, routine, workoutLog });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayKeyAt(Date.now(), prefs), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore, trainPrefs, routine, workoutLog });
   useEffect(() => {
     if (!hydrated.current) return;
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
@@ -2120,7 +2148,11 @@ export default function App() {
       const after = onMed && dow === (doseIdx + 1) % 7;
       const pT = Math.round((dose ? targets.protein * 0.78 : after ? targets.protein * 0.82 : targets.protein) / 5) * 5;
       const cT = Math.round((dose ? targets.calories * 0.75 : after ? targets.calories * 0.85 : targets.calories) / 25) * 25;
-      out.push({ iso: dt.toISOString().slice(0, 10), label: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dow], dose, after, doseLabel: dose ? "Shot day" : after ? "Day after shot" : null, target: { protein: pT, calories: cT } });
+      const iso2 = dt.toLocaleDateString("sv-SE");
+      const wn2 = prefs.shiftMode === "varies" ? (prefs.workNights || []) : [];
+      const prev2 = (() => { const q = new Date(dt); q.setDate(q.getDate() - 1); return q.toLocaleDateString("sv-SE"); })();
+      const night = wn2.includes(iso2), postNights = !night && wn2.includes(prev2);
+      out.push({ iso: iso2, label: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dow], dose, after, night, postNights, doseLabel: dose ? "Shot day" : after ? "Day after shot" : night ? "Work night" : postNights ? "Post-nights recovery" : null, target: { protein: pT, calories: cT } });
     }
     return out;
   }
@@ -2596,7 +2628,7 @@ export default function App() {
     return (
       <div style={{ padding: "18px 18px 12px" }}>
         <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Today</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{(() => { const k = todayISO(), plain = dayKeyAt(Date.now(), { rolloverHour: prefs.rolloverHour }); return k !== plain ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: C.violet, border: `1px solid ${C.violet}55`, borderRadius: 20, padding: "3px 9px" }}>NIGHT DAY · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short" })}</span> : null; })()}</div>
         <button onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ width: "100%", marginBottom: 16, background: C.ink, color: C.surface, border: "none", borderRadius: 13, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.surface} strokeWidth="1.6" strokeLinecap="round" /></svg>
           Scan or log food
@@ -2615,9 +2647,9 @@ export default function App() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Water</div><div style={{ fontFamily: DISPLAY, fontWeight: 700, color: C.blue }}>{fmtVol(eaten.waterOz)} / {fmtVol(targets.waterOz)} {volU}</div></div>
             <div style={{ height: 10, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 8 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
-      {mealLog.filter((m) => m.date === dayISOAt(prefs.rolloverHour)).length > 0 && <div style={{ marginTop: 14 }}>{card(<>
+      {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ marginTop: 14 }}>{card(<>
         <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Logged today — tap ✕ to undo a mistake</div>
-        {mealLog.filter((m) => m.date === dayISOAt(prefs.rolloverHour)).map((m) => (
+        {mealLog.filter((m) => m.date === todayISO()).map((m) => (
           <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
             <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div><div style={{ fontSize: 11, color: C.faint }}>{m.protein}g protein · {m.calories} cal</div></div>
             <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button>
@@ -2643,8 +2675,12 @@ export default function App() {
   const trainDates = () => { // 7 days from today, marked with the shot window
     const doses = new Set(((glp && glp.doseLog) || []).map((d) => d.date));
     const after = new Set([...doses].map((d) => { const t = new Date(d + "T12:00:00"); t.setDate(t.getDate() + 1); return t.toISOString().slice(0, 10); }));
-    return Array.from({ length: 7 }, (_, i) => { const t = new Date(); t.setDate(t.getDate() + i); const iso = t.toISOString().slice(0, 10);
-      return { iso, label: i === 0 ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" }), dose: doses.has(iso), after: after.has(iso) }; });
+    return Array.from({ length: 7 }, (_, i) => { const t = new Date(); t.setDate(t.getDate() + i); const iso = t.toLocaleDateString("sv-SE"); // LOCAL — a UTC label here made "Today's session" miss every evening
+      const wn = prefs.shiftMode === "varies" ? (prefs.workNights || []) : [];
+      const prevIso = (() => { const q = new Date(t); q.setDate(q.getDate() - 1); return q.toLocaleDateString("sv-SE"); })();
+      const night = wn.includes(iso);
+      const postNights = !night && wn.includes(prevIso);
+      return { iso, label: i === 0 ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" }), dose: doses.has(iso), after: after.has(iso), night, postNights }; });
   };
   const exHistory = (exId) => workoutLog.flatMap((s) => (s.entries || []).filter((e) => e.exId === exId).map((e) => ({ date: s.date, sets: e.sets || [] })));
   function startSession(dayDef) {
@@ -2667,10 +2703,10 @@ export default function App() {
     const todaySlot = week.find((d) => d.iso === todayISO() && d.day);
     const nextSlot = todaySlot || week.find((d) => d.day);
     const fuel = fuelWarning(mealLog, targets, todayISO());
-    const weekAgo = (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })();
+    const weekAgo = (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toLocaleDateString("sv-SE"); })();
     const cardioMin7 = cardioMinutes(workoutLog, weekAgo);
     const weekCardio = routine ? cardioSchedule(week) : [];
-    const sets7 = weeklySets(workoutLog, exCatalog, (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })());
+    const sets7 = weeklySets(workoutLog, exCatalog, (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toLocaleDateString("sv-SE"); })());
     const done7 = workoutLog.filter((s) => s.date >= (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })()).length;
     const nav = (
       <div style={{ display: "flex", gap: 7, margin: "0 0 12px", flexWrap: "wrap" }}>
@@ -3284,7 +3320,7 @@ export default function App() {
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6 }}><div style={{ height: 6, width: `${Math.min(100, (tot.p / day.target.protein) * 100)}%`, background: hit ? C.go : C.caution, borderRadius: 6 }} /></div>
         </div>, { marginBottom: 12 })}
         {planPhotoNote && day.slots.some((x) => !x.photo && !x.image) && <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Dish photos unavailable right now ({/402/.test(planPhotoNote) ? "Spoonacular daily quota used up — they'll fill in automatically tomorrow" : /401|unauthor/i.test(planPhotoNote) ? "key rejected — check Settings" : planPhotoNote}).</div>}
-        {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()} · TARGET EASED TO {day.target.protein}G</div><div style={{ fontSize: 13, color: C.ink, marginTop: 3, lineHeight: 1.45 }}>Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal.</div></div>}
+        {(day.dose || day.after || day.night || day.postNights) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()}{(day.dose || day.after) ? ` · TARGET EASED TO ${day.target.protein}G` : ""}</div><div style={{ fontSize: 13, color: C.ink, marginTop: 3, lineHeight: 1.45 }}>{day.night ? "Your day runs into tomorrow morning — meals after midnight still count here." : day.postNights ? "Sleep is the workout today. Protein when you wake; don't chase the full target." : "Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal."}</div></div>}
         {day.slots.map((slot, si) => (
           <div key={si} onClick={() => { setPlanMealRef([Math.min(planSel, mealPlan.days.length - 1), si]); setPlanView("meal"); }} style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", marginBottom: 10, cursor: "pointer" }}>
             <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: (day.dose || day.after) ? C.violet : medalColor(si) }} />
@@ -3784,7 +3820,18 @@ export default function App() {
                   return (
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "6px 0 2px" }}>Day & units</div>
-                      {row("Day resets at", sel(String(P.rolloverHour), Array.from({ length: 24 }, (_, h) => [String(h), h === 0 ? "Midnight" : h < 12 ? `${h} AM` : h === 12 ? "Noon" : `${h - 12} PM`]), (v) => set("rolloverHour")(+v)))}
+                      {row("Work schedule", sel(P.shiftMode || "days", [["days", "Day shift"], ["nights", "Nights — fixed"], ["varies", "Nights — rotating"]], (v) => set("shiftMode")(v)))}
+                      {(P.shiftMode === "nights" || P.shiftMode === "varies") && row("Night day rolls at", sel(String(P.nightRollHour == null ? 11 : P.nightRollHour), [["9", "9 AM"], ["10", "10 AM"], ["11", "11 AM"], ["12", "Noon"], ["13", "1 PM"], ["14", "2 PM"]], (v) => set("nightRollHour")(+v)))}
+                      {P.shiftMode === "varies" && <div style={{ margin: "10px 0 4px" }}>
+                        <div style={{ fontSize: 12, color: C.muted, marginBottom: 7 }}>Tap the nights you work — everything else behaves like a normal day.</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5 }}>
+                          {Array.from({ length: 14 }, (_, i) => { const t = new Date(); t.setDate(t.getDate() - 2 + i); const iso = t.toLocaleDateString("sv-SE"); const on = (P.workNights || []).includes(iso); return (
+                            <button key={iso} onClick={() => { const cur = P.workNights || []; const keepFrom = (() => { const q = new Date(); q.setDate(q.getDate() - 30); return q.toLocaleDateString("sv-SE"); })(); set("workNights")((on ? cur.filter((x) => x !== iso) : [...cur, iso]).filter((x) => x >= keepFrom).sort()); }} style={{ padding: "8px 0", borderRadius: 9, border: `1.5px solid ${on ? C.violet : C.hair}`, background: on ? C.violet : C.surfaceAlt, color: on ? "#fff" : C.muted, fontFamily: BODY, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                              <div>{t.toLocaleDateString([], { weekday: "short" }).slice(0, 2)}</div><div style={{ fontSize: 12.5 }}>{t.getDate()}</div>
+                            </button>); })}
+                        </div>
+                      </div>}
+                      {(P.shiftMode || "days") === "days" && row("Day resets at", sel(String(P.rolloverHour), Array.from({ length: 24 }, (_, h) => [String(h), h === 0 ? "Midnight" : h < 12 ? `${h} AM` : h === 12 ? "Noon" : `${h - 12} PM`]), (v) => set("rolloverHour")(+v)))}
                       {row("Units", sel(P.units, [["imperial", "lbs · oz · in"], ["metric", "kg · ml · cm"]], set("units")))}
                       {row("Target pace (lb/week)", num(P.paceLbPerWeek, set("paceLbPerWeek"), 64, 0.1))}
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "14px 0 2px" }}>GLP-1</div>

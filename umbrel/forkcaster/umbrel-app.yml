@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.16"
+version: "0.9.17"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,18 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.16: the test suite now lives in the repository (tools/ftest) instead
-  of only in the development sandbox. Ten suites, several hundred checks,
-  and a full render smoke - the gate every release must pass - are now
-  version-controlled alongside the code they protect, runnable anywhere
-  with npm install and one command. No app behavior changes; updating is
-  optional.
+  v0.9.17: night shift support, and a day-boundary fix for everyone. The app
+  was rolling its day on UTC time - about 7 PM in US Central - so meals
+  logged in the evening were quietly stamped onto tomorrow. One clock now
+  runs everything, on your phone's local time zone. New in Settings: a Work
+  schedule setting with three modes - Day shift, fixed Nights, and rotating
+  Nights with a two-week tap strip to mark the nights you work. On marked
+  nights your day runs into the next morning, so a 3 AM meal counts toward
+  the day you are living; the Today header shows a NIGHT DAY badge; the day
+  after your last night is labeled for recovery; and training steers heavy
+  sessions off work nights the same way it already dodges your shot window.
+  Doses and the PK chart stay on calendar dates - medical records don't
+  shift. Rebuild the routine in Train to pick up night-aware scheduling.
 dependencies: []
 path: ""
 defaultUsername: ""
