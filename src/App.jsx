@@ -3862,7 +3862,7 @@ export default function App() {
                 {prefs.hideHealthCard && <button onClick={() => setPrefs({ ...prefs, hideHealthCard: false })} style={{ width: "100%", marginBottom: 12, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>Show the Apple Health card again</button>}
                 <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 11, padding: "11px 12px" }}>
                   <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 700 }}>Images on your node</div>
-                  <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{photoUsage ? `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB` : "checking…"}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{photoUsage ? (photoUsage.count == null ? "storage unreadable — check the node" : `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB`) : "checking…"}</div>
                   <button onClick={async () => {
                     try {
                       const keep = (stateBlob.match(/\/api\/photo\/[A-Za-z0-9._-]+/g) || []);

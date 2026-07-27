@@ -215,7 +215,7 @@ app.get("/api/photos/usage", (_req, res) => {
     const files = fs.readdirSync(PHOTO_DIR).filter((f) => /\.(jpg|png)$/i.test(f));
     const bytes = files.reduce((n, f) => { try { return n + fs.statSync(path.join(PHOTO_DIR, f)).size; } catch { return n; } }, 0);
     res.json({ ok: true, count: files.length, bytes });
-  } catch (e) { res.json({ ok: true, count: 0, bytes: 0 }); }
+  } catch (e) { res.json({ ok: false, count: null, bytes: null, error: String(e).slice(0, 120) }); }
 });
 /* Sweep: delete any image the app no longer references. The keep list comes from the client's
    live state, so forecasts, comparisons and meal shots are all protected — orphans only. */
@@ -401,11 +401,12 @@ app.post("/api/ai", async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120000),   // generations and vision run long; a hung upstream must not hang the app forever
     });
     if (!r.ok && body.output_config) {
       // structured-output shape rejected (API drift): retry plain, client salvage still guards
       delete body.output_config;
-      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify(body) });
+      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify(body), signal: AbortSignal.timeout(120000) });
     }
     const data = await r.json();
     if (data.error) return res.json({ error: data.error.message || "API error" });
@@ -419,6 +420,7 @@ app.get("/api/off/:barcode", async (req, res) => {
     const bc = req.params.barcode.replace(/\D/g, "");
     const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${bc}.json?fields=product_name,brands,serving_size,nutriments`, {
       headers: { "User-Agent": "ForkCaster/0.1 (self-hosted; personal use)" },
+      signal: AbortSignal.timeout(9000),
     });
     res.json(await r.json());
   } catch (e) { res.json({ status: 0, error: String(e) }); }
@@ -436,6 +438,7 @@ async function fatsecretToken() {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: "Basic " + Buffer.from(`${id}:${sec}`).toString("base64") },
     body: "grant_type=client_credentials&scope=basic",
+    signal: AbortSignal.timeout(9000),
   });
   const d = await r.json();
   if (!d.access_token) throw new Error(d.error_description || d.error || "token failed");
@@ -453,6 +456,7 @@ app.get("/api/food/:barcode", async (req, res) => {
   try {
     const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${bc}.json?fields=product_name,brands,serving_size,nutriments`, {
       headers: { "User-Agent": "ForkCaster/0.1 (self-hosted; personal use)" },
+      signal: AbortSignal.timeout(9000),
     });
     const d = await r.json();
     if (d && d.status === 1 && d.product) {
@@ -475,6 +479,7 @@ app.get("/api/food/:barcode", async (req, res) => {
     const r = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${key2}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: bc, dataType: ["Branded"], pageSize: 3 }),
+      signal: AbortSignal.timeout(9000),
     });
     const d = await r.json();
     const hit = (d.foods || []).find((f) => (f.gtinUpc || "").replace(/\D/g, "").endsWith(bc.slice(-11))) || (d.foods || [])[0];
@@ -493,11 +498,11 @@ app.get("/api/food/:barcode", async (req, res) => {
   try {
     const tok = await fatsecretToken();
     const gtin = bc.padStart(13, "0");
-    const r1 = await fetch(`${FS_PLATFORM}/rest/server.api?method=food.find_id_for_barcode&barcode=${gtin}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
+    const r1 = await fetch(`${FS_PLATFORM}/rest/server.api?method=food.find_id_for_barcode&barcode=${gtin}&format=json`, { headers: { Authorization: `Bearer ${tok}` }, signal: AbortSignal.timeout(9000) });
     const d1 = await r1.json();
     const fid = d1 && d1.food_id && d1.food_id.value;
     if (fid && fid !== "0") {
-      const r2 = await fetch(`${FS_PLATFORM}/rest/server.api?method=food.get.v4&food_id=${fid}&format=json`, { headers: { Authorization: `Bearer ${tok}` } });
+      const r2 = await fetch(`${FS_PLATFORM}/rest/server.api?method=food.get.v4&food_id=${fid}&format=json`, { headers: { Authorization: `Bearer ${tok}` }, signal: AbortSignal.timeout(9000) });
       const d2 = await r2.json();
       const f = d2 && d2.food;
       const servs = f && f.servings && f.servings.serving;
@@ -524,6 +529,7 @@ app.get("/api/nearby", async (req, res) => {
     const { lat, lng } = req.query;
     const r = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
       method: "POST",
+      signal: AbortSignal.timeout(10000),
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": PLACES_KEY,
@@ -582,6 +588,7 @@ async function gmapSession(style) {
   const r = await fetch(`https://tile.googleapis.com/v1/createSession?key=${PLACES_KEY}`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mapType: cfg.mapType, language: "en-US", region: "US", scale: "scaleFactor2x", highDpi: true, ...(cfg.styles ? { styles: cfg.styles } : {}) }),
+    signal: AbortSignal.timeout(10000),
   });
   const d = await r.json();
   if (!d.session) throw new Error((d.error && d.error.message) || "session failed");
@@ -593,7 +600,7 @@ app.get("/api/gmap/tile/:style/:z/:x/:y", async (req, res) => {
     const PLACES_KEY = key("GOOGLE_PLACES_KEY");
     const { style, z, x, y } = req.params;
     const session = await gmapSession(style);
-    const r = await fetch(`https://tile.googleapis.com/v1/2dtiles/${z}/${x}/${y}?session=${session}&key=${PLACES_KEY}`);
+    const r = await fetch(`https://tile.googleapis.com/v1/2dtiles/${z}/${x}/${y}?session=${session}&key=${PLACES_KEY}`, { signal: AbortSignal.timeout(8000) });
     if (!r.ok) return res.status(404).end();
     res.set("Content-Type", r.headers.get("content-type") || "image/png");
     res.set("Cache-Control", "public, max-age=604800");
@@ -1500,7 +1507,7 @@ app.get("/api/vphoto", async (req, res) => {
   const name = req.query.name;
   if (!PLACES_KEY || !name) return res.status(404).end();
   try {
-    const r = await fetch(`https://places.googleapis.com/v1/${name}/media?maxWidthPx=500&key=${PLACES_KEY}`, { redirect: "follow" });
+    const r = await fetch(`https://places.googleapis.com/v1/${name}/media?maxWidthPx=500&key=${PLACES_KEY}`, { redirect: "follow", signal: AbortSignal.timeout(10000) });
     if (!r.ok) return res.status(404).end();
     const buf = Buffer.from(await r.arrayBuffer());
     res.set("Content-Type", r.headers.get("content-type") || "image/jpeg");

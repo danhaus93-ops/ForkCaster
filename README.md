@@ -43,9 +43,10 @@ Two-step release flow:
 
 1. **Build + push the image to GHCR** (classic `ghp_` PAT with `write:packages` — fine-grained tokens get 403'd):
    ```bash
-   docker build -t ghcr.io/<you>/forkcaster:0.1.0 .
+   # Releases go to the node's LOCAL registry via ./release.sh — see that script.
+   sudo docker build -t 127.0.0.1:5000/forkcaster:v<version> .
    echo $GHP_PAT | docker login ghcr.io -u <you> --password-stdin
-   docker push ghcr.io/<you>/forkcaster:0.1.0
+   sudo docker push 127.0.0.1:5000/forkcaster:v<version>
    ```
 2. **Add `umbrel/forkcaster/` to your community app store repo**, replace `CHANGEME` in both files (repo URL, image ref, and set `ANTHROPIC_API_KEY` in the compose env), pin the sha256 digest, and install from your store on the node.
 
@@ -74,12 +75,12 @@ Open that HTTPS URL on your phone → GPS works, and you can Add to Home Screen 
 | `DATA_DIR` | no (default `/data`) | state + photos location |
 | `PORT` | no (default `3450`) | listen port |
 
-## Notes / honest limitations (v0.1.0)
+## Notes / honest limitations
 
 - Live venues from Places have **no menus** (no public menu API exists) — for those, the AI proposes realistic goal-fit orders for that cuisine and estimates macros conservatively. Demo venues carry full sample menus.
 - Allergy filtering on live venues is AI-inference over dish names; barcode-scanned items use real Open Food Facts allergen-relevant data. **Always confirm with the restaurant for severe allergies.**
-- Camera barcode *scanning* is manual-entry in v0.1 (type/paste the number); a `BarcodeDetector`/QuaggaJS scanner is the obvious v0.2.
-- Map is a stylized vector + OSM tile when reachable; a proper map SDK is a v0.2 item.
+- Camera barcode scanning is live (ZXing); typed/pasted barcodes work as a fallback.
+- Map is Leaflet with Google tile sessions when a Places key is set, OSM otherwise.
 - Single-user, no auth — designed to sit behind Tailscale, not the open internet.
 
 ## Medical disclaimer
