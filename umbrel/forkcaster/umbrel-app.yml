@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.21"
+version: "0.9.22"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.21: the weight projection now earns its confidence. It had been
-  willing to project a goal date from as little as two weigh-ins a day
-  apart - multiplying one night's scale noise into a weekly rate. The
-  projection card now follows the same rule as the app's learning engines:
-  no rate or goal date until at least 4 weigh-ins spanning 12+ days, and
-  until then it says it is collecting and what it needs. With daily scale
-  syncs it graduates to a real projection on its own in about two weeks.
+  v0.9.22: three logging fixes. Describe-a-meal works again - it was the
+  only AI call that depended solely on the structured-output field, so when
+  that field failed the model answered in prose and every request looked
+  like a wording problem; the prompt now demands JSON directly, and error
+  messages distinguish an unreachable AI from a genuine parse failure.
+  Quick-adds from the Now tiles now write a visible entry in Today instead
+  of only bumping the counter. And the app saves immediately when closed
+  or backgrounded, so taps made just before swiping away can no longer be
+  lost.
 dependencies: []
 path: ""
 defaultUsername: ""

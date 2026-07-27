@@ -185,5 +185,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/!hydrated\.current; w\+\+\) await new Promise/.test(A),'ranking waits for hydration when GPS wins the race');
   ok(/savedRankRef\.current = \{ key, at: now, arr \}/.test(A),'saving keeps ref and state in sync');
 }
+// v0.9.22: no more silent data loss on app close, quick-adds leave records, honest describe-it errors
+{
+  const A2=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/keepalive: true/.test(A2),'the close-time flush uses keepalive so the POST outlives the page');
+  ok(/addEventListener\("pagehide", flush\)/.test(A2) && /visibilitychange/.test(A2),'flush fires on both hide paths');
+  ok(/blobRef\.current = stateBlob/.test(A2),'the flush reads a ref kept current by the save effect');
+  ok(/Quick add \\u2014/.test(A2) || /Quick add \u2014/.test(A2),'macro quick-adds write a visible row');
+  ok(/Couldn't reach the AI/.test(A2),'describe-it distinguishes an outage from a parse failure');
+  ok(!/alert\("Couldn't parse that/.test(A2),'the undifferentiated catch-all alert is gone');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

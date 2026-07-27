@@ -1155,6 +1155,7 @@ export default function App() {
   const [venues, setVenues] = useState(RESTAURANTS);
   const [rankState, setRankState] = useState("idle"); // idle | ranking | ranked | <error string>
   const hydrated = useRef(false);
+  const blobRef = useRef("");
 
   const [selected, setSelected] = useState(null);
   const [result, setResult] = useState(null);
@@ -1331,7 +1332,14 @@ export default function App() {
     }
   }
   function stopCam() { try { camControlsRef.current && camControlsRef.current.stop(); } catch {} setCamOn(false); }
-  const [quick, setQuick] = useState(null);   // {field,label,unit,kcalPerG} — tapped tile awaiting a number
+  const [quick, setQuick] = useState(null);
+  useEffect(() => {
+    const flush = () => { if (!hydrated.current || !blobRef.current) return; try { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: blobRef.current, keepalive: true }); } catch {} };
+    const onVis = () => { if (document.visibilityState === "hidden") flush(); };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    return () => { window.removeEventListener("pagehide", flush); document.removeEventListener("visibilitychange", onVis); };
+  }, []);   // {field,label,unit,kcalPerG} — tapped tile awaiting a number
   const [quickVal, setQuickVal] = useState("");
   const [scan, setScan] = useState({ status: "idle" }); // idle|loading|found|miss|error + food
   useEffect(() => { if (scan.status === "found" && resultRef.current) resultRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [scan.status]);
@@ -1393,6 +1401,7 @@ export default function App() {
   const stateBlob = JSON.stringify({ saved: true, eatenDate: dayKeyAt(Date.now(), prefs), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore, trainPrefs, routine, workoutLog });
   useEffect(() => {
     if (!hydrated.current) return;
+    blobRef.current = stateBlob; // the flush hook below reads this — always current, no closure lag
     const t = setTimeout(() => { fetch("/api/state", { method: "POST", headers: { "Content-Type": "application/json" }, body: stateBlob }).catch(() => {}); }, 800);
     return () => clearTimeout(t);
   }, [stateBlob]);
@@ -2070,11 +2079,18 @@ export default function App() {
     const q = nlText.trim(); if (!q || nlBusy) return;
     setNlBusy(true);
     try {
-      const text = await callClaude(`Estimate total nutrition for this described eating: "${q}". Single combined estimate, conservative.`, null, null, 500, NL_SCHEMA, 0);
+      const text = await callClaude(`Estimate total nutrition for this described eating: "${q}". Single combined estimate, conservative. Reply with ONLY a JSON object, no prose: {"name": string, "calories": int, "protein": int, "carbs": int, "fat": int, "fiber": int}`, null, null, 500, NL_SCHEMA, 0);
       const f = salvageJSONObject(text);
+      if (!f || typeof f !== "object") throw new Error("the reply contained no JSON");
       setScan({ status: "found", food: { found: true, source: "AI estimate", name: f.name || q.slice(0, 40), brand: "", basis: "as described", calories: +f.calories || 0, protein: +f.protein || 0, carbs: +f.carbs || 0, fat: +f.fat || 0, fiber: +f.fiber || 0 } });
       setNlText("");
-    } catch (e) { alert("Couldn't parse that \u2014 try rewording."); }
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      // network/timeout/proxy failures are NOT wording problems — say which one happened; keep their text
+      alert(/abort|timeout|fetch|network|load failed|failed to/i.test(msg)
+        ? "Couldn't reach the AI \u2014 the node or API may be busy. Your text is kept \u2014 try again in a moment."
+        : `Couldn't parse the reply \u2014 try rewording. (${msg.slice(0, 90)})`);
+    }
     setNlBusy(false);
   }
   async function scanMenuPhoto(file) {
@@ -2422,6 +2438,13 @@ export default function App() {
     if (quick && Number.isFinite(v) && v > 0) {
       const f = quick.field, kcal = QUICK_KCAL[f] || 0;
       setEaten((e) => ({ ...e, [f]: (+e[f] || 0) + v, ...(kcal ? { calories: (+e.calories || 0) + v * kcal } : {}) }));
+      // macro quick-adds also write a row — a counter bump with no record was how a morning of
+      // logging vanished without a trace (water and steps stay counter-only; they aren't meals)
+      if (["protein", "carbs", "fat", "fiber", "calories"].includes(f)) {
+        const row = { id: uid(), date: todayISO(), name: `Quick add \u2014 ${v}${quick.unit || "g"} ${f}`, protein: 0, calories: f === "calories" ? v : v * kcal, fat: 0, carbs: 0, fiber: 0, quick: true };
+        row[f === "calories" ? "calories" : f] = v;
+        setMealLog((m) => [...m, row]);
+      }
     }
     setQuick(null); setQuickVal("");
   };
