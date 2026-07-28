@@ -1455,7 +1455,13 @@ export default function App() {
     setTimeout(() => { setSplashFade(true); setTimeout(() => setSplashOn(false), FADE); }, Math.max(0, MIN_HOLD - (Date.now() - splashT0.current)));
   }
   const [savedGeo, setSavedGeo] = useState(null);
-  useEffect(() => { if (geo.status === "ok") setSavedGeo({ lat: geo.lat, lng: geo.lng }); }, [geo.status, geo.lat, geo.lng]);
+  // Persist location at ~110m precision and only when it actually moved — raw GPS jitter in the
+  // saved state was producing a write every ~48s while idle (rev 516→574 in 46 min, the doctor's find).
+  useEffect(() => {
+    if (geo.status !== "ok") return;
+    const r3 = (n) => Math.round(n * 1000) / 1000;
+    setSavedGeo((p) => (p && r3(p.lat) === r3(geo.lat) && r3(p.lng) === r3(geo.lng) ? p : { lat: r3(geo.lat), lng: r3(geo.lng) }));
+  }, [geo.status, geo.lat, geo.lng]);
   const stateBlob = JSON.stringify({ saved: true, eatenDate: dayKeyAt(Date.now(), prefs), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore, trainPrefs, routine, workoutLog });
   useEffect(() => {
     if (!hydrated.current) return;

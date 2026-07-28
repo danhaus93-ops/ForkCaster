@@ -249,5 +249,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/if \(next && next !== lastSavedRef\.current\) postState\(next, false\);/.test(A9),'the queued newest state ships the moment the line clears, latest wins');
   ok((A9.match(/fetch\("\/api\/state", \{ method: "POST"/g) || []).length === 1,'exactly ONE code path posts state — postState is the single writer');
 }
+// v0.9.32: GPS jitter stays out of the saved state — location persists at ~110m grid, identity kept when unmoved
+{
+  const B1=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(/const r3 = \(n\) => Math\.round\(n \* 1000\) \/ 1000;/.test(B1),'savedGeo rounds to 3 decimals (~110m)');
+  ok(/r3\(p\.lat\) === r3\(geo\.lat\) && r3\(p\.lng\) === r3\(geo\.lng\) \? p :/.test(B1),'an unmoved position keeps the SAME object — no blob churn, no save');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
