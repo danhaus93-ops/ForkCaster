@@ -1156,7 +1156,7 @@ export default function App() {
     catch { setKeyMsg("Save failed — is the node reachable?"); }
   }
   async function testAiKey() {
-    if (keyIn.a.trim() || keyIn.g.trim() || keyIn.fi.trim() || keyIn.fs.trim() || (keyIn.gm || "").trim() || (keyIn.sp || "").trim() || (keyIn.yt || "").trim()) { await saveKeys(); }  // test what you pasted, not a stale save
+        if (Object.values(keyIn).some((v) => String(v || "").trim())) { await saveKeys(); }  // test what you pasted, not a stale save — DERIVED, never enumerate key fields again
     setKeyMsg("Testing AI key…");
     try { const t = await callClaude("Reply with exactly: ok");
       const good = t.toLowerCase().includes("ok");

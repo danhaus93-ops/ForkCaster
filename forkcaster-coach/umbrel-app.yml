@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.34"
+version: "0.9.35"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,15 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.34: fixes the Save keys button staying grayed out when you paste
-  a key into a newly added field (the USDA FoodData Central key hit
-  this). The button now recognizes text in ANY key field, permanently —
-  future key fields can never be forgotten by it again.
+  v0.9.35: updates now actually arrive. Your phone could keep running an
+  old cached copy of the app after an update while the header claimed
+  the new version — the cause of the recent "Save keys stayed gray"
+  frustration. The app shell is no longer cacheable and each release
+  gets its own bundle address, so after this one, closing and reopening
+  the app once is the last cache ritual you will ever perform. Also:
+  the Test AI key button now saves any key you have pasted, and a
+  rebuilt safeguard makes it impossible to add a key field the form
+  cannot save.
 dependencies: []
 path: ""
 defaultUsername: ""

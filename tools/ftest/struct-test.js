@@ -277,5 +277,19 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!src.includes('!keyIn.a.trim() && !keyIn.g.trim()'), 'the enumerated field chain is gone from the gate');
   ok(src.includes('body.USDA_FDC_KEY = keyIn.fdc.trim()'), 'FDC key crosses the payload hop to the server name the whitelist expects');
 }
+// v0.9.35: updates must arrive — versioned bundle URLs + no-store HTML; CHECK 46 REBORN
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  ok(app.split('Object.values(keyIn).some((v) => String(v || \"\").trim())').length===4, 'ALL THREE key-gate sites (Save disabled, opacity, test-then-save) derive from every field');
+  ok(!/if \(keyIn\.a\.trim\(\) \|\| keyIn\.g\.trim\(\)/.test(app), 'the test-then-save enumeration (the v0.6.2 site my v0.9.34 missed) is gone');
+  ok(srv.includes('app.js?v=${APP_VERSION}') && srv.includes('"no-store"') && srv.includes('index: false'), 'server stamps the bundle URL with its version and never lets the HTML shell cache — a release IS a new URL');
+  // CHECK 46, REBORN (the v0.6.2 tripwire lost in the rig reset): every key field an input renders
+  // must be sendable — present in the saveKeys body mapping. A field the form shows but cannot save
+  // is the whole family of this bug.
+  const fields=[...new Set([...app.matchAll(/value=\{keyIn\.([a-z]+)/g)].map(m=>m[1]))];
+  ok(fields.length>=8, 'found the key input fields ('+fields.length+')');
+  for (const f of fields) ok(new RegExp('keyIn\\.'+f+'(\\s*\\|\\|\\s*\"\")?\\)?\\.trim\\(\\)\\) body\\.').test(app.replace(/\(keyIn\.([a-z]+) \|\| ""\)\.trim\(\)\) body\./g,'keyIn.$1.trim()) body.')), 'key field \''+f+'\' is sendable — appears in the saveKeys body (check 46)');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

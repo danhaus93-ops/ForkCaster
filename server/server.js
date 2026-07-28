@@ -1697,7 +1697,23 @@ app.post("/api/report/pdf", async (req, res) => {
 
 /* ── static frontend ── */
 const DIST = path.join(__dirname, "..", "dist");
-app.use(express.static(DIST));
-app.get("*", (_req, res) => res.sendFile(path.join(DIST, "index.html")));
+// v0.9.35: an update must ARRIVE. The HTML shell is never cached (no-store) and it references
+// version-stamped bundle URLs, so every release is a new URL — a guaranteed cache miss. This is
+// why his v0.9.34 Save-keys fix never reached the phone: iOS served a stale app.js under a
+// server-supplied header version that impersonated the new release.
+const APP_VERSION = require("./../package.json").version;
+app.use(express.static(DIST, { index: false, setHeaders: (res, fp) => {
+  if (/\.(js|css)$/.test(fp)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); // safe: URLs are versioned
+} }));
+let _indexHtml = null;
+app.get("*", (_req, res) => {
+  if (_indexHtml === null) {
+    _indexHtml = fs.readFileSync(path.join(DIST, "index.html"), "utf8")
+      .replace('src="/app.js"', `src="/app.js?v=${APP_VERSION}"`)
+      .replace('href="/app.css"', `href="/app.css?v=${APP_VERSION}"`);
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.type("html").send(_indexHtml);
+});
 
 app.listen(PORT, () => console.log(`ForkCaster listening on :${PORT} · data at ${DATA_DIR}`));
