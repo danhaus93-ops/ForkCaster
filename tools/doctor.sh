@@ -8,8 +8,14 @@ hr() { echo "──────────────────────�
 okc()  { echo "  ✅ $1"; }
 warn() { echo "  ⚠️  $1"; }
 
-echo "🩺 ForkCaster Doctor — $(date '+%Y-%m-%d %H:%M:%S')"
+echo "🩺 ForkCaster Doctor — $(date '+%Y-%m-%d %H:%M:%S %Z') (node clock)"
 hr
+# ── 0. Clock (node logs are stamped in the NODE's zone — do not read them as wall-clock) ──
+echo "CLOCK"
+okc "node: $(date '+%H:%M %Z') · UTC: $(date -u '+%H:%M') · US Central: $(TZ=America/Chicago date '+%H:%M %Z')"
+SYNCED=$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo unknown)
+if [ "$SYNCED" = "yes" ]; then okc "system clock is NTP-synchronized"; else warn "clock sync status: $SYNCED — drifting clocks corrupt every timestamped diagnosis"; fi
+echo
 
 # ── 1. Container ─────────────────────────────────────────
 CID=$(sudo docker ps -qf name=forkcaster | head -1)
@@ -18,6 +24,7 @@ if [ -z "$CID" ]; then
   sudo docker ps -a --filter name=forkcaster --format '  last seen: {{.Names}}  {{.Status}}  ({{.Image}})'
   exit 1
 fi
+HOSTDATA="$HOME/umbrel/app-data/forkcaster-coach/data"
 NAME=$(sudo docker inspect -f '{{.Name}}' "$CID" | sed 's|^/||')
 IMAGE=$(sudo docker inspect -f '{{.Config.Image}}' "$CID")
 STARTED=$(sudo docker inspect -f '{{.State.StartedAt}}' "$CID" | cut -c1-19)
@@ -25,6 +32,17 @@ RESTARTS=$(sudo docker inspect -f '{{.RestartCount}}' "$CID")
 echo "CONTAINER"
 okc "$NAME running since $STARTED (image $IMAGE)"
 if [ "$RESTARTS" = "0" ]; then okc "container restarts: 0 — the SERVER has not been crashing"; else warn "container has restarted $RESTARTS times — server-side instability, check errors below"; fi
+
+# ── 1b. Versions (running vs repo vs GitHub — is an update pending?) ──
+echo; echo "VERSIONS"
+RUNV=$(echo "$IMAGE" | sed 's/.*://')
+REPOV=$(grep -o '"version": "[^"]*"' "$HOME/ForkCaster/package.json" 2>/dev/null | cut -d'"' -f4)
+git -C "$HOME/ForkCaster" fetch -q origin main 2>/dev/null
+LOCALC=$(git -C "$HOME/ForkCaster" rev-parse --short HEAD 2>/dev/null)
+REMOTC=$(git -C "$HOME/ForkCaster" rev-parse --short origin/main 2>/dev/null)
+okc "running: $RUNV · repo checkout: v${REPOV:-?} @ ${LOCALC:-?} · GitHub: ${REMOTC:-?}"
+if [ -n "$LOCALC" ] && [ "$LOCALC" != "$REMOTC" ]; then warn "your checkout is BEHIND GitHub — run: cd ~/ForkCaster && ./release.sh"; fi
+if [ -n "$REPOV" ] && [ "v$REPOV" != "$RUNV" ]; then warn "repo is v$REPOV but the container runs $RUNV — an Update tap is pending in the Umbrel App Store"; fi
 
 # ── 2. Server answers ────────────────────────────────────
 PORT=$(sudo docker exec "$CID" sh -c 'echo ${PORT:-3000}')
@@ -53,6 +71,25 @@ sudo docker exec "$CID" node -e '
   } catch(e){ console.log("  ⚠️  health.json problem: "+e.message); }
 ' 2>/dev/null || warn "could not inspect data files inside the container"
 
+# ── 3b. API keys (names only — a missing key silently kills its feature) ──
+echo; echo "API KEYS (present in secrets.json — names only, never values)"
+sudo docker exec "$CID" node -e '
+  try { const k=Object.keys(JSON.parse(require("fs").readFileSync((process.env.DATA_DIR||"/data")+"/secrets.json","utf8"))||{});
+    console.log("  ✅ "+(k.length? k.join(" · ") : "none — AI, menus, recipes, photos and videos are all offline"));
+  } catch(e){ console.log("  ⚠️  secrets.json unreadable: "+e.message); }' 2>/dev/null
+
+# ── 3c. Data footprint ──
+echo; echo "DATA FOOTPRINT"
+DSIZE=$(sudo du -sh "$HOSTDATA" 2>/dev/null | awk "{print \$1}")
+PHOTOS=$(sudo sh -c "ls $HOSTDATA/photos 2>/dev/null | wc -l" || echo 0)
+LOGP=$(sudo docker inspect -f '{{.LogPath}}' "$CID" 2>/dev/null)
+LOGSZ=$(sudo du -sh "$LOGP" 2>/dev/null | awk "{print \$1}")
+okc "app data: ${DSIZE:-?} · progress photos: ${PHOTOS:-0} · docker log file: ${LOGSZ:-?}"
+
+# ── 3d. Node vitals (the whole Umbrel, not just this app) ──
+echo; echo "NODE VITALS"
+okc "$(free -h | awk '/^Mem:/{printf "RAM %s used of %s", $3, $2}') · load $(cut -d" " -f1-3 /proc/loadavg) · up $(uptime -p | sed 's/up //')"
+
 # ── 4. Stale-write rejections (self-reload evidence) ────
 echo; echo "STALE WRITES (full log — each one = a client got bounced and reloaded)"
 STALES=$(sudo docker logs -t "$CID" 2>&1 | grep -c "STALE WRITE REJECTED" || true)
@@ -76,16 +113,18 @@ echo; echo "MEMORY"
 MEMUSE=$(sudo docker stats --no-stream --format '{{.MemUsage}} ({{.MemPerc}})' "$CID" 2>/dev/null)
 RSS=$(sudo docker exec "$CID" sh -c "grep VmRSS /proc/1/status 2>/dev/null" | awk '{print $2, $3}')
 okc "container: $MEMUSE · server process RSS: ${RSS:-unknown}"
-CHROMS=$(sudo docker exec "$CID" sh -c "ps -o comm 2>/dev/null | grep -ci chrom" 2>/dev/null || echo 0)
+CHROMS=$(sudo docker exec "$CID" sh -c "ps -o comm 2>/dev/null | grep -ci chrom" 2>/dev/null | head -1); CHROMS=${CHROMS:-0}
 if [ "${CHROMS:-0}" = "0" ]; then okc "no Chromium processes alive — the menu scraper is cleaning up after itself"; else
   warn "$CHROMS Chromium process(es) running — fine mid-scrape; LEAKED BROWSERS if the app is idle (the classic Node leak here)"; fi
 MEMLOG="$HOME/.forkcaster-mem.log"
-echo "$(date '+%Y-%m-%d %H:%M') rss=${RSS:-?} chromium=$CHROMS since=$STARTED" >> "$MEMLOG"
+REV=$(sudo docker exec "$CID" node -e 'try{console.log(JSON.parse(require("fs").readFileSync((process.env.DATA_DIR||"/data")+"/state.json","utf8"))._rev||0)}catch(e){console.log("?")}' 2>/dev/null)
+LASTREV=$(tail -1 "$MEMLOG" 2>/dev/null | grep -o 'rev=[0-9]*' | cut -d= -f2)
+if [ -n "$LASTREV" ] && [ "$REV" != "?" ]; then okc "rev velocity: +$((REV - LASTREV)) writes since the last doctor run (idle should be ~0 after v0.9.32)"; fi
+echo "$(date '+%Y-%m-%d %H:%M') rss=${RSS:-?} chromium=$CHROMS rev=${REV:-?} since=$STARTED" >> "$MEMLOG"
 echo "  trend (last 5 runs — flat RSS at similar uptime = healthy, a staircase = leak):"
 tail -5 "$MEMLOG" | sed 's/^/     /'
 
 # ── 7. Snapshots & disk ─────────────────────────────────
-HOSTDATA="$HOME/umbrel/app-data/forkcaster-coach/data"
 echo; echo "SNAPSHOTS & DISK"
 SNAPS=$(sudo sh -c "ls $HOSTDATA/*snapshot* 2>/dev/null | wc -l" || echo 0)
 NEWEST=$(sudo sh -c "ls -t $HOSTDATA/*snapshot* 2>/dev/null | head -1" || true)
