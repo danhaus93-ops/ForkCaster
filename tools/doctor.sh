@@ -71,7 +71,20 @@ if [ "$ERRS" = "0" ]; then okc "no errors in the server log"; else
   sudo docker logs -t "$CID" 2>&1 | grep -iE "error|exception|unhandled" | tail -5 | cut -c1-160 | sed 's/^/     /'
 fi
 
-# ── 6. Snapshots & disk ─────────────────────────────────
+# ── 6. Memory (a leak is a SLOPE — each run logs a point) ─
+echo; echo "MEMORY"
+MEMUSE=$(sudo docker stats --no-stream --format '{{.MemUsage}} ({{.MemPerc}})' "$CID" 2>/dev/null)
+RSS=$(sudo docker exec "$CID" sh -c "grep VmRSS /proc/1/status 2>/dev/null" | awk '{print $2, $3}')
+okc "container: $MEMUSE · server process RSS: ${RSS:-unknown}"
+CHROMS=$(sudo docker exec "$CID" sh -c "ps -o comm 2>/dev/null | grep -ci chrom" 2>/dev/null || echo 0)
+if [ "${CHROMS:-0}" = "0" ]; then okc "no Chromium processes alive — the menu scraper is cleaning up after itself"; else
+  warn "$CHROMS Chromium process(es) running — fine mid-scrape; LEAKED BROWSERS if the app is idle (the classic Node leak here)"; fi
+MEMLOG="$HOME/.forkcaster-mem.log"
+echo "$(date '+%Y-%m-%d %H:%M') rss=${RSS:-?} chromium=$CHROMS since=$STARTED" >> "$MEMLOG"
+echo "  trend (last 5 runs — flat RSS at similar uptime = healthy, a staircase = leak):"
+tail -5 "$MEMLOG" | sed 's/^/     /'
+
+# ── 7. Snapshots & disk ─────────────────────────────────
 HOSTDATA="$HOME/umbrel/app-data/forkcaster-coach/data"
 echo; echo "SNAPSHOTS & DISK"
 SNAPS=$(sudo sh -c "ls $HOSTDATA/*snapshot* 2>/dev/null | wc -l" || echo 0)
