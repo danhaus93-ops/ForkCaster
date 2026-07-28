@@ -112,7 +112,23 @@ function violatesAllergy(text, allergies) {
 }
 const RANK_SCHEMA = { type: "array", items: { type: "object", properties: { id: { type: "string" }, match: { type: "integer" }, why: { type: "string" } }, required: ["id", "match", "why"] } };
 const EXTRACT_SCHEMA = { type: "array", items: { type: "object", properties: { item: { type: "string" }, section: { type: "string" }, cal: { type: "integer" }, protein: { type: "integer" }, fat: { type: "integer" } }, required: ["item", "section", "cal", "protein", "fat"] } };
-const NL_SCHEMA = { type: "object", properties: { name: { type: "string" }, calories: { type: "integer" }, protein: { type: "integer" }, carbs: { type: "integer" }, fat: { type: "integer" }, fiber: { type: "integer" } }, required: ["name", "calories", "protein", "carbs", "fat", "fiber"] };
+const NL_SCHEMA = { type: "object", properties: { name: { type: "string" }, items: { type: "array", items: { type: "object", properties: { item: { type: "string" }, qty: { type: "string" }, calories: { type: "integer" }, protein: { type: "integer" }, carbs: { type: "integer" }, fat: { type: "integer" }, fiber: { type: "integer" } }, required: ["item", "calories", "protein", "carbs", "fat", "fiber"] } } }, required: ["name", "items"] };
+// v0.9.33: the model itemizes; THIS does the arithmetic. Sums per-item macros deterministically,
+// then cross-checks against the 4/4/9 identity — if the summed calories stray >18% from what the
+// macros imply, trust the macros (a model that misadds calories rarely misstates all three macros too).
+function sumFoodItems(items) {
+  const rows = (Array.isArray(items) ? items : []).map((it) => ({
+    item: String((it && it.item) || "").slice(0, 60), qty: String((it && it.qty) || "").slice(0, 40),
+    calories: Math.max(0, Math.round(+((it && it.calories)) || 0)), protein: Math.max(0, Math.round(+((it && it.protein)) || 0)),
+    carbs: Math.max(0, Math.round(+((it && it.carbs)) || 0)), fat: Math.max(0, Math.round(+((it && it.fat)) || 0)),
+    fiber: Math.max(0, Math.round(+((it && it.fiber)) || 0)),
+  })).filter((r) => r.item);
+  const t = rows.reduce((a, r) => ({ calories: a.calories + r.calories, protein: a.protein + r.protein, carbs: a.carbs + r.carbs, fat: a.fat + r.fat, fiber: a.fiber + r.fiber }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+  const macroCal = 4 * t.protein + 4 * t.carbs + 9 * t.fat;
+  let adjusted = false;
+  if (macroCal > 0 && Math.abs(t.calories - macroCal) > 0.18 * macroCal) { t.calories = Math.round(macroCal); adjusted = true; }
+  return { ...t, items: rows, adjusted };
+}
 const POLISH_SCHEMA = { type: "object", properties: { coach: { type: "string" }, notes: { type: "array", items: { type: "object", properties: { item: { type: "string" }, why: { type: "string" } }, required: ["item", "why"] } } }, required: ["coach", "notes"] };
 /* Deterministic pick selection: AI only extracts items; code enforces goal rules. */
 function composePicks(items, mode, nauseaRisk, proteinLeft, calLeft, fatCeil, opts = {}) {
@@ -2148,10 +2164,15 @@ export default function App() {
     const q = nlText.trim(); if (!q || nlBusy) return;
     setNlBusy(true);
     try {
-      const text = await callClaude(`Estimate total nutrition for this described eating: "${q}". Single combined estimate, conservative. Reply with ONLY a JSON object, no prose: {"name": string, "calories": int, "protein": int, "carbs": int, "fat": int, "fiber": int}`, null, null, 500, NL_SCHEMA, 0);
+      const text = await callClaude(`Itemize and compute nutrition for this described eating: "${q}". RULES: stated quantities are EXACT — compute from them using standard USDA reference values (e.g. 1 cup raspberries 123 g = 64 cal; 1 tbsp chia 12 g = 58 cal). NEVER round toward a "typical serving". Be accurate, not conservative. Include zero-calorie items (water, black coffee) with zeros. Reply with ONLY a JSON object, no prose: {"name": string, "items": [{"item": string, "qty": string, "calories": int, "protein": int, "carbs": int, "fat": int, "fiber": int}]}`, null, null, 700, NL_SCHEMA, 0);
       const f = salvageJSONObject(text);
       if (!f || typeof f !== "object") throw new Error("the reply contained no JSON");
-      setScan({ status: "found", food: { found: true, source: "AI estimate", name: f.name || q.slice(0, 40), brand: "", basis: "as described", calories: +f.calories || 0, protein: +f.protein || 0, carbs: +f.carbs || 0, fat: +f.fat || 0, fiber: +f.fiber || 0 } });
+      // itemized path: sum deterministically; tolerate an old flat-shape reply as fallback
+      if (Array.isArray(f.items) && f.items.length) {
+        const tot = sumFoodItems(f.items);
+        Object.assign(f, tot);
+      }
+      setScan({ status: "found", food: { found: true, source: "AI estimate", name: f.name || q.slice(0, 40), brand: "", basis: Array.isArray(f.items) && f.items.length ? "itemized from stated amounts" : "as described", items: f.items || null, adjusted: !!f.adjusted, calories: +f.calories || 0, protein: +f.protein || 0, carbs: +f.carbs || 0, fat: +f.fat || 0, fiber: +f.fiber || 0 } });
       setNlText("");
     } catch (e) {
       const msg = String((e && e.message) || e);
@@ -2228,13 +2249,16 @@ export default function App() {
     setScan({ status: "loading" });
     try {
       const b64 = await shrinkToJpeg(file);
-      const prompt = "FIRST: if a Nutrition Facts label is readable ANYWHERE in this photo, TRANSCRIBE its per-serving numbers exactly — do not estimate — and set src to label. " +
-        "OTHERWISE identify the food and estimate macros for the full portion shown: state your assumed portion weight in grams, and be CONSERVATIVE about size — packaged single-serve bakery/deli items are typically 60–100 g, not restaurant portions; use the container for scale. " +
-        "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"calories\":<int>,\"protein\":<int>,\"carbs\":<int>,\"fat\":<int>,\"fiber\":<int>,\"grams\":<int or 0>,\"src\":\"label\" or \"estimate\"}.";
+      const prompt = "FIRST: if a Nutrition Facts label is readable ANYWHERE in this photo, TRANSCRIBE its per-serving numbers exactly — do not estimate — and set src to label with flat fields: {\"name\":string,\"calories\":int,\"protein\":int,\"carbs\":int,\"fat\":int,\"fiber\":int,\"grams\":int,\"src\":\"label\"}. " +
+        "OTHERWISE itemize every distinct food visible and COMPUTE each item from its estimated portion using visual scale cues (dinner plate ~26 cm, fork length): state each portion in qty (grams or household measure). Be realistic about size — packaged single-serve bakery/deli items are typically 60–100 g, not restaurant portions — but compute accurately from the portion you state; do not shade numbers low. " +
+        "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"src\":\"estimate\",\"items\":[{\"item\":string,\"qty\":string,\"calories\":int,\"protein\":int,\"carbs\":int,\"fat\":int,\"fiber\":int}]}.";
       const text = await callClaude(prompt, null, { data: b64, media_type: "image/jpeg" });
       const f = salvageJSONObject(text);
+      if (f.src !== "label" && Array.isArray(f.items) && f.items.length) Object.assign(f, sumFoodItems(f.items));
       setScan({ status: "found", food: {
-        name: f.name || "Photo estimate", brand: "", basis: f.src === "label" ? "1 serving (from label)" : (f.grams ? `~${Math.round(f.grams)} g portion` : "portion shown"), source: f.src === "label" ? "nutrition label read from photo" : "AI photo estimate",
+        name: f.name || "Photo estimate", brand: "", items: (f.src !== "label" && f.items) || null, adjusted: !!f.adjusted,
+        basis: f.src === "label" ? "1 serving (from label)" : (Array.isArray(f.items) && f.items.length ? "itemized from the photo" : (f.grams ? `~${Math.round(f.grams)} g portion` : "portion shown")),
+        source: f.src === "label" ? "nutrition label read from photo" : "AI estimate",
         calories: Math.round(f.calories || 0), protein: Math.round(f.protein || 0), carbs: Math.round(f.carbs || 0), fat: Math.round(f.fat || 0), fiber: Math.round(f.fiber || 0) } });
     } catch { setScan({ status: "error" }); }
   }
@@ -3799,6 +3823,14 @@ export default function App() {
                     ))}
                   </div>
                   <div style={{ fontSize: 10.5, color: C.faint, marginTop: 8 }}>per {scan.food.basis} · source: {scan.food.source || "Open Food Facts"}</div>
+                  {Array.isArray(scan.food.items) && scan.food.items.length > 0 && (
+                    <div style={{ marginTop: 6 }}>
+                      {scan.food.items.map((it, i) => (
+                        <div key={i} style={{ fontSize: 10.5, color: C.faint }}>{it.qty ? `${it.qty} ` : ""}{it.item} — {it.calories} cal</div>
+                      ))}
+                      {scan.food.adjusted ? <div style={{ fontSize: 10, color: C.faint, fontStyle: "italic" }}>calories cross-checked against macros</div> : null}
+                    </div>
+                  )}
                   <button onClick={addLoggedFood} style={{ width: "100%", marginTop: 12, background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>Add to today →</button>
                 </div>
               )}

@@ -255,5 +255,19 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/const r3 = \(n\) => Math\.round\(n \* 1000\) \/ 1000;/.test(B1),'savedGeo rounds to 3 decimals (~110m)');
   ok(/r3\(p\.lat\) === r3\(geo\.lat\) && r3\(p\.lng\) === r3\(geo\.lng\) \? p :/.test(B1),'an unmoved position keeps the SAME object — no blob churn, no save');
 }
+// v0.9.33: estimates itemize; deterministic summation with a 4/4/9 identity cross-check
+{
+  const src=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const fn=new Function('return '+src.slice(src.indexOf('function sumFoodItems'), src.indexOf('\n}', src.indexOf('function sumFoodItems'))+2))();
+  // the raspberry fixture — his exact evening, USDA per-item
+  const t=fn([{item:'raspberries',qty:'6 oz',calories:88,protein:2,carbs:20,fat:1,fiber:11},{item:'chia seeds',qty:'2 tbsp',calories:116,protein:4,carbs:10,fat:7,fiber:8},{item:'water',qty:'8 oz',calories:0,protein:0,carbs:0,fat:0,fiber:0}]);
+  ok(t.calories===204 && t.protein===6 && t.carbs===30 && t.fat===8 && t.fiber===19, 'raspberry fixture sums to the true 204/6/30/8/19 (card had said 150)');
+  ok(t.adjusted===false, 'honest per-item calories are left alone (within 18% of macro identity)');
+  const bad=fn([{item:'x',qty:'',calories:50,protein:10,carbs:10,fat:10}]);
+  ok(bad.calories===170 && bad.adjusted===true, 'calories that contradict the macros get recomputed from 4/4/9 and flagged');
+  ok(fn(null).calories===0 && fn([{qty:'1'}]).items.length===0, 'garbage in, zeros out — no NaN, nameless rows dropped');
+  ok(src.includes('stated quantities are EXACT') && !src.includes('Single combined estimate, conservative'), 'description prompt computes from stated amounts; the conservative lump-sum wording is gone');
+  ok(/OTHERWISE itemize every distinct food visible/.test(src) && /do not shade numbers low/.test(src), 'photo prompt itemizes and forbids lowballing (portion realism kept)');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

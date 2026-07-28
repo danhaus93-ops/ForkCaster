@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.32"
+version: "0.9.33"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.32: the app no longer saves your data every minute just because
-  GPS drifted a few meters. Location is now remembered at neighborhood
-  precision and only when you actually move, cutting background writes
-  and mobile data use to nearly zero while the app sits open. Venue
-  ranking still uses your precise live location and is unaffected.
+  v0.9.33: food estimates got a math upgrade. When you describe a meal
+  or snap a plate, the AI now itemizes each component and the app adds
+  them up itself, cross-checking calories against the macros. Stated
+  amounts are computed exactly instead of rounded to a "typical
+  serving", the systematic low-balling is gone, and the card shows the
+  per-item breakdown so you can spot a bad line before adding.
 dependencies: []
 path: ""
 defaultUsername: ""
