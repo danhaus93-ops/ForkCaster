@@ -269,5 +269,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(src.includes('stated quantities are EXACT') && !src.includes('Single combined estimate, conservative'), 'description prompt computes from stated amounts; the conservative lump-sum wording is gone');
   ok(/OTHERWISE itemize every distinct food visible/.test(src) && /do not shade numbers low/.test(src), 'photo prompt itemizes and forbids lowballing (portion realism kept)');
 }
+// v0.9.34: the Save-keys gate derives from ALL fields — the per-field enumeration that silently
+// ignored each newly added key input (his FDC paste, and one before it) is structurally dead
+{
+  const src=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(src.split('!Object.values(keyIn).some((v) => String(v || \"\").trim())').length===3, 'Save gate (disabled + opacity) derives from Object.values — a ninth key field can never be forgotten');
+  ok(!src.includes('!keyIn.a.trim() && !keyIn.g.trim()'), 'the enumerated field chain is gone from the gate');
+  ok(src.includes('body.USDA_FDC_KEY = keyIn.fdc.trim()'), 'FDC key crosses the payload hop to the server name the whitelist expects');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
