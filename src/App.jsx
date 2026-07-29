@@ -4429,10 +4429,10 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
       <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 6 }}>Cycle {cycleLogged}/{cyc} · {perSite} per site · resets when every site is used</div>
       <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: 240, margin: "0 auto" }}>
         <g fontWeight="700" fontSize="9">
-          <text x="16" y="14" fill={C.muted} textAnchor="middle">R</text>
-          <text x="104" y="14" fill={C.muted} textAnchor="middle">L</text>
-          <text x="16" y="21" fill={C.faint} fontSize="5.2" fontWeight="500" textAnchor="middle">your right</text>
-          <text x="104" y="21" fill={C.faint} fontSize="5.2" fontWeight="500" textAnchor="middle">your left</text>
+          <text x="26" y="14" fill={C.muted} textAnchor="middle">R</text>
+          <text x="94" y="14" fill={C.muted} textAnchor="middle">L</text>
+          <text x="26" y="21" fill={C.faint} fontSize="4.6" fontWeight="500" textAnchor="middle">your right</text>
+          <text x="94" y="21" fill={C.faint} fontSize="4.6" fontWeight="500" textAnchor="middle">your left</text>
         </g>
         <defs>
           <linearGradient id="siteFadeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
