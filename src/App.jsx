@@ -3326,7 +3326,7 @@ export default function App() {
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>)}</div>}
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
-      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} />)}</div>}
+      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} />)}</div>}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
 
       {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
@@ -4206,7 +4206,7 @@ export default function App() {
 }
 
 /* Estimated medication-level curve: one-compartment model from published half-lives. Informational only. */
-function MedLevelChart({ C, doseLog, med }) {
+function MedLevelChart({ C, doseLog, med, dueISO }) {
   const HL_DAYS = { tirzepatide: 5, semaglutide: 7, retatrutide: 6, rybelsus: 7, orforglipron: 5 }; // reta = trial-data estimate
   const hl = HL_DAYS[med] || 6;
   const ke = Math.log(2) / (hl * 24), ka = ke * 10; // absorption tuned for ~1.5d peak
@@ -4222,8 +4222,14 @@ function MedLevelChart({ C, doseLog, med }) {
   const gaps = doses.slice(1).map((d, i) => d.t - doses[i].t).sort((a, b) => a - b);
   const cadence = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 7 * 86400000;
   const lastDose = doses[doses.length - 1];
+  // v0.9.43: the projection anchors its FIRST future dose to the DUE date (the chosen dose day,
+  // the same truth the calendar chip renders), then continues at the inferred cadence. Before
+  // this, cadence-from-log alone put the next-dose marker on the OLD day for anyone who changed
+  // dose days. An overdue date clamps to now: the model assumes prompt dosing, never the past.
+  const dueT = dueISO ? new Date(dueISO + "T12:00:00").getTime() : null;
+  const firstT = dueT && dueT > lastDose.t ? Math.max(dueT, now) : lastDose.t + cadence;
   const virtual = [];
-  for (let t = lastDose.t + cadence; t <= end; t += cadence) virtual.push({ t, mg: lastDose.mg });
+  for (let t = firstT; t <= end; t += cadence) virtual.push({ t, mg: lastDose.mg });
   const mk = (list) => (t) => list.reduce((s, d) => {
     const h = (t - d.t) / 3600000; if (h <= 0) return s;
     return s + d.mg * (ka / (ka - ke)) * (Math.exp(-ke * h) - Math.exp(-ka * h));
@@ -4239,7 +4245,7 @@ function MedLevelChart({ C, doseLog, med }) {
   }
   const maxL = maxAll;
   if (maxReal <= 0) return null;
-  const nextDoseT = lastDose.t + cadence;
+  const nextDoseT = (dueT && dueT > lastDose.t ? Math.max(dueT, now) : lastDose.t + cadence);
   const W = 320, H = 110, PADB = 16;
   const x = (t) => ((t - start) / (end - start)) * W;
   const y = (L) => (H - PADB) - (L / maxL) * (H - PADB - 8);
