@@ -112,5 +112,26 @@ console.log('  glp1 picks:',JSON.stringify(picks.map(p=>p.item||p.name||p.id)));
   ok(/Confirm with your prescriber; log whatever you actually take/.test(SRC4), 'the card defers the decision, always');
   ok(/steps: \[2, 4, 8, 12\]/.test(SRC4), 'the TRIUMPH escalation ladder is the reta data');
 }
+
+// --- v0.9.37 resting heart rate surveillance (rhrRead) ---
+const RR=build(slice('function rhrRead(','function sumFoodItems'),['rhrRead']);
+const days=(vals)=>vals.map((v,i)=>({date:iso(vals.length-i),rhr:v}));
+ok(RR.rhrRead([]).status==='empty','no data = empty state');
+ok(RR.rhrRead(days([62,63,61,62,63])).status==='collecting','5 days = collecting');
+{ const r=RR.rhrRead(days([61,62,63,61,62,63,62,63,64,62]));
+  ok(r.status==='ready'&&r.baseline===62,'baseline = mean of first 7 (62), got '+r.baseline);
+  ok(!r.flagged,'in-band series does not flag'); }
+{ const spike=[61,62,63,61,62,63,62,63,62,78,62,63];
+  ok(!RR.rhrRead(days(spike)).flagged,'one 78-bpm spike day does NOT flag (espresso rule)'); }
+{ const drift=[61,62,63,61,62,63,62,64,71,72,71,70,71,72,71];
+  const r=RR.rhrRead(days(drift));
+  ok(r.flagged&&r.run===7,'+9 sustained across exactly 7 data days flags, run='+r.run);
+  ok(r.delta===9,'delta vs baseline = 9, got '+r.delta); }
+{ const drift=[61,62,63,61,62,63,62,64,71,72,71,70,71,72,71];
+  const dl=[{date:iso(20),mg:0.25},{date:iso(6),mg:0.5}];
+  ok(RR.rhrRead(days(drift),dl).escalated===true,'dose escalation inside the drift window is named');
+  ok(RR.rhrRead(days(drift),[{date:iso(20),mg:0.25},{date:iso(6),mg:0.25}]).escalated===false,'same-dose repeat is NOT an escalation');
+  ok(RR.rhrRead(days(drift),dl,{trainingChanged:true}).softened===true,'training-change context softens the banner'); }
+ok(RR.rhrRead([{date:iso(1),rhr:250},{date:iso(2),rhr:20}]).status==='empty','garbage bpm values are rejected, not averaged');
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

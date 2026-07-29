@@ -137,6 +137,31 @@ async function groundFoodItems(items) {
     return { items: merged, groundedCount: g };
   } catch (e) { return { items, groundedCount: 0 }; }
 }
+// v0.9.37 RESTING HEART RATE surveillance — a small sustained RHR rise is a labeled class effect
+// of GLP-1 medications (sinoatrial GLP-1 receptors). This watches HIS baseline, not a population's:
+// baseline = first 7 days on file; flags only a rise of >=8 bpm sustained across >=7 data days, so a
+// hard shift, one bad night, or a pre-shift espresso can never trip it. Informs, never prescribes.
+function rhrRead(healthDays, doseLog, opts) {
+  const rows = (Array.isArray(healthDays) ? healthDays : [])
+    .filter((d) => d && d.date && Number.isFinite(+d.rhr) && +d.rhr >= 30 && +d.rhr <= 130)
+    .map((d) => ({ date: String(d.date).slice(0, 10), rhr: Math.round(+d.rhr) }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  if (!rows.length) return { status: "empty" };
+  if (rows.length < 7) return { status: "collecting", have: rows.length, need: 7 };
+  const baseline = Math.round(rows.slice(0, 7).reduce((a, r) => a + r.rhr, 0) / 7);
+  const cur = rows[rows.length - 1];
+  let run = 0;
+  for (let i = rows.length - 1; i >= 0 && rows[i].rhr >= baseline + 8; i--) run += 1;
+  const flagged = run >= 7;
+  let escalated = false;
+  if (flagged) {
+    const winStart = rows[rows.length - run].date;
+    const log = (doseLog || []).filter((x) => x && x.date).sort((a, b) => (a.date < b.date ? -1 : 1));
+    for (let i = 1; i < log.length; i++) if (String(log[i].date) >= winStart && +log[i].mg > +log[i - 1].mg) escalated = true;
+  }
+  return { status: "ready", baseline, current: cur.rhr, delta: cur.rhr - baseline, run, flagged,
+    escalated, softened: !!(opts && opts.trainingChanged), series: rows.slice(-28) };
+}
 function sumFoodItems(items) {
   const rows = (Array.isArray(items) ? items : []).map((it) => ({
     item: String((it && it.item) || "").slice(0, 60), qty: String((it && it.qty) || "").slice(0, 40),
@@ -3183,6 +3208,37 @@ export default function App() {
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication, titration &amp; side effects</div>
+      {(() => {
+        const rr = rhrRead((healthSync && healthSync.days) || [], glp.doseLog);
+        const RED = "#f05252";
+        return <div style={{ marginBottom: 14 }}>{card(<div>
+          {sectionTitle("Resting heart rate", RED)}
+          {rr.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
+            Waiting for heart-rate data. When your watch is paired, add the <b>Resting Heart Rate</b> metric to your existing Health Auto Export automation and it lands here on its own. A small sustained rise is a known effect of this medication class — this card will watch yours against your own baseline, not the textbook's.</div>}
+          {rr.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8 }}>
+            Learning your baseline — {rr.have}/{rr.need} days banked. The first week on file becomes the reference everything after is judged against.</div>}
+          {rr.status === "ready" && <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 8 }}>
+              <span style={{ fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, color: C.ink }}>{rr.current}</span>
+              <span style={{ fontSize: 12, color: C.faint }}>bpm today</span>
+              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: rr.delta >= 8 ? RED : C.good }}>{rr.delta >= 0 ? "+" : ""}{rr.delta} vs your baseline ({rr.baseline})</span>
+            </div>
+            <svg viewBox="0 0 300 64" style={{ width: "100%", display: "block", marginTop: 8 }}>
+              {(() => { const se = rr.series; const lo = Math.min(...se.map((r) => r.rhr), rr.baseline) - 4, hi = Math.max(...se.map((r) => r.rhr), rr.baseline + 8) + 4;
+                const x = (i) => 4 + (i / Math.max(1, se.length - 1)) * 292, y = (v) => 4 + (1 - (v - lo) / (hi - lo)) * 56;
+                return <g>
+                  <rect x="4" y={y(rr.baseline + 3)} width="292" height={Math.max(2, y(rr.baseline - 3) - y(rr.baseline + 3))} fill="rgba(139,151,147,0.16)" rx="2" />
+                  <path d={se.map((r, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(r.rhr).toFixed(1)).join(" ")} fill="none" stroke={RED} strokeWidth="2" strokeLinejoin="round" />
+                  <circle cx={x(se.length - 1)} cy={y(se[se.length - 1].rhr)} r="2.6" fill={RED} />
+                </g>; })()}
+            </svg>
+            {rr.flagged
+              ? <div style={{ background: "rgba(240,82,82,0.10)", border: "1px solid rgba(240,82,82,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 9, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
+                  <b style={{ color: RED }}>Sustained +{rr.delta} bpm</b> above your baseline across {rr.run} days{rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
+              : <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
+          </div>}
+        </div>)}</div>;
+      })()}
 
       <div style={{ marginBottom: 14 }}>{card(
         <>

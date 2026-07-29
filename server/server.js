@@ -290,6 +290,7 @@ app.post("/api/health/sync", (req, res) => {
       const d = String(rec.date || "").slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
       const clean = {};
       for (const [k, cast] of [["steps", Math.round], ["activeKcal", Math.round], ["exerciseMin", Math.round], ["strength", Math.round]]) { const v = +rec[k]; if (Number.isFinite(v) && v >= 0) clean[k] = cast(v); }
+      const hr = +(rec.rhr != null ? rec.rhr : rec.restingHeartRate); if (Number.isFinite(hr) && hr >= 30 && hr <= 130) clean.rhr = Math.round(hr);
       let bf = +rec.bodyFatPct; if (Number.isFinite(bf) && bf > 0 && bf <= 1) bf *= 100; // scales report either 0.28 or 28
       if (Number.isFinite(bf) && bf >= 3 && bf <= 70) clean.bodyFatPct = Math.round(bf * 10) / 10;
       const lm = +rec.leanMassLbs, lmk = +rec.leanMassKg;
@@ -320,6 +321,7 @@ app.post("/api/health/sync", (req, res) => {
       else if (nm === "apple_exercise_time") rec.exerciseMin = (rec.exerciseMin || 0) + Math.round(q);
       else if (nm === "body_fat_percentage") { const v = q <= 1 ? q * 100 : q; if (v >= 3 && v <= 70) rec.bodyFatPct = Math.round(v * 10) / 10; }
       else if (nm === "lean_body_mass") { const v = unit.startsWith("kg") ? q * 2.20462 : q; if (v > 30 && v < 500) rec.leanMassLbs = Math.round(v * 10) / 10; }
+      else if (nm === "resting_heart_rate") { if (q >= 30 && q <= 130) rec.rhr = Math.round(q); }  // v0.9.37: bpm, wrist-derived
     }
   }
   for (const w of workouts) {

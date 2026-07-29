@@ -301,5 +301,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(srv.includes('return { grounded: false }'), 'no-match and FDC failure fall back honestly, never block');
   ok(app.includes('grounded: true') && app.includes('item: row.matched'), 'grounded lines take FDC values AND display the matched row name');
 }
+// v0.9.37: RHR wired end to end — ingest (both shapes) -> summary passthrough -> card
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  ok(srv.includes('nm === \"resting_heart_rate\"'), 'HAE metric resting_heart_rate is ingested');
+  ok(srv.includes('rec.restingHeartRate'), 'flat-shape rhr/restingHeartRate is ingested');
+  ok(app.includes('rhrRead((healthSync && healthSync.days) || [], glp.doseLog)'), 'card reads the synced days + dose log');
+  ok(app.includes('Resting heart rate') && app.includes('#f05252'), 'card exists and the vital sign line is RED (his call — dose curve stays purple)');
+  ok(app.includes('not medical advice') || app.includes('Informational only'), 'flag banner keeps the informs-never-prescribes voice');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
