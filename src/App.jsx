@@ -2576,10 +2576,22 @@ export default function App() {
      because a carb entry that left the calorie budget untouched would quietly overstate what is left.
      Calories entered directly add no macros; water and fiber carry none either. */
   const QUICK_KCAL = { protein: 4, carbs: 4, fat: 9 };
-  const commitQuick = () => {
+  const commitQuick = (mode) => {
     const v = +quickVal;
-    if (quick && Number.isFinite(v) && v > 0) {
-      const f = quick.field, kcal = QUICK_KCAL[f] || 0;
+    const f = quick && quick.field, kcal = QUICK_KCAL[f] || 0;
+    if (quick && mode === "set") {
+      // v0.9.40: SET replaces today's total for THIS counter (blank = 0). It touches only the tapped
+      // number — no derived calorie side-effect — because its job is correction, and a correction
+      // that silently moved a second counter would be a new version of the bug it exists to fix.
+      const target = Number.isFinite(v) && v >= 0 ? v : 0;
+      const cur = +eaten[f] || 0, delta = target - cur;
+      setEaten((e) => ({ ...e, [f]: target }));
+      if (delta !== 0 && ["protein", "carbs", "fat", "fiber", "calories"].includes(f)) {
+        const row = { id: uid(), date: todayISO(), name: `Set ${f} to ${target}${quick.unit || "g"} \u2014 correction`, protein: 0, calories: 0, fat: 0, carbs: 0, fiber: 0, quick: true, adjust: true };
+        row[f] = delta; // may be negative; the X subtracts it, which restores exactly
+        setMealLog((m) => [...m, row]);
+      }
+    } else if (quick && Number.isFinite(v) && v > 0) {
       setEaten((e) => ({ ...e, [f]: (+e[f] || 0) + v, ...(kcal ? { calories: (+e.calories || 0) + v * kcal } : {}) }));
       // macro quick-adds also write a row — a counter bump with no record was how a morning of
       // logging vanished without a trace (water and steps stay counter-only; they aren't meals)
@@ -2596,9 +2608,10 @@ export default function App() {
     <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 12px" }}>
       <span style={{ fontSize: 12.5, color: C.muted, whiteSpace: "nowrap" }}>add {quick.label}</span>
       <input autoFocus type="number" inputMode="decimal" value={quickVal} onChange={(e) => setQuickVal(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") commitQuick(); if (e.key === "Escape") { setQuick(null); setQuickVal(""); } }}
+        onKeyDown={(e) => { if (e.key === "Enter") commitQuick("add"); if (e.key === "Escape") { setQuick(null); setQuickVal(""); } }}
         placeholder={quick.unit} style={{ flex: 1, minWidth: 0, fontFamily: BODY, fontSize: 15, color: C.ink, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 9, padding: "9px 11px", outline: "none" }} />
-      <button onClick={commitQuick} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 9, padding: "9px 15px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
+      <button onClick={() => commitQuick("add")} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 9, padding: "9px 15px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
+      <button onClick={() => commitQuick("set")} title="Replace today's total for this number with the value typed (blank = 0)" style={{ background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "9px 13px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Set</button>
       <button onClick={() => { setQuick(null); setQuickVal(""); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 17, cursor: "pointer", padding: "0 2px" }}>✕</button>
     </div>
   );

@@ -331,5 +331,16 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
     ok(body.includes(f+':'), 'a meal-entry writer stores '+f+' (missing from: '+body.slice(0,60).trim()+'...)');
   ok(app.includes('- (m.carbs || 0)') && app.includes('- (m.fiber || 0)'), 'the X subtracts all five macros');
 }
+// v0.9.40: every counter can be SET to an exact value, including zero — his order after the
+// orphan cleanup proved the tiles could only ADD. Set touches only the tapped number, records a
+// reversible correction row (delta may be negative), and blank input means zero.
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(app.includes('commitQuick("set")') && app.includes('>Set</button>'), 'the editor has a Set button beside Add');
+  ok(app.includes('const target = Number.isFinite(v) && v >= 0 ? v : 0;'), 'blank or invalid input sets ZERO — zeroing is the primary use');
+  ok(app.includes('delta = target - cur'), 'Set computes a delta against the current counter');
+  ok(app.includes('adjust: true'), 'corrections are recorded as adjustment rows, X-reversible like any entry');
+  ok(!/mode === \"set\"[\s\S]{0,900}kcal \? \{ calories/.test(app.slice(app.indexOf('mode === \"set\"'), app.indexOf('mode === \"set\"')+900)), 'Set moves ONLY the tapped counter — no derived calorie side-effect');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

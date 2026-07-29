@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.39"
+version: "0.9.40"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.39: deleting a logged meal now removes ALL of its macros from the
-  day. Photo and plan-logged meals were recorded without their carbs and
-  fiber, so tapping X reversed protein, calories and fat but left carbs
-  and fiber stuck on the Now card. Every logging path now records the
-  complete set. Meals logged before this update may still need a manual
-  correction via tap-to-edit on the tiles.
+  v0.9.40: every counter on the Now card can now be set to an exact
+  value. Tap a number, type the correct total and hit Set — or leave it
+  blank and hit Set to zero it. Corrections show up in today's log and
+  can be undone with the X like any entry. Add works exactly as before.
 dependencies: []
 path: ""
 defaultUsername: ""
