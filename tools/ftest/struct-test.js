@@ -319,5 +319,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(app.includes('% at next dose'), 'next-dose marker names the projected trough');
   ok(app.split('rhrCardFor(_r)').length===3, 'RHR card renders in exactly one of two slots: top when flagged, below the med curve when quiet');
 }
+// v0.9.39: the X must be a perfect inverse of Add — EVERY meal-entry writer stores EVERY macro
+// the delete subtracts. His field find: photo meal deleted, carbs+fiber orphaned on the Now card,
+// because two of four entry writers enumerated {fat, protein, calories} and stopped (the picks
+// writer and quick-add stored all five — a fix applied to one caller and not its siblings).
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const pushes=[...app.matchAll(/setMealLog\(\(m\) => \[\.\.\.m, \{([^}]*)\}/g)].map(x=>x[1]);
+  ok(pushes.length>=3, 'found the inline meal-entry writers ('+pushes.length+')');
+  for (const body of pushes) for (const f of ['protein','calories','fat','carbs','fiber'])
+    ok(body.includes(f+':'), 'a meal-entry writer stores '+f+' (missing from: '+body.slice(0,60).trim()+'...)');
+  ok(app.includes('- (m.carbs || 0)') && app.includes('- (m.fiber || 0)'), 'the X subtracts all five macros');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -2316,7 +2316,7 @@ export default function App() {
     if (scan.status !== "found") return;
     const f = scan.food;
     setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat, fiber: (e.fiber || 0) + (f.fiber || 0) }));
-    setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: f.name, fat: f.fat || 0, protein: f.protein || 0, calories: f.calories || 0 }]);
+    setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: f.name, fat: f.fat || 0, protein: f.protein || 0, calories: f.calories || 0, carbs: f.carbs || 0, fiber: f.fiber || 0 }]);
     setScan({ status: "idle" }); setBarcode(""); setLogOpen(false);
   }
 
@@ -2518,7 +2518,7 @@ export default function App() {
     if (slot.logged) return;
     const f = { protein: Math.round(slot.perServing.protein * slot.servings), calories: Math.round(slot.perServing.calories * slot.servings), fat: Math.round((slot.perServing.fat || 0) * slot.servings), carbs: Math.round((slot.perServing.carbs || 0) * slot.servings) };
     setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat, fiber: (e.fiber || 0) + (+f.fiber || 0) }));
-    setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: slot.name, fat: f.fat, protein: f.protein, calories: f.calories }]);
+    setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: slot.name, fat: f.fat || 0, protein: f.protein || 0, calories: f.calories || 0, carbs: f.carbs || 0, fiber: f.fiber || 0 }]);
     setMealPlan((pl) => { const d = pl.days.map((day, i) => i !== di ? day : { ...day, slots: day.slots.map((x, j) => j !== si ? x : { ...x, logged: true }) }); return { ...pl, days: d }; });
   }
   async function shopLookup(codeArg) {
