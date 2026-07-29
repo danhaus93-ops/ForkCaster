@@ -1489,6 +1489,14 @@ export default function App() {
         if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) }));
         if (s.routine) setRoutine(s.routine);
         if (s.workoutLog) setWorkoutLog(s.workoutLog);
+        // v0.9.41 one-time migration: every dose site recorded before this release came through the
+        // mirrored map — the stored name is the OPPOSITE of the side the user actually tapped and
+        // injected. Flipping L<->R once restores every record to what the user meant (his dose 1:
+        // stored "Abdomen L", actual right abdomen — he told us). Flag prevents a double flip.
+        if (s.glp && Array.isArray(s.glp.doseLog) && !s.glp._siteMirrorFixed) {
+          const flip = (z) => (typeof z === "string" ? (z.endsWith(" L") ? z.slice(0, -2) + " R" : z.endsWith(" R") ? z.slice(0, -2) + " L" : z) : z);
+          s.glp = { ...s.glp, _siteMirrorFixed: true, doseLog: s.glp.doseLog.map((d) => (d && d.site ? { ...d, site: flip(d.site) } : d)) };
+        }
         if (s.goalWeight) setGoalWeight(s.goalWeight); if (s.glp) setGlp({ ...s.glp, doseLog: s.glp.doseLog || (s.glp.lastInjection ? [{ date: s.glp.lastInjection, mg: s.glp.dose || 0 }] : []) });
         if (s.mealLog) setMealLog(s.mealLog);
         if (s.photos) { const alive = s.photos.filter((p) => p && p.url && !p.url.startsWith("blob:")); const real = alive.filter((p) => !p.sim); const legacySims = alive.filter((p) => p.sim); setPhotos(real); if (legacySims.length) setSimShots((x) => [...legacySims, ...x]); }
@@ -4405,9 +4413,13 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
   const suggested = avail.length ? avail.reduce((a, b) => (daysSince(b) > daysSince(a) ? b : a)) : null;
   const belly = waist * 0.5 + 1.5 * g;
   const pos = {
-    "Arm L": [-(sh + lp(7, 10)), 68], "Arm R": [sh + lp(7, 10), 68],
-    "Abdomen L": [-belly * 0.8, NAVY + 5], "Abdomen R": [belly * 0.8, NAVY + 5],
-    "Thigh L": [-(thW + 2.5), 128], "Thigh R": [thW + 2.5, 128],
+    // v0.9.41: ANATOMICAL sides. This is a front view, so YOUR left renders on the VIEWER'S right —
+    // the map used to carry viewer-side coordinates under patient-side names, which recorded his
+    // right-abdomen shot as "Abdomen L" and then honestly offered the right again. Sides mean the
+    // patient's sides, as they do on every medical chart.
+    "Arm L": [sh + lp(7, 10), 68], "Arm R": [-(sh + lp(7, 10)), 68],
+    "Abdomen L": [belly * 0.8, NAVY + 5], "Abdomen R": [-belly * 0.8, NAVY + 5],
+    "Thigh L": [thW + 2.5, 128], "Thigh R": [-(thW + 2.5), 128],
   };
   return (
     <div>
@@ -4416,6 +4428,12 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
       </div>
       <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 6 }}>Cycle {cycleLogged}/{cyc} · {perSite} per site · resets when every site is used</div>
       <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: 240, margin: "0 auto" }}>
+        <g fontWeight="700" fontSize="9">
+          <text x="16" y="14" fill={C.muted} textAnchor="middle">R</text>
+          <text x="104" y="14" fill={C.muted} textAnchor="middle">L</text>
+          <text x="16" y="21" fill={C.faint} fontSize="5.2" fontWeight="500" textAnchor="middle">your right</text>
+          <text x="104" y="21" fill={C.faint} fontSize="5.2" fontWeight="500" textAnchor="middle">your left</text>
+        </g>
         <defs>
           <linearGradient id="siteFadeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
           <mask id="siteFadeM"><rect x="0" y="0" width="120" height="160" fill="url(#siteFadeG)" /></mask>
@@ -4446,7 +4464,7 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
           );
         })}
       </svg>
-      <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>Arm dots mean the <b>back</b> of the upper arm (shown front-view). Tap a site, then Log dose — it saves with the dose. Faded sites are used up this cycle.</div>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>L/R are <b>your</b> left and right (front view, so they appear mirrored — same as the R marker on an X-ray). Arm dots mean the <b>back</b> of the upper arm. Tap a site, then Log dose — it saves with the dose. Faded sites are used up this cycle.</div>
     </div>
   );
 }

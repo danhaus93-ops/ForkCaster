@@ -342,5 +342,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(app.includes('adjust: true'), 'corrections are recorded as adjustment rows, X-reversible like any entry');
   ok(!/mode === \"set\"[\s\S]{0,900}kcal \? \{ calories/.test(app.slice(app.indexOf('mode === \"set\"'), app.indexOf('mode === \"set\"')+900)), 'Set moves ONLY the tapped counter — no derived calorie side-effect');
 }
+// v0.9.41: injection-site sides are ANATOMICAL — his right-abdomen shot was recorded as
+// "Abdomen L" because the dot map carried viewer-side coordinates under patient-side names.
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(app.includes('\"Abdomen L\": [belly * 0.8') && app.includes('\"Abdomen R\": [-belly * 0.8'), 'patient-left renders viewer-right: the front view is a mirror, like every medical chart');
+  ok(app.includes('\"Thigh L\": [thW + 2.5') && app.includes('\"Arm L\": [sh + lp(7, 10)'), 'all three L/R pairs flipped together — no half-mirrored body');
+  ok(app.includes('_siteMirrorFixed'), 'one-time migration flips pre-fix stored sites and flags itself done');
+  ok(app.includes('are <b>your</b> left and right'), 'the caption teaches the mirror');
+  ok(app.includes('>R</text>') && app.includes('>your right</text>'), 'radiograph-style R/L side markers on the avatar (his ask)');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
