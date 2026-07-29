@@ -990,6 +990,57 @@ app.get("/api/foodsearch", async (req, res) => {
   res.json({ results: [], error: "unreachable", detail: errs.join(" | ") });
 });
 
+// v0.9.36 GROUNDED ITEMIZATION — the model identifies and weighs; THIS resolves each item against
+// USDA FoodData Central and computes grams x per-100g / 100 deterministically. The model never
+// states a calorie on the grounded path; every number traces to a named federal database row.
+const _groundCache = new Map(); // query -> per-100g row (saves quota; foods don't change mid-day)
+async function groundOne(qRaw) {
+  const q = String(qRaw || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!q) return null;
+  if (_groundCache.has(q)) return _groundCache.get(q);
+  const key2 = key("USDA_FDC_KEY") || "DEMO_KEY";
+  async function search(types) {
+    const r = await fetch(`${FDC_BASE}/fdc/v1/foods/search?api_key=${key2}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q, dataType: types, pageSize: 6 }),
+      signal: AbortSignal.timeout(7000),
+    });
+    if (!r.ok) throw new Error(`FDC ${r.status}`);
+    return ((await r.json()).foods || []);
+  }
+  let foods = await search(["Foundation", "SR Legacy"]);           // generic whole foods first
+  if (!foods.length) foods = await search(["Survey (FNDDS)"]);      // prepared/mixed dishes fallback
+  const qTok = q.split(" ").filter((w) => w.length > 2);
+  let best = null, bestScore = -1;
+  for (const f of foods) {
+    const d = String(f.description || "").toLowerCase();
+    let score = qTok.reduce((a, w) => a + (d.includes(w) ? 1 : 0), 0);
+    if (d.startsWith(qTok[0] || "")) score += 0.5;                  // prefer rows led by the food itself
+    if (score > bestScore) { bestScore = score; best = f; }
+  }
+  if (!best || bestScore < 1) { _groundCache.set(q, null); return null; }
+  const by = {}; (best.foodNutrients || []).forEach((x) => { by[x.nutrientId] = x.value; });
+  if (!(by[1008] || by[1003])) { _groundCache.set(q, null); return null; }
+  const row = { matched: String(best.description || "").slice(0, 70), fdcId: best.fdcId || 0,
+    per100: { calories: +by[1008] || 0, protein: +by[1003] || 0, carbs: +by[1005] || 0, fat: +by[1004] || 0, fiber: +by[1079] || 0 } };
+  _groundCache.set(q, row);
+  return row;
+}
+app.post("/api/food/ground", async (req, res) => {
+  const items = (Array.isArray(req.body && req.body.items) ? req.body.items : []).slice(0, 12);
+  const out = await Promise.all(items.map(async (it) => {
+    const grams = Math.max(0, Math.min(3000, +((it && it.grams)) || 0));
+    try {
+      const row = grams > 0 ? await groundOne(it && it.item) : null;
+      if (!row) return { grounded: false };
+      const per = (k) => Math.round(row.per100[k] * grams / 100);
+      return { grounded: true, matched: row.matched, fdcId: row.fdcId,
+        calories: per("calories"), protein: per("protein"), carbs: per("carbs"), fat: per("fat"), fiber: per("fiber") };
+    } catch (e) { return { grounded: false }; }                     // any FDC failure = honest fallback, never a block
+  }));
+  res.json({ rows: out });
+});
+
 const MENU_CACHE = new Map(); // url+goal -> { t, obj }
 const MENU_INFLIGHT = new Map(); // url+goal -> Promise: concurrent identical requests share one run
 /* ── Recipe engine (Plan tab): schema.org importer, Spoonacular search, seed cookbook ── */

@@ -291,5 +291,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(fields.length>=8, 'found the key input fields ('+fields.length+')');
   for (const f of fields) ok(new RegExp('keyIn\\.'+f+'(\\s*\\|\\|\\s*\"\")?\\)?\\.trim\\(\\)\\) body\\.').test(app.replace(/\(keyIn\.([a-z]+) \|\| ""\)\.trim\(\)\) body\./g,'keyIn.$1.trim()) body.')), 'key field \''+f+'\' is sendable — appears in the saveKeys body (check 46)');
 }
+// v0.9.36 grounded itemization: model weighs, server resolves, code computes
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  ok(app.includes('required: [\"item\", \"grams\"'), 'NL schema REQUIRES grams — the model must weigh every item');
+  ok(app.split('groundFoodItems(').length>=4, 'both estimate paths (described + photo) ground through the shared helper');
+  ok(srv.includes('app.post(\"/api/food/ground\"') && srv.includes('${FDC_BASE}'), 'ground endpoint exists and is stubbable via FDC_BASE');
+  ok(srv.includes('return { grounded: false }'), 'no-match and FDC failure fall back honestly, never block');
+  ok(app.includes('grounded: true') && app.includes('item: row.matched'), 'grounded lines take FDC values AND display the matched row name');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

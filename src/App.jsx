@@ -112,10 +112,31 @@ function violatesAllergy(text, allergies) {
 }
 const RANK_SCHEMA = { type: "array", items: { type: "object", properties: { id: { type: "string" }, match: { type: "integer" }, why: { type: "string" } }, required: ["id", "match", "why"] } };
 const EXTRACT_SCHEMA = { type: "array", items: { type: "object", properties: { item: { type: "string" }, section: { type: "string" }, cal: { type: "integer" }, protein: { type: "integer" }, fat: { type: "integer" } }, required: ["item", "section", "cal", "protein", "fat"] } };
-const NL_SCHEMA = { type: "object", properties: { name: { type: "string" }, items: { type: "array", items: { type: "object", properties: { item: { type: "string" }, qty: { type: "string" }, calories: { type: "integer" }, protein: { type: "integer" }, carbs: { type: "integer" }, fat: { type: "integer" }, fiber: { type: "integer" } }, required: ["item", "calories", "protein", "carbs", "fat", "fiber"] } } }, required: ["name", "items"] };
+const NL_SCHEMA = { type: "object", properties: { name: { type: "string" }, items: { type: "array", items: { type: "object", properties: { item: { type: "string" }, qty: { type: "string" }, grams: { type: "number" }, calories: { type: "integer" }, protein: { type: "integer" }, carbs: { type: "integer" }, fat: { type: "integer" }, fiber: { type: "integer" } }, required: ["item", "grams", "calories", "protein", "carbs", "fat", "fiber"] } } }, required: ["name", "items"] };
 // v0.9.33: the model itemizes; THIS does the arithmetic. Sums per-item macros deterministically,
 // then cross-checks against the 4/4/9 identity — if the summed calories stray >18% from what the
 // macros imply, trust the macros (a model that misadds calories rarely misstates all three macros too).
+// v0.9.36: resolve items against USDA via the server; grounded rows take FDC values and show the
+// matched row's name — a wrong match is visible on the card, not buried in a total. Any failure
+// returns the items untouched (the v0.9.33 model-value path), honestly labeled a tier lower.
+async function groundFoodItems(items) {
+  try {
+    const list = (Array.isArray(items) ? items : []).map((it) => ({ item: it.item, grams: +it.grams || 0 }));
+    if (!list.length) return { items, groundedCount: 0 };
+    const r = await fetch("/api/food/ground", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: list }), signal: AbortSignal.timeout(12000) });
+    const rows = ((await r.json()) || {}).rows || [];
+    let g = 0;
+    const merged = items.map((it, i) => {
+      const row = rows[i];
+      if (!row || !row.grounded) return it;
+      g += 1;
+      return { ...it, item: row.matched, calories: row.calories, protein: row.protein,
+        carbs: row.carbs, fat: row.fat, fiber: row.fiber, grounded: true };
+    });
+    return { items: merged, groundedCount: g };
+  } catch (e) { return { items, groundedCount: 0 }; }
+}
 function sumFoodItems(items) {
   const rows = (Array.isArray(items) ? items : []).map((it) => ({
     item: String((it && it.item) || "").slice(0, 60), qty: String((it && it.qty) || "").slice(0, 40),
@@ -2164,15 +2185,16 @@ export default function App() {
     const q = nlText.trim(); if (!q || nlBusy) return;
     setNlBusy(true);
     try {
-      const text = await callClaude(`Itemize and compute nutrition for this described eating: "${q}". RULES: stated quantities are EXACT — compute from them using standard USDA reference values (e.g. 1 cup raspberries 123 g = 64 cal; 1 tbsp chia 12 g = 58 cal). NEVER round toward a "typical serving". Be accurate, not conservative. Include zero-calorie items (water, black coffee) with zeros. Reply with ONLY a JSON object, no prose: {"name": string, "items": [{"item": string, "qty": string, "calories": int, "protein": int, "carbs": int, "fat": int, "fiber": int}]}`, null, null, 700, NL_SCHEMA, 0);
+      const text = await callClaude(`Itemize and compute nutrition for this described eating: "${q}". For EVERY item include grams: the edible weight as one number (stated quantities are EXACT — convert them exactly: 6 oz = 170 g, 1 tbsp chia = 12 g). Also compute nutrition from standard USDA reference values as a fallback. NEVER round toward a "typical serving". Be accurate, not conservative. Include zero-calorie items (water, black coffee) with zeros. Reply with ONLY a JSON object, no prose: {"name": string, "items": [{"item": string, "qty": string, "calories": int, "protein": int, "carbs": int, "fat": int, "fiber": int}]}`, null, null, 700, NL_SCHEMA, 0);
       const f = salvageJSONObject(text);
       if (!f || typeof f !== "object") throw new Error("the reply contained no JSON");
       // itemized path: sum deterministically; tolerate an old flat-shape reply as fallback
       if (Array.isArray(f.items) && f.items.length) {
+        const gr = await groundFoodItems(f.items); f.items = gr.items; f._grounded = gr.groundedCount;
         const tot = sumFoodItems(f.items);
         Object.assign(f, tot);
       }
-      setScan({ status: "found", food: { found: true, source: "AI estimate", name: f.name || q.slice(0, 40), brand: "", basis: Array.isArray(f.items) && f.items.length ? "itemized from stated amounts" : "as described", items: f.items || null, adjusted: !!f.adjusted, calories: +f.calories || 0, protein: +f.protein || 0, carbs: +f.carbs || 0, fat: +f.fat || 0, fiber: +f.fiber || 0 } });
+      setScan({ status: "found", food: { found: true, source: f._grounded && f._grounded === (f.items || []).length ? "USDA FoodData Central (grounded)" : f._grounded ? "USDA + AI (partially grounded)" : "AI estimate", name: f.name || q.slice(0, 40), brand: "", basis: Array.isArray(f.items) && f.items.length ? (f._grounded ? "itemized \u00b7 computed from matched USDA rows" : "itemized from stated amounts") : "as described", items: f.items || null, adjusted: !!f.adjusted, calories: +f.calories || 0, protein: +f.protein || 0, carbs: +f.carbs || 0, fat: +f.fat || 0, fiber: +f.fiber || 0 } });
       setNlText("");
     } catch (e) {
       const msg = String((e && e.message) || e);
@@ -2254,7 +2276,10 @@ export default function App() {
         "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"src\":\"estimate\",\"items\":[{\"item\":string,\"qty\":string,\"calories\":int,\"protein\":int,\"carbs\":int,\"fat\":int,\"fiber\":int}]}.";
       const text = await callClaude(prompt, null, { data: b64, media_type: "image/jpeg" });
       const f = salvageJSONObject(text);
-      if (f.src !== "label" && Array.isArray(f.items) && f.items.length) Object.assign(f, sumFoodItems(f.items));
+      if (f.src !== "label" && Array.isArray(f.items) && f.items.length) {
+        const gr = await groundFoodItems(f.items); f.items = gr.items; f._grounded = gr.groundedCount;
+        Object.assign(f, sumFoodItems(f.items));
+      }
       setScan({ status: "found", food: {
         name: f.name || "Photo estimate", brand: "", items: (f.src !== "label" && f.items) || null, adjusted: !!f.adjusted,
         basis: f.src === "label" ? "1 serving (from label)" : (Array.isArray(f.items) && f.items.length ? "itemized from the photo" : (f.grams ? `~${Math.round(f.grams)} g portion` : "portion shown")),
