@@ -311,5 +311,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(app.includes('Resting heart rate') && app.includes('#f05252'), 'card exists and the vital sign line is RED (his call — dose curve stays purple)');
   ok(app.includes('not medical advice') || app.includes('Informational only'), 'flag banner keeps the informs-never-prescribes voice');
 }
+// v0.9.38: dose curve teaches steady-state; RHR card position is a signal
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  ok(app.includes('doses.concat(virtual)'), 'projection includes scheduled future doses (steady-state build is drawn, not hidden)');
+  ok(app.includes('level(now) / maxReal'), 'now-percent stays anchored to the peak actually reached, not the projected future peak');
+  ok(app.includes('% at next dose'), 'next-dose marker names the projected trough');
+  ok(app.split('rhrCardFor(_r)').length===3, 'RHR card renders in exactly one of two slots: top when flagged, below the med curve when quiet');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

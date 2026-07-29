@@ -3204,41 +3204,40 @@ export default function App() {
     </div>
   );
 
-  const renderGlp = () => (
-    <div style={{ padding: "18px 18px 12px" }}>
-      <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
-      <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication, titration &amp; side effects</div>
-      {(() => {
-        const rr = rhrRead((healthSync && healthSync.days) || [], glp.doseLog);
-        const RED = "#f05252";
-        return <div style={{ marginBottom: 14 }}>{card(<div>
+  // v0.9.38: the RHR card's POSITION is itself a signal — quiet states live below the med curve;
+  // a flagged state promotes the card to the very top of the tab, so something feels off before a word is read.
+  const rhrCardFor = (_rr) => { const RED = "#f05252"; return <div style={{ marginBottom: 14 }}>{card(<div>
           {sectionTitle("Resting heart rate", RED)}
-          {rr.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
+          {_rr.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
             Waiting for heart-rate data. When your watch is paired, add the <b>Resting Heart Rate</b> metric to your existing Health Auto Export automation and it lands here on its own. A small sustained rise is a known effect of this medication class — this card will watch yours against your own baseline, not the textbook's.</div>}
-          {rr.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8 }}>
-            Learning your baseline — {rr.have}/{rr.need} days banked. The first week on file becomes the reference everything after is judged against.</div>}
-          {rr.status === "ready" && <div>
+          {_rr.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8 }}>
+            Learning your baseline — {_rr.have}/{_rr.need} days banked. The first week on file becomes the reference everything after is judged against.</div>}
+          {_rr.status === "ready" && <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 8 }}>
-              <span style={{ fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, color: C.ink }}>{rr.current}</span>
+              <span style={{ fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, color: C.ink }}>{_rr.current}</span>
               <span style={{ fontSize: 12, color: C.faint }}>bpm today</span>
-              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: rr.delta >= 8 ? RED : C.good }}>{rr.delta >= 0 ? "+" : ""}{rr.delta} vs your baseline ({rr.baseline})</span>
+              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: _rr.delta >= 8 ? RED : C.good }}>{_rr.delta >= 0 ? "+" : ""}{_rr.delta} vs your baseline ({_rr.baseline})</span>
             </div>
             <svg viewBox="0 0 300 64" style={{ width: "100%", display: "block", marginTop: 8 }}>
-              {(() => { const se = rr.series; const lo = Math.min(...se.map((r) => r.rhr), rr.baseline) - 4, hi = Math.max(...se.map((r) => r.rhr), rr.baseline + 8) + 4;
+              {(() => { const se = _rr.series; const lo = Math.min(...se.map((r) => r.rhr), _rr.baseline) - 4, hi = Math.max(...se.map((r) => r.rhr), _rr.baseline + 8) + 4;
                 const x = (i) => 4 + (i / Math.max(1, se.length - 1)) * 292, y = (v) => 4 + (1 - (v - lo) / (hi - lo)) * 56;
                 return <g>
-                  <rect x="4" y={y(rr.baseline + 3)} width="292" height={Math.max(2, y(rr.baseline - 3) - y(rr.baseline + 3))} fill="rgba(139,151,147,0.16)" rx="2" />
+                  <rect x="4" y={y(_rr.baseline + 3)} width="292" height={Math.max(2, y(_rr.baseline - 3) - y(_rr.baseline + 3))} fill="rgba(139,151,147,0.16)" rx="2" />
                   <path d={se.map((r, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(r.rhr).toFixed(1)).join(" ")} fill="none" stroke={RED} strokeWidth="2" strokeLinejoin="round" />
                   <circle cx={x(se.length - 1)} cy={y(se[se.length - 1].rhr)} r="2.6" fill={RED} />
                 </g>; })()}
             </svg>
-            {rr.flagged
+            {_rr.flagged
               ? <div style={{ background: "rgba(240,82,82,0.10)", border: "1px solid rgba(240,82,82,0.35)", borderRadius: 10, padding: "9px 11px", marginTop: 9, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
-                  <b style={{ color: RED }}>Sustained +{rr.delta} bpm</b> above your baseline across {rr.run} days{rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
+                  <b style={{ color: RED }}>Sustained +{_rr.delta} bpm</b> above your baseline across {_rr.run} days{_rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{_rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
           </div>}
-        </div>)}</div>;
-      })()}
+        </div>)}</div>; };
+  const renderGlp = () => (
+    <div style={{ padding: "18px 18px 12px" }}>
+      <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
+      <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication, titration &amp; side effects</div>
+      {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? rhrCardFor(_r) : null; })()}
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
@@ -3307,6 +3306,7 @@ export default function App() {
       </>)}</div>}
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} />)}</div>}
+      {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
 
       {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
       {(() => { const t = titrationRead(glp.doseLog, glp.med); if (!t) return null; return (
@@ -4193,22 +4193,40 @@ function MedLevelChart({ C, doseLog, med }) {
   if (!doses.length) return null;
   const now = Date.now();
   const start = Math.max(doses[0].t - 86400000, now - 42 * 86400000);
-  const end = now + 7 * 86400000;
-  const level = (t) => doses.reduce((s, d) => {
+  const end = now + 28 * 86400000; // v0.9.38: look far enough ahead to SHOW steady-state building
+  // Cadence = median gap between logged doses (weekly meds default 7d); the projection assumes the
+  // schedule continues at the current dose — each dose lands on the remains of the last, so the
+  // floor climbs for a few weeks before levelling. That accumulation is the most educational truth
+  // this chart owns; hiding it made week-4 feel inexplicably stronger than week-1.
+  const gaps = doses.slice(1).map((d, i) => d.t - doses[i].t).sort((a, b) => a - b);
+  const cadence = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 7 * 86400000;
+  const lastDose = doses[doses.length - 1];
+  const virtual = [];
+  for (let t = lastDose.t + cadence; t <= end; t += cadence) virtual.push({ t, mg: lastDose.mg });
+  const mk = (list) => (t) => list.reduce((s, d) => {
     const h = (t - d.t) / 3600000; if (h <= 0) return s;
     return s + d.mg * (ka / (ka - ke)) * (Math.exp(-ke * h) - Math.exp(-ka * h));
   }, 0);
-  const N = 140, pts = [];
-  let maxL = 0;
-  for (let i = 0; i <= N; i++) { const t = start + (i / N) * (end - start); const L = level(t); maxL = Math.max(maxL, L); pts.push({ t, L }); }
-  if (maxL <= 0) return null;
+  const level = mk(doses), levelProj = mk(doses.concat(virtual));
+  const N = 200, pts = [];
+  let maxReal = 0, maxAll = 0;
+  for (let i = 0; i <= N; i++) {
+    const t = start + (i / N) * (end - start);
+    const L = t <= now ? level(t) : levelProj(t);
+    if (t <= now) maxReal = Math.max(maxReal, level(t));
+    maxAll = Math.max(maxAll, L); pts.push({ t, L });
+  }
+  const maxL = maxAll;
+  if (maxReal <= 0) return null;
+  const nextDoseT = lastDose.t + cadence;
   const W = 320, H = 110, PADB = 16;
   const x = (t) => ((t - start) / (end - start)) * W;
   const y = (L) => (H - PADB) - (L / maxL) * (H - PADB - 8);
   const nowX = x(now);
   const past = pts.filter((p) => p.t <= now).map((p) => `${x(p.t).toFixed(1)},${y(p.L).toFixed(1)}`).join(" ");
   const fut = pts.filter((p) => p.t >= now).map((p) => `${x(p.t).toFixed(1)},${y(p.L).toFixed(1)}`).join(" ");
-  const nowLevelPct = Math.round((level(now) / maxL) * 100);
+  const nowLevelPct = Math.round((level(now) / maxReal) * 100); // % of the peak you have actually reached
+  const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / maxReal) * 100) : null;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
@@ -4216,6 +4234,10 @@ function MedLevelChart({ C, doseLog, med }) {
         <div style={{ fontFamily: BODY, fontSize: 12, fontWeight: 700, color: C.violet }}>~{nowLevelPct}% of your peak</div>
       </div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+        {[75, 50, 25].map((g) => { const gy = y((g / 100) * maxReal); return <g key={g}>
+          <line x1="0" x2={W} y1={gy} y2={gy} stroke={C.hair || "#26302c"} strokeWidth="0.75" strokeDasharray="1 3" />
+          <text x={W - 2} y={gy - 2} textAnchor="end" fontSize="7.5" fill={C.faint}>{g}%</text>
+        </g>; })}
         <polyline points={past} fill="none" stroke={C.violet} strokeWidth="2.4" strokeLinejoin="round" />
         <polyline points={fut} fill="none" stroke={C.violet} strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />
         <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
@@ -4223,8 +4245,12 @@ function MedLevelChart({ C, doseLog, med }) {
           <g key={i}><circle cx={x(d.t)} cy={H - PADB} r="3" fill={C.violet} /><text x={x(d.t)} y={H - 3} textAnchor="middle" fontSize="8" fill={C.faint}>{d.mg}</text></g>
         ))}
         <text x={nowX + 4} y="12" fontSize="8.5" fill={C.go}>now</text>
+        {nextPct != null && nextDoseT < end && <g>
+          <circle cx={x(nextDoseT)} cy={y(levelProj(nextDoseT - 3600000))} r="3" fill="none" stroke={C.violet} strokeWidth="1.5" />
+          <text x={Math.min(x(nextDoseT) + 5, W - 66)} y={Math.max(y(levelProj(nextDoseT - 3600000)) - 5, 10)} fontSize="8" fill={C.violet}>~{nextPct}% at next dose</text>
+        </g>}
       </svg>
-      <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection. Informational only — not medical advice.</div>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1. Informational only — not medical advice.</div>
     </div>
   );
 }

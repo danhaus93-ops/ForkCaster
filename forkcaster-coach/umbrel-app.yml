@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.37"
+version: "0.9.38"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.37: resting heart rate surveillance. A small sustained rise in
-  resting heart rate is a known effect of GLP-1 medications — the GLP-1
-  tab now watches yours against your own first-week baseline once your
-  watch data flows in via Health Auto Export (add the Resting Heart
-  Rate metric to your export). Flags only a sustained 8+ bpm rise
-  across 7+ days; single spiky days are ignored. Informational only.
+  v0.9.38: the med-level chart now shows the full picture. The projection
+  includes your upcoming doses, so you can see the level build week over
+  week toward steady state — the reason the same dose feels stronger in
+  week 4 than week 1. Percent gridlines and a "at next dose" marker make
+  the curve readable at a glance. The resting-heart-rate card now sits
+  below the med curve on quiet days and jumps to the top only when it
+  has something to flag.
 dependencies: []
 path: ""
 defaultUsername: ""
