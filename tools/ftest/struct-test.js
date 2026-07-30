@@ -360,5 +360,32 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(app.includes('const firstT = dueT && dueT > lastDose.t ? Math.max(dueT, now)'), 'first projected dose anchors to DUE (clamped to now if overdue), cadence after');
   ok(app.includes('const nextDoseT = (dueT && dueT > lastDose.t'), 'the ~X%-at-next-dose marker uses the same anchor — one screen, one story');
 }
+// v0.9.44: custom protocol engine + sleep. The app reports whether HIS conditions are met and
+// never sets a dose — that boundary is structural, not stylistic, for a compound with no label.
+{
+  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  ok(srv.includes('nm === \"sleep_analysis\"'), 'HAE sleep_analysis is ingested');
+  ok(srv.includes('q <= 24 ? q * 60 : q'), 'sleep accepts hours OR minutes without export-format archaeology');
+  ok(srv.includes('clean.sleepMin'), 'sleepMin survives into the stored day and the summary');
+  ok(app.includes('function sleepRead(') && app.includes('function checkpointRead('), 'both engines are module-level and testable');
+  ok(app.includes('i.appetite === \"returning\"'), 'escalation requires appetite RETURNING — a flat scale with appetite already gone is not an under-dosing signal');
+  ok(app.includes('if (veto.length) return { ...base, status: \"veto\" }'), 'tolerability vetoes efficacy — the scale never outranks the heart');
+  ok(app.indexOf('status: \"early\"') < app.indexOf('status: \"veto\"'), 'too-early is evaluated BEFORE any verdict (accumulation lag outranks everything)');
+  ok(app.includes('checkpointAnswers'), 'the one asked marker is stored per rung, never assumed');
+  ok(!/status: \"escalate\"[\s\S]{0,400}(next|target) *mg/.test(app), 'the escalate branch never names a target dose');
+  ok(app.includes('never sets a dose'), 'the card says in the UI that it does not set doses');
+  ok(app.includes('protocol: { ...(g.protocol || {}), rungs'), 'the user can author his own rungs — not locked to the trial ladder');
+  // HIS design: the escalation verdict only speaks when asked, and the button cannot be pressed
+  // before the hold completes. That single control replaced a lock + auto-re-arm + periodic review.
+  ok(app.includes('Evaluate if a dose increase is suggested'), 'the escalation verdict is user-triggered, never volunteered');
+  ok(app.includes('const locked = cp.days < cp.need;'), 'the button is gated on hold completion, not on a status string');
+  ok(app.includes('Unlocks in {cp.need - cp.days} days'), 'a locked button says when it opens and why');
+  ok(app.indexOf('Tolerability flags right now') < app.indexOf('{locked ?'), 'tolerability surveillance renders BEFORE the gate — safety is never opt-in');
+  ok(app.includes('const stall = { on: flatWeeks >= 4 && belowGoal'), 'the stall watch requires being below goal — flat AT goal is maintenance');
+  ok(app.includes('rateOver = (wk)'), 'stall uses a ROLLING window, so a long hold cannot smear a recent plateau into invisibility');
+  ok(app.includes('worth running the checkpoint'), 'the stall notice INVITES an evaluation rather than delivering a verdict');
+  ok(app.includes('goalWeight,'), 'goal weight reaches the engine');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

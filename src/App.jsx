@@ -162,6 +162,146 @@ function rhrRead(healthDays, doseLog, opts) {
   return { status: "ready", baseline, current: cur.rhr, delta: cur.rhr - baseline, run, flagged,
     escalated, softened: !!(opts && opts.trainingChanged), series: rows.slice(-28) };
 }
+/* v0.9.44 SLEEP — same discipline as rhrRead: judged against HIS baseline, never against "8 hours",
+   which would scold a night nurse every single day. Sleep is also the substrate a wrist RHR is
+   derived from, so a sustained sleep drop makes the heart-rate card noisier — reading the two
+   together is what makes either one trustworthy. The server files each sleep episode under the
+   user's own day clock, so naps and a 9 a.m. bedtime land on the right day for shift workers and
+   collapse to plain "last night" for everyone on a normal schedule. */
+function sleepRead(healthDays, doseLog, opts) {
+  const rows = (Array.isArray(healthDays) ? healthDays : [])
+    .filter((d) => d && d.date && Number.isFinite(+d.sleepMin) && +d.sleepMin >= 60 && +d.sleepMin <= 1200)
+    .map((d) => ({ date: String(d.date).slice(0, 10), min: Math.round(+d.sleepMin) }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  if (!rows.length) return { status: "empty" };
+  if (rows.length < 7) return { status: "collecting", have: rows.length, need: 7 };
+  const baseline = Math.round(rows.slice(0, 7).reduce((a, r) => a + r.min, 0) / 7);
+  const cur = rows[rows.length - 1];
+  const drop = (opts && +opts.dropMin) || 45;
+  let run = 0;
+  for (let i = rows.length - 1; i >= 0 && rows[i].min <= baseline - drop; i--) run += 1;
+  const flagged = run >= 7;
+  let escalated = false;
+  if (flagged) {
+    const winStart = rows[rows.length - run].date;
+    const log = (doseLog || []).filter((x) => x && x.date).sort((a, b) => (a.date < b.date ? -1 : 1));
+    for (let i = 1; i < log.length; i++) if (String(log[i].date) >= winStart && +log[i].mg > +log[i - 1].mg) escalated = true;
+  }
+  return { status: "ready", baseline, current: cur.min, delta: cur.min - baseline, run, flagged, escalated, series: rows.slice(-14) };
+}
+
+/* v0.9.44 PRE-ESCALATION CHECKPOINT — the protocol engine.
+   It reports whether the USER'S OWN protocol conditions are met. It never sets a dose, never names
+   a target mg, and defers every decision to the prescriber — which is the only defensible shape for
+   a compound with no approved label. Six of the seven markers are MEASURED from his own logs; only
+   appetite is asked, because only he knows it.
+   Precedence is deliberate and is the whole safety design:
+     1. too early   — a rung that hasn't reached steady state cannot be judged (accumulation lag)
+     2. tolerability — vetoes efficacy; the scale never outranks the heart
+     3. ask         — the one human input, requested only once the data supports asking
+     4. escalate / hold
+   Guideline basis: ADA Standards of Care 2026 rec 8.20 (individualize dose and titration; the
+   optimal dose may not be the maximum) and the ACLM/ASN/OMA/TOS advisory (hold the lowest effective
+   dose, escalate when weight reduction ceases or efficacy wanes). */
+function checkpointRead(input) {
+  const i = input || {};
+  const proto = i.protocol || {};
+  const today = i.today || "1970-01-01";
+  const need = Math.max(7, Math.round(+proto.minHoldDays || 28));
+  const dnum = (s) => new Date(String(s).slice(0, 10) + "T12:00:00").getTime();
+  const span = (a, b) => Math.max(0, Math.round((dnum(b) - dnum(a)) / 86400000));
+  const inWin = (d, from) => d && String(d).slice(0, 10) >= from && String(d).slice(0, 10) <= today;
+
+  const log = (i.doseLog || []).filter((d) => d && d.date && +d.mg > 0)
+    .sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
+  if (!log.length) return { status: "nodose" };
+  const cur = +log[log.length - 1].mg;
+  let firstAt = String(log[log.length - 1].date).slice(0, 10);
+  for (let k = log.length - 1; k >= 0 && +log[k].mg === cur; k--) firstAt = String(log[k].date).slice(0, 10);
+  const days = span(firstAt, today);
+
+  const rungs = (Array.isArray(proto.rungs) ? proto.rungs : []).map(Number)
+    .filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
+  const next = rungs.length ? (rungs.filter((x) => x > cur)[0] ?? null) : null;
+  const atCeiling = rungs.length > 0 && next == null;
+
+  // ── measured markers ───────────────────────────────────────────────────────
+  const w = (i.weightSeries || []).filter((x) => x && x.date && +x.lbs > 0 && inWin(x.date, firstAt))
+    .sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
+  let rate = null;
+  if (w.length >= 3) {
+    const d = span(w[0].date, w[w.length - 1].date);
+    if (d >= 10) rate = ((+w[w.length - 1].lbs - +w[0].lbs) / d) * 7;
+  }
+  const pd = (i.proteinDays || []).filter((x) => x && inWin(x.date, firstAt));
+  const target = Math.max(1, +i.proteinTarget || 1);
+  const pHit = pd.filter((x) => +x.protein >= target * 0.9).length;
+  const trainDays = (i.healthDays || []).filter((x) => x && inWin(x.date, firstAt) && +x.strength > 0).length;
+  const trainWeeks = Math.max(1, Math.round(days / 7));
+  const se = (i.sideEffects || []).filter((x) => x && inWin(x.date, firstAt));
+  const seModPlus = se.filter((x) => +x.severity >= 2).length;
+  const seLast = se.length ? se.map((x) => String(x.date).slice(0, 10)).sort().slice(-1)[0] : null;
+  const rhr = i.rhr || {}, sleep = i.sleep || {};
+
+  // ── tolerability vetoes ────────────────────────────────────────────────────
+  const veto = [];
+  if (rhr.flagged) veto.push("resting heart rate up " + rhr.delta + " bpm for " + rhr.run + " days");
+  if (sleep.flagged) veto.push("sleep down " + Math.abs(sleep.delta) + " min for " + sleep.run + " days");
+  if (seModPlus >= 2) veto.push(seModPlus + " moderate-or-worse symptom days");
+  if (pd.length >= 7 && pHit / pd.length < 0.6) veto.push("protein target missed on most days");
+
+  const row = (label, value, origin, status) => ({ label, value, origin, status });
+  const rows = [
+    row("Days at this rung", days + " of " + need, "measured", days >= need ? "ok" : "wait"),
+    row("Weight trend", rate == null ? "needs more weigh-ins" : (rate <= 0 ? "" : "+") + rate.toFixed(1) + " lb / wk",
+      "measured", rate == null ? "wait" : rate <= -0.35 ? "ok" : "flag"),
+    row("Protein target", pd.length ? pHit + " of " + pd.length + " days" : "no days logged",
+      "measured", !pd.length ? "wait" : pHit / pd.length >= 0.75 ? "ok" : pHit / pd.length >= 0.6 ? "flag" : "bad"),
+    row("Training sessions", trainDays + " in " + trainWeeks + " wk", "measured",
+      trainDays >= trainWeeks * 2 ? "ok" : trainDays >= trainWeeks ? "flag" : "bad"),
+    row("Side effects", !se.length ? "none logged" : seModPlus + " moderate+ of " + se.length,
+      "measured", seModPlus >= 2 ? "bad" : se.length ? "flag" : "ok"),
+    row("Resting heart rate", rhr.status === "ready" ? (rhr.delta >= 0 ? "+" : "") + rhr.delta + " vs your " + rhr.baseline : "no data yet",
+      "measured", rhr.status !== "ready" ? "wait" : rhr.flagged ? "bad" : "ok"),
+    row("Sleep", sleep.status === "ready" ? (sleep.delta >= 0 ? "+" : "") + sleep.delta + " min vs your " + Math.round(sleep.baseline / 60 * 10) / 10 + "h" : "no data yet",
+      "measured", sleep.status !== "ready" ? "wait" : sleep.flagged ? "bad" : "ok"),
+    row("Appetite control", i.appetite ? ({ controlled: "Controlled", returning: "Returning between meals", suppressed: "Fully suppressed" }[i.appetite] || String(i.appetite)) : "not asked yet",
+      "you answered", !i.appetite ? "wait" : i.appetite === "controlled" ? "ok" : "flag"),
+  ];
+
+  // ── stall watch ────────────────────────────────────────────────────────────
+  // Deliberately computed on a ROLLING window, not the rung window: after eight months at one dose
+  // the rung average would smear a recent plateau into invisibility. Fires only while he is still
+  // meaningfully below goal — flat AT goal is maintenance, which is the destination, not a problem.
+  const wAll = (i.weightSeries || []).filter((x) => x && x.date && +x.lbs > 0)
+    .sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
+  const rateOver = (wk) => {
+    const from = new Date(dnum(today) - wk * 7 * 86400000).toISOString().slice(0, 10);
+    const seg = wAll.filter((x) => String(x.date).slice(0, 10) >= from);
+    if (seg.length < 3) return null;
+    const d = span(seg[0].date, seg[seg.length - 1].date);
+    return d >= 10 ? ((+seg[seg.length - 1].lbs - +seg[0].lbs) / d) * 7 : null;
+  };
+  const nowLbs = wAll.length ? +wAll[wAll.length - 1].lbs : null;
+  const goal = +i.goalWeight || 0;
+  const belowGoal = !goal || (nowLbs != null && nowLbs > goal + 2);
+  let flatWeeks = 0;
+  for (const wk of [4, 8, 12, 16]) { const r = rateOver(wk); if (r != null && r > -0.35) flatWeeks = wk; else break; }
+  const stall = { on: flatWeeks >= 4 && belowGoal, weeks: flatWeeks, recentRate: rateOver(4),
+    atGoal: !belowGoal, lbsToGoal: goal && nowLbs != null ? Math.max(0, Math.round(nowLbs - goal)) : null };
+
+  const base = { cur, next, atCeiling, days, need, rate, rows, veto, firstAt, stall,
+    proteinHit: pHit, proteinOf: pd.length, trainDays, trainWeeks, seModPlus, seLast };
+  if (days < need || rate == null) return { ...base, status: "early", remaining: Math.max(0, need - days) };
+  if (veto.length) return { ...base, status: "veto" };
+  if (!i.appetite) return { ...base, status: "ask" };
+  // Escalation needs appetite to be COMING BACK. A flat scale with appetite already fully gone is
+  // not an under-dosing signal — the drug is doing its job and the plateau is elsewhere (adaptation,
+  // intake creep, water). More drug would buy side effects, not loss. That case holds.
+  if (!atCeiling && rate > -0.35 && i.appetite === "returning") return { ...base, status: "escalate" };
+  return { ...base, status: "hold" };
+}
+
 function sumFoodItems(items) {
   const rows = (Array.isArray(items) ? items : []).map((it) => ({
     item: String((it && it.item) || "").slice(0, 60), qty: String((it && it.qty) || "").slice(0, 40),
@@ -3227,6 +3367,9 @@ export default function App() {
 
   // v0.9.38: the RHR card's POSITION is itself a signal — quiet states live below the med curve;
   // a flagged state promotes the card to the very top of the tab, so something feels off before a word is read.
+  const [cpOpenFor, setCpOpenFor] = useState(null);
+  const [protoEdit, setProtoEdit] = useState(false);
+  const [protoRungs, setProtoRungs] = useState("");
   const rhrCardFor = (_rr) => { const RED = "#f05252"; return <div style={{ marginBottom: 14 }}>{card(<div>
           {sectionTitle("Resting heart rate", RED)}
           {_rr.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
@@ -3259,6 +3402,161 @@ export default function App() {
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication, titration &amp; side effects</div>
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? rhrCardFor(_r) : null; })()}
+      {/* v0.9.44 PROTOCOL + CHECKPOINT. The ladder is HIS, not the trial's; the checkpoint reports
+          whether his own conditions are met and never names a dose. */}
+      {(() => {
+        const proto = glp.protocol || {};
+        const medSteps = (MEDS[glp.med] && MEDS[glp.med].steps) || [];
+        const rungs = (Array.isArray(proto.rungs) && proto.rungs.length ? proto.rungs : medSteps).map(Number).filter((x) => x > 0);
+        const holdWk = Math.max(1, Math.round((+proto.minHoldDays || 28) / 7));
+        const curMg = (glp.doseLog || []).length ? +glp.doseLog[glp.doseLog.length - 1].mg : null;
+        const pDays = Object.values((mealLog || []).reduce((acc, m) => {
+          if (!m || !m.date) return acc;
+          acc[m.date] = acc[m.date] || { date: m.date, protein: 0 };
+          acc[m.date].protein += +m.protein || 0; return acc;
+        }, {}));
+        const rr = rhrRead((healthSync && healthSync.days) || [], glp.doseLog);
+        const sl = sleepRead((healthSync && healthSync.days) || [], glp.doseLog);
+        const cp = checkpointRead({
+          doseLog: glp.doseLog, protocol: { rungs, minHoldDays: holdWk * 7 }, today: todayISO(),
+          weightSeries, proteinDays: pDays, proteinTarget: targets.protein,
+          healthDays: (healthSync && healthSync.days) || [], sideEffects: glp.sideEffects, goalWeight,
+          rhr: rr, sleep: sl, appetite: (glp.checkpointAnswers || {})[String(curMg)] || null,
+        });
+        if (cp.status === "nodose") return null;
+        const TONE = { hold: C.go, escalate: C.violet, veto: C.avoid, early: C.muted, ask: C.violet };
+        const CHIP = { hold: "HOLD SUPPORTED", escalate: "ESCALATION CRITERIA MET", veto: "TOLERABILITY SAYS WAIT", early: "TOO EARLY TO READ", ask: "ONE QUESTION LEFT" };
+        const DOT = { ok: C.go, flag: C.caution, bad: C.avoid, wait: C.faint };
+        const tone = TONE[cp.status] || C.muted;
+        const locked = cp.days < cp.need;
+        const cpOpen = cpOpenFor === cp.cur;
+        const title = {
+          hold: "Your hold criteria are met.",
+          escalate: "Your escalation criteria are met.",
+          veto: "Tolerability markers say wait.",
+          early: "This rung hasn't finished arriving.",
+          ask: "One thing only you can answer.",
+        }[cp.status];
+        const body = {
+          hold: "Efficacy and tolerability both look right where your protocol wants them. Nothing here points to a change.",
+          escalate: "Weight has flattened while every tolerability marker stays clear. Your protocol says this is the point to talk to your prescriber \u2014 the dose decision is theirs.",
+          veto: "Your protocol holds escalation while these are flagged, whatever the scale is doing: " + cp.veto.join("; ") + ".",
+          early: "You're " + cp.days + " days in. Levels keep climbing toward steady state around day " + cp.need + " \u2014 judging this rung now would be judging a dose you haven't fully received.",
+          ask: "Your measured markers are in. How is appetite between meals?",
+        }[cp.status];
+        return (<>
+          <div style={{ marginBottom: 14 }}>{card(<div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              {sectionTitle("Your protocol", C.muted)}
+              <span onClick={() => setProtoEdit((v) => !v)} style={{ fontSize: 11, color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {rungs.map((r) => { const on = curMg != null && +r === +curMg; return (
+                <div key={r} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 10,
+                  background: on ? C.violetSoft || "rgba(167,139,250,0.16)" : "transparent",
+                  border: `1px solid ${on ? C.violet : C.hair}`, color: on ? C.ink : C.faint,
+                  fontSize: 13, fontWeight: on ? 700 : 500 }}>{r}<span style={{ fontSize: 9, opacity: 0.7 }}> mg</span></div>); })}
+            </div>
+            {protoEdit ? (<div style={{ marginTop: 11 }}>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>Rungs (mg, comma separated)</div>
+              <input value={protoRungs} onChange={(e) => setProtoRungs(e.target.value)} inputMode="decimal"
+                placeholder={medSteps.join(", ")} style={{ width: "100%", background: C.bg, border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "10px 11px", fontSize: 14, fontFamily: BODY, boxSizing: "border-box" }} />
+              <div style={{ fontSize: 11, color: C.muted, margin: "10px 0 5px" }}>Minimum hold before a checkpoint</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[4, 5, 6, 8].map((wk) => (<button key={wk} onClick={() => setGlp((g) => ({ ...g, protocol: { ...(g.protocol || {}), minHoldDays: wk * 7 } }))}
+                  style={{ flex: 1, background: holdWk === wk ? C.hair : "transparent", border: `1px solid ${C.hair}`, color: holdWk === wk ? C.ink : C.muted, borderRadius: 9, padding: "9px 0", fontSize: 12.5, fontWeight: holdWk === wk ? 700 : 500, fontFamily: BODY, cursor: "pointer" }}>{wk} wk</button>))}
+              </div>
+              <button onClick={() => { const v = protoRungs.split(",").map((x) => +x.trim()).filter((x) => x > 0).sort((a, b) => a - b);
+                  setGlp((g) => ({ ...g, protocol: { ...(g.protocol || {}), rungs: v.length ? v : null } })); setProtoEdit(false); }}
+                style={{ width: "100%", marginTop: 10, background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Save protocol</button>
+            </div>) : (
+              <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+                Minimum hold {holdWk} weeks{rungs.length ? " \u00b7 ceiling " + rungs[rungs.length - 1] + " mg" : ""} \u00b7 you and your prescriber set these
+              </div>)}
+          </div>)}</div>
+
+          <div style={{ marginBottom: 14 }}>{card(<div>
+            {sectionTitle("Dose checkpoint", C.muted)}
+
+            {/* Tolerability surveillance is UNCONDITIONAL — it never waits for a button. Safety
+                signals are not opt-in, and they are the one thing that can contradict the scale. */}
+            {cp.veto.length > 0 && (
+              <div style={{ background: "rgba(240,82,82,0.10)", border: `1px solid rgba(240,82,82,0.35)`,
+                borderRadius: 10, padding: "9px 11px", marginBottom: 11, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
+                <b style={{ color: C.avoid }}>Tolerability flags right now:</b> {cp.veto.join("; ")}. Your protocol
+                holds escalation while these stand, whatever the scale is doing.
+              </div>)}
+
+            {locked ? (<div>
+              <button disabled style={{ width: "100%", background: "transparent", border: `1px dashed ${C.hair}`,
+                color: C.faint, borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700 }}>
+                Unlocks in {cp.need - cp.days} days at this dose
+              </button>
+              <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+                You're {cp.days} of {cp.need} days at {cp.cur} mg. Levels are still climbing toward steady state,
+                so an evaluation now would judge a dose you haven't fully received yet.
+              </div>
+            </div>) : (<div>
+              <button onClick={() => setCpOpenFor(cpOpen ? null : cp.cur)}
+                style={{ width: "100%", background: cpOpen ? "transparent" : C.violet, color: cpOpen ? C.ink : C.surface,
+                  border: `1px solid ${cpOpen ? C.hair : C.violet}`, borderRadius: 11, padding: "13px 0",
+                  fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+                {cpOpen ? "Close" : "Evaluate if a dose increase is suggested"}
+              </button>
+              {!cpOpen && cp.stall.on && <div style={{ background: C.cautionSoft || "rgba(240,178,82,0.10)",
+                border: `1px solid rgba(240,178,82,0.35)`, borderRadius: 10, padding: "9px 11px",
+                marginTop: 11, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
+                <b style={{ color: C.caution }}>Loss has been flat for {cp.stall.weeks} weeks</b>
+                {cp.stall.lbsToGoal ? ` while you're still ${cp.stall.lbsToGoal} lb from your goal` : ""}.
+                That's the condition your protocol watches for \u2014 worth running the checkpoint.
+              </div>}
+              {!cpOpen && <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+                {cp.days} days at {cp.cur} mg. Nothing here asks you to move up \u2014 press it when you want the
+                question answered, whether that's this week or six months from now.
+              </div>}
+            </div>)}
+
+            {cpOpen && !locked && (<div style={{ marginTop: 14 }}>
+              {cp.status === "ask" ? (<div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.ink, marginBottom: 5, lineHeight: 1.3 }}>One thing only you can answer.</div>
+                <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>Your measured markers are in. How is appetite between meals?</div>
+                <div style={{ display: "flex", gap: 6, marginTop: 11 }}>
+                  {[["controlled", "Controlled"], ["returning", "Returning"], ["suppressed", "Fully gone"]].map(([k, lbl]) => (
+                    <button key={k} onClick={() => setGlp((g) => ({ ...g, checkpointAnswers: { ...(g.checkpointAnswers || {}), [String(cp.cur)]: k } }))}
+                      style={{ flex: 1, background: "transparent", border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 10,
+                        padding: "11px 0", fontFamily: BODY, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{lbl}</button>))}
+                </div>
+              </div>) : (<div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.6, color: tone,
+                    border: `1px solid ${tone}55`, borderRadius: 99, padding: "3px 9px" }}>{CHIP[cp.status]}</span>
+                  <span onClick={() => setGlp((g) => ({ ...g, checkpointAnswers: { ...(g.checkpointAnswers || {}), [String(cp.cur)]: null } }))}
+                    style={{ fontSize: 10.5, color: C.faint, cursor: "pointer" }}>re-answer</span>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.ink, margin: "2px 0 6px", lineHeight: 1.3 }}>{title}</div>
+                <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>{body}</div>
+              </div>)}
+
+              <div style={{ marginTop: 13, borderTop: `1px solid ${C.hair}` }}>
+                {cp.rows.map((r) => (
+                  <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 6, background: DOT[r.status], flexShrink: 0 }} />
+                    <span style={{ fontSize: 12.5, color: C.muted, flex: 1 }}>{r.label}</span>
+                    <span style={{ fontSize: 12, color: C.ink, textAlign: "right" }}>{r.value}</span>
+                    <span style={{ fontSize: 8.5, letterSpacing: 0.4, color: r.origin === "measured" ? C.faint : C.violet,
+                      border: `1px solid ${r.origin === "measured" ? C.hair : "rgba(167,139,250,0.35)"}`, borderRadius: 4,
+                      padding: "2px 4px", width: 60, textAlign: "center", flexShrink: 0 }}>{r.origin.toUpperCase()}</span>
+                  </div>))}
+              </div>
+              <div style={{ fontSize: 10.5, color: C.faint, marginTop: 11, lineHeight: 1.5 }}>
+                Seven markers, one of them asked \u2014 the rest read from your own logs. This card reports whether your
+                protocol's conditions are met; it never sets a dose{MEDS[glp.med] && MEDS[glp.med].investigational ? ". This medication is investigational and has no approved dosing" : ""}. Decisions stay with your prescriber.
+              </div>
+            </div>)}
+          </div>)}</div>
+        </>);
+      })()}
+
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
@@ -3328,6 +3626,39 @@ export default function App() {
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} />)}</div>}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
+      {(() => {
+        const sl = sleepRead((healthSync && healthSync.days) || [], glp.doseLog);
+        const CY = "#67e8f9";
+        const hm = (m) => Math.floor(m / 60) + "h " + String(Math.round(m % 60)).padStart(2, "0") + "m";
+        return <div style={{ marginBottom: 14 }}>{card(<div>
+          {sectionTitle("Sleep", CY)}
+          {sl.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
+            Waiting for sleep data. Add the <b>Sleep Analysis</b> metric to your Health Auto Export automation and it lands here on its own. Sleep is what your watch derives resting heart rate from, so tracking it also makes that card more trustworthy.</div>}
+          {sl.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted }}>
+            Learning your baseline \u2014 {sl.have}/{sl.need} days banked.</div>}
+          {sl.status === "ready" && <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span style={{ fontFamily: DISPLAY, fontSize: 29, fontWeight: 700, color: C.ink }}>{hm(sl.current)}</span>
+              <span style={{ fontSize: 12, color: C.faint }}>this day</span>
+              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: sl.flagged ? C.avoid : C.go }}>{sl.delta >= 0 ? "+" : ""}{sl.delta} min vs your {hm(sl.baseline)}</span>
+            </div>
+            <svg viewBox="0 0 300 56" style={{ width: "100%", display: "block", marginTop: 8 }}>
+              {(() => { const se = sl.series, lo = Math.min(...se.map((r) => r.min), sl.baseline) - 40, hi = Math.max(...se.map((r) => r.min), sl.baseline) + 40;
+                const bw = 296 / Math.max(1, se.length), y = (v) => 4 + (1 - (v - lo) / (hi - lo)) * 48;
+                return <g>
+                  <rect x="2" y={y(sl.baseline + 20)} width="296" height={Math.max(2, y(sl.baseline - 20) - y(sl.baseline + 20))} fill="rgba(139,151,147,0.14)" rx="2" />
+                  {se.map((r, k) => <rect key={k} x={2 + k * bw + bw * 0.16} y={y(r.min)} width={bw * 0.68} height={Math.max(1, 52 - y(r.min))} rx="2" fill={k === se.length - 1 ? CY : "rgba(103,232,249,0.42)"} />)}
+                </g>; })()}
+            </svg>
+            {sl.flagged
+              ? <div style={{ background: "rgba(240,82,82,0.10)", border: `1px solid rgba(240,82,82,0.35)`, borderRadius: 10, padding: "9px 11px", marginTop: 9, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
+                  Sleep has run {Math.abs(sl.delta)} min under your baseline for {sl.run} days{sl.escalated ? ", starting near a dose increase" : ""}. Short sleep also makes your resting heart rate read higher, so treat both cards as one picture. Worth mentioning to your prescriber if it holds.</div>
+              : <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
+                  Judged against your own baseline, never against eight hours. Flags only a sustained drop \u2014 one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
+          </div>}
+        </div>)}</div>;
+      })()}
+
 
       {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
       {(() => { const t = titrationRead(glp.doseLog, glp.med); if (!t) return null; return (

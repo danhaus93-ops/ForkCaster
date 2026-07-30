@@ -133,5 +133,83 @@ ok(RR.rhrRead(days([62,63,61,62,63])).status==='collecting','5 days = collecting
   ok(RR.rhrRead(days(drift),[{date:iso(20),mg:0.25},{date:iso(6),mg:0.25}]).escalated===false,'same-dose repeat is NOT an escalation');
   ok(RR.rhrRead(days(drift),dl,{trainingChanged:true}).softened===true,'training-change context softens the banner'); }
 ok(RR.rhrRead([{date:iso(1),rhr:250},{date:iso(2),rhr:20}]).status==='empty','garbage bpm values are rejected, not averaged');
+
+// --- v0.9.44 sleep surveillance (sleepRead) ---
+const SR=build(slice('function sleepRead(','/* v0.9.44 PRE-ESCALATION'),['sleepRead']);
+const sdays=(vals)=>vals.map((v,i)=>({date:iso(vals.length-i),sleepMin:v}));
+ok(SR.sleepRead([]).status==='empty','no sleep data = empty state');
+ok(SR.sleepRead(sdays([420,430,410])).status==='collecting','3 days = collecting');
+{ const r=SR.sleepRead(sdays([420,430,410,425,415,420,425,430,420]));
+  ok(r.status==='ready'&&r.baseline===421,'baseline = mean of first 7 ('+r.baseline+')');
+  ok(!r.flagged,'steady sleep does not flag'); }
+{ const one=[420,430,410,425,415,420,425,300,425,420];
+  ok(!SR.sleepRead(sdays(one)).flagged,'ONE 5-hour night does not flag (a bad night is not a trend)'); }
+{ const drop=[420,430,410,425,415,420,425,360,355,350,358,352,349,356];
+  const r=SR.sleepRead(sdays(drop));
+  ok(r.flagged&&r.run===7,'sustained -65 min across 7 days flags (run '+r.run+')');
+  ok(r.delta===-65,'delta vs baseline = -65 min, got '+r.delta);
+  const dl=[{date:iso(20),mg:0.25},{date:iso(7),mg:0.5}];
+  ok(SR.sleepRead(sdays(drop),dl).escalated===true,'a dose increase inside the window is named');
+  ok(SR.sleepRead(sdays(drop),[{date:iso(20),mg:0.25},{date:iso(7),mg:0.25}]).escalated===false,'same-dose repeat is not an escalation'); }
+ok(SR.sleepRead([{date:iso(1),sleepMin:5},{date:iso(2),sleepMin:2000}]).status==='empty','impossible sleep values are rejected, not averaged');
+
+// --- v0.9.44 pre-escalation checkpoint (checkpointRead) ---
+const CPE=build(slice('function checkpointRead(','function sumFoodItems'),['checkpointRead']);
+const okRhr={status:'ready',baseline:62,delta:1,run:0,flagged:false};
+const badRhr={status:'ready',baseline:62,delta:9,run:8,flagged:true};
+const okSleep={status:'ready',baseline:421,delta:-3,run:0,flagged:false};
+const badSleep={status:'ready',baseline:421,delta:-52,run:8,flagged:true};
+const wSeries=(perWk)=>{const out=[];for(let k=0;k<5;k++)out.push({date:iso(28-k*7),lbs:256-(k*perWk)});return out;};
+const pDays=(n,hit,target)=>Array.from({length:n},(_,k)=>({date:iso(29-k),protein:k<hit?target:target*0.3}));
+const hDays=(n)=>Array.from({length:n},(_,k)=>({date:iso(29-k),strength:k%3===0?30:0}));
+const baseIn=(over)=>Object.assign({
+  doseLog:[{date:iso(37),mg:0.5},{date:iso(30),mg:1},{date:iso(23),mg:1},{date:iso(16),mg:1},{date:iso(9),mg:1},{date:iso(2),mg:1}],
+  protocol:{rungs:[0.5,1,2,3,4],minHoldDays:28}, today:iso(0),
+  weightSeries:wSeries(1.6), proteinDays:pDays(28,24,160), proteinTarget:160,
+  healthDays:hDays(28), sideEffects:[], rhr:okRhr, sleep:okSleep, appetite:'controlled'},over);
+ok(CPE.checkpointRead({}).status==='nodose','no doses logged = nodose');
+{ const r=CPE.checkpointRead(baseIn({}));
+  ok(r.status==='hold','controlled appetite + losing + clean tolerability = HOLD (got '+r.status+')');
+  ok(r.rows.length===8&&r.rows.filter((x)=>x.origin==='measured').length===7,'ledger is 8 rows, 7 measured 1 asked');
+  ok(r.cur===1&&r.next===2,'reads current rung and the next one from HIS protocol'); }
+{ const r=CPE.checkpointRead(baseIn({doseLog:[{date:iso(11),mg:1}]}));
+  ok(r.status==='early','11 days into a 28-day hold = TOO EARLY (accumulation lag)');
+  ok(r.remaining===17,'names the days remaining ('+r.remaining+')'); }
+{ const flat=baseIn({weightSeries:wSeries(0.05),appetite:'returning'});
+  ok(CPE.checkpointRead(flat).status==='escalate','flat weight + appetite returning + clean tolerability = ESCALATE'); }
+{ const flat=baseIn({weightSeries:wSeries(0.05),appetite:'suppressed'});
+  ok(CPE.checkpointRead(flat).status==='hold','flat weight but appetite ALREADY GONE is not an under-dosing signal = HOLD'); }
+{ const flat=baseIn({weightSeries:wSeries(0.05),appetite:'returning',rhr:badRhr});
+  const r=CPE.checkpointRead(flat);
+  ok(r.status==='veto','a flagged heart rate OUTRANKS a flat scale = VETO');
+  ok(/heart rate/.test(r.veto.join(' ')),'the veto names its reason'); }
+{ const r=CPE.checkpointRead(baseIn({weightSeries:wSeries(0.05),appetite:'returning',sleep:badSleep}));
+  ok(r.status==='veto','a flagged sleep decline also vetoes escalation'); }
+{ const r=CPE.checkpointRead(baseIn({weightSeries:wSeries(0.05),appetite:'returning',
+    sideEffects:[{date:iso(5),severity:2},{date:iso(3),severity:3}]}));
+  ok(r.status==='veto','two moderate-or-worse symptom days veto escalation'); }
+{ const r=CPE.checkpointRead(baseIn({proteinDays:pDays(28,10,160),weightSeries:wSeries(0.05),appetite:'returning'}));
+  ok(r.status==='veto','protein missed on most days vetoes escalation (muscle first)'); }
+{ const r=CPE.checkpointRead(baseIn({appetite:null}));
+  ok(r.status==='ask','markers in but appetite unanswered = ASK, never assume'); }
+{ const r=CPE.checkpointRead(baseIn({protocol:{rungs:[0.5,1],minHoldDays:28},weightSeries:wSeries(0.05),appetite:'returning'}));
+  ok(r.atCeiling===true&&r.status==='hold','at HIS ceiling the engine never suggests going higher'); }
+{ const r=CPE.checkpointRead(baseIn({weightSeries:[]}));
+  ok(r.status==='early','too few weigh-ins to compute a trend = not evaluable, never guessed'); }
+
+// --- v0.9.44 stall watch: fires on a real plateau, stays silent at goal ---
+const wRoll=(perWk,startLbs)=>Array.from({length:9},(_,k)=>({date:iso(56-k*7),lbs:startLbs-(k*perWk)}));
+{ const r=CPE.checkpointRead(baseIn({weightSeries:wRoll(0.05,260),goalWeight:200}));
+  ok(r.stall.on===true,'flat 4+ weeks while still below goal = stall fires');
+  ok(r.stall.weeks>=4,'names how many weeks it has been flat ('+r.stall.weeks+')');
+  ok(r.stall.lbsToGoal>0,'names the distance left to goal ('+r.stall.lbsToGoal+' lb)'); }
+{ const r=CPE.checkpointRead(baseIn({weightSeries:wRoll(0.05,201),goalWeight:200}));
+  ok(r.stall.on===false&&r.stall.atGoal===true,'flat AT goal is maintenance, not a stall — stays silent'); }
+{ const r=CPE.checkpointRead(baseIn({weightSeries:wRoll(1.5,260),goalWeight:200}));
+  ok(r.stall.on===false,'still losing 1.5 lb/wk = no stall'); }
+{ const r=CPE.checkpointRead(baseIn({weightSeries:[{date:iso(3),lbs:250}],goalWeight:200}));
+  ok(r.stall.on===false,'too few weigh-ins cannot manufacture a stall'); }
+{ const r=CPE.checkpointRead(baseIn({weightSeries:wRoll(0.05,260),goalWeight:0}));
+  ok(r.stall.on===true,'no goal set still allows the stall notice'); }
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

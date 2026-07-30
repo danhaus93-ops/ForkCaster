@@ -291,6 +291,8 @@ app.post("/api/health/sync", (req, res) => {
       const clean = {};
       for (const [k, cast] of [["steps", Math.round], ["activeKcal", Math.round], ["exerciseMin", Math.round], ["strength", Math.round]]) { const v = +rec[k]; if (Number.isFinite(v) && v >= 0) clean[k] = cast(v); }
       const hr = +(rec.rhr != null ? rec.rhr : rec.restingHeartRate); if (Number.isFinite(hr) && hr >= 30 && hr <= 130) clean.rhr = Math.round(hr);
+      const slp = +(rec.sleepMin != null ? rec.sleepMin : (rec.sleepHours != null ? rec.sleepHours * 60 : NaN));
+      if (Number.isFinite(slp) && slp >= 30 && slp <= 1200) clean.sleepMin = Math.round(slp);
       let bf = +rec.bodyFatPct; if (Number.isFinite(bf) && bf > 0 && bf <= 1) bf *= 100; // scales report either 0.28 or 28
       if (Number.isFinite(bf) && bf >= 3 && bf <= 70) clean.bodyFatPct = Math.round(bf * 10) / 10;
       const lm = +rec.leanMassLbs, lmk = +rec.leanMassKg;
@@ -322,6 +324,14 @@ app.post("/api/health/sync", (req, res) => {
       else if (nm === "body_fat_percentage") { const v = q <= 1 ? q * 100 : q; if (v >= 3 && v <= 70) rec.bodyFatPct = Math.round(v * 10) / 10; }
       else if (nm === "lean_body_mass") { const v = unit.startsWith("kg") ? q * 2.20462 : q; if (v > 30 && v < 500) rec.leanMassLbs = Math.round(v * 10) / 10; }
       else if (nm === "resting_heart_rate") { if (q >= 30 && q <= 130) rec.rhr = Math.round(q); }  // v0.9.37: bpm, wrist-derived
+      // v0.9.44: sleep. HAE reports hours for sleep_analysis; some shapes report minutes. Anything
+      // at or under 24 is read as hours, above that as minutes — one number, no export-format
+      // archaeology. Episodes land on the day the client's clock says, so a night-shift 9 a.m.
+      // bedtime files correctly and a normal schedule collapses to plain "last night".
+      else if (nm === "sleep_analysis" || nm === "sleep" || nm === "asleep") {
+        const mins = q <= 24 ? q * 60 : q;
+        if (mins >= 30 && mins <= 1200) rec.sleepMin = Math.round((+rec.sleepMin || 0) + mins);
+      }
     }
   }
   for (const w of workouts) {
