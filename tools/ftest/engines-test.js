@@ -223,5 +223,66 @@ ok(JSON.stringify(PR.parseRungs('0.25/0.5/1'))==='[0.25,0.5,1]','slashes work');
 ok(JSON.stringify(PR.parseRungs('1, 0.5, 0.25, 0.5'))==='[0.25,0.5,1]','dedupes and sorts — order of typing never matters');
 ok(JSON.stringify(PR.parseRungs('abc'))==='[]'&&JSON.stringify(PR.parseRungs(''))==='[]'&&JSON.stringify(PR.parseRungs(null))==='[]','garbage, empty, and null all parse to nothing, never NaN');
 ok(JSON.stringify(PR.parseRungs('2 mg, 4 mg, 8'))==='[2,4,8]','unit suffixes are separators, not poison');
+// --- v0.9.46 personal dose-response (rungResponseRead) ---
+const RRC=build(slice('function rungResponseRead(','function parseRungs('),['rungResponseRead']);
+const dISO=(n)=>{const d=new Date('2026-07-29T12:00:00');d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);};
+const mkDoses=(spec)=>{const out=[];let day=spec.reduce((a,x)=>a+x.n*7,0);for(const r of spec){for(let k=0;k<r.n;k++){out.push({date:dISO(day),mg:r.mg,med:r.med||'semaglutide'});day-=7;}}return out;};
+const mkW=(from,to,startLbs,perWk)=>{const out=[];for(let d=from;d>=to;d-=2)out.push({date:dISO(d),lbs:startLbs+((from-d)/7)*(-perWk)});return out;};
+{ const r=RRC.rungResponseRead({doseLog:[],med:'semaglutide'});
+  ok(r.status==='empty'&&r.rungs.length===0,'no doses = empty, never a fabricated row'); }
+{ const doses=mkDoses([{mg:0.25,n:4},{mg:0.5,n:4}]);
+  const w=[...mkW(56,29,250,1.0),...mkW(28,1,246,1.5)];
+  const r=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),weightSeries:w});
+  ok(r.status==='ready'&&r.rungs.length===2&&r.rungs[0].mg===0.25&&r.rungs[1].mg===0.5,'two rungs, sorted ascending');
+  ok(r.rungs[0].dWk!=null&&Math.abs(r.rungs[0].dWk+1.0)<0.15,'rung 1 measures ~-1.0 lb/wk, got '+r.rungs[0].dWk);
+  ok(r.rungs[1].dWk!=null&&Math.abs(r.rungs[1].dWk+1.5)<0.15,'rung 2 measures ~-1.5 lb/wk from ITS OWN window, got '+r.rungs[1].dWk); }
+{ const r=RRC.rungResponseRead({doseLog:mkDoses([{mg:0.25,n:4}]),med:'semaglutide',today:dISO(0),
+    weightSeries:[{date:dISO(20),lbs:250},{date:dISO(18),lbs:249}]});
+  ok(r.rungs[0].dWk===null,'two weigh-ins cannot make a rate — the floor holds'); }
+{ const doses=mkDoses([{mg:0.25,n:2}]);
+  const se=[{date:dISO(10),severity:2},{date:dISO(8),severity:2},{date:dISO(5),severity:2},{date:dISO(3),severity:2}];
+  const r=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),sideEffects:se});
+  ok(r.rungs[0].symWk===4,'symptom LOAD is severity-weighted per week: 4x sev-2 over 2 wk = 4, got '+r.rungs[0].symWk); }
+{ const doses=mkDoses([{mg:0.25,n:2}]);
+  const hd=[5,6,7,8,9].map((d)=>({date:dISO(d),rhr:66}));
+  const r1=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),healthDays:hd,rhrBaseline:60});
+  const r2=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),healthDays:hd.slice(0,4),rhrBaseline:60});
+  const r3=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),healthDays:hd});
+  ok(r1.rungs[0].rhrDelta===6,'RHR delta vs the surveillance baseline: +6');
+  ok(r2.rungs[0].rhrDelta===null,'under 5 RHR days = dash, not a guess');
+  ok(r3.rungs[0].rhrDelta===null,'no baseline banked = dash — never invents its own'); }
+{ const doses=mkDoses([{mg:0.25,n:2}]);
+  const pd=[3,4,5,6,7,8,9,10,11,12].map((d,ix)=>({date:dISO(d),protein:ix<8?160:100}));
+  const r=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),proteinDays:pd,proteinTarget:160});
+  ok(r.rungs[0].protein===80,'protein hit rate 8/10 at the 90% line = 80%, got '+r.rungs[0].protein); }
+{ const doses=[...mkDoses([{mg:0.25,n:2}]),{date:dISO(3),mg:2,med:'retatrutide'}];
+  const r=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0)});
+  ok(r.rungs.length===1&&r.rungs[0].mg===0.25&&r.switched===true,'the other drug\'s rung never appears in this med\'s curve'); }
+{ const legacy=[{date:dISO(21),mg:0.25},{date:dISO(14),mg:0.25}];
+  const r1=RRC.rungResponseRead({doseLog:legacy,med:'semaglutide',today:dISO(0)});
+  const r2=RRC.rungResponseRead({doseLog:[...legacy.map((d)=>({...d,med:'semaglutide'})),{date:dISO(7),mg:2,med:'retatrutide'}],med:'retatrutide',today:dISO(0)});
+  ok(r1.rungs.length===1,'unstamped legacy doses count while only one drug has ever appeared');
+  ok(r2.rungs.length===1&&r2.rungs[0].mg===2,'after a switch, the old drug\'s doses drop — reta starts clean (the v0.8.0 rule, byte-identical)'); }
+{ const doses=[{date:dISO(42),mg:0.25},{date:dISO(35),mg:0.25},{date:dISO(28),mg:0.5},{date:dISO(21),mg:0.5},{date:dISO(14),mg:0.25},{date:dISO(7),mg:0.25}].map((d)=>({...d,med:'semaglutide'}));
+  const se=[{date:dISO(24),severity:3}];
+  const r=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),sideEffects:se});
+  const r025=r.rungs.find((x)=>x.mg===0.25), r05=r.rungs.find((x)=>x.mg===0.5);
+  ok(r025.episodes===2&&r025.doses===4,'a return to a rung is a second STAY, never merged');
+  ok(r05.symWk>0&&r025.symWk===0,'a symptom during the 0.5 window belongs to 0.5, not to 0.25'); }
+{ const doses=mkDoses([{mg:0.25,n:4}]);
+  const w=mkW(28,1,250,1.0);
+  const r=RRC.rungResponseRead({doseLog:doses,med:'semaglutide',today:dISO(0),weightSeries:w});
+  ok(r.rungs[0].tier==='holding','4 doses + 4 weeks + 2 ready metrics = the pattern is holding');
+  const r2=RRC.rungResponseRead({doseLog:mkDoses([{mg:0.25,n:2}]),med:'semaglutide',today:dISO(0),weightSeries:mkW(14,1,250,1.0)});
+  ok(r2.rungs[0].tier==='directional','2 doses stays DIRECTIONAL whatever the cells say'); }
+// --- v0.9.46 cell tone: readability aid whose thresholds come from shipped rules ---
+const TN=build(slice('function rungCellTone(','function parseRungs('),['rungCellTone']);
+ok(TN.rungCellTone('wt',null)==='none'&&TN.rungCellTone('rhr',null)==='none','a dash is never coloured as a judgement');
+ok(TN.rungCellTone('rhr',7)==='caution'&&TN.rungCellTone('rhr',8)==='avoid','RHR turns red at +8 — the exact point rhrRead flags');
+ok(TN.rungCellTone('rhr',2)==='go','a small RHR drift stays green');
+ok(TN.rungCellTone('protein',90)==='go'&&TN.rungCellTone('protein',89)==='caution','protein green at 90% — the checkpointRead hit line');
+ok(TN.rungCellTone('lifts',2)==='go'&&TN.rungCellTone('lifts',1.9)==='caution','lifts green at 2/wk — the contractScorecard bar');
+ok(TN.rungCellTone('wt',-0.9)==='go'&&TN.rungCellTone('wt',0.5)==='caution','weight is never red — gaining is amber, never a verdict');
+ok(TN.rungCellTone('sym',0.5)==='go'&&TN.rungCellTone('sym',1)==='caution'&&TN.rungCellTone('sym',3)==='avoid','symptom load steps green/amber/red by magnitude');
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

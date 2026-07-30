@@ -414,5 +414,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const hits=bare(app);
   ok(hits.length===0, 'no bare unicode escapes in JSX text — found '+hits.length+(hits.length?' e.g. ...'+JSON.stringify(app.slice(Math.max(0,hits[0]-30),hits[0]+20)):''));
 }
+// --- v0.9.46: the dose-response card is honest by construction ---
+{
+  const app=SRC;
+  ok(app.includes('function rungResponseRead('), 'the dose-response engine is module-level and testable');
+  ok(app.includes('Your dose-response'), 'the card exists');
+  ok(app.indexOf('Decisions stay with your prescriber') < app.indexOf('Your dose-response'), 'it renders BELOW the checkpoint, never inside it');
+  ok(app.includes('Starts measuring with your first logged dose'), 'zero doses gets an honest empty state, not a hidden card');
+  ok(app.includes('rhrBaseline: rr.status === "ready" ? rr.baseline : null'), 'RHR delta borrows the surveillance baseline only once it is banked');
+  ok(app.includes('"PATTERN HOLDING"') && app.includes('"DIRECTIONAL"'), 'every row carries an evidence tier');
+  ok(app.includes("Patterns, not prescriptions"), 'the footer keeps the house boundary in words');
+}
+{
+  ok(SRC.includes('function rungCellTone('), 'cell tone is a module-level pure function, not inline styling');
+  ok(SRC.includes('const TONE_C = { go: C.go, caution: C.caution, avoid: C.avoid, none: C.faint }'), 'tones map onto the theme palette, so every theme stays legible');
+  ok(/rungCellTone\(kind, raw\)/.test(SRC), 'colour is computed from the RAW number, never the formatted string');
+  ok(SRC.includes('letterSpacing: 0.4, color: C.muted }}>{lbl}'), 'column labels use muted, not faint — readable at 8.5px');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

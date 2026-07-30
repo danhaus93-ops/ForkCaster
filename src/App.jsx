@@ -203,6 +203,90 @@ function sleepRead(healthDays, doseLog, opts) {
    Guideline basis: ADA Standards of Care 2026 rec 8.20 (individualize dose and titration; the
    optimal dose may not be the maximum) and the ACLM/ASN/OMA/TOS advisory (hold the lowest effective
    dose, escalate when weight reduction ceases or efficacy wanes). */
+/* v0.9.46 PERSONAL DOSE-RESPONSE \u2014 the view no trial can print: HIS measured response at each
+   rung he has actually held. The moat is data adjacency: dose timing, grounded macros, training,
+   RHR, sleep and weight already share one schema here, so this is arithmetic, not modeling.
+   Every cell floors INDEPENDENTLY (projectionReady generalized): a number appears only when its
+   own evidence exists, and the tier chip says how much weight the whole row can bear.
+   Informs, never prescribes \u2014 this feeds the prescriber conversation, not the syringe. */
+function rungResponseRead(input) {
+  const i = input || {};
+  const cur = i.med || null;
+  const t = (d) => new Date(String(d).slice(0, 10) + "T12:00:00").getTime();
+  const nDays = (a, b) => Math.max(0, Math.round((t(b) - t(a)) / 86400000));
+  const today = i.today || "1970-01-01";
+  const log = (i.doseLog || []).filter((d) => d && d.date && +d.mg > 0)
+    .sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
+  // Per-medication evidence, exactly the doseResponseRead rule: unstamped legacy doses count
+  // while only one drug has ever appeared, and drop as ambiguous after a switch.
+  const stamped = [...new Set(log.map((d) => d.med).filter(Boolean))];
+  const switched = stamped.length > 1 || (stamped.length === 1 && cur && stamped[0] !== cur);
+  const mine = log.filter((d) => (d.med ? d.med === cur : !switched));
+  if (!mine.length) return { status: "empty", med: cur, rungs: [] };
+  // Episodes: consecutive runs at one mg. Returning to a rung after time away is a NEW stay \u2014
+  // merging windows separated by a different dose would average two different physiologic contexts.
+  const eps = [];
+  for (const d of mine) {
+    const last = eps[eps.length - 1];
+    if (last && +last.mg === +d.mg) { last.doses += 1; }
+    else eps.push({ mg: +d.mg, start: String(d.date).slice(0, 10), doses: 1 });
+  }
+  for (let k = 0; k < eps.length; k++) eps[k].end = k + 1 < eps.length ? eps[k + 1].start : today;
+  const inEp = (date, e) => { const x = String(date).slice(0, 10); return x >= e.start && x < e.end; };
+  const inRung = (date, list) => list.some((e) => inEp(date, e));
+  const byMg = new Map();
+  for (const e of eps) { if (!byMg.has(e.mg)) byMg.set(e.mg, []); byMg.get(e.mg).push(e); }
+  const w = (i.weightSeries || []).filter((x) => x && x.date && +x.lbs > 0);
+  const se = (i.sideEffects || []).filter((x) => x && x.date);
+  const hd = (i.healthDays || []).filter((x) => x && x.date);
+  const pd = (i.proteinDays || []).filter((x) => x && x.date);
+  const target = Math.max(1, +i.proteinTarget || 1);
+  const baseline = Number.isFinite(+i.rhrBaseline) ? +i.rhrBaseline : null;
+  const rungs = [...byMg.entries()].sort((a, b) => a[0] - b[0]).map(([mg, list]) => {
+    const doses = list.reduce((a, e) => a + e.doses, 0);
+    const spanDays = list.reduce((a, e) => a + nDays(e.start, e.end), 0);
+    const weeks = spanDays / 7;
+    // Weight rate is measured inside the LONGEST single stay only \u2014 the one honest window.
+    const main = list.reduce((a, e) => (nDays(e.start, e.end) > nDays(a.start, a.end) ? e : a), list[0]);
+    const ww = w.filter((x) => inEp(x.date, main)).sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
+    let dWk = null;
+    if (ww.length >= 3) { const d = nDays(ww[0].date, ww[ww.length - 1].date);
+      if (d >= 10) dWk = ((+ww[ww.length - 1].lbs - +ww[0].lbs) / d) * 7; }
+    const load = se.filter((x) => inRung(x.date, list)).reduce((a, x) => a + (+x.severity || 1), 0);
+    const symWk = weeks >= 1 ? load / weeks : null;
+    const rr2 = hd.filter((x) => inRung(x.date, list) && Number.isFinite(+x.rhr) && +x.rhr >= 30 && +x.rhr <= 130);
+    const rhrDelta = baseline != null && rr2.length >= 5
+      ? Math.round(rr2.reduce((a, x) => a + +x.rhr, 0) / rr2.length) - baseline : null;
+    const pp = pd.filter((x) => inRung(x.date, list));
+    const protein = pp.length >= 5 ? Math.round(100 * pp.filter((x) => +x.protein >= target * 0.9).length / pp.length) : null;
+    const trainWk = weeks >= 1 ? hd.filter((x) => inRung(x.date, list) && +x.strength > 0).length / weeks : null;
+    const ready = [dWk, symWk, rhrDelta, protein, trainWk].filter((v) => v != null).length;
+    const tier = doses >= 4 && weeks >= 4 && ready >= 2 ? "holding" : "directional";
+    return { mg, doses, weeks: Math.round(weeks * 10) / 10, episodes: list.length,
+      dWk: dWk == null ? null : Math.round(dWk * 100) / 100,
+      symWk: symWk == null ? null : Math.round(symWk * 10) / 10,
+      rhrDelta, protein, trainWk: trainWk == null ? null : Math.round(trainWk * 10) / 10, tier };
+  });
+  return { status: "ready", med: cur, switched, rungs };
+}
+
+/* Cell colour is a READABILITY aid, not a verdict. Every threshold is borrowed from a rule this
+   app already ships, so the row cannot invent a standard of its own:
+     rhr     \u2192 rhrRead flags at baseline+8
+     protein \u2192 checkpointRead counts a day hit at 90% of target
+     lifts   \u2192 contractScorecard wants >=2 resistance sessions a week
+   Weight and symptoms have no shipped cut-point, so they only ever go green-or-amber \u2014 nothing
+   about a dose-response row is allowed to render as "bad". */
+function rungCellTone(kind, v) {
+  if (v == null) return "none";
+  if (kind === "wt") return v < -0.2 ? "go" : "caution";
+  if (kind === "sym") return v < 1 ? "go" : v < 3 ? "caution" : "avoid";
+  if (kind === "rhr") return v >= 8 ? "avoid" : v >= 3 ? "caution" : "go";
+  if (kind === "protein") return v >= 90 ? "go" : v >= 70 ? "caution" : "avoid";
+  if (kind === "lifts") return v >= 2 ? "go" : v >= 1 ? "caution" : "avoid";
+  return "none";
+}
+
 function parseRungs(s) {
   // Any separator the thumb reaches: comma, space, slash, semicolon, arrow paste.
   return Array.from(new Set(String(s == null ? "" : s).split(/[^0-9.]+/).map(Number)
@@ -3576,6 +3660,52 @@ export default function App() {
               </div>
             </div>)}
             </>)}
+          </div>)}</div>
+
+          <div style={{ marginBottom: 14 }}>{card(<div>
+            {sectionTitle("Your dose-response", C.muted)}
+            {(() => {
+              const dr2 = rungResponseRead({ doseLog: glp.doseLog, med: glp.med, today: todayISO(),
+                weightSeries, sideEffects: glp.sideEffects, healthDays: (healthSync && healthSync.days) || [],
+                proteinDays: pDays, proteinTarget: targets.protein,
+                rhrBaseline: rr.status === "ready" ? rr.baseline : null });
+              if (dr2.status === "empty") return (
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>
+                  Starts measuring with your first logged dose. Each rung you hold becomes a row of your own
+                  numbers {"\u2014"} weight rate, symptom load, heart-rate shift, protein hit rate, training
+                  {"\u2014"} the one view no trial or tracker can print.
+                </div>);
+              const TONE_C = { go: C.go, caution: C.caution, avoid: C.avoid, none: C.faint };
+              const cell = (lbl, v, kind, raw) => (
+                <div style={{ flex: 1, minWidth: 58 }}>
+                  <div style={{ fontSize: 8.5, letterSpacing: 0.4, color: C.muted }}>{lbl}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: TONE_C[rungCellTone(kind, raw)], fontVariantNumeric: "tabular-nums" }}>{v == null ? "\u2014" : v}</div>
+                </div>);
+              return (<div>
+                {dr2.rungs.map((r) => (
+                  <div key={r.mg} style={{ borderTop: `1px solid ${C.hair}`, padding: "10px 0 8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{r.mg} mg
+                        <span style={{ fontSize: 10.5, fontWeight: 500, color: C.faint }}>{"\u2002\u00b7\u2002" + r.doses + (r.doses === 1 ? " dose" : " doses") + " \u00b7 " + r.weeks + " wk" + (r.episodes > 1 ? " \u00b7 " + r.episodes + " stays" : "")}</span></span>
+                      <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, color: r.tier === "holding" ? C.go : C.faint,
+                        border: `1px solid ${r.tier === "holding" ? C.go + "55" : C.hair}`, borderRadius: 99, padding: "2px 7px", flexShrink: 0 }}>
+                        {r.tier === "holding" ? "PATTERN HOLDING" : "DIRECTIONAL"}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 7 }}>
+                      {cell("WT \u0394/WK", r.dWk == null ? null : (r.dWk > 0 ? "+" : r.dWk < 0 ? "\u2212" : "") + fmtWt(Math.abs(r.dWk)) + " " + wtU, "wt", r.dWk)}
+                      {cell("SYMPT/WK", r.symWk, "sym", r.symWk)}
+                      {cell("RHR \u0394", r.rhrDelta == null ? null : (r.rhrDelta > 0 ? "+" : "") + r.rhrDelta, "rhr", r.rhrDelta)}
+                      {cell("PROTEIN", r.protein == null ? null : r.protein + "%", "protein", r.protein)}
+                      {cell("LIFTS/WK", r.trainWk, "lifts", r.trainWk)}
+                    </div>
+                  </div>))}
+                <div style={{ fontSize: 10.5, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+                  Every number is measured from your own logs inside that rung's window; a dash means the floor
+                  for that cell isn't met yet. DIRECTIONAL under 4 doses and 4 weeks. Patterns, not prescriptions
+                  {"\u2014"} bring the row to your prescriber, not to the syringe.
+                </div>
+              </div>);
+            })()}
           </div>)}</div>
         </>);
       })()}
