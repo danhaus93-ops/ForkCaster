@@ -2401,8 +2401,28 @@ export default function App() {
     try {
       const hd = healthSync && healthSync.days ? healthSync.days : [];
       const wk = hd.slice(-7);
+      const _pDaysRpt = Object.values((mealLog || []).reduce((acc, m) => {
+        if (!m || !m.date) return acc;
+        acc[m.date] = acc[m.date] || { date: m.date, protein: 0 };
+        acc[m.date].protein += +m.protein || 0; return acc;
+      }, {}));
+      const _rhrRpt = rhrRead(hd, glp.doseLog);
+      const _sleepRpt = sleepRead(hd, glp.doseLog);
+      const _protoRpt = (() => { const pr = (glp.protocol || {}); const steps = (MEDS[glp.med] || {}).steps || [];
+        const rungs = (Array.isArray(pr.rungs) && pr.rungs.length ? pr.rungs : steps).map(Number).filter((x) => x > 0);
+        return { rungs, minHoldDays: +pr.minHoldDays || 28, authored: !!(Array.isArray(pr.rungs) && pr.rungs.length) }; })();
       const findings = {
         adaptive: adaptiveRead(weightLog, hd, glp, wk.reduce((n, d) => n + (d.strength || 0), 0)),
+        rungResponse: rungResponseRead({ doseLog: glp.doseLog, med: glp.med, today: todayISO(),
+          weightSeries: weightLog, sideEffects: glp.sideEffects, healthDays: hd,
+          proteinDays: _pDaysRpt, proteinTarget: targets.protein,
+          rhrBaseline: _rhrRpt.status === "ready" ? _rhrRpt.baseline : null }),
+        protocol: _protoRpt,
+        checkpoint: checkpointRead({ doseLog: glp.doseLog, protocol: { rungs: _protoRpt.rungs, minHoldDays: _protoRpt.minHoldDays },
+          today: todayISO(), weightSeries: weightLog, proteinDays: _pDaysRpt, proteinTarget: targets.protein,
+          healthDays: hd, sideEffects: glp.sideEffects, goalWeight, rhr: _rhrRpt, sleep: _sleepRpt,
+          appetite: (glp.checkpointAnswers || {})[String((glp.doseLog || []).length ? (glp.doseLog[glp.doseLog.length - 1] || {}).mg : "")] || null }),
+        surveillance: { rhr: _rhrRpt, sleep: _sleepRpt },
         doseResp: doseResponseRead(mealLog, glp),
         medication: { current: glp.med || null, label: (MEDS[glp.med] || {}).label || glp.med || null },
         contract: (() => { const hd0 = hd; const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);

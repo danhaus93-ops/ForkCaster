@@ -441,5 +441,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/date: today, at: new Date\(\)\.toISOString\(\)/.test(dW), 'the dose writer stamps at too — hours-post-dose has two ends');
   ok(SRC.includes('{s.at ? " " + new Date(s.at).toLocaleTimeString'), 'the row shows the clock time only when the entry carries one — pre-fix entries render unchanged');
 }
+// --- v0.9.48: the prescriber report knows what the app knows ---
+{
+  const R = SRV.slice(SRV.indexOf('app.post("/api/report/pdf"'));
+  ok(/Measured response at each dose/.test(R), 'the report leads with the per-rung dose-response table');
+  ok(R.indexOf('Measured response at each dose') < R.indexOf('What the app has learned'), 'it leads — the unprecedented section is page one, not an appendix');
+  ok(/Patient-authored protocol/.test(R) && /Tolerability surveillance/.test(R), 'protocol/checkpoint and surveillance sections exist');
+  ok(/DIRECTIONAL/.test(R) && /HOLDING/.test(R), 'evidence tiers survive into print — a clinician sees which rows are provisional');
+  ok(/MEASURED|origin === "measured"/.test(R), 'the checkpoint ledger prints per-marker provenance');
+  ok(/ADA Standards of Care rec 8\.20/.test(R), 'the guideline framework is named so the prescriber sees the basis');
+  ok(/does not recommend a dose/.test(R), 'the report states its own boundary in print');
+  ok(/own banked baseline, never a population norm/.test(R), 'surveillance explains it is judged against the patient, not a norm');
+  ok(/color:#1a2430;background:#fff/.test(R) && /color-scheme:light only/.test(R), 'the report declares its white paper — a dark-mode viewer can never render ink-on-ink');
+  // the client must gather every engine the server templates — server holds NO physiology
+  ok(/rungResponse: rungResponseRead\(/.test(SRC) && /checkpoint: checkpointRead\(/.test(SRC), 'client computes the engines once and ships results');
+  ok(/surveillance: \{ rhr: _rhrRpt, sleep: _sleepRpt \}/.test(SRC), 'surveillance findings reach the payload');
+  ok(!/function (checkpointRead|rungResponseRead|rhrRead|sleepRead)\(/.test(SRV), 'no engine is duplicated server-side — one implementation, one place to be wrong');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

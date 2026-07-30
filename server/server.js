@@ -1712,14 +1712,26 @@ app.post("/api/report/pdf", async (req, res) => {
     const first = wl[0], last = wl[wl.length - 1];
     const delta = first && last ? (last.lbs - first.lbs).toFixed(1) : null;
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-      body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1a2430;margin:36px 44px;font-size:12px}
+      body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;color:#1a2430;background:#fff;margin:36px 44px;font-size:12px}
+      :root{color-scheme:light only}
       h1{font-size:20px;margin:0}.sub{color:#5a6a7a;font-size:11px;margin-top:2px}
       h2{font-size:13px;border-bottom:1.5px solid #2f9e63;padding-bottom:4px;margin:22px 0 8px;color:#1f7a4d}
       table{width:100%;border-collapse:collapse}td,th{padding:5px 8px;border-bottom:1px solid #e3e8ee;text-align:left;font-size:11.5px}
       th{color:#5a6a7a;font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.4px}
       .kpis{display:flex;gap:14px;margin-top:14px}.kpi{border:1px solid #dfe6ec;border-radius:10px;padding:10px 14px;flex:1}
       .kpi b{font-size:16px;display:block}.kpi span{color:#5a6a7a;font-size:10px}
-      .foot{margin-top:26px;color:#8a97a4;font-size:9.5px}</style></head><body>
+      .foot{margin-top:26px;color:#8a97a4;font-size:9.5px}
+      .lead{border:1px solid #cfe6da;background:#f5fbf8;border-radius:10px;padding:12px 14px;margin-top:14px}
+      .lead .t{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:#1f7a4d;font-weight:700}
+      .lead .v{font-size:12.5px;color:#1a2430;margin-top:4px;line-height:1.5}
+      table.rr td,table.rr th{text-align:right}table.rr td:first-child,table.rr th:first-child{text-align:left}
+      .tier{font-size:8.5px;letter-spacing:.4px;border:1px solid #cbd5de;border-radius:9px;padding:1px 5px;color:#5a6a7a}
+      .tier.hold{border-color:#8ccfae;color:#1f7a4d}
+      .prov{font-size:8.5px;letter-spacing:.4px;border:1px solid #e3e8ee;border-radius:4px;padding:1px 5px;color:#8a97a4}
+      .prov.ask{border-color:#c9bdf0;color:#6a5aa6}
+      .note{color:#5a6a7a;font-size:10px;margin-top:6px;line-height:1.45}
+      .dot{display:inline-block;width:7px;height:7px;border-radius:7px;margin-right:6px;vertical-align:middle}
+      </style></head><body>
       <h1>ForkCaster \u2014 Progress Report</h1>
       <div class="sub">Generated ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} \u00b7 self-reported data \u00b7 for review with your care team</div>
       <div class="kpis">
@@ -1727,6 +1739,46 @@ app.post("/api/report/pdf", async (req, res) => {
         <div class="kpi"><b>${doses.length}</b><span>doses logged</span></div>
         <div class="kpi"><b>${delta != null ? (delta > 0 ? "+" : "") + delta + " lb" : "\u2014"}</b><span>weight change over log</span></div>
       </div>
+      ${(() => { const rr = fnd.rungResponse || {}; const rows = rr.rungs || [];
+        if (!rows.length) return "";
+        const n = (v, suf, plus) => v == null ? '<span style="color:#b3bdc7">\u2014</span>' : (plus && v > 0 ? "+" : "") + v + (suf || "");
+        const body = rows.map((r) => `<tr><td><b>${esc(r.mg)} mg</b> <span style="color:#8a97a4">\u00b7 ${r.doses} dose${r.doses === 1 ? "" : "s"} \u00b7 ${r.weeks} wk${r.episodes > 1 ? " \u00b7 " + r.episodes + " stays" : ""}</span></td>`
+          + `<td>${r.dWk == null ? '<span style="color:#b3bdc7">\u2014</span>' : (r.dWk > 0 ? "+" : "\u2212") + Math.abs(r.dWk).toFixed(2) + " lb"}</td>`
+          + `<td>${n(r.symWk)}</td><td>${n(r.rhrDelta, "", true)}</td><td>${n(r.protein, "%")}</td><td>${n(r.trainWk)}</td>`
+          + `<td><span class="tier ${r.tier === "holding" ? "hold" : ""}">${r.tier === "holding" ? "HOLDING" : "DIRECTIONAL"}</span></td></tr>`).join("");
+        return `<h2>Measured response at each dose</h2>
+        <table class="rr"><tr><th>Rung</th><th>Weight/wk</th><th>Sympt/wk</th><th>RHR \u0394</th><th>Protein</th><th>Lifts/wk</th><th>Evidence</th></tr>${body}</table>
+        <div class="note">Each row is measured from this patient's own logs inside that rung's window; the weight rate uses the longest single stay at that dose. A dash means the evidence floor for that cell is not met. Rows marked DIRECTIONAL have under four doses or under four weeks at that rung and should be read as provisional.</div>`;
+      })()}
+
+      ${(() => { const cp = fnd.checkpoint || {}; const pr = fnd.protocol || {};
+        if (!pr.rungs || !pr.rungs.length) return "";
+        const STATE = { hold: "Hold criteria met", escalate: "Escalation criteria met", veto: "Tolerability says wait", early: "Rung not yet at steady state", ask: "Awaiting patient-reported appetite", nodose: "No dose logged yet" };
+        const rowsHtml = (cp.rows || []).map((r) => `<tr><td style="width:180px">${esc(r.label)}</td><td>${esc(r.value)}</td>`
+          + `<td style="width:78px"><span class="prov ${r.origin === "measured" ? "" : "ask"}">${esc(String(r.origin || "").toUpperCase())}</span></td></tr>`).join("");
+        return `<h2>Patient-authored protocol &amp; checkpoint</h2>
+        <div class="lead"><div class="t">Protocol${pr.authored ? " (set by patient with prescriber)" : " (medication default)"}</div>
+          <div class="v">Ladder ${pr.rungs.join(" \u2192 ")} mg \u00b7 minimum hold ${Math.round(pr.minHoldDays / 7)} weeks \u00b7 ceiling ${pr.rungs[pr.rungs.length - 1]} mg.
+          ${cp.status && cp.status !== "nodose" ? `Currently ${esc(cp.days)} days at ${esc(cp.cur)} mg. Checkpoint state: <b>${esc(STATE[cp.status] || cp.status)}</b>.` : "No dose logged against this protocol yet."}</div></div>
+        ${(cp.veto && cp.veto.length) ? `<div class="note" style="color:#b4442f"><b>Tolerability flags:</b> ${esc(cp.veto.join("; "))}. The protocol holds escalation while these stand, independent of weight trend.</div>` : ""}
+        ${rowsHtml ? `<table>${rowsHtml}</table><div class="note">Provenance is printed per marker: MEASURED rows are computed from logged data; ASKED rows are the patient's own report. Framework follows individualized-titration guidance (ADA Standards of Care rec 8.20; lowest-effective-dose advisory) \u2014 the app reports whether the patient's own stated conditions are met and does not recommend a dose.</div>` : ""}`;
+      })()}
+
+      ${(() => { const sv = fnd.surveillance || {}; const rh = sv.rhr || {}; const sl = sv.sleep || {};
+        if (!rh.status && !sl.status) return "";
+        const line = (label, o, unit, fmt) => {
+          if (!o || !o.status || o.status === "empty") return `<tr><td style="width:180px"><b>${label}</b></td><td>No data yet</td></tr>`;
+          if (o.status === "collecting") return `<tr><td><b>${label}</b></td><td>Collecting baseline \u2014 ${o.have} of ${o.need} days banked</td></tr>`;
+          const bad = o.flagged;
+          return `<tr><td><b>${label}</b></td><td><span class="dot" style="background:${bad ? "#c2452f" : "#2f9e63"}"></span>Baseline ${fmt(o.baseline)}${unit}, current ${fmt(o.current)}${unit}`
+            + `${bad ? ` \u2014 sustained change over ${o.run} days${o.escalated ? ", coinciding with a dose increase in the window" : ""}` : " \u2014 within baseline range"}</td></tr>`;
+        };
+        return `<h2>Tolerability surveillance</h2><table>
+          ${line("Resting heart rate", rh, " bpm", (v) => v)}
+          ${line("Sleep", sl, "", (v) => (v == null ? "\u2014" : Math.floor(v / 60) + "h " + Math.round(v % 60) + "m"))}
+        </table><div class="note">Both are judged against this patient's own banked baseline, never a population norm, and flag only sustained multi-day change \u2014 a single night or day cannot trigger either.</div>`;
+      })()}
+
       <h2>What the app has learned (on-device analysis)</h2>
       <table>
       ${(() => { const a = fnd.adaptive || {}; return a.status === "ok" ? `<tr><td style="width:140px"><b>Weight trend</b></td><td>${esc(a.detail)} (${a.pts} weigh-ins over ${a.spanDays} days)</td></tr>` : `<tr><td style="width:140px"><b>Weight trend</b></td><td>Still collecting \u2014 ${a.pts || 0} weigh-ins over ${a.spanDays || 0} days so far.</td></tr>`; })()}
