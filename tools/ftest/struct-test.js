@@ -431,5 +431,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/rungCellTone\(kind, raw\)/.test(SRC), 'colour is computed from the RAW number, never the formatted string');
   ok(SRC.includes('letterSpacing: 0.4, color: C.muted }}>{lbl}'), 'column labels use muted, not faint — readable at 8.5px');
 }
+// --- v0.9.47: symptom + dose instants — the phase-map's raw material starts accruing NOW ---
+{
+  // Both writers must stamp `at`. A phase-map needs BOTH ends of the hours-post-dose interval,
+  // and every entry logged without a time is data that engine can never use.
+  const seW = SRC.slice(SRC.indexOf('function addSideEffect()'), SRC.indexOf('function addSideEffect()') + 320);
+  ok(/date: todayISO\(\), at: new Date\(\)\.toISOString\(\)/.test(seW), 'the symptom writer stamps date (day-clock bucket) AND at (exact instant)');
+  const dW = SRC.slice(SRC.indexOf('doseLog: [...log,'), SRC.indexOf('doseLog: [...log,') + 200);
+  ok(/date: today, at: new Date\(\)\.toISOString\(\)/.test(dW), 'the dose writer stamps at too — hours-post-dose has two ends');
+  ok(SRC.includes('{s.at ? " " + new Date(s.at).toLocaleTimeString'), 'the row shows the clock time only when the entry carries one — pre-fix entries render unchanged');
+}
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

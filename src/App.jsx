@@ -2338,7 +2338,7 @@ export default function App() {
       const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "forkcaster-progress.jpg"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
     } catch (e) { alert("Share failed: " + (e && e.message ? e.message : e)); }
   }
-  function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), symptom: seSymptom, severity: seSeverity }] })); }
+  function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), at: new Date().toISOString(), symptom: seSymptom, severity: seSeverity }] })); }
   const [doseLogged, setDoseLogged] = useState(false);
   const [presetSaved, setPresetSaved] = useState(false);
   const [loggedPicks, setLoggedPicks] = useState([]);
@@ -2367,7 +2367,7 @@ export default function App() {
     setGlp((g) => {
       const today = todayISO();
       const log = (g.doseLog || []).filter((d) => d.date !== today);
-      return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, mg: g.dose || 0, site: pendingSite || undefined, med: g.med }] };
+      return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, at: new Date().toISOString(), mg: g.dose || 0, site: pendingSite || undefined, med: g.med }] };
     });
     setDoseLogged(true); setPendingSite(null); setTimeout(() => setDoseLogged(false), 2500);
   }
@@ -3887,7 +3887,7 @@ export default function App() {
           </div>
           {[...glp.sideEffects].reverse().map((s) => (
             <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${C.hair}` }}>
-              <div><span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{s.symptom}</span><span style={{ fontSize: 12, color: C.faint, marginLeft: 8 }}>{fmtDate(s.date)}</span></div>
+              <div><span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{s.symptom}</span><span style={{ fontSize: 12, color: C.faint, marginLeft: 8 }}>{fmtDate(s.date)}{s.at ? " " + new Date(s.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 11.5, fontWeight: 600, color: [C.go, C.caution, C.avoid][s.severity - 1], background: [C.goSoft, C.cautionSoft, C.avoidSoft][s.severity - 1], borderRadius: 20, padding: "3px 10px" }}>{["Mild", "Moderate", "Severe"][s.severity - 1]}</span>
                 <button onClick={() => setGlp((g) => ({ ...g, sideEffects: g.sideEffects.filter((x) => x.id !== s.id) }))} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4 }}>✕</button>
