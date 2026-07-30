@@ -203,6 +203,12 @@ function sleepRead(healthDays, doseLog, opts) {
    Guideline basis: ADA Standards of Care 2026 rec 8.20 (individualize dose and titration; the
    optimal dose may not be the maximum) and the ACLM/ASN/OMA/TOS advisory (hold the lowest effective
    dose, escalate when weight reduction ceases or efficacy wanes). */
+function parseRungs(s) {
+  // Any separator the thumb reaches: comma, space, slash, semicolon, arrow paste.
+  return Array.from(new Set(String(s == null ? "" : s).split(/[^0-9.]+/).map(Number)
+    .filter((x) => Number.isFinite(x) && x > 0))).sort((a, b) => a - b);
+}
+
 function checkpointRead(input) {
   const i = input || {};
   const proto = i.protocol || {};
@@ -214,7 +220,7 @@ function checkpointRead(input) {
 
   const log = (i.doseLog || []).filter((d) => d && d.date && +d.mg > 0)
     .sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
-  if (!log.length) return { status: "nodose" };
+  if (!log.length) return { status: "nodose", cur: null, days: 0, need, veto: [], rows: [], stall: { on: false } };
   const cur = +log[log.length - 1].mg;
   let firstAt = String(log[log.length - 1].date).slice(0, 10);
   for (let k = log.length - 1; k >= 0 && +log[k].mg === cur; k--) firstAt = String(log[k].date).slice(0, 10);
@@ -3423,7 +3429,7 @@ export default function App() {
           healthDays: (healthSync && healthSync.days) || [], sideEffects: glp.sideEffects, goalWeight,
           rhr: rr, sleep: sl, appetite: (glp.checkpointAnswers || {})[String(curMg)] || null,
         });
-        if (cp.status === "nodose") return null;
+        const noDose = cp.status === "nodose";
         const TONE = { hold: C.go, escalate: C.violet, veto: C.avoid, early: C.muted, ask: C.violet };
         const CHIP = { hold: "HOLD SUPPORTED", escalate: "ESCALATION CRITERIA MET", veto: "TOLERABILITY SAYS WAIT", early: "TOO EARLY TO READ", ask: "ONE QUESTION LEFT" };
         const DOT = { ok: C.go, flag: C.caution, bad: C.avoid, wait: C.faint };
@@ -3448,7 +3454,7 @@ export default function App() {
           <div style={{ marginBottom: 14 }}>{card(<div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               {sectionTitle("Your protocol", C.muted)}
-              <span onClick={() => setProtoEdit((v) => !v)} style={{ fontSize: 11, color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
+              <span onClick={() => { if (!protoEdit) setProtoRungs(rungs.join(", ")); setProtoEdit((v) => !v); }} style={{ fontSize: 11, color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               {rungs.map((r) => { const on = curMg != null && +r === +curMg; return (
@@ -3458,25 +3464,41 @@ export default function App() {
                   fontSize: 13, fontWeight: on ? 700 : 500 }}>{r}<span style={{ fontSize: 9, opacity: 0.7 }}> mg</span></div>); })}
             </div>
             {protoEdit ? (<div style={{ marginTop: 11 }}>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>Rungs (mg, comma separated)</div>
-              <input value={protoRungs} onChange={(e) => setProtoRungs(e.target.value)} inputMode="decimal"
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>Rungs (mg, separated by spaces or commas)</div>
+              <input value={protoRungs} onChange={(e) => setProtoRungs(e.target.value)} type="text"
                 placeholder={medSteps.join(", ")} style={{ width: "100%", background: C.bg, border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "10px 11px", fontSize: 14, fontFamily: BODY, boxSizing: "border-box" }} />
+              {(() => { const v = parseRungs(protoRungs); return v.length ? (
+                <div style={{ fontSize: 11, color: C.go, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>{"Will save: " + v.join(" \u2192 ") + " mg"}</div>
+              ) : protoRungs.trim() ? (
+                <div style={{ fontSize: 11, color: C.caution, marginTop: 6 }}>No readable numbers yet</div>
+              ) : null; })()}
               <div style={{ fontSize: 11, color: C.muted, margin: "10px 0 5px" }}>Minimum hold before a checkpoint</div>
               <div style={{ display: "flex", gap: 6 }}>
                 {[4, 5, 6, 8].map((wk) => (<button key={wk} onClick={() => setGlp((g) => ({ ...g, protocol: { ...(g.protocol || {}), minHoldDays: wk * 7 } }))}
                   style={{ flex: 1, background: holdWk === wk ? C.hair : "transparent", border: `1px solid ${C.hair}`, color: holdWk === wk ? C.ink : C.muted, borderRadius: 9, padding: "9px 0", fontSize: 12.5, fontWeight: holdWk === wk ? 700 : 500, fontFamily: BODY, cursor: "pointer" }}>{wk} wk</button>))}
               </div>
-              <button onClick={() => { const v = protoRungs.split(",").map((x) => +x.trim()).filter((x) => x > 0).sort((a, b) => a - b);
+              <button onClick={() => { const v = parseRungs(protoRungs);
                   setGlp((g) => ({ ...g, protocol: { ...(g.protocol || {}), rungs: v.length ? v : null } })); setProtoEdit(false); }}
                 style={{ width: "100%", marginTop: 10, background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Save protocol</button>
             </div>) : (
               <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
-                Minimum hold {holdWk} weeks{rungs.length ? " \u00b7 ceiling " + rungs[rungs.length - 1] + " mg" : ""} \u00b7 you and your prescriber set these
+                Minimum hold {holdWk} weeks{rungs.length ? " \u00b7 ceiling " + rungs[rungs.length - 1] + " mg" : ""} {"\u00b7"} you and your prescriber set these
               </div>)}
           </div>)}</div>
 
           <div style={{ marginBottom: 14 }}>{card(<div>
             {sectionTitle("Dose checkpoint", C.muted)}
+
+            {noDose ? (<div>
+              <div style={{ border: `1px dashed ${C.hair}`, borderRadius: 11, padding: "13px 0", textAlign: "center",
+                color: C.faint, fontFamily: BODY, fontSize: 13.5, fontWeight: 700 }}>
+                Waiting for your first logged dose
+              </div>
+              <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+                Your ladder above is configuration {"\u2014"} it stands on its own. The checkpoint starts counting
+                the day you log a dose of this medication.
+              </div>
+            </div>) : (<>
 
             {/* Tolerability surveillance is UNCONDITIONAL — it never waits for a button. Safety
                 signals are not opt-in, and they are the one thing that can contradict the scale. */}
@@ -3508,10 +3530,10 @@ export default function App() {
                 marginTop: 11, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
                 <b style={{ color: C.caution }}>Loss has been flat for {cp.stall.weeks} weeks</b>
                 {cp.stall.lbsToGoal ? ` while you're still ${cp.stall.lbsToGoal} lb from your goal` : ""}.
-                That's the condition your protocol watches for \u2014 worth running the checkpoint.
+                That's the condition your protocol watches for {"\u2014"} worth running the checkpoint.
               </div>}
               {!cpOpen && <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
-                {cp.days} days at {cp.cur} mg. Nothing here asks you to move up \u2014 press it when you want the
+                {cp.days} days at {cp.cur} mg. Nothing here asks you to move up {"\u2014"} press it when you want the
                 question answered, whether that's this week or six months from now.
               </div>}
             </div>)}
@@ -3549,10 +3571,11 @@ export default function App() {
                   </div>))}
               </div>
               <div style={{ fontSize: 10.5, color: C.faint, marginTop: 11, lineHeight: 1.5 }}>
-                Seven markers, one of them asked \u2014 the rest read from your own logs. This card reports whether your
+                Seven markers, one of them asked {"\u2014"} the rest read from your own logs. This card reports whether your
                 protocol's conditions are met; it never sets a dose{MEDS[glp.med] && MEDS[glp.med].investigational ? ". This medication is investigational and has no approved dosing" : ""}. Decisions stay with your prescriber.
               </div>
             </div>)}
+            </>)}
           </div>)}</div>
         </>);
       })()}
@@ -3635,7 +3658,7 @@ export default function App() {
           {sl.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
             Waiting for sleep data. Add the <b>Sleep Analysis</b> metric to your Health Auto Export automation and it lands here on its own. Sleep is what your watch derives resting heart rate from, so tracking it also makes that card more trustworthy.</div>}
           {sl.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted }}>
-            Learning your baseline \u2014 {sl.have}/{sl.need} days banked.</div>}
+            Learning your baseline {"\u2014"} {sl.have}/{sl.need} days banked.</div>}
           {sl.status === "ready" && <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontFamily: DISPLAY, fontSize: 29, fontWeight: 700, color: C.ink }}>{hm(sl.current)}</span>
@@ -3654,7 +3677,7 @@ export default function App() {
               ? <div style={{ background: "rgba(240,82,82,0.10)", border: `1px solid rgba(240,82,82,0.35)`, borderRadius: 10, padding: "9px 11px", marginTop: 9, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
                   Sleep has run {Math.abs(sl.delta)} min under your baseline for {sl.run} days{sl.escalated ? ", starting near a dose increase" : ""}. Short sleep also makes your resting heart rate read higher, so treat both cards as one picture. Worth mentioning to your prescriber if it holds.</div>
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-                  Judged against your own baseline, never against eight hours. Flags only a sustained drop \u2014 one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
+                  Judged against your own baseline, never against eight hours. Flags only a sustained drop {"\u2014"} one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
           </div>}
         </div>)}</div>;
       })()}
@@ -4636,8 +4659,8 @@ function SymptomPatterns({ C, sideEffects, doseLog }) {
   return (
     <div>
       <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Symptom patterns</div>
-      {lines.map((l) => <div key={l.sym} style={{ fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 6 }}>\u2022 {l.text}</div>)}
-      <div style={{ fontSize: 10, color: C.faint, marginTop: 4 }}>Computed from your logs \u2014 worth mentioning to your prescriber if a pattern is disruptive.</div>
+      {lines.map((l) => <div key={l.sym} style={{ fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 6 }}>{"\u2022"} {l.text}</div>)}
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 4 }}>Computed from your logs {"\u2014"} worth mentioning to your prescriber if a pattern is disruptive.</div>
     </div>
   );
 }

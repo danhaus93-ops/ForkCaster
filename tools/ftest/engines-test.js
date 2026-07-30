@@ -211,5 +211,17 @@ const wRoll=(perWk,startLbs)=>Array.from({length:9},(_,k)=>({date:iso(56-k*7),lb
   ok(r.stall.on===false,'too few weigh-ins cannot manufacture a stall'); }
 { const r=CPE.checkpointRead(baseIn({weightSeries:wRoll(0.05,260),goalWeight:0}));
   ok(r.stall.on===true,'no goal set still allows the stall notice'); }
+// --- v0.9.45: nodose is a full safe shape; parseRungs accepts any separator ---
+{ const r=CPE.checkpointRead({});
+  ok(r.status==='nodose'&&Array.isArray(r.veto)&&r.veto.length===0,'nodose carries an empty veto array — render cannot crash');
+  ok(Array.isArray(r.rows)&&r.rows.length===0&&r.stall&&r.stall.on===false,'nodose carries empty rows and a quiet stall');
+  ok(r.days===0&&r.cur===null,'nodose reports zero days and no current rung'); }
+const PR=build(slice('function parseRungs(','function checkpointRead('),['parseRungs']);
+ok(JSON.stringify(PR.parseRungs('0.25, 0.5, 1, 1.7, 2.4'))==='[0.25,0.5,1,1.7,2.4]','commas still work');
+ok(JSON.stringify(PR.parseRungs('0.25 0.5 1 1.7 2.4'))==='[0.25,0.5,1,1.7,2.4]','spaces work — the number-pad fix');
+ok(JSON.stringify(PR.parseRungs('0.25/0.5/1'))==='[0.25,0.5,1]','slashes work');
+ok(JSON.stringify(PR.parseRungs('1, 0.5, 0.25, 0.5'))==='[0.25,0.5,1]','dedupes and sorts — order of typing never matters');
+ok(JSON.stringify(PR.parseRungs('abc'))==='[]'&&JSON.stringify(PR.parseRungs(''))==='[]'&&JSON.stringify(PR.parseRungs(null))==='[]','garbage, empty, and null all parse to nothing, never NaN');
+ok(JSON.stringify(PR.parseRungs('2 mg, 4 mg, 8'))==='[2,4,8]','unit suffixes are separators, not poison');
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

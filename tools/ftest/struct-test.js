@@ -179,7 +179,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.19: the rank cache must be consulted through the synchronous ref, after hydration
 {
-  const A=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/savedRankRef\.current \|\| savedRank/.test(A),'rank gate reads the ref mirror, not the stale closure');
   ok(/if \(s\.savedRank\) \{ savedRankRef\.current = s\.savedRank;/.test(A),'loader writes the ref synchronously');
   ok(/!hydrated\.current; w\+\+\) await new Promise/.test(A),'ranking waits for hydration when GPS wins the race');
@@ -187,7 +187,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.22: no more silent data loss on app close, quick-adds leave records, honest describe-it errors
 {
-  const A2=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A2=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/keepalive: true/.test(A2),'the close-time flush uses keepalive so the POST outlives the page');
   ok(/addEventListener\("pagehide", flush\)/.test(A2) && /visibilitychange/.test(A2),'flush fires on both hide paths');
   ok(/blobRef\.current = stateBlob/.test(A2),'the flush reads a ref kept current by the save effect');
@@ -197,7 +197,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.25: every client writer presents its revision; restore is the one deliberate overwrite
 {
-  const A3=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A3=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok((A3.match(/"_baseRev":\$\{revRef\.current\}/g) || []).length === 1, 'the ONE writer (postState) injects _baseRev — both callers route through it (v0.9.31)');
   ok(/revRef\.current = j\.rev; lastSavedRef\.current = blob;/.test(A3), 'an accepted post advances the rev AND the saved baseline in one place');
   ok(/j\.stale\) \{ console\.warn/.test(A3) && /window\.location\.reload\(\)/.test(A3), 'a stale ACTIVE instance re-syncs instead of fighting');
@@ -206,21 +206,21 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.26: provenance labeling end to end on the client
 {
-  const A4=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A4=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/synced: true, source: d\.source/.test(A4),'mergeWeightSeries carries the source tag');
   ok(/"apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH"/.test(A4),'the chip names known platforms');
   ok(/: "SYNCED"/.test(A4),'untagged synced days still fall back to the generic SYNCED chip');
 }
 // v0.9.27: the Today steps tile agrees with Body — shows today's synced count when it beats the manual tap counter
 {
-  const A5=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A5=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/Math\.max\(\+eaten\.steps \|\| 0, syn\)/.test(A5),'the tile shows the larger of manual and synced-today');
   ok(/d\.date === tk/.test(A5) && /dayKeyAt\(Date\.now\(\), prefs\)/.test(A5),'synced lookup uses the unified day clock, not UTC');
   ok(/"synced \\u00b7 goal 10,000"/.test(A5),'the tile says when the number came from sync');
 }
 // v0.9.28: foreground refresh — resume re-pulls synced health data and re-renders time-dependent surfaces
 {
-  const A6=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A6=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/document\.visibilityState !== "visible"\) return/.test(A6),'refresh fires only on becoming visible, not on hide');
   ok(/setFgTick\(\(t\) => t \+ 1\)/.test(A6),'a tick re-renders clocks even when data is unchanged');
   ok(/setHealthSync\(\(h\) => \(\{ \.\.\.\(h \|\| \{\}\), days: sm\.days \}\)\)/.test(A6),'the summary re-pull keeps the token and replaces days');
@@ -228,7 +228,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.29: never write unchanged data — the echo save + teardown flush + stale-reload chased each other into a restart loop
 {
-  const A7=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A7=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/lastSavedRef\.current === null\) \{ lastSavedRef\.current = stateBlob; return; \}/.test(A7),'first post-hydration blob is the as-loaded baseline, not a save');
   ok(/if \(stateBlob === lastSavedRef\.current\) return;/.test(A7),'an unchanged blob is never saved');
   ok(/blobRef\.current === lastSavedRef\.current\) return;/.test(A7),'an unchanged blob is never flushed at teardown');
@@ -237,13 +237,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.30: the flush learns the revision its write produced — edit + quick-background no longer strands the client one rev behind
 {
-  const A8=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A8=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/postState\(blobRef\.current, true\)/.test(A8),'the flush routes through the single writer with keepalive');
   ok(/now - lastRefresh < 2000\) return;/.test(A8),'resume refreshes once, not once per event');
 }
 // v0.9.31: saves are SERIALIZED — a client can never race itself into an off-by-one stale
 {
-  const A9=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const A9=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/if \(saveBusyRef\.current\) \{ pendingSaveRef\.current = stateBlob; return; \}/.test(A9),'a debounced save queues instead of racing an in-flight one');
   ok(/if \(saveBusyRef\.current\) \{ pendingSaveRef\.current = blobRef\.current; return; \}/.test(A9),'the flush queues too instead of racing with an old rev');
   ok(/if \(next && next !== lastSavedRef\.current\) postState\(next, false\);/.test(A9),'the queued newest state ships the moment the line clears, latest wins');
@@ -251,13 +251,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.32: GPS jitter stays out of the saved state — location persists at ~110m grid, identity kept when unmoved
 {
-  const B1=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const B1=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/const r3 = \(n\) => Math\.round\(n \* 1000\) \/ 1000;/.test(B1),'savedGeo rounds to 3 decimals (~110m)');
   ok(/r3\(p\.lat\) === r3\(geo\.lat\) && r3\(p\.lng\) === r3\(geo\.lng\) \? p :/.test(B1),'an unmoved position keeps the SAME object — no blob churn, no save');
 }
 // v0.9.33: estimates itemize; deterministic summation with a 4/4/9 identity cross-check
 {
-  const src=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const src=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const fn=new Function('return '+src.slice(src.indexOf('function sumFoodItems'), src.indexOf('\n}', src.indexOf('function sumFoodItems'))+2))();
   // the raspberry fixture — his exact evening, USDA per-item
   const t=fn([{item:'raspberries',qty:'6 oz',calories:88,protein:2,carbs:20,fat:1,fiber:11},{item:'chia seeds',qty:'2 tbsp',calories:116,protein:4,carbs:10,fat:7,fiber:8},{item:'water',qty:'8 oz',calories:0,protein:0,carbs:0,fat:0,fiber:0}]);
@@ -272,14 +272,14 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.34: the Save-keys gate derives from ALL fields — the per-field enumeration that silently
 // ignored each newly added key input (his FDC paste, and one before it) is structurally dead
 {
-  const src=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const src=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(src.split('!Object.values(keyIn).some((v) => String(v || \"\").trim())').length===3, 'Save gate (disabled + opacity) derives from Object.values — a ninth key field can never be forgotten');
   ok(!src.includes('!keyIn.a.trim() && !keyIn.g.trim()'), 'the enumerated field chain is gone from the gate');
   ok(src.includes('body.USDA_FDC_KEY = keyIn.fdc.trim()'), 'FDC key crosses the payload hop to the server name the whitelist expects');
 }
 // v0.9.35: updates must arrive — versioned bundle URLs + no-store HTML; CHECK 46 REBORN
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
   ok(app.split('Object.values(keyIn).some((v) => String(v || \"\").trim())').length===4, 'ALL THREE key-gate sites (Save disabled, opacity, test-then-save) derive from every field');
   ok(!/if \(keyIn\.a\.trim\(\) \|\| keyIn\.g\.trim\(\)/.test(app), 'the test-then-save enumeration (the v0.6.2 site my v0.9.34 missed) is gone');
@@ -293,7 +293,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.36 grounded itemization: model weighs, server resolves, code computes
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
   ok(app.includes('required: [\"item\", \"grams\"'), 'NL schema REQUIRES grams — the model must weigh every item');
   ok(app.split('groundFoodItems(').length>=4, 'both estimate paths (described + photo) ground through the shared helper');
@@ -303,7 +303,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.37: RHR wired end to end — ingest (both shapes) -> summary passthrough -> card
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
   ok(srv.includes('nm === \"resting_heart_rate\"'), 'HAE metric resting_heart_rate is ingested');
   ok(srv.includes('rec.restingHeartRate'), 'flat-shape rhr/restingHeartRate is ingested');
@@ -313,7 +313,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.38: dose curve teaches steady-state; RHR card position is a signal
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(app.includes('doses.concat(virtual)'), 'projection includes scheduled future doses (steady-state build is drawn, not hidden)');
   ok(app.includes('level(now) / maxReal'), 'now-percent stays anchored to the peak actually reached, not the projected future peak');
   ok(app.includes('% at next dose'), 'next-dose marker names the projected trough');
@@ -324,7 +324,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // because two of four entry writers enumerated {fat, protein, calories} and stopped (the picks
 // writer and quick-add stored all five — a fix applied to one caller and not its siblings).
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const pushes=[...app.matchAll(/setMealLog\(\(m\) => \[\.\.\.m, \{([^}]*)\}/g)].map(x=>x[1]);
   ok(pushes.length>=3, 'found the inline meal-entry writers ('+pushes.length+')');
   for (const body of pushes) for (const f of ['protein','calories','fat','carbs','fiber'])
@@ -335,7 +335,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // orphan cleanup proved the tiles could only ADD. Set touches only the tapped number, records a
 // reversible correction row (delta may be negative), and blank input means zero.
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(app.includes('commitQuick("set")') && app.includes('>Set</button>'), 'the editor has a Set button beside Add');
   ok(app.includes('const target = Number.isFinite(v) && v >= 0 ? v : 0;'), 'blank or invalid input sets ZERO — zeroing is the primary use');
   ok(app.includes('delta = target - cur'), 'Set computes a delta against the current counter');
@@ -345,7 +345,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.41: injection-site sides are ANATOMICAL — his right-abdomen shot was recorded as
 // "Abdomen L" because the dot map carried viewer-side coordinates under patient-side names.
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(app.includes('\"Abdomen L\": [belly * 0.8') && app.includes('\"Abdomen R\": [-belly * 0.8'), 'patient-left renders viewer-right: the front view is a mirror, like every medical chart');
   ok(app.includes('\"Thigh L\": [thW + 2.5') && app.includes('\"Arm L\": [sh + lp(7, 10)'), 'all three L/R pairs flipped together — no half-mirrored body');
   ok(app.includes('_siteMirrorFixed'), 'one-time migration flips pre-fix stored sites and flags itself done');
@@ -354,7 +354,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 // v0.9.43: the projection and the calendar agree on the next dose
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(app.includes('function MedLevelChart({ C, doseLog, med, dueISO })'), 'chart receives the due date');
   ok(app.includes('dueISO={dueISO}'), 'renderGlp passes the SAME dueISO the calendar chip uses');
   ok(app.includes('const firstT = dueT && dueT > lastDose.t ? Math.max(dueT, now)'), 'first projected dose anchors to DUE (clamped to now if overdue), cadence after');
@@ -363,7 +363,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.44: custom protocol engine + sleep. The app reports whether HIS conditions are met and
 // never sets a dose — that boundary is structural, not stylistic, for a compound with no label.
 {
-  const app=require('fs').readFileSync('/home/claude/forkcaster/src/App.jsx','utf8');
+  const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
   ok(srv.includes('nm === \"sleep_analysis\"'), 'HAE sleep_analysis is ingested');
   ok(srv.includes('q <= 24 ? q * 60 : q'), 'sleep accepts hours OR minutes without export-format archaeology');
@@ -386,6 +386,33 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(app.includes('rateOver = (wk)'), 'stall uses a ROLLING window, so a long hold cannot smear a recent plateau into invisibility');
   ok(app.includes('worth running the checkpoint'), 'the stall notice INVITES an evaluation rather than delivering a verdict');
   ok(app.includes('goalWeight,'), 'goal weight reaches the engine');
+}
+// --- v0.9.45: protocol always renders; rungs field is typeable; no bare JSX escapes ---
+{
+  const app=SRC;
+  ok(!app.includes('if (cp.status === "nodose") return null'), 'the nodose early return is gone — configuration never gates on the dose log');
+  ok(app.includes('Waiting for your first logged dose'), 'the checkpoint has an honest empty state instead of vanishing');
+  ok(app.indexOf('Waiting for your first logged dose') < app.indexOf('Tolerability flags right now'), 'the empty state lives inside the checkpoint card, above the gated content');
+  // The rungs input must open a FULL keyboard: a comma-separated field with a number pad is untypeable.
+  const rIn = app.slice(app.indexOf('Rungs (mg'), app.indexOf('Minimum hold before a checkpoint'));
+  ok(!/inputMode/.test(rIn), 'the rungs input carries no inputMode — full keyboard, commas and spaces typeable');
+  ok(app.includes('parseRungs(protoRungs)') && (app.match(/parseRungs\(protoRungs\)/g)||[]).length>=2, 'save AND preview run through the one parser');
+  ok(app.includes('"Will save: "'), 'a live preview shows exactly what will parse before the tap');
+  ok(app.includes('setProtoRungs(rungs.join(", "))'), 'opening edit seeds the field with the current rungs, never blank');
+  // TRIPWIRE: a \uXXXX outside every string/template renders LITERALLY in JSX text (the circled \u00b7).
+  // Char-walk the source tracking string state exactly; any escape surviving in code position is JSX text.
+  const bare=(src)=>{const st=[];const out=[];for(let i=0;i<src.length;i++){const c=src[i],t=st[st.length-1];
+    if(t==='d'){if(c==='\\')i++;else if(c==='"')st.pop();}
+    else if(t==='s'){if(c==='\\')i++;else if(c==="'")st.pop();}
+    else if(t==='t'){if(c==='\\')i++;else if(c==='`')st.pop();else if(c==='$'&&src[i+1]==='{'){st.push('x');i++;}}
+    else{if(c==='/'&&src[i+1]==='/'){while(i<src.length&&src[i]!=='\n')i++;}
+      else if(c==='/'&&src[i+1]==='*'){i+=2;while(i<src.length&&!(src[i]==='*'&&src[i+1]==='/'))i++;i++;}
+      else if(c==='"')st.push('d');else if(c==="'")st.push('s');else if(c==='`')st.push('t');
+      else if(t==='x'&&c==='}')st.pop();
+      else if(c==='\\'&&src[i+1]==='u')out.push(i);}}
+    return out;};
+  const hits=bare(app);
+  ok(hits.length===0, 'no bare unicode escapes in JSX text — found '+hits.length+(hits.length?' e.g. ...'+JSON.stringify(app.slice(Math.max(0,hits[0]-30),hits[0]+20)):''));
 }
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
