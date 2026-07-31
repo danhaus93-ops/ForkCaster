@@ -20,12 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.59: the med-level story gets its ending. Beyond your dose
-  ledger the chart now sketches faint ghost doses out to the point
-  where your level actually reaches steady state, marked STEADY with
-  the dose number - so the green line is no longer a ceiling the
-  curve never touches. Ghosts become real ledger slots as you log
-  each shot, and the chart opens centered on today.
+  v0.9.59: two things. First, the med-level chart now explains itself
+  the morning of a shot - an ABSORBING badge, a marker showing where
+  todays dose peaks and when, and a note that a shot builds over days,
+  not minutes; the projection also continues as faint ghost doses out
+  to the steady-state line, so the curve visibly arrives. Second, the
+  Body tab gets the new look: instrument numerals on the weight hero
+  and tiles, pill badges on synced entries, glowing Log and Save
+  buttons, and the journey rail in the data typeface.
 dependencies: []
 path: ""
 defaultUsername: ""

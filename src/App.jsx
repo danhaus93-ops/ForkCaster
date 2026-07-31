@@ -2826,8 +2826,8 @@ export default function App() {
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
   const stat = (label, value, unit, color = C.ink) => (
     <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 10.5, color: C.muted, letterSpacing: 0.4, textTransform: "uppercase" }}>{label}</div>
-      <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{value}<span style={{ fontSize: 12, color: C.faint, fontWeight: 500 }}>{unit}</span></div>
+      <div style={{ fontFamily: DATA, fontSize: 9.5, fontWeight: 700, color: C.muted, letterSpacing: 1.3, textTransform: "uppercase" }}>{label}</div>
+      <div style={{ fontFamily: DATA, fontSize: 22, fontWeight: 700, color, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{value}<span style={{ fontSize: 12, color: C.faint, fontWeight: 500 }}>{unit}</span></div>
     </div>
   );
 
@@ -3375,19 +3375,19 @@ export default function App() {
       <div style={{ marginBottom: 14 }}>{card(
         <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <div style={{ fontFamily: DISPLAY, fontSize: 40, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{fmtWt(curWeight)}<span style={{ fontSize: 16, color: C.muted }}> {wtU}</span></div>
-            <div style={{ textAlign: "right" }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.go }}>−{lost.toFixed(1)} lbs</div><div style={{ fontSize: 11, color: C.faint }}>since start</div></div>
+            <div style={{ fontFamily: DATA, fontSize: 38, fontWeight: 700, color: C.ink }}>{fmtWt(curWeight)}<span style={{ fontSize: 16, color: C.muted }}> {wtU}</span></div>
+            <div style={{ textAlign: "right" }}><div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, color: C.go }}>−{lost.toFixed(1)} lbs</div><div style={{ fontSize: 11, color: C.faint }}>since start</div></div>
           </div>
           {weightSeries.length > 1 ? lineChart(weightSeries.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
           {weightSeries.length > 0 && <div style={{ marginTop: 8 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
             <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ fontSize: 12.5, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
-              {w.synced ? <span style={{ fontSize: 10, fontWeight: 800, color: C.faint, letterSpacing: 0.4, padding: 4 }}>{w.source ? ({ "apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH" }[w.source] || w.source.toUpperCase().replace(/-/g, " ")) : "SYNCED"}</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>}
+              {w.synced ? <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, color: C.muted, letterSpacing: 0.8, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "3px 8px" }}>{w.source ? ({ "apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH" }[w.source] || w.source.toUpperCase().replace(/-/g, " ")) : "SYNCED"}</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>}
             </div>
           ))}</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
             <input type="number" value={newWeight} placeholder={`Log today's weight (${wtU})`} onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
-            <button onClick={logWeight} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "0 20px", fontFamily: BODY, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Log</button>
+            <button onClick={logWeight} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 20px", fontFamily: DATA, fontWeight: 800, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Log</button>
           </div>
         </>)}</div>
 
@@ -3401,7 +3401,7 @@ export default function App() {
               return (
                 <div key={p.key} style={{ flex: 1 }}>
                   <div style={{ height: 6, borderRadius: 3, background: done ? C.violet : cur ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
-                  <div style={{ fontSize: 9.5, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.15 }}>{p.label}</div>
+                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 0.4, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>{p.label}</div>
                 </div>
               );
             })}
@@ -3411,8 +3411,8 @@ export default function App() {
             <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
+            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
+            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
           </div>
           <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
         </>)}</div>
@@ -3440,14 +3440,14 @@ export default function App() {
               <div style={{ fontSize: 12, fontWeight: 800, color: C.ink, marginBottom: 7 }}>Check these before saving</div>
               {ROWS.map(([k, val, u]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13 }}>
-                  <span style={{ color: C.muted }}>{k}</span><span style={{ color: C.ink, fontWeight: 600 }}>{val}{u}</span>
+                  <span style={{ color: C.muted }}>{k}</span><span style={{ fontFamily: DATA, color: C.ink, fontWeight: 600, fontSize: 12.5 }}>{val}{u}</span>
                 </div>
               ))}
               {v.segmental && <div style={{ marginTop: 6, fontSize: 11, color: C.faint, lineHeight: 1.4 }}>Per-limb figures captured for reference. Scales model these rather than measuring each limb, so they are shown but never used to judge left/right balance.</div>}
               {bodyScan.warning && <div style={{ marginTop: 8, fontSize: 12, color: C.avoid, lineHeight: 1.45 }}>⚠ {bodyScan.warning}</div>}
               {!!bodyScan.rejected.length && <div style={{ marginTop: 6, fontSize: 11, color: C.faint }}>Skipped as unreadable or out of range: {bodyScan.rejected.join(", ")}</div>}
               <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
-                <button onClick={saveBodyScan} style={{ flex: 1, background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                <button onClick={saveBodyScan} style={{ flex: 1, background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "11px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Save</button>
                 <button onClick={() => setBodyScan(null)} style={{ flex: 1, background: "none", color: C.muted, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Discard</button>
               </div>
             </div>
@@ -3458,7 +3458,7 @@ export default function App() {
       <div style={{ marginBottom: 14 }}>{card(
         <>
           {sectionTitle("Body stats")}
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>{["male", "female"].map((s) => (<button key={s} onClick={() => setBody({ ...body, sex: s })} style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${body.sex === s ? C.ink : C.hair}`, background: body.sex === s ? C.ink : C.surface, color: body.sex === s ? C.surface : C.muted, fontFamily: BODY, fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{s}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>{["male", "female"].map((s) => (<button key={s} onClick={() => setBody({ ...body, sex: s })} style={{ flex: 1, padding: "9px 0", borderRadius: 999, border: `1.5px solid ${body.sex === s ? C.go : C.hair}`, background: body.sex === s ? C.go + "22" : "transparent", color: body.sex === s ? C.go : C.muted, fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" }}>{s}</button>))}</div>
           <div style={{ display: "flex", gap: 10 }}>{numField(`Height (${isMetric ? "cm" : "in"})`, fmtLen(body.heightIn), (v) => setBody({ ...body, heightIn: parseLen(v) }))}{numField(`Neck (${isMetric ? "cm" : "in"})`, fmtLen(body.neck), (v) => setBody({ ...body, neck: parseLen(v) }))}</div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Waist (${isMetric ? "cm" : "in"})`, fmtLen(body.waist), (v) => setBody({ ...body, waist: parseLen(v) }))}{body.sex === "female" ? numField(`Hip (${isMetric ? "cm" : "in"})`, fmtLen(body.hip), (v) => setBody({ ...body, hip: parseLen(v) })) : numField(`Goal weight (${wtU})`, +fmtWt(goalWeight, 0), (v) => setGoalWeight(parseWt(v)))}</div>
         </>)}</div>
@@ -3471,7 +3471,7 @@ export default function App() {
           )}
           {photoPanes("front", "Front", compareA, setCompareA, compareB, setCompareB, activeSide, setActiveSide, fileRef)}
           {photoPanes("back", "Back", compareABack, setCompareABack, compareBBack, setCompareBBack, activeSideBack, setActiveSideBack, fileRefBack)}
-          {photos.length > 0 && <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 12, background: "none", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>✨ Body Forecaster →</button>}
+          {photos.length > 0 && <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 12, background: C.violet + "22", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>✨ Body Forecaster →</button>}
         </>)}
     </div>
   );
@@ -4774,6 +4774,13 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const maxL = ssPeak * 1.08;
   const ssPct = Math.round((level(now) / ssPeak) * 100);
   const climbing = ssPct < 97;
+  // v0.9.59: the morning of a shot, the level is RIGHT but reads wrong — a subQ dose absorbs over
+  // days, it does not spike. Name the state so a fresh injection never looks unregistered again.
+  const tPeakH = Math.log(ka / ke) / (ka - ke); // hours to single-dose peak
+  const lastPeakT = lastDose.t + tPeakH * 3600000;
+  const absorbing = now >= lastDose.t && now < lastPeakT;
+  const absPeakPct = absorbing ? Math.round((levelProj(lastPeakT) / ssPeak) * 100) : null;
+  const absDays = absorbing ? Math.max(0.5, Math.round(((lastPeakT - now) / 86400000) * 2) / 2) : null;
   const nextDoseT = (dueT && dueT > lastDose.t ? Math.max(dueT, now) : lastDose.t + cadence);
   // v0.9.56: DOSE-INDEXED sawtooth — the mock's geometry. One equal x-step per dose, trough→peak
   // per cycle, projection extended until the peaks visually converge on steady state. Calendar-time
@@ -4829,7 +4836,7 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
         <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.6, whiteSpace: "nowrap" }}>Estimated med level</div>
-        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>{climbing ? "CLIMBING" : "STEADY"} · {ssPct}%</div>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>{absorbing ? "ABSORBING" : climbing ? "CLIMBING" : "STEADY"} · {ssPct}%</div>
       </div>
       <div ref={scrollRef} style={{ overflowX: scrolls ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ display: "block", width: scrolls ? `${W}px` : "100%", height: scrolls ? `${H}px` : "auto" }}>
@@ -4844,6 +4851,8 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
         <polyline points={fut} fill="none" stroke={C.violet} strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />
         {ghost && <polyline points={ghost} fill="none" stroke={C.violet} strokeWidth="1.6" strokeDasharray="3 5" opacity="0.22" />}
         {steadyIdx >= 0 && <text x={xi(steadyIdx, 0.3)} y={y(ssPeak) + 10} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" letterSpacing="1" fill={C.go} opacity="0.85">STEADY ≈ D{steadyIdx + 1}</text>}
+        {absorbing && <g><circle cx={xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac))} cy={y(cyc[nowIdx].pkL)} r="2.6" fill="none" stroke={C.go} strokeWidth="1.4" />
+          <text x={Math.min(xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac)) + 5, W - 60)} y={Math.max(y(cyc[nowIdx].pkL) - 6, 10)} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" fill={C.go}>peaks ~{absPeakPct}%</text></g>}
         <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
         {fullSeq.map((d, i) => (
           <text key={i} x={xi(i, 0.5)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={i <= nowIdx ? C.muted : C.faint} opacity={i >= nLedger ? 0.4 : 1}>D{i + 1}</text>
@@ -4858,6 +4867,10 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
       </svg>
       </div>
       {scrolls && <div style={{ fontFamily: DATA, fontSize: 8.5, letterSpacing: 1, color: C.faint, marginTop: 4, textAlign: "right" }}>← SCROLL TO REVIEW EVERY DOSE</div>}
+      {absorbing && <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.go + "14", border: `1px solid ${C.go}44`, borderRadius: 10, padding: "8px 11px", marginTop: 8 }}>
+        <span style={{ width: 7, height: 7, borderRadius: 7, background: C.go, flexShrink: 0 }} />
+        <span style={{ fontSize: 11.5, color: C.ink2, lineHeight: 1.45 }}>Today's dose is <b>in</b> — still absorbing. A shot builds over days, not minutes: this one peaks around <b style={{ color: C.go }}>~{absPeakPct}%</b> in ~{absDays} day{absDays === 1 ? "" : "s"}, and each trough lands higher than the last. That climb is the medication accumulating.</span>
+      </div>}
       <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1. Each dose lands before the last has cleared, so the troughs climb — solid is logged, dashed is planned. Steady state is the highest of your peak levels this dose and schedule will produce; you're at ~{ssPct}% of it now. Informational only — not medical advice.</div>
     </div>
   );
