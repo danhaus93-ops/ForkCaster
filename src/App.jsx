@@ -4783,36 +4783,48 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   // once it outgrows the screen so every dose stays reviewable.
   const slots = Math.max(4, doses.length + 1);
   const futDoses = [];
-  { let t = firstT; for (let k = doses.length; k < slots; k++) { futDoses.push({ t, mg: lastDose.mg }); t += cadence; } }
+  let tCursor = firstT;
+  { for (let k = doses.length; k < slots; k++) { futDoses.push({ t: tCursor, mg: lastDose.mg }); tCursor += cadence; } }
   const seq = doses.concat(futDoses);
+  // v0.9.59: GHOST doses beyond the ledger — dimmed, scrollable, out to convergence, so the curve
+  // visibly ARRIVES at steady state instead of ending mid-climb. Each one becomes a real ledger
+  // slot the day he logs it; the ledger spec and the convergence story stop fighting.
+  const ghosts = [];
+  { let guard = 0;
+    while (guard < 12) { const pk = ssLevel(tCursor + cadence * 0.25); ghosts.push({ t: tCursor, mg: lastDose.mg }); tCursor += cadence; guard++; if (pk >= ssPeak * 0.985) break; } }
+  const fullSeq = seq.concat(ghosts);
+  let steadyIdx = -1;
+  for (let i = 0; i < fullSeq.length; i++) { if (ssLevel(fullSeq[i].t + cadence * 0.25) >= ssPeak * 0.985) { steadyIdx = i; break; } }
   const fnAll = mk(seq);
-  const nD = seq.length;
+  const nD = fullSeq.length, nLedger = seq.length;
   const PER = 78, scrolls = nD > 4;
   const W = scrolls ? nD * PER : 320, H = 150, PADB = 16;
   const xi = (i, frac) => ((i + Math.min(0.98, Math.max(0, frac))) / nD) * (W - 4) + 2;
   const y = (L) => (H - PADB) - (Math.min(L, maxL) / maxL) * (H - PADB - 8);
-  const cycLen = (i) => (i + 1 < seq.length ? seq[i + 1].t - seq[i].t : cadence);
-  const cyc = seq.map((d, i) => {
+  const cycLen = (i) => (i + 1 < fullSeq.length ? fullSeq[i + 1].t - fullSeq[i].t : cadence);
+  const cyc = fullSeq.map((d, i) => {
     const len = cycLen(i);
     let pkL = 0, pkFrac = 0.22;
     for (let k = 1; k <= 24; k++) { const f = k / 25, L = fnAll(d.t + f * len); if (L > pkL) { pkL = L; pkFrac = f; } }
     return { trough: fnAll(d.t), pkL, pkFrac, t: d.t, len };
   });
   let nowIdx = 0, nowFrac = 0;
-  for (let i = 0; i < seq.length; i++) if (seq[i].t <= now) { nowIdx = i; nowFrac = Math.min(0.98, (now - seq[i].t) / cycLen(i)); }
+  for (let i = 0; i < fullSeq.length; i++) if (fullSeq[i].t <= now) { nowIdx = i; nowFrac = Math.min(0.98, (now - fullSeq[i].t) / cycLen(i)); }
   const nowX = xi(nowIdx, nowFrac), nowY = y(fnAll(now));
   const ptsSeq = [];
   cyc.forEach((c, i) => { ptsSeq.push({ i, f: 0.02, L: c.trough }); ptsSeq.push({ i, f: c.pkFrac, L: c.pkL }); });
   const before = ptsSeq.filter((p) => p.i < nowIdx || (p.i === nowIdx && p.f <= nowFrac));
-  const after = ptsSeq.filter((p) => p.i > nowIdx || (p.i === nowIdx && p.f > nowFrac));
+  const after = ptsSeq.filter((p) => (p.i > nowIdx || (p.i === nowIdx && p.f > nowFrac)) && p.i < nLedger);
+  const ghostPts = ptsSeq.filter((p) => p.i >= nLedger);
+  const ghost = (ghostPts.length ? [after.length ? after[after.length - 1] : null].filter(Boolean).map(pt).concat(ghostPts.map(pt)) : []).join(" ");
   const pt = (p) => `${xi(p.i, p.f).toFixed(1)},${y(p.L).toFixed(1)}`;
   const nowPt = `${nowX.toFixed(1)},${nowY.toFixed(1)}`;
   const past = before.map(pt).concat([nowPt]).join(" ");
   const fut = [nowPt].concat(after.map(pt)).join(" ");
   const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null;
-  const nextDoseIdx = seq.findIndex((d) => d.t >= nextDoseT - 3600000 && d.t > now);
+  const nextDoseIdx = fullSeq.findIndex((d) => d.t >= nextDoseT - 3600000 && d.t > now);
   const scrollRef = useRef(null);
-  useEffect(() => { const el = scrollRef.current; if (el) el.scrollLeft = el.scrollWidth; }, [seq.length]);
+  useEffect(() => { const el = scrollRef.current; if (el) { const target = ((nowIdx + 0.5) / nD) * el.scrollWidth - el.clientWidth * 0.45; el.scrollLeft = Math.max(0, target); } }, [nD, nowIdx]);
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
@@ -4830,9 +4842,11 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
         {past && <polygon points={`${past} ${past.trim().split(" ").slice(-1)[0].split(",")[0]},${H - PADB} ${past.trim().split(" ")[0].split(",")[0]},${H - PADB}`} fill="url(#medfill)" />}
         <polyline points={past} fill="none" stroke={C.violet} strokeWidth="2.4" strokeLinejoin="round" />
         <polyline points={fut} fill="none" stroke={C.violet} strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />
+        {ghost && <polyline points={ghost} fill="none" stroke={C.violet} strokeWidth="1.6" strokeDasharray="3 5" opacity="0.22" />}
+        {steadyIdx >= 0 && <text x={xi(steadyIdx, 0.3)} y={y(ssPeak) + 10} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" letterSpacing="1" fill={C.go} opacity="0.85">STEADY ≈ D{steadyIdx + 1}</text>}
         <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
-        {seq.map((d, i) => (
-          <text key={i} x={xi(i, 0.5)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={i <= nowIdx ? C.muted : C.faint}>D{i + 1}</text>
+        {fullSeq.map((d, i) => (
+          <text key={i} x={xi(i, 0.5)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={i <= nowIdx ? C.muted : C.faint} opacity={i >= nLedger ? 0.4 : 1}>D{i + 1}</text>
         ))}
         <circle cx={nowX} cy={nowY} r="7" fill={C.violet} opacity="0.22" />
         <circle cx={nowX} cy={nowY} r="3.4" fill={C.violet} />
