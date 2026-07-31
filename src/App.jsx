@@ -3559,14 +3559,14 @@ export default function App() {
           <div style={{ marginBottom: 14 }}>{card(<div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               {sectionTitle("Your protocol", C.muted)}
-              <span onClick={() => { if (!protoEdit) setProtoRungs(rungs.join(", ")); setProtoEdit((v) => !v); }} style={{ fontSize: 11, color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
+              <span onClick={() => { if (!protoEdit) setProtoRungs(rungs.join(", ")); setProtoEdit((v) => !v); }} style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               {rungs.map((r) => { const on = curMg != null && +r === +curMg; return (
-                <div key={r} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 10,
-                  background: on ? C.violetSoft || "rgba(167,139,250,0.16)" : "transparent",
-                  border: `1px solid ${on ? C.violet : C.hair}`, color: on ? C.ink : C.faint,
-                  fontSize: 13, fontWeight: on ? 700 : 500 }}>{r}<span style={{ fontSize: 9, opacity: 0.7 }}> mg</span></div>); })}
+                <div key={r} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 999,
+                  background: on ? C.violet + "2E" : "transparent",
+                  border: `1px solid ${on ? C.violet : C.hair}`, color: on ? C.violet : C.faint,
+                  fontFamily: DATA, fontSize: 12, fontWeight: on ? 700 : 500 }}>{r}<span style={{ fontSize: 9, opacity: 0.7 }}> mg</span></div>); })}
             </div>
             {protoEdit ? (<div style={{ marginTop: 11 }}>
               <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>Rungs (mg, separated by spaces or commas)</div>
@@ -3841,8 +3841,8 @@ export default function App() {
             {sectionTitle("Titration tracker", C.go)}
             {t.investigational && <div style={{ background: C.caution + "22", border: `1.5px solid ${C.caution}`, borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 12, color: C.caution, fontWeight: 700 }}>RETATRUTIDE IS INVESTIGATIONAL — this ladder is the TRIUMPH trial escalation, not an approved schedule. The stepping decision is yours and your prescriber's.</div>}
             <div style={{ display: "flex", gap: 6, marginBottom: 9, flexWrap: "wrap" }}>
-              {t.steps.map((mg) => (<span key={mg} style={{ padding: "5px 11px", borderRadius: 18, fontSize: 12.5, fontWeight: 800, border: `1.5px solid ${mg === t.cur ? C.go : C.hair}`, color: mg === t.cur ? C.go : C.muted, background: mg === t.cur ? C.go + "1A" : "transparent" }}>{mg} {t.unit}</span>))}
-              {t.custom && <span style={{ padding: "5px 11px", borderRadius: 18, fontSize: 12.5, fontWeight: 800, border: `1.5px solid ${C.go}`, color: C.go }}>{t.cur} {t.unit} (custom)</span>}
+              {t.steps.map((mg) => (<span key={mg} style={{ padding: "6px 13px", borderRadius: 999, fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, border: `1.5px solid ${mg === t.cur ? C.go : C.hair}`, color: mg === t.cur ? C.go : C.muted, background: mg === t.cur ? C.go + "1A" : "transparent" }}>{mg} {t.unit}</span>))}
+              {t.custom && <span style={{ padding: "6px 13px", borderRadius: 999, fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 0.8, border: `1.5px solid ${C.go}`, color: C.go, background: C.go + "1A" }}>{t.cur} {t.unit} (custom)</span>}
             </div>
             {t.need === 4 && <div style={{ display: "flex", gap: 7, marginBottom: 8, alignItems: "center" }}>{Array.from({ length: 4 }, (_, i) => (<span key={i} style={{ width: 13, height: 13, borderRadius: "50%", background: i < Math.min(t.n, 4) ? C.go : "transparent", border: `2px solid ${i < Math.min(t.n, 4) ? C.go : C.hair}` }} />))}{t.n > 4 && <span style={{ fontSize: 12, fontWeight: 800, color: C.go, marginLeft: 3 }}>+{t.n - 4}</span>}</div>}
             <div style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.5 }}>
@@ -3904,13 +3904,13 @@ export default function App() {
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             <select value={seSymptom} onChange={(e) => setSeSymptom(e.target.value)} style={selectStyle}>{["Nausea", "Fatigue", "Constipation", "Diarrhea", "Heartburn", "Injection site", "Headache", "Dizziness"].map((s) => <option key={s}>{s}</option>)}</select>
             <select value={seSeverity} onChange={(e) => setSeSeverity(+e.target.value)} style={{ ...selectStyle, flex: "0 0 96px" }}>{[1, 2, 3].map((n) => <option key={n} value={n}>{["Mild", "Moderate", "Severe"][n - 1]}</option>)}</select>
-            <button onClick={addSideEffect} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "0 16px", fontFamily: BODY, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Log</button>
+            <button onClick={addSideEffect} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 18px", fontFamily: DATA, fontWeight: 800, fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Log</button>
           </div>
           {[...glp.sideEffects].reverse().map((s) => (
             <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${C.hair}` }}>
               <div><span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{s.symptom}</span><span style={{ fontSize: 12, color: C.faint, marginLeft: 8 }}>{fmtDate(s.date)}{s.at ? " " + new Date(s.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: [C.go, C.caution, C.avoid][s.severity - 1], background: [C.goSoft, C.cautionSoft, C.avoidSoft][s.severity - 1], borderRadius: 20, padding: "3px 10px" }}>{["Mild", "Moderate", "Severe"][s.severity - 1]}</span>
+                <span style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: [C.go, C.caution, C.avoid][s.severity - 1], background: [C.goSoft, C.cautionSoft, C.avoidSoft][s.severity - 1], borderRadius: 999, padding: "4px 11px" }}>{["Mild", "Moderate", "Severe"][s.severity - 1]}</span>
                 <button onClick={() => setGlp((g) => ({ ...g, sideEffects: g.sideEffects.filter((x) => x.id !== s.id) }))} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4 }}>✕</button>
               </div>
             </div>

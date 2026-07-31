@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.51"
+version: "0.9.52"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.51: the GLP-1 tab gets the full new look. The medication picker
-  becomes tinted pill chips in the data typeface, the Injections and
-  Daily pill switch matches, Log dose is now a glowing violet pill,
-  the Next injection card carries a violet edge mark, dose-day chips
-  are rounded and tinted, the titration ladder numbers and the dose
-  calendar header switch to the instrument typeface. Same buttons,
-  same features, verified by the manifest suite - only redrawn.
+  v0.9.52: GLP-1 polish pass from live-screenshot review. Protocol rung
+  chips become tinted violet pills in the data typeface, the edit link
+  matches, titration tracker doses become pill chips, the side-effect
+  Log button is now a green pill, and severity badges switch to the
+  instrument style. Nothing moved or removed - manifest verified.
 dependencies: []
 path: ""
 defaultUsername: ""
