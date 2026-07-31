@@ -4843,7 +4843,7 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   let ssPeak = 0; { const t0 = lastDose.t + cadence * 38; for (let i = 0; i <= 60; i++) ssPeak = Math.max(ssPeak, ssLevel(t0 + (i / 60) * cadence)); }
   ssPeak = Math.max(ssPeak, 1e-9);
   const maxL = ssPeak * 1.08;
-  const ssPct = Math.round((level(now) / ssPeak) * 100);
+  const ssPct = Math.round((level(now) / ssPeak) * 100); // drives the STEADY flip + the chart ceiling
   const climbing = ssPct < 97;
   // v0.9.62: HIS denominator restored. 7-day half-life means only ~13% bleeds off between weekly
   // shots — the morning of dose 2 he was at ~86% OF HIS OWN PEAK while ~40% of steady state. Both
@@ -4890,6 +4890,13 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
     for (let k = 1; k <= 24; k++) { const f = k / 25, L = fnAll(d.t + f * len); if (L > pkL) { pkL = L; pkFrac = f; } }
     return { trough: fnAll(d.t), pkL, pkFrac, t: d.t, len };
   });
+  // v0.9.65: HIS gauge — the number dips to ~86 by shot day and climbs back through 100 past last
+  // week's peak, matching how the med feels. Reference = best peak of completed cycles; the chart's
+  // steady-state line still carries the long game, and ssPct still flips the chip to STEADY.
+  let nowIdx0 = 0; for (let i = 0; i < fullSeq.length; i++) if (fullSeq[i].t <= now) nowIdx0 = i;
+  let refPeak = 0; for (let i = 0; i < nowIdx0; i++) refPeak = Math.max(refPeak, cyc[i].pkL);
+  if (refPeak <= 0) refPeak = cyc[nowIdx0] ? cyc[nowIdx0].pkL : ssPeak;
+  const vsPeak = Math.round((level(now) / Math.max(refPeak, 1e-9)) * 100);
   let nowIdx = 0, nowFrac = 0;
   for (let i = 0; i < fullSeq.length; i++) if (fullSeq[i].t <= now) { nowIdx = i; nowFrac = Math.min(0.98, (now - fullSeq[i].t) / cycLen(i)); }
   const nowX = xi(nowIdx, nowFrac), nowY = y(fnAll(now));
@@ -4903,7 +4910,8 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const ghost = (ghostPts.length ? [after.length ? after[after.length - 1] : null].filter(Boolean).map(pt).concat(ghostPts.map(pt)) : []).join(" ");
   const past = before.map(pt).concat([nowPt]).join(" ");
   const fut = [nowPt].concat(after.map(pt)).join(" ");
-  const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null;
+  const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null; // kept: ss-relative internals
+  const nextVsPeak = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / Math.max(refPeak, 1e-9)) * 100) : null;
   const nextDoseIdx = fullSeq.findIndex((d) => d.t >= nextDoseT - 3600000 && d.t > now);
   const scrollRef = useRef(null);
   useEffect(() => { const el = scrollRef.current; if (el) { const target = ((nowIdx + 0.5) / nD) * el.scrollWidth - el.clientWidth * 0.45; el.scrollLeft = Math.max(0, target); } }, [nD, nowIdx]);
@@ -4911,7 +4919,7 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
         <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.6, whiteSpace: "nowrap" }}>Estimated med level</div>
-        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>{absorbing ? "ABSORBING" : climbing ? "CLIMBING" : "STEADY"} · {ssPct}%</div>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>{absorbing ? "ABSORBING" : climbing ? "CLIMBING" : "STEADY"} · {vsPeak}%</div>
       </div>
       <div ref={scrollRef} style={{ overflowX: scrolls ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ display: "block", width: scrolls ? `${W}px` : "100%", height: scrolls ? `${H}px` : "auto" }}>
@@ -4927,17 +4935,17 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
         {ghost && <polyline points={ghost} fill="none" stroke={C.violet} strokeWidth="1.6" strokeDasharray="3 5" opacity="0.22" />}
         {steadyIdx >= 0 && <text x={xi(steadyIdx, 0.3)} y={y(ssPeak) + 10} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" letterSpacing="1" fill={C.go} opacity="0.85">STEADY ≈ D{steadyIdx + 1}</text>}
         {absorbing && <g><circle cx={xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac))} cy={y(cyc[nowIdx].pkL)} r="2.6" fill="none" stroke={C.go} strokeWidth="1.4" />
-          <text x={Math.min(xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac)) + 5, W - 60)} y={Math.max(y(cyc[nowIdx].pkL) - 6, 10)} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" fill={C.go}>peaks ~{absPeakPct}%</text></g>}
+          <text x={Math.min(xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac)) + 5, W - 60)} y={Math.max(y(cyc[nowIdx].pkL) - 6, 10)} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" fill={C.go}>peaks ~{Math.round((cyc[nowIdx].pkL / Math.max(refPeak, 1e-9)) * 100)}%</text></g>}
         <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
         {fullSeq.map((d, i) => (
           <text key={i} x={xi(i, 0.5)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={i <= nowIdx ? C.muted : C.faint} opacity={i >= nLedger ? 0.4 : 1}>D{i + 1}</text>
         ))}
         <circle cx={nowX} cy={nowY} r="7" fill={C.violet} opacity="0.22" />
         <circle cx={nowX} cy={nowY} r="3.4" fill={C.violet} />
-        <text x={Math.min(nowX + 6, W - 74)} y={Math.max(nowY - 8, 10)} fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.ink}>NOW · {ssPct}%</text>
+        <text x={Math.min(nowX + 6, W - 74)} y={Math.max(nowY - 8, 10)} fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.ink}>NOW · {vsPeak}%</text>
         {nextPct != null && nextDoseIdx > 0 && <g>
           <circle cx={xi(nextDoseIdx, 0.02)} cy={y(cyc[nextDoseIdx].trough)} r="3" fill="none" stroke={C.violet} strokeWidth="1.5" />
-          <text x={Math.min(xi(nextDoseIdx, 0.02) + 5, W - 70)} y={Math.min(H - PADB - 6, y(cyc[nextDoseIdx].trough) + 11)} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextPct}% at next dose</text>
+          <text x={Math.min(xi(nextDoseIdx, 0.02) + 5, W - 70)} y={Math.min(H - PADB - 6, y(cyc[nextDoseIdx].trough) + 11)} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextVsPeak}% at next dose</text>
         </g>}
       </svg>
       </div>
