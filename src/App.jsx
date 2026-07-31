@@ -4748,28 +4748,37 @@ function MedLevelChart({ C, doseLog, med, dueISO }) {
     if (t <= now) maxReal = Math.max(maxReal, level(t));
     maxAll = Math.max(maxAll, L); pts.push({ t, L });
   }
-  const maxL = maxAll;
   if (maxReal <= 0) return null;
+  // v0.9.54: steady-state peak — run the same model 40 cycles out and take the converged peak,
+  // so the chart's ceiling is the level this dose+schedule flattens at (the mock's whole thesis)
+  const ssVirtual = []; for (let t = firstT; t <= lastDose.t + cadence * 40; t += cadence) ssVirtual.push({ t, mg: lastDose.mg });
+  const ssLevel = mk(doses.concat(ssVirtual));
+  let ssPeak = 0; { const t0 = lastDose.t + cadence * 38; for (let i = 0; i <= 60; i++) ssPeak = Math.max(ssPeak, ssLevel(t0 + (i / 60) * cadence)); }
+  ssPeak = Math.max(ssPeak, maxAll * 0.999, 1e-9);
+  const maxL = ssPeak * 1.08;
+  const ssPct = Math.round((level(now) / ssPeak) * 100);
+  const climbing = ssPct < 97;
   const nextDoseT = (dueT && dueT > lastDose.t ? Math.max(dueT, now) : lastDose.t + cadence);
-  const W = 320, H = 110, PADB = 16;
+  const W = 320, H = 150, PADB = 16;
   const x = (t) => ((t - start) / (end - start)) * W;
   const y = (L) => (H - PADB) - (L / maxL) * (H - PADB - 8);
   const nowX = x(now);
   const past = pts.filter((p) => p.t <= now).map((p) => `${x(p.t).toFixed(1)},${y(p.L).toFixed(1)}`).join(" ");
   const fut = pts.filter((p) => p.t >= now).map((p) => `${x(p.t).toFixed(1)},${y(p.L).toFixed(1)}`).join(" ");
   const nowLevelPct = Math.round((level(now) / maxReal) * 100); // % of the peak you have actually reached
-  const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / maxReal) * 100) : null;
+  const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null;
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.6 }}>Estimated med level</div>
-        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px" }}>~{nowLevelPct}% of your peak</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.6, whiteSpace: "nowrap" }}>Estimated med level</div>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>{climbing ? "CLIMBING" : "STEADY"} · {ssPct}%</div>
       </div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
         <defs><linearGradient id="medfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={C.violet} stopOpacity="0.28" /><stop offset="1" stopColor={C.violet} stopOpacity="0.02" /></linearGradient></defs>
-        {[100, 75, 50, 25].map((g) => { const gy = y((g / 100) * maxReal); return <g key={g}>
-          <line x1="0" x2={W} y1={gy} y2={gy} stroke={g === 100 ? C.go : (C.hair || "#26302c")} strokeWidth={g === 100 ? 1 : 0.75} strokeDasharray={g === 100 ? "4 3" : "1 3"} opacity={g === 100 ? 0.7 : 1} />
-          <text x={W - 2} y={gy - 2} textAnchor="end" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={g === 100 ? C.go : C.faint}>{g === 100 ? "STEADY STATE" : g + "%"}</text>
+        {[100, 75, 50, 25].map((g) => { const gy = y((g / 100) * ssPeak); return <g key={g}>
+          <line x1="0" x2={W} y1={gy} y2={gy} stroke={g === 100 ? C.go : (C.hair || "#26302c")} strokeWidth={g === 100 ? 1.2 : 0.75} strokeDasharray={g === 100 ? "5 4" : "1 3"} opacity={g === 100 ? 0.85 : 1} />
+          <text x={W - 2} y={gy - 3} textAnchor="end" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={g === 100 ? C.go : C.faint}>{g + "%"}</text>
+          {g === 100 && <text x="2" y={gy - 3} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" letterSpacing="1" fill={C.go}>STEADY STATE</text>}
         </g>; })}
         {past && <polygon points={`${past} ${past.trim().split(" ").slice(-1)[0].split(",")[0]},${H - PADB} ${past.trim().split(" ")[0].split(",")[0]},${H - PADB}`} fill="url(#medfill)" />}
         <polyline points={past} fill="none" stroke={C.violet} strokeWidth="2.4" strokeLinejoin="round" />
@@ -4778,13 +4787,15 @@ function MedLevelChart({ C, doseLog, med, dueISO }) {
         {doses.filter((d) => d.t >= start).map((d, i) => (
           <g key={i}><circle cx={x(d.t)} cy={H - PADB} r="3" fill={C.violet} /><text x={x(d.t)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.faint}>{d.mg}</text></g>
         ))}
-        <text x={nowX + 4} y="12" fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.go}>NOW</text>
+        <circle cx={nowX} cy={y(level(now))} r="7" fill={C.violet} opacity="0.22" />
+        <circle cx={nowX} cy={y(level(now))} r="3.4" fill={C.violet} />
+        <text x={Math.min(nowX + 6, W - 70)} y={Math.max(y(level(now)) - 7, 10)} fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.ink}>NOW · {ssPct}%</text>
         {nextPct != null && nextDoseT < end && <g>
           <circle cx={x(nextDoseT)} cy={y(levelProj(nextDoseT - 3600000))} r="3" fill="none" stroke={C.violet} strokeWidth="1.5" />
           <text x={Math.min(x(nextDoseT) + 5, W - 66)} y={Math.max(y(levelProj(nextDoseT - 3600000)) - 5, 10)} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextPct}% at next dose</text>
         </g>}
       </svg>
-      <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1. Informational only — not medical advice.</div>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1 — you're at ~{nowLevelPct}% of your peak so far. Each dose lands before the last has cleared, so the troughs climb; solid is logged, dashed is planned. Informational only — not medical advice.</div>
     </div>
   );
 }
