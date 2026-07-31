@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.59"
+version: "0.9.60"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.59: two things. First, the med-level chart now explains itself
-  the morning of a shot - an ABSORBING badge, a marker showing where
-  todays dose peaks and when, and a note that a shot builds over days,
-  not minutes; the projection also continues as faint ghost doses out
-  to the steady-state line, so the curve visibly arrives. Second, the
-  Body tab gets the new look: instrument numerals on the weight hero
-  and tiles, pill badges on synced entries, glowing Log and Save
-  buttons, and the journey rail in the data typeface.
+  v0.9.60: CRITICAL FIX - v0.9.59 crashed the app on the GLP-1 tab
+  for anyone with logged doses (a code-ordering error in the new
+  ghost-dose drawing). Fixed, and the test rig now deep-renders every
+  tab with real dose data before any release can ship, so this class
+  of crash cannot reach your phone again. Update immediately.
 dependencies: []
 path: ""
 defaultUsername: ""

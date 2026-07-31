@@ -1441,7 +1441,11 @@ export default function App() {
       if (good && venues.length && !venues[0].menu) rankVenues(venues); }
     catch (e) { setKeyMsg(`AI key failed: ${(e && e.message) || e}`); }
   }
-  const [tab, setTab] = useState("now");
+  // Test-only hooks: the deep render smoke seeds a tab and state through globals so EVERY tab
+  // renders with real-shaped data. Prod never sets these; the crash class this closes: v0.9.59's
+  // TDZ in the med chart, invisible to a default-state render because no doses meant early return.
+  const __T = (typeof globalThis !== "undefined" && globalThis.__FC_TEST_STATE) || null;
+  const [tab, setTab] = useState((typeof globalThis !== "undefined" && globalThis.__FC_TEST_TAB) || "now");
 
   const [targets, setTargets] = useState(MODES.cut.targets);
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
@@ -1501,7 +1505,7 @@ export default function App() {
   const [scanBusy, setScanBusy] = useState(false);
   const [scanErr, setScanErr] = useState("");
   const scanRef = useRef(null);
-  const [weightLog, setWeightLog] = useState([]);
+  const [weightLog, setWeightLog] = useState(__T && __T.weightLog ? __T.weightLog : []);
   const [newWeight, setNewWeight] = useState("");
   const [goalWeight, setGoalWeight] = useState(185);
   const [photos, setPhotos] = useState([]);
@@ -1520,7 +1524,7 @@ export default function App() {
   const fileRef = useRef(null);
   const photoRef = useRef(null);
 
-  const [glp, setGlp] = useState({
+  const [glp, setGlp] = useState(__T && __T.glp ? __T.glp : {
     med: "tirzepatide", dose: 2.5, injectionDay: "SU",
     lastInjection: null, weeksOn: 1, lastDoseChangeWk: 99, doseLog: [],
     sideEffects: [],
@@ -4823,9 +4827,9 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const before = ptsSeq.filter((p) => p.i < nowIdx || (p.i === nowIdx && p.f <= nowFrac));
   const after = ptsSeq.filter((p) => (p.i > nowIdx || (p.i === nowIdx && p.f > nowFrac)) && p.i < nLedger);
   const ghostPts = ptsSeq.filter((p) => p.i >= nLedger);
-  const ghost = (ghostPts.length ? [after.length ? after[after.length - 1] : null].filter(Boolean).map(pt).concat(ghostPts.map(pt)) : []).join(" ");
   const pt = (p) => `${xi(p.i, p.f).toFixed(1)},${y(p.L).toFixed(1)}`;
   const nowPt = `${nowX.toFixed(1)},${nowY.toFixed(1)}`;
+  const ghost = (ghostPts.length ? [after.length ? after[after.length - 1] : null].filter(Boolean).map(pt).concat(ghostPts.map(pt)) : []).join(" ");
   const past = before.map(pt).concat([nowPt]).join(" ");
   const fut = [nowPt].concat(after.map(pt)).join(" ");
   const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null;
