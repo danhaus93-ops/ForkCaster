@@ -315,7 +315,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 {
   const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(app.includes('doses.concat(virtual)'), 'projection includes scheduled future doses (steady-state build is drawn, not hidden)');
-  ok(app.includes('level(now) / maxReal'), 'now-percent stays anchored to the peak actually reached, not the projected future peak');
+  // v0.9.56: design change on his order — the mock's chart normalizes NOW to CONVERGED STEADY STATE,
+  // not the peak reached so far. The invariant moves with it: the denominator must be the 40-cycle
+  // converged peak (never a moving in-window max), and the caption must say what steady state means.
+  ok(app.includes('level(now) / ssPeak'), 'now-percent anchors to converged steady-state peak (the mock design)');
+  ok(app.includes('cadence * 40'), 'steady-state peak comes from a far-horizon run of the same model, not the visible window');
+  ok(app.includes('Steady state is the highest of your peak levels'), 'caption defines steady state in plain words');
   ok(app.includes('% at next dose'), 'next-dose marker names the projected trough');
   ok(app.split('rhrCardFor(_r)').length===3, 'RHR card renders in exactly one of two slots: top when flagged, below the med curve when quiet');
 }

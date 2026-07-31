@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.55"
+version: "0.9.56"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,14 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.55: the GLP-1 tab now matches the redesign preview card for
-  card. Your protocol becomes the rail - violet segments with a YOU
-  ARE HERE marker, and Minimum hold and Your ceiling as clean labeled
-  rows. The dose checkpoint gains the big day counter with its amber
-  progress bar while locked. Checkpoint ledger tags become pill
-  badges, with flagged safety markers highlighted in red. The
-  injection-site title joins the instrument style. Nothing removed,
-  manifest verified.
+  v0.9.56: the med-level chart now draws exactly like the preview. The
+  timeline is per-dose - one step per injection, D1 onward - so your
+  history shows the true zig-zag climb instead of a calendar blob. The
+  projection runs until it visibly meets the steady-state line, so the
+  ceiling finally sits where the curve is heading. And the card speaks
+  one number now: your percent of steady state, explained in plain
+  words underneath. Same model, honest picture.
 dependencies: []
 path: ""
 defaultUsername: ""
