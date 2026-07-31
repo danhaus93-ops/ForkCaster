@@ -4778,15 +4778,17 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   // v0.9.56: DOSE-INDEXED sawtooth — the mock's geometry. One equal x-step per dose, trough→peak
   // per cycle, projection extended until the peaks visually converge on steady state. Calendar-time
   // sampling made the history a blob and left the ceiling floating; dose-time IS the story.
+  // v0.9.58: the chart is a dose LEDGER — 4 slots to start, one new slot per logged dose
+  // (log D4, D5 appears; hold at maintenance and it keeps growing), horizontally scrollable
+  // once it outgrows the screen so every dose stays reviewable.
+  const slots = Math.max(4, doses.length + 1);
   const futDoses = [];
-  { let t = firstT, guard = 0;
-    while (guard < 14) { futDoses.push({ t, mg: lastDose.mg }); guard++;
-      const pk = ssLevel(t + cadence * 0.22);
-      if (futDoses.length >= 4 && pk >= ssPeak * 0.985) break; t += cadence; } }
+  { let t = firstT; for (let k = doses.length; k < slots; k++) { futDoses.push({ t, mg: lastDose.mg }); t += cadence; } }
   const seq = doses.concat(futDoses);
   const fnAll = mk(seq);
   const nD = seq.length;
-  const W = 320, H = 150, PADB = 16;
+  const PER = 78, scrolls = nD > 4;
+  const W = scrolls ? nD * PER : 320, H = 150, PADB = 16;
   const xi = (i, frac) => ((i + Math.min(0.98, Math.max(0, frac))) / nD) * (W - 4) + 2;
   const y = (L) => (H - PADB) - (Math.min(L, maxL) / maxL) * (H - PADB - 8);
   const cycLen = (i) => (i + 1 < seq.length ? seq[i + 1].t - seq[i].t : cadence);
@@ -4809,13 +4811,16 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const fut = [nowPt].concat(after.map(pt)).join(" ");
   const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null;
   const nextDoseIdx = seq.findIndex((d) => d.t >= nextDoseT - 3600000 && d.t > now);
+  const scrollRef = useRef(null);
+  useEffect(() => { const el = scrollRef.current; if (el) el.scrollLeft = el.scrollWidth; }, [seq.length]);
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
         <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.6, whiteSpace: "nowrap" }}>Estimated med level</div>
         <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>{climbing ? "CLIMBING" : "STEADY"} · {ssPct}%</div>
       </div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+      <div ref={scrollRef} style={{ overflowX: scrolls ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ display: "block", width: scrolls ? `${W}px` : "100%", height: scrolls ? `${H}px` : "auto" }}>
         <defs><linearGradient id="medfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={C.violet} stopOpacity="0.28" /><stop offset="1" stopColor={C.violet} stopOpacity="0.02" /></linearGradient></defs>
         {[100, 75, 50, 25].map((g) => { const gy = y((g / 100) * ssPeak); return <g key={g}>
           <line x1="0" x2={W} y1={gy} y2={gy} stroke={g === 100 ? C.go : (C.hair || "#26302c")} strokeWidth={g === 100 ? 1.2 : 0.75} strokeDasharray={g === 100 ? "5 4" : "1 3"} opacity={g === 100 ? 0.85 : 1} />
@@ -4837,6 +4842,8 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
           <text x={Math.min(xi(nextDoseIdx, 0.02) + 5, W - 70)} y={Math.min(H - PADB - 6, y(cyc[nextDoseIdx].trough) + 11)} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextPct}% at next dose</text>
         </g>}
       </svg>
+      </div>
+      {scrolls && <div style={{ fontFamily: DATA, fontSize: 8.5, letterSpacing: 1, color: C.faint, marginTop: 4, textAlign: "right" }}>← SCROLL TO REVIEW EVERY DOSE</div>}
       <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1. Each dose lands before the last has cleared, so the troughs climb — solid is logged, dashed is planned. Steady state is the highest of your peak levels this dose and schedule will produce; you're at ~{ssPct}% of it now. Informational only — not medical advice.</div>
     </div>
   );
