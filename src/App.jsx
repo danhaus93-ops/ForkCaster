@@ -3742,10 +3742,10 @@ export default function App() {
             return (<>
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             {[["inj", "\uD83D\uDC89 Injections"], ["oral", "\uD83D\uDC8A Daily pill"]].map(([f, lbl]) => (
-              <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet : C.surface, color: form === f ? C.surface : C.muted, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{lbl}</button>
+              <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", minWidth: 104, padding: "9px 10px", borderRadius: 9, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet : C.surface, color: glp.med === k ? C.surface : C.muted, fontFamily: BODY, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{m.label}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", padding: "8px 14px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
             </>);
           })()}
           {medObj.investigational ? (
@@ -3765,7 +3765,7 @@ export default function App() {
           ) : (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {donut(glp.dose, medObj.steps[medObj.steps.length - 1], C.violet, `${glp.dose}`, medObj.unit, C)}
-              <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 11.5, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontSize: 11.5, color: C.muted, marginTop: 6 }}>Week {glp.weeksOn} · current dose {glp.dose} {medObj.unit}</div></div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 11.5, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontFamily: DATA, fontSize: 11.5, color: C.muted, marginTop: 6 }}>Week {glp.weeksOn} · current dose {glp.dose} {medObj.unit}</div></div>
             </div>
           )}
         </>)}</div>
@@ -3774,7 +3774,7 @@ export default function App() {
         <div style={{ marginBottom: 14 }}>{card(
           <>
             {sectionTitle("Titration ladder")}
-            <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<button key={s} onClick={() => setGlp({ ...glp, dose: s, lastDoseChangeWk: 0 })} style={{ flex: 1, textAlign: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontSize: 11, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, fontVariantNumeric: "tabular-nums" }}>{s}</div></button>); })}</div>
+            <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<button key={s} onClick={() => setGlp({ ...glp, dose: s, lastDoseChangeWk: 0 })} style={{ flex: 1, textAlign: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontFamily: DATA, fontSize: 11, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint }}>{s}</div></button>); })}</div>
             <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.4 }}>{medObj.note}</div>
             <div style={{ fontSize: 10.5, color: C.faint, marginTop: 6 }}>Tap a step to record the dose your prescriber directed — confirm every change with them.</div>
           </>)}</div>
@@ -3782,15 +3782,15 @@ export default function App() {
 
       <div style={{ marginBottom: 14 }}>{card(
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>{medObj && medObj.cadence === "daily" ? "Next dose" : "Next injection"}</div><div style={{ fontFamily: DATA, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : (medObj && medObj.cadence === "daily" ? "No dose logged yet — tap Log dose after your pill" : "No dose logged yet — tap Log dose after your injection")}</div></div>
-          <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.surface, border: "none", borderRadius: 11, padding: "12px 18px", fontFamily: BODY, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
-        </div>)}</div>
+          <div><div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted }}>{medObj && medObj.cadence === "daily" ? "Next dose" : "Next injection"}</div><div style={{ fontFamily: DATA, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : (medObj && medObj.cadence === "daily" ? "No dose logged yet — tap Log dose after your pill" : "No dose logged yet — tap Log dose after your injection")}</div></div>
+          <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.bg, border: "none", borderRadius: 999, padding: "12px 20px", fontFamily: DATA, fontWeight: 800, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 16px ${(doseLogged ? C.go : C.violet)}44` }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
+        </div>, { borderLeft: `2.5px solid ${C.violet}` })}</div>
       {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>
-        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Dose day{(prefs.injIntervalDays || 7) !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {prefs.injIntervalDays} days)</span> : null}</div>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted, marginBottom: 8 }}>Dose day{(prefs.injIntervalDays || 7) !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {prefs.injIntervalDays} days)</span> : null}</div>
         <div style={{ display: "flex", gap: 6 }}>
           {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
             <button key={k} onClick={() => setGlp({ ...glp, injectionDay: k })}
-              style={{ flex: 1, height: 38, borderRadius: 10, border: glp.injectionDay === k ? "none" : `1.5px solid ${C.hair}`, background: glp.injectionDay === k ? C.violet : "transparent", color: glp.injectionDay === k ? "#fff" : C.muted, fontFamily: BODY, fontWeight: 800, fontSize: 12.5, cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
+              style={{ flex: 1, height: 38, borderRadius: 999, border: `1.5px solid ${glp.injectionDay === k ? C.violet : C.hair}`, background: glp.injectionDay === k ? C.violet + "2E" : "transparent", color: glp.injectionDay === k ? C.violet : C.muted, fontFamily: DATA, fontWeight: 800, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
           ))}
         </div>
       </>)}</div>}
@@ -5007,16 +5007,16 @@ const pillIc = (color, s = 12) => (
       {dueISO === todayIso && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 10, padding: "9px 12px", marginBottom: 12 }}>
           {syr(C.violet, 15)}
-          <span style={{ fontFamily: BODY, fontSize: 13, fontWeight: 700, color: C.violet }}>Dose due today — log it once taken</span>
+          <span style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violet }}>Dose due today — log it once taken</span>
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <button onClick={() => setYm(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }))} style={navB}>‹</button>
-        <div style={{ fontFamily: BODY, fontSize: 12.5, fontWeight: 700, color: C.ink2 }}>{monthName}</div>
+        <div style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.muted }}>{monthName}</div>
         <button onClick={() => setYm(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }))} style={navB}>›</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>
-        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 9, fontWeight: 700, color: C.faint }}>{d}</div>)}
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i} style={{ textAlign: "center", fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 1, color: C.faint }}>{d}</div>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", rowGap: 4 }}>
         {cells.map((d, i) => {
