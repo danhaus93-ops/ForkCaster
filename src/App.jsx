@@ -204,12 +204,12 @@ function sleepRead(healthDays, doseLog, opts) {
    Guideline basis: ADA Standards of Care 2026 rec 8.20 (individualize dose and titration; the
    optimal dose may not be the maximum) and the ACLM/ASN/OMA/TOS advisory (hold the lowest effective
    dose, escalate when weight reduction ceases or efficacy wanes). */
-/* v0.9.46 PERSONAL DOSE-RESPONSE \u2014 the view no trial can print: HIS measured response at each
+/* v0.9.46 PERSONAL DOSE-RESPONSE — the view no trial can print: HIS measured response at each
    rung he has actually held. The moat is data adjacency: dose timing, grounded macros, training,
    RHR, sleep and weight already share one schema here, so this is arithmetic, not modeling.
    Every cell floors INDEPENDENTLY (projectionReady generalized): a number appears only when its
    own evidence exists, and the tier chip says how much weight the whole row can bear.
-   Informs, never prescribes \u2014 this feeds the prescriber conversation, not the syringe. */
+   Informs, never prescribes — this feeds the prescriber conversation, not the syringe. */
 function rungResponseRead(input) {
   const i = input || {};
   const cur = i.med || null;
@@ -224,7 +224,7 @@ function rungResponseRead(input) {
   const switched = stamped.length > 1 || (stamped.length === 1 && cur && stamped[0] !== cur);
   const mine = log.filter((d) => (d.med ? d.med === cur : !switched));
   if (!mine.length) return { status: "empty", med: cur, rungs: [] };
-  // Episodes: consecutive runs at one mg. Returning to a rung after time away is a NEW stay \u2014
+  // Episodes: consecutive runs at one mg. Returning to a rung after time away is a NEW stay —
   // merging windows separated by a different dose would average two different physiologic contexts.
   const eps = [];
   for (const d of mine) {
@@ -247,7 +247,7 @@ function rungResponseRead(input) {
     const doses = list.reduce((a, e) => a + e.doses, 0);
     const spanDays = list.reduce((a, e) => a + nDays(e.start, e.end), 0);
     const weeks = spanDays / 7;
-    // Weight rate is measured inside the LONGEST single stay only \u2014 the one honest window.
+    // Weight rate is measured inside the LONGEST single stay only — the one honest window.
     const main = list.reduce((a, e) => (nDays(e.start, e.end) > nDays(a.start, a.end) ? e : a), list[0]);
     const ww = w.filter((x) => inEp(x.date, main)).sort((a, b) => (String(a.date) < String(b.date) ? -1 : 1));
     let dWk = null;
@@ -276,7 +276,7 @@ function rungResponseRead(input) {
      rhr     \u2192 rhrRead flags at baseline+8
      protein \u2192 checkpointRead counts a day hit at 90% of target
      lifts   \u2192 contractScorecard wants >=2 resistance sessions a week
-   Weight and symptoms have no shipped cut-point, so they only ever go green-or-amber \u2014 nothing
+   Weight and symptoms have no shipped cut-point, so they only ever go green-or-amber — nothing
    about a dose-response row is allowed to render as "bad". */
 function rungCellTone(kind, v) {
   if (v == null) return "none";
@@ -2327,13 +2327,13 @@ export default function App() {
       drawCover(ia, 0, W / 2 - 2); drawCover(ib, W / 2 + 2, W / 2 - 2);
       const wa = nearestWeight(pa.date), wb = nearestWeight(pb.date);
       ctx.fillStyle = "#E8ECEA"; ctx.font = "600 34px -apple-system, sans-serif";
-      const cap = (p, w) => `${fmtDate(p.date)}${w ? ` \u00b7 ${fmtWt(w.lbs)} ${wtU}` : ""}`;
+      const cap = (p, w) => `${fmtDate(p.date)}${w ? ` · ${fmtWt(w.lbs)} ${wtU}` : ""}`;
       ctx.textAlign = "center";
       ctx.fillText(cap(pa, wa), W / 4, PH + 52); ctx.fillText(cap(pb, wb), (3 * W) / 4, PH + 52);
       if (wa && wb) {
         const d = wb.lbs - wa.lbs;
         ctx.fillStyle = d <= 0 ? "#63D48C" : "#E8B45A"; ctx.font = "800 40px -apple-system, sans-serif";
-        ctx.fillText(`${d > 0 ? "+" : "\u2212"}${fmtWt(Math.abs(d))} ${wtU}`, W / 2, PH + 104);
+        ctx.fillText(`${d > 0 ? "+" : "−"}${fmtWt(Math.abs(d))} ${wtU}`, W / 2, PH + 104);
       }
       ctx.fillStyle = "#8A968C"; ctx.font = "600 22px -apple-system, sans-serif";
       ctx.fillText("ForkCaster", W / 2, PH + 138);
@@ -2482,14 +2482,14 @@ export default function App() {
         const tot = sumFoodItems(f.items);
         Object.assign(f, tot);
       }
-      setScan({ status: "found", food: { found: true, source: f._grounded && f._grounded === (f.items || []).length ? "USDA FoodData Central (grounded)" : f._grounded ? "USDA + AI (partially grounded)" : "AI estimate", name: f.name || q.slice(0, 40), brand: "", basis: Array.isArray(f.items) && f.items.length ? (f._grounded ? "itemized \u00b7 computed from matched USDA rows" : "itemized from stated amounts") : "as described", items: f.items || null, adjusted: !!f.adjusted, calories: +f.calories || 0, protein: +f.protein || 0, carbs: +f.carbs || 0, fat: +f.fat || 0, fiber: +f.fiber || 0 } });
+      setScan({ status: "found", food: { found: true, source: f._grounded && f._grounded === (f.items || []).length ? "USDA FoodData Central (grounded)" : f._grounded ? "USDA + AI (partially grounded)" : "AI estimate", name: f.name || q.slice(0, 40), brand: "", basis: Array.isArray(f.items) && f.items.length ? (f._grounded ? "itemized · computed from matched USDA rows" : "itemized from stated amounts") : "as described", items: f.items || null, adjusted: !!f.adjusted, calories: +f.calories || 0, protein: +f.protein || 0, carbs: +f.carbs || 0, fat: +f.fat || 0, fiber: +f.fiber || 0 } });
       setNlText("");
     } catch (e) {
       const msg = String((e && e.message) || e);
       // network/timeout/proxy failures are NOT wording problems — say which one happened; keep their text
       alert(/abort|timeout|fetch|network|load failed|failed to/i.test(msg)
-        ? "Couldn't reach the AI \u2014 the node or API may be busy. Your text is kept \u2014 try again in a moment."
-        : `Couldn't parse the reply \u2014 try rewording. (${msg.slice(0, 90)})`);
+        ? "Couldn't reach the AI — the node or API may be busy. Your text is kept — try again in a moment."
+        : `Couldn't parse the reply — try rewording. (${msg.slice(0, 90)})`);
     }
     setNlBusy(false);
   }
@@ -2505,7 +2505,7 @@ export default function App() {
       const items = salvageJSONArray(await callClaude(
         `List the distinct orderable menu items visible in this photographed menu (max 14). For each: item name, section (menu heading if visible, else "menu"), estimated calories, protein grams, and fat grams. Your ENTIRE response must be one JSON array.`,
         null, { data: b64, media_type: "image/jpeg" }, 1600, EXTRACT_SCHEMA, 0)).filter((i) => i && i.item);
-      if (items.length < 2) throw new Error("couldn't read items off that photo \u2014 try closer/straighter");
+      if (items.length < 2) throw new Error("couldn't read items off that photo — try closer/straighter");
       const composed = composePicks(items, rankMode, nauseaRisk, proteinLeft, calLeft);
       const cleaned = sanitizePicks(composed, allergies);
       cleaned._menuSource = "photo"; cleaned._menuText = items.map((i) => `${i.item} (${i.section}) ~${i.cal} cal ${i.protein}g`).join("\n");
@@ -2518,9 +2518,9 @@ export default function App() {
     setMenuQBusy(true); setMenuA(null);
     try {
       const ctxStr = result._menuText ? `MENU TEXT:\n"""${result._menuText}"""` : `No menu text; picks were: ${JSON.stringify((result.picks || []).map((p) => p.item || p.name))}.`;
-      const text = await callClaude(ctxStr + `\nUser goal mode: ${MODES[mode] ? MODES[mode].label : mode}; ${nauseaRisk} nausea risk on a GLP-1. Question about this restaurant/menu: ${q}\nAnswer in 1-3 short, direct sentences. If alcohol comes up: effects hit harder on GLP-1 meds \u2014 advise pacing and lower-sugar choices.`, null, null, 400);
+      const text = await callClaude(ctxStr + `\nUser goal mode: ${MODES[mode] ? MODES[mode].label : mode}; ${nauseaRisk} nausea risk on a GLP-1. Question about this restaurant/menu: ${q}\nAnswer in 1-3 short, direct sentences. If alcohol comes up: effects hit harder on GLP-1 meds — advise pacing and lower-sugar choices.`, null, null, 400);
       setMenuA(text);
-    } catch (e) { setMenuA("Couldn't answer \u2014 try again."); }
+    } catch (e) { setMenuA("Couldn't answer — try again."); }
     setMenuQBusy(false);
   }
   async function searchFood() {
@@ -2850,7 +2850,7 @@ export default function App() {
       const cur = +eaten[f] || 0, delta = target - cur;
       setEaten((e) => ({ ...e, [f]: target }));
       if (delta !== 0 && ["protein", "carbs", "fat", "fiber", "calories"].includes(f)) {
-        const row = { id: uid(), date: todayISO(), name: `Set ${f} to ${target}${quick.unit || "g"} \u2014 correction`, protein: 0, calories: 0, fat: 0, carbs: 0, fiber: 0, quick: true, adjust: true };
+        const row = { id: uid(), date: todayISO(), name: `Set ${f} to ${target}${quick.unit || "g"} — correction`, protein: 0, calories: 0, fat: 0, carbs: 0, fiber: 0, quick: true, adjust: true };
         row[f] = delta; // may be negative; the X subtracts it, which restores exactly
         setMealLog((m) => [...m, row]);
       }
@@ -2859,7 +2859,7 @@ export default function App() {
       // macro quick-adds also write a row — a counter bump with no record was how a morning of
       // logging vanished without a trace (water and steps stay counter-only; they aren't meals)
       if (["protein", "carbs", "fat", "fiber", "calories"].includes(f)) {
-        const row = { id: uid(), date: todayISO(), name: `Quick add \u2014 ${v}${quick.unit || "g"} ${f}`, protein: 0, calories: f === "calories" ? v : v * kcal, fat: 0, carbs: 0, fiber: 0, quick: true };
+        const row = { id: uid(), date: todayISO(), name: `Quick add — ${v}${quick.unit || "g"} ${f}`, protein: 0, calories: f === "calories" ? v : v * kcal, fat: 0, carbs: 0, fiber: 0, quick: true };
         row[f === "calories" ? "calories" : f] = v;
         setMealLog((m) => [...m, row]);
       }
@@ -3375,70 +3375,54 @@ export default function App() {
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Body</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
 
-      {(() => { // v0.9.61: mock Body architecture — Forecaster promoted to hero with goal preview
-        const fronts = simShots.filter((sh) => (sh.view || "front") === "front");
-        const shot = fronts.length ? fronts[fronts.length - 1] : null;
-        if (!shot) return null;
-        const src = photos.find((ph) => ph.url === shot.srcUrl);
-        return (<div style={{ marginBottom: 14 }}>{card(<>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            {sectionTitle("Body Forecaster", C.violet)}
-            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, color: C.violet, border: `1px solid ${C.violet}55`, background: C.violet + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>GOAL PREVIEW</span>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {[src && { url: src.url, tag: `TODAY · ${fmtWt(curWeight, 0)}` }, { url: shot.url, tag: `AT GOAL · ${fmtWt(goalWeight, 0)}` }].filter(Boolean).map((im, ii) => (
-              <div key={ii} style={{ flex: 1, position: "relative" }}>
-                <img src={im.url} alt="" style={{ width: "100%", borderRadius: 12, display: "block", border: `1px solid ${C.hair}` }} />
-                <div style={{ position: "absolute", left: 6, bottom: 6, fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 0.8, color: "#fff", background: "rgba(10,14,19,0.72)", borderRadius: 999, padding: "3px 8px" }}>{im.tag}</div>
-              </div>))}
-          </div>
-          <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Rendered from your measurements at goal weight{leanShown ? ` — ${leanShown.toFixed(0)} lb lean held` : ""}{goalWeight && leanShown ? `, ~${Math.max(5, Math.round(((+fmtWt(goalWeight) - leanShown) / +fmtWt(goalWeight)) * 100))}% body fat` : ""}.</div>
-          <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 10, background: C.violet + "22", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 999, padding: "11px 0", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>✨ Re-forecast</button>
-        </>)}</div>);
-      })()}
-      {(() => { // Path to your forecast — the mock's signal ledger, derived from engines already on board
-        if (!weightSeries.length || !goalWeight) return null;
+      {(() => { // v0.9.63: Path to your forecast — the EXISTING goalContract engine wearing the mock's
+        // design, with the weight graph + logged entries folded in (his markup: one weight card, not two)
+        if (!weightSeries.length) return null;
         const cur = weightSeries[weightSeries.length - 1].lbs;
-        const recent = weightSeries.filter((w) => (Date.now() - new Date(w.date)) / 86400000 <= 21);
+        const lastBf2 = (((healthSync && healthSync.days) || []).filter((d9) => d9.bodyFatPct != null).slice(-1))[0];
+        const lastLm2 = (((healthSync && healthSync.days) || []).filter((d9) => d9.leanMassLbs != null).slice(-1))[0];
+        const recent = weightSeries.filter((w9) => (Date.now() - new Date(w9.date)) / 86400000 <= 21);
         let rate = null;
-        if (recent.length >= 3) { const a = recent[0], b = recent[recent.length - 1], days = (new Date(b.date) - new Date(a.date)) / 86400000; if (days >= 7) rate = ((b.lbs - a.lbs) / a.lbs) * 100 / (days / 7); }
+        if (recent.length >= 3) { const a9 = recent[0], b9 = recent[recent.length - 1], dd9 = (new Date(b9.date) - new Date(a9.date)) / 86400000; if (dd9 >= 7) rate = -((b9.lbs - a9.lbs) / a9.lbs) * 100 / (dd9 / 7); }
+        const ct = goalContract({ weightLbs: cur, bodyFatPct: lastBf2 ? lastBf2.bodyFatPct : bfShown, leanMassLbs: lastLm2 ? lastLm2.leanMassLbs : (leanShown || 0), goalWeight, sex: body.sex, ratePctWk: rate, todayISO: todayISO() });
         const wk = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
         const pDays = {}; (mealLog || []).forEach((mE) => { if (mE.date >= wk && mE.protein) pDays[mE.date] = (pDays[mE.date] || 0) + mE.protein; });
         const pVals = Object.values(pDays);
         const pAvg = pVals.length ? Math.round(pVals.reduce((a2, b2) => a2 + b2, 0) / pVals.length) : null;
+        const pFloor = ct.proteinFloor || targets.protein;
         const lifts = (workoutLog || []).filter((w2) => w2.kind !== "cardio" && w2.date >= wk).length;
-        const scans = ((healthSync && healthSync.days) || []).filter((d2) => d2.bodyFatPct != null);
+        const scans = ((healthSync && healthSync.days) || []).filter((d2) => d2.leanMassLbs != null);
         let leanTrend = null;
-        if (scans.length >= 2) { const s1 = scans[scans.length - 2], s2 = scans.length ? scans[scans.length - 1] : null, dd = (new Date(s2.date) - new Date(s1.date)) / 86400000; if (dd >= 7 && s1.leanMassLbs && s2.leanMassLbs) leanTrend = ((s2.leanMassLbs - s1.leanMassLbs) / s1.leanMassLbs) * 100 / (dd / 7); }
+        if (scans.length >= 2) { const s1 = scans[scans.length - 2], s2 = scans[scans.length - 1], dd = (new Date(s2.date) - new Date(s1.date)) / 86400000; if (dd >= 7) leanTrend = ((s2.leanMassLbs - s1.leanMassLbs) / s1.leanMassLbs) * 100 / (dd / 7); }
         const rows = [
-          { l: "Loss rate in band", v: rate == null ? "log weigh-ins" : rate.toFixed(2) + " %/wk", st: rate == null ? "wait" : rate <= -0.25 && rate >= -1.25 ? "ok" : "flag" },
-          { l: "Protein ≥ floor", v: pAvg == null ? "log meals" : pAvg + " / " + targets.protein, st: pAvg == null ? "wait" : pAvg >= targets.protein ? "ok" : "flag" },
+          { l: "Loss rate in band", v: rate == null ? "log weigh-ins" : rate.toFixed(2) + " %/wk", st: rate == null ? "wait" : rate >= 0.25 && rate <= 1.25 ? "ok" : "flag" },
+          { l: "Protein ≥ floor", v: pAvg == null ? "log meals" : pAvg + " / " + pFloor, st: pAvg == null ? "wait" : pAvg >= pFloor ? "ok" : "flag" },
           { l: "Lifting sessions", v: lifts + " this week", st: lifts >= 2 ? "ok" : lifts >= 1 ? "flag" : "wait" },
           { l: "Lean mass holding", v: leanTrend == null ? "add 2+ scans" : leanTrend.toFixed(2) + " %/wk", st: leanTrend == null ? "wait" : leanTrend > -0.35 ? "ok" : "flag" },
         ];
         const allOk = rows.every((r3) => r3.st === "ok");
-        const toGo = +fmtWt(cur) - +fmtWt(goalWeight);
-        const etaWk = rate && rate < -0.05 ? Math.ceil((toGo / cur) * 100 / Math.abs(rate)) : null;
         const PC = { ok: C.go, flag: C.caution, wait: C.faint };
         return (<div style={{ marginBottom: 14 }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             {sectionTitle("Path to your forecast", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, color: allOk ? C.go : C.caution, border: `1px solid ${(allOk ? C.go : C.caution)}55`, background: (allOk ? C.go : C.caution) + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>{allOk ? "ON TRACK" : "CHECK SIGNALS"}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
-            <span style={{ fontFamily: DATA, fontSize: 28, fontWeight: 700, color: C.ink }}>{fmtWt(cur)}</span>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
+            <span style={{ fontFamily: DATA, fontSize: 32, fontWeight: 700, color: C.ink }}>{fmtWt(cur)}</span>
             <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint }}>{wtU}</span>
-            <span style={{ color: C.faint }}>→</span>
-            <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "4px 10px" }}>GOAL {fmtWt(goalWeight, 0)}</span>
+            <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "4px 10px" }}>GOAL {fmtWt(goalWeight, 0)}</span>
           </div>
-          <div style={{ display: "flex", gap: 7, marginBottom: 10 }}>
-            {[[leanShown ? leanShown.toFixed(0) + " lb" : "—", "LEAN TO HOLD"], [toGo > 0 ? toGo.toFixed(0) + " lb" : "—", "TO LOSE"], [goalWeight && leanShown ? "~" + Math.max(5, Math.round(((+fmtWt(goalWeight) - leanShown) / +fmtWt(goalWeight)) * 100)) + "%" : "—", "AT GOAL"]].map(([v4, l4]) => (
+          <div style={{ fontFamily: DATA, fontSize: 11, color: C.go, marginBottom: 8 }}>{lost > 0 ? `−${lost.toFixed(1)} lbs` : "±0 lbs"} <span style={{ color: C.faint }}>since start</span></div>
+          {weightSeries.length > 1 ? lineChart(weightSeries.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
+          {ct.status !== "incomplete" && <div style={{ display: "flex", gap: 7, marginTop: 10, marginBottom: 8 }}>
+            {[[Math.round(ct.lean || 0) + " lb", "LEAN TO HOLD"], [Math.round(ct.fatToLose || 0) + " lb", "FAT TO LOSE"], [ct.bfAtGoal ? "~" + Math.round(ct.bfAtGoal) + "%" : "—", "AT GOAL"]].map(([v4, l4]) => (
               <div key={l4} style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 10px" }}>
                 <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink }}>{v4}</div>
                 <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>{l4}</div>
               </div>))}
-          </div>
-          {etaWk && <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.muted, marginBottom: 10 }}>~{etaWk} wk at measured rate · ETA {new Date(Date.now() + etaWk * 7 * 86400000).toLocaleDateString([], { month: "short", year: "numeric" })}</div>}
+          </div>}
+          {ct.status !== "incomplete" && (ct.weeksTarget || ct.weeksAtCurrent) && <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.muted, marginBottom: 8 }}>{ct.weeksTarget ? `${ct.weeksTarget} wk at target rate` : ""}{ct.weeksAtCurrent ? `${ct.weeksTarget ? " · " : ""}${ct.weeksAtCurrent} wk at measured rate` : ""}</div>}
+          {ct.status === "incomplete" && <div style={{ fontSize: 11.5, color: C.faint, marginBottom: 8 }}>{ct.reason}</div>}
           <div style={{ borderTop: `1px solid ${C.hair}` }}>
             {rows.map((r4) => (<div key={r4.l} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ width: 6, height: 6, borderRadius: 6, background: PC[r4.st], flexShrink: 0 }} />
@@ -3446,28 +3430,20 @@ export default function App() {
               <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 0.7, color: PC[r4.st], border: `1px solid ${PC[r4.st]}55`, background: PC[r4.st] + "14", borderRadius: 999, padding: "3px 9px" }}>{r4.st === "ok" ? "OK" : r4.st === "flag" ? "MISS" : "WAIT"} · {r4.v}</span>
             </div>))}
           </div>
-          {rows[1].st === "flag" && pAvg != null && <div style={{ fontSize: 11.5, color: C.caution, marginTop: 9 }}>Raise protein — you averaged {pAvg} g against a {targets.protein} g floor this week.</div>}
-        </>)}</div>);
-      })()}
-      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />)}</div>
-      <div style={{ marginBottom: 14 }}>{card(
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <div style={{ fontFamily: DATA, fontSize: 38, fontWeight: 700, color: C.ink }}>{fmtWt(curWeight)}<span style={{ fontSize: 16, color: C.muted }}> {wtU}</span></div>
-            <div style={{ textAlign: "right" }}><div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, color: C.go }}>−{lost.toFixed(1)} lbs</div><div style={{ fontSize: 11, color: C.faint }}>since start</div></div>
-          </div>
-          {weightSeries.length > 1 ? lineChart(weightSeries.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
-          {weightSeries.length > 0 && <div style={{ marginTop: 8 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
+          {pAvg != null && pAvg < pFloor && <div style={{ fontSize: 11.5, color: C.caution, marginTop: 9 }}>Raise protein — you averaged {pAvg} g against a {pFloor} g floor this week.</div>}
+          {weightSeries.length > 0 && <div style={{ marginTop: 10 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
             <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
-              <span style={{ fontSize: 12.5, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
+              <span style={{ fontFamily: DATA, fontSize: 12, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
               {w.synced ? <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, color: C.muted, letterSpacing: 0.8, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "3px 8px" }}>{w.source ? ({ "apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH" }[w.source] || w.source.toUpperCase().replace(/-/g, " ")) : "SYNCED"}</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", padding: 4 }}>✕</button>}
             </div>
           ))}</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-            <input type="number" value={newWeight} placeholder={`Log today's weight (${wtU})`} onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
+            <input type="number" value={newWeight} placeholder={`Log today's weight (${wtU})`} onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DATA, fontSize: 15, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
             <button onClick={logWeight} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 20px", fontFamily: DATA, fontWeight: 800, fontSize: 12, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Log</button>
           </div>
-        </>)}</div>
+        </>)}</div>);
+      })()}
+      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />)}</div>
 
 
       <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
@@ -3645,9 +3621,9 @@ export default function App() {
         }[cp.status];
         const body = {
           hold: "Efficacy and tolerability both look right where your protocol wants them. Nothing here points to a change.",
-          escalate: "Weight has flattened while every tolerability marker stays clear. Your protocol says this is the point to talk to your prescriber \u2014 the dose decision is theirs.",
+          escalate: "Weight has flattened while every tolerability marker stays clear. Your protocol says this is the point to talk to your prescriber — the dose decision is theirs.",
           veto: "Your protocol holds escalation while these are flagged, whatever the scale is doing: " + cp.veto.join("; ") + ".",
-          early: "You're " + cp.days + " days in. Levels keep climbing toward steady state around day " + cp.need + " \u2014 judging this rung now would be judging a dose you haven't fully received.",
+          early: "You're " + cp.days + " days in. Levels keep climbing toward steady state around day " + cp.need + " — judging this rung now would be judging a dose you haven't fully received.",
           ask: "Your measured markers are in. How is appetite between meals?",
         }[cp.status];
         return (<>
@@ -3704,7 +3680,7 @@ export default function App() {
                 Waiting for your first logged dose
               </div>
               <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
-                Your ladder above is configuration {"\u2014"} it stands on its own. The checkpoint starts counting
+                Your ladder above is configuration {"—"} it stands on its own. The checkpoint starts counting
                 the day you log a dose of this medication.
               </div>
             </div>) : (<>
@@ -3747,10 +3723,10 @@ export default function App() {
                 marginTop: 11, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
                 <b style={{ color: C.caution }}>Loss has been flat for {cp.stall.weeks} weeks</b>
                 {cp.stall.lbsToGoal ? ` while you're still ${cp.stall.lbsToGoal} lb from your goal` : ""}.
-                That's the condition your protocol watches for {"\u2014"} worth running the checkpoint.
+                That's the condition your protocol watches for {"—"} worth running the checkpoint.
               </div>}
               {!cpOpen && <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
-                {cp.days} days at {cp.cur} mg. Nothing here asks you to move up {"\u2014"} press it when you want the
+                {cp.days} days at {cp.cur} mg. Nothing here asks you to move up {"—"} press it when you want the
                 question answered, whether that's this week or six months from now.
               </div>}
             </div>)}
@@ -3786,11 +3762,11 @@ export default function App() {
                       color: r.status === "bad" ? C.avoid : r.origin === "measured" ? C.muted : C.violet,
                       border: `1px solid ${r.status === "bad" ? C.avoid + "70" : r.origin === "measured" ? C.hair : C.violet + "55"}`,
                       background: r.status === "bad" ? C.avoid + "1A" : r.origin === "measured" ? "transparent" : C.violet + "1A",
-                      borderRadius: 999, padding: "3px 8px", minWidth: 58, textAlign: "center", flexShrink: 0 }}>{r.origin.toUpperCase()}{r.status === "bad" ? " \u00b7 FLAG" : ""}</span>
+                      borderRadius: 999, padding: "3px 8px", minWidth: 58, textAlign: "center", flexShrink: 0 }}>{r.origin.toUpperCase()}{r.status === "bad" ? " · FLAG" : ""}</span>
                   </div>))}
               </div>
               <div style={{ fontSize: 10.5, color: C.faint, marginTop: 11, lineHeight: 1.5 }}>
-                Seven markers, one of them asked {"\u2014"} the rest read from your own logs. This card reports whether your
+                Seven markers, one of them asked {"—"} the rest read from your own logs. This card reports whether your
                 protocol's conditions are met; it never sets a dose{MEDS[glp.med] && MEDS[glp.med].investigational ? ". This medication is investigational and has no approved dosing" : ""}. Decisions stay with your prescriber.
               </div>
             </div>)}
@@ -3807,27 +3783,27 @@ export default function App() {
               if (dr2.status === "empty") return (
                 <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>
                   Starts measuring with your first logged dose. Each rung you hold becomes a row of your own
-                  numbers {"\u2014"} weight rate, symptom load, heart-rate shift, protein hit rate, training
-                  {"\u2014"} the one view no trial or tracker can print.
+                  numbers {"—"} weight rate, symptom load, heart-rate shift, protein hit rate, training
+                  {"—"} the one view no trial or tracker can print.
                 </div>);
               const TONE_C = { go: C.go, caution: C.caution, avoid: C.avoid, none: C.faint };
               const cell = (lbl, v, kind, raw) => (
                 <div style={{ flex: 1, minWidth: 58 }}>
                   <div style={{ fontSize: 8.5, letterSpacing: 0.4, color: C.muted }}>{lbl}</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: TONE_C[rungCellTone(kind, raw)], fontVariantNumeric: "tabular-nums" }}>{v == null ? "\u2014" : v}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: TONE_C[rungCellTone(kind, raw)], fontVariantNumeric: "tabular-nums" }}>{v == null ? "—" : v}</div>
                 </div>);
               return (<div>
                 {dr2.rungs.map((r) => (
                   <div key={r.mg} style={{ borderTop: `1px solid ${C.hair}`, padding: "10px 0 8px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{r.mg} mg
-                        <span style={{ fontSize: 10.5, fontWeight: 500, color: C.faint }}>{"\u2002\u00b7\u2002" + r.doses + (r.doses === 1 ? " dose" : " doses") + " \u00b7 " + r.weeks + " wk" + (r.episodes > 1 ? " \u00b7 " + r.episodes + " stays" : "")}</span></span>
+                        <span style={{ fontSize: 10.5, fontWeight: 500, color: C.faint }}>{"\u2002·\u2002" + r.doses + (r.doses === 1 ? " dose" : " doses") + " · " + r.weeks + " wk" + (r.episodes > 1 ? " · " + r.episodes + " stays" : "")}</span></span>
                       <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, color: r.tier === "holding" ? C.go : C.faint,
                         border: `1px solid ${r.tier === "holding" ? C.go + "55" : C.hair}`, borderRadius: 99, padding: "2px 7px", flexShrink: 0 }}>
                         {r.tier === "holding" ? "PATTERN HOLDING" : "DIRECTIONAL"}</span>
                     </div>
                     <div style={{ display: "flex", gap: 7 }}>
-                      {cell("WT \u0394/WK", r.dWk == null ? null : (r.dWk > 0 ? "+" : r.dWk < 0 ? "\u2212" : "") + fmtWt(Math.abs(r.dWk)) + " " + wtU, "wt", r.dWk)}
+                      {cell("WT \u0394/WK", r.dWk == null ? null : (r.dWk > 0 ? "+" : r.dWk < 0 ? "−" : "") + fmtWt(Math.abs(r.dWk)) + " " + wtU, "wt", r.dWk)}
                       {cell("SYMPT/WK", r.symWk, "sym", r.symWk)}
                       {cell("RHR \u0394", r.rhrDelta == null ? null : (r.rhrDelta > 0 ? "+" : "") + r.rhrDelta, "rhr", r.rhrDelta)}
                       {cell("PROTEIN", r.protein == null ? null : r.protein + "%", "protein", r.protein)}
@@ -3837,7 +3813,7 @@ export default function App() {
                 <div style={{ fontSize: 10.5, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
                   Every number is measured from your own logs inside that rung's window; a dash means the floor
                   for that cell isn't met yet. DIRECTIONAL under 4 doses and 4 weeks. Patterns, not prescriptions
-                  {"\u2014"} bring the row to your prescriber, not to the syringe.
+                  {"—"} bring the row to your prescriber, not to the syringe.
                 </div>
               </div>);
             })()}
@@ -3923,7 +3899,7 @@ export default function App() {
           {sl.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
             Waiting for sleep data. Add the <b>Sleep Analysis</b> metric to your Health Auto Export automation and it lands here on its own. Sleep is what your watch derives resting heart rate from, so tracking it also makes that card more trustworthy.</div>}
           {sl.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted }}>
-            Learning your baseline {"\u2014"} {sl.have}/{sl.need} days banked.</div>}
+            Learning your baseline {"—"} {sl.have}/{sl.need} days banked.</div>}
           {sl.status === "ready" && <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontFamily: DISPLAY, fontSize: 29, fontWeight: 700, color: C.ink }}>{hm(sl.current)}</span>
@@ -3942,7 +3918,7 @@ export default function App() {
               ? <div style={{ background: "rgba(240,82,82,0.10)", border: `1px solid rgba(240,82,82,0.35)`, borderRadius: 10, padding: "9px 11px", marginTop: 9, fontSize: 12.5, color: C.ink, lineHeight: 1.5 }}>
                   Sleep has run {Math.abs(sl.delta)} min under your baseline for {sl.run} days{sl.escalated ? ", starting near a dose increase" : ""}. Short sleep also makes your resting heart rate read higher, so treat both cards as one picture. Worth mentioning to your prescriber if it holds.</div>
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-                  Judged against your own baseline, never against eight hours. Flags only a sustained drop {"\u2014"} one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
+                  Judged against your own baseline, never against eight hours. Flags only a sustained drop {"—"} one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
           </div>}
         </div>)}</div>;
       })()}
@@ -4971,10 +4947,12 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
         <div style={{ flex: 1, background: C.violet + "14", border: `1px solid ${C.violet}44`, borderRadius: 10, padding: "8px 10px" }}>
           <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.violet }}>{ssPct}%</div>
           <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>OF STEADY STATE · THE CLIMB</div>
+          {absorbing && <div style={{ fontFamily: DATA, fontSize: 8, color: C.go, marginTop: 3 }}>▲ was {Math.round((level(lastDose.t - 3600000) / ssPeak) * 100)}% before today's shot</div>}
         </div>
         {peakPct != null && <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 10, padding: "8px 10px" }}>
           <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink }}>{peakPct}%</div>
           <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>OF YOUR OWN PEAK · IN YOU NOW</div>
+          {absorbing && peakPct >= 99 && <div style={{ fontFamily: DATA, fontSize: 8, color: C.go, marginTop: 3 }}>▲ new peak — past every earlier week</div>}
         </div>}
       </div>
       {absorbing && <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.go + "14", border: `1px solid ${C.go}44`, borderRadius: 10, padding: "8px 11px", marginTop: 8 }}>
@@ -5010,7 +4988,7 @@ function SymptomPatterns({ C, sideEffects, doseLog }) {
     <div>
       <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Symptom patterns</div>
       {lines.map((l) => <div key={l.sym} style={{ fontSize: 12.5, color: C.ink2, lineHeight: 1.5, marginBottom: 6 }}>{"\u2022"} {l.text}</div>)}
-      <div style={{ fontSize: 10, color: C.faint, marginTop: 4 }}>Computed from your logs {"\u2014"} worth mentioning to your prescriber if a pattern is disruptive.</div>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 4 }}>Computed from your logs {"—"} worth mentioning to your prescriber if a pattern is disruptive.</div>
     </div>
   );
 }
