@@ -4762,24 +4762,26 @@ function MedLevelChart({ C, doseLog, med, dueISO }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>Estimated med level</div>
-        <div style={{ fontFamily: BODY, fontSize: 12, fontWeight: 700, color: C.violet }}>~{nowLevelPct}% of your peak</div>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.6 }}>Estimated med level</div>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px" }}>~{nowLevelPct}% of your peak</div>
       </div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
-        {[75, 50, 25].map((g) => { const gy = y((g / 100) * maxReal); return <g key={g}>
-          <line x1="0" x2={W} y1={gy} y2={gy} stroke={C.hair || "#26302c"} strokeWidth="0.75" strokeDasharray="1 3" />
-          <text x={W - 2} y={gy - 2} textAnchor="end" fontSize="7.5" fill={C.faint}>{g}%</text>
+        <defs><linearGradient id="medfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={C.violet} stopOpacity="0.28" /><stop offset="1" stopColor={C.violet} stopOpacity="0.02" /></linearGradient></defs>
+        {[100, 75, 50, 25].map((g) => { const gy = y((g / 100) * maxReal); return <g key={g}>
+          <line x1="0" x2={W} y1={gy} y2={gy} stroke={g === 100 ? C.go : (C.hair || "#26302c")} strokeWidth={g === 100 ? 1 : 0.75} strokeDasharray={g === 100 ? "4 3" : "1 3"} opacity={g === 100 ? 0.7 : 1} />
+          <text x={W - 2} y={gy - 2} textAnchor="end" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={g === 100 ? C.go : C.faint}>{g === 100 ? "STEADY STATE" : g + "%"}</text>
         </g>; })}
+        {past && <polygon points={`${past} ${past.trim().split(" ").slice(-1)[0].split(",")[0]},${H - PADB} ${past.trim().split(" ")[0].split(",")[0]},${H - PADB}`} fill="url(#medfill)" />}
         <polyline points={past} fill="none" stroke={C.violet} strokeWidth="2.4" strokeLinejoin="round" />
         <polyline points={fut} fill="none" stroke={C.violet} strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />
         <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
         {doses.filter((d) => d.t >= start).map((d, i) => (
-          <g key={i}><circle cx={x(d.t)} cy={H - PADB} r="3" fill={C.violet} /><text x={x(d.t)} y={H - 3} textAnchor="middle" fontSize="8" fill={C.faint}>{d.mg}</text></g>
+          <g key={i}><circle cx={x(d.t)} cy={H - PADB} r="3" fill={C.violet} /><text x={x(d.t)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.faint}>{d.mg}</text></g>
         ))}
-        <text x={nowX + 4} y="12" fontSize="8.5" fill={C.go}>now</text>
+        <text x={nowX + 4} y="12" fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.go}>NOW</text>
         {nextPct != null && nextDoseT < end && <g>
           <circle cx={x(nextDoseT)} cy={y(levelProj(nextDoseT - 3600000))} r="3" fill="none" stroke={C.violet} strokeWidth="1.5" />
-          <text x={Math.min(x(nextDoseT) + 5, W - 66)} y={Math.max(y(levelProj(nextDoseT - 3600000)) - 5, 10)} fontSize="8" fill={C.violet}>~{nextPct}% at next dose</text>
+          <text x={Math.min(x(nextDoseT) + 5, W - 66)} y={Math.max(y(levelProj(nextDoseT - 3600000)) - 5, 10)} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextPct}% at next dose</text>
         </g>}
       </svg>
       <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1. Informational only — not medical advice.</div>

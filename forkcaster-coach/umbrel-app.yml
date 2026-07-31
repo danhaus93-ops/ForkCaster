@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.52"
+version: "0.9.53"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.52: GLP-1 polish pass from live-screenshot review. Protocol rung
-  chips become tinted violet pills in the data typeface, the edit link
-  matches, titration tracker doses become pill chips, the side-effect
-  Log button is now a green pill, and severity badges switch to the
-  instrument style. Nothing moved or removed - manifest verified.
+  v0.9.53: the med-level chart gets the full treatment. The curve now
+  fills with a violet gradient, a green dashed steady-state line marks
+  100 percent, your current level shows as a violet pill badge, and
+  every chart label switches to the instrument typeface. Same math,
+  same model, same honesty note - just finally dressed like the rest.
 dependencies: []
 path: ""
 defaultUsername: ""
