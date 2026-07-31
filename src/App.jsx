@@ -3562,11 +3562,12 @@ export default function App() {
               <span onClick={() => { if (!protoEdit) setProtoRungs(rungs.join(", ")); setProtoEdit((v) => !v); }} style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
-              {rungs.map((r) => { const on = curMg != null && +r === +curMg; return (
-                <div key={r} style={{ flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 999,
-                  background: on ? C.violet + "2E" : "transparent",
-                  border: `1px solid ${on ? C.violet : C.hair}`, color: on ? C.violet : C.faint,
-                  fontFamily: DATA, fontSize: 12, fontWeight: on ? 700 : 500 }}>{r}<span style={{ fontSize: 9, opacity: 0.7 }}> mg</span></div>); })}
+              {rungs.map((r) => { const on = curMg != null && +r === +curMg; const done = curMg != null && +r < +curMg; return (
+                <div key={r} style={{ flex: 1 }}>
+                  <div style={{ height: 6, borderRadius: 4, background: on || done ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
+                  <div style={{ fontFamily: DATA, fontSize: 11.5, marginTop: 6, fontWeight: on ? 700 : 500, color: on ? C.violet : C.faint }}>{r}</div>
+                  {on && <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 1, color: C.faint, marginTop: 2 }}>YOU ARE HERE</div>}
+                </div>); })}
             </div>
             {protoEdit ? (<div style={{ marginTop: 11 }}>
               <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>Rungs (mg, separated by spaces or commas)</div>
@@ -3586,8 +3587,16 @@ export default function App() {
                   setGlp((g) => ({ ...g, protocol: { ...(g.protocol || {}), rungs: v.length ? v : null } })); setProtoEdit(false); }}
                 style={{ width: "100%", marginTop: 10, background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Save protocol</button>
             </div>) : (
-              <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
-                Minimum hold {holdWk} weeks{rungs.length ? " \u00b7 ceiling " + rungs[rungs.length - 1] + " mg" : ""} {"\u00b7"} you and your prescriber set these
+              <div style={{ marginTop: 11 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderTop: `1px solid ${C.hair}` }}>
+                  <span style={{ fontSize: 13, color: C.ink2 }}>Minimum hold</span>
+                  <span style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, color: C.ink }}>{holdWk} wk</span>
+                </div>
+                {rungs.length > 0 && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderTop: `1px solid ${C.hair}` }}>
+                  <span style={{ fontSize: 13, color: C.ink2 }}>Your ceiling</span>
+                  <span style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, color: C.ink }}>{rungs[rungs.length - 1]} mg</span>
+                </div>}
+                <div style={{ fontSize: 10.5, color: C.faint, marginTop: 4 }}>Minimum hold {holdWk} weeks · you and your prescriber set these</div>
               </div>)}
           </div>, { borderLeft: `2.5px solid ${C.violet}` })}</div>
 
@@ -3615,6 +3624,14 @@ export default function App() {
               </div>)}
 
             {locked ? (<div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 7 }}>
+                <span style={{ width: 7, height: 7, borderRadius: 7, background: C.go, alignSelf: "center", flexShrink: 0 }} />
+                <span style={{ fontFamily: DATA, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1 }}>{cp.days}</span>
+                <span style={{ fontFamily: DATA, fontSize: 13, color: C.muted }}>/ {cp.need} days at {cp.cur} mg</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 4, background: C.hair, marginBottom: 12 }}>
+                <div style={{ width: `${Math.min(100, Math.round((cp.days / cp.need) * 100))}%`, height: "100%", borderRadius: 4, background: `linear-gradient(90deg, ${C.gold}, ${C.caution})` }} />
+              </div>
               <button disabled style={{ width: "100%", background: "transparent", border: `1px dashed ${C.hair}`,
                 color: C.faint, borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700 }}>
                 Unlocks in {cp.need - cp.days} days at this dose
@@ -3670,9 +3687,11 @@ export default function App() {
                     <span style={{ width: 6, height: 6, borderRadius: 6, background: DOT[r.status], flexShrink: 0 }} />
                     <span style={{ fontSize: 12.5, color: C.muted, flex: 1 }}>{r.label}</span>
                     <span style={{ fontSize: 12, color: C.ink, textAlign: "right" }}>{r.value}</span>
-                    <span style={{ fontSize: 8.5, letterSpacing: 0.4, color: r.origin === "measured" ? C.faint : C.violet,
-                      border: `1px solid ${r.origin === "measured" ? C.hair : "rgba(167,139,250,0.35)"}`, borderRadius: 4,
-                      padding: "2px 4px", width: 60, textAlign: "center", flexShrink: 0 }}>{r.origin.toUpperCase()}</span>
+                    <span style={{ fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 0.8,
+                      color: r.status === "bad" ? C.avoid : r.origin === "measured" ? C.muted : C.violet,
+                      border: `1px solid ${r.status === "bad" ? C.avoid + "70" : r.origin === "measured" ? C.hair : C.violet + "55"}`,
+                      background: r.status === "bad" ? C.avoid + "1A" : r.origin === "measured" ? "transparent" : C.violet + "1A",
+                      borderRadius: 999, padding: "3px 8px", minWidth: 58, textAlign: "center", flexShrink: 0 }}>{r.origin.toUpperCase()}{r.status === "bad" ? " \u00b7 FLAG" : ""}</span>
                   </div>))}
               </div>
               <div style={{ fontSize: 10.5, color: C.faint, marginTop: 11, lineHeight: 1.5 }}>
@@ -4947,7 +4966,7 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
   };
   return (
     <div>
-      <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
+      <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase",  fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
         Injection site — rotate{pendingSite ? <span style={{ textTransform: "none", color: C.violet }}> · next dose: {pendingSite}{pendingSite.startsWith("Arm") ? " (back of arm)" : ""}</span> : null}
       </div>
       <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 6 }}>Cycle {cycleLogged}/{cyc} · {perSite} per site · resets when every site is used</div>
