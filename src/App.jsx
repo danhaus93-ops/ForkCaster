@@ -16,6 +16,7 @@ import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');`;
 const DISPLAY = "'Space Grotesk', sans-serif";
 const BODY = "'Inter', sans-serif";
+const DATA = "ui-monospace,'SF Mono','JetBrains Mono',Menlo,monospace"; // v0.9.50 chassis — numbers & eyebrows read as instrument data; system stack, nothing fetched
 
 const THEMES = {
   forest: { name: "Forest",
@@ -23,9 +24,9 @@ const THEMES = {
     go: "#128A4B", goSoft: "#DDF0E4", gold: "#B8860B", silver: "#7C8891", bronze: "#B06A34",
     caution: "#D08A22", cautionSoft: "#F7ECD8", avoid: "#C24631", avoidSoft: "#F6E1DC", hair: "#D3DBCC", blue: "#2E6F8E", violet: "#6A5AA6" },
   midnight: { name: "Midnight", dark: true,
-    bg: "#0E141A", surface: "#182029", surfaceAlt: "#202A34", ink: "#ECF2EE", ink2: "#C6D0C9", muted: "#8A9AA0", faint: "#5E6B73",
-    go: "#35D68A", goSoft: "#14322A", gold: "#E3B24C", silver: "#9AA7B0", bronze: "#C98A55",
-    caution: "#E4A94C", cautionSoft: "#2C2413", avoid: "#E86A54", avoidSoft: "#2E1A16", hair: "#2A343E", blue: "#4FA3D4", violet: "#A28FE6" },
+    bg: "#0A0E13", surface: "#141C25", surfaceAlt: "#1B2530", ink: "#F2F6F4", ink2: "#C9D3CD", muted: "#8595A2", faint: "#5B6874",
+    go: "#3BDF93", goSoft: "#0F2E22", gold: "#E3B24C", silver: "#9AA7B0", bronze: "#C98A55",
+    caution: "#F0B455", cautionSoft: "#2C2413", avoid: "#F0705A", avoidSoft: "#2E1A16", hair: "#232E3A", blue: "#7CC7F0", violet: "#AE9BF6" },
   ocean: { name: "Ocean",
     bg: "#E7EEF2", surface: "#FFFFFF", surfaceAlt: "#EEF4F8", ink: "#10202B", ink2: "#22333F", muted: "#566873", faint: "#8497A2",
     go: "#0E8F9B", goSoft: "#D5EEF0", gold: "#C69A3C", silver: "#7C8891", bronze: "#B06A34",
@@ -2820,8 +2821,8 @@ export default function App() {
   const scoreColor = (s) => (s >= 4.3 ? C.go : s >= 3.8 ? C.caution : C.avoid);
   const medalColor = (i) => [C.gold, C.silver, C.bronze][i] || C.muted;
 
-  const card = (children, extra = {}) => (<div style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, padding: 16, ...extra }}>{children}</div>);
-  const sectionTitle = (t, color = C.ink) => (<div style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 10 }}>{t}</div>);
+  const card = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: 18, padding: 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
+  const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
   const stat = (label, value, unit, color = C.ink) => (
     <div style={{ flex: 1 }}>
@@ -3488,7 +3489,7 @@ export default function App() {
             Learning your baseline — {_rr.have}/{_rr.need} days banked. The first week on file becomes the reference everything after is judged against.</div>}
           {_rr.status === "ready" && <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 8 }}>
-              <span style={{ fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, color: C.ink }}>{_rr.current}</span>
+              <span style={{ fontFamily: DATA, fontSize: 30, fontWeight: 700, color: C.ink }}>{_rr.current}</span>
               <span style={{ fontSize: 12, color: C.faint }}>bpm today</span>
               <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: _rr.delta >= 8 ? RED : C.good }}>{_rr.delta >= 0 ? "+" : ""}{_rr.delta} vs your baseline ({_rr.baseline})</span>
             </div>
@@ -3496,7 +3497,7 @@ export default function App() {
               {(() => { const se = _rr.series; const lo = Math.min(...se.map((r) => r.rhr), _rr.baseline) - 4, hi = Math.max(...se.map((r) => r.rhr), _rr.baseline + 8) + 4;
                 const x = (i) => 4 + (i / Math.max(1, se.length - 1)) * 292, y = (v) => 4 + (1 - (v - lo) / (hi - lo)) * 56;
                 return <g>
-                  <rect x="4" y={y(_rr.baseline + 3)} width="292" height={Math.max(2, y(_rr.baseline - 3) - y(_rr.baseline + 3))} fill="rgba(139,151,147,0.16)" rx="2" />
+                  <rect x="4" y={y(_rr.baseline + 4)} width="292" height={Math.max(2, y(_rr.baseline - 4) - y(_rr.baseline + 4))} fill="rgba(59,223,147,0.10)" rx="2" />
                   <path d={se.map((r, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(r.rhr).toFixed(1)).join(" ")} fill="none" stroke={RED} strokeWidth="2" strokeLinejoin="round" />
                   <circle cx={x(se.length - 1)} cy={y(se[se.length - 1].rhr)} r="2.6" fill={RED} />
                 </g>; })()}
@@ -3506,7 +3507,7 @@ export default function App() {
                   <b style={{ color: RED }}>Sustained +{_rr.delta} bpm</b> above your baseline across {_rr.run} days{_rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{_rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
           </div>}
-        </div>)}</div>; };
+        </div>, { borderLeft: `2.5px solid ${RED}` })}</div>; };
   const renderGlp = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
@@ -3588,7 +3589,7 @@ export default function App() {
               <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
                 Minimum hold {holdWk} weeks{rungs.length ? " \u00b7 ceiling " + rungs[rungs.length - 1] + " mg" : ""} {"\u00b7"} you and your prescriber set these
               </div>)}
-          </div>)}</div>
+          </div>, { borderLeft: `2.5px solid ${C.violet}` })}</div>
 
           <div style={{ marginBottom: 14 }}>{card(<div>
             {sectionTitle("Dose checkpoint", C.muted)}
@@ -3680,7 +3681,7 @@ export default function App() {
               </div>
             </div>)}
             </>)}
-          </div>)}</div>
+          </div>, { borderLeft: `2.5px solid ${C.gold}` })}</div>
 
           <div style={{ marginBottom: 14 }}>{card(<div>
             {sectionTitle("Your dose-response", C.muted)}
@@ -3781,7 +3782,7 @@ export default function App() {
 
       <div style={{ marginBottom: 14 }}>{card(
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>{medObj && medObj.cadence === "daily" ? "Next dose" : "Next injection"}</div><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : (medObj && medObj.cadence === "daily" ? "No dose logged yet — tap Log dose after your pill" : "No dose logged yet — tap Log dose after your injection")}</div></div>
+          <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4 }}>{medObj && medObj.cadence === "daily" ? "Next dose" : "Next injection"}</div><div style={{ fontFamily: DATA, fontSize: 26, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 12, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 11, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : (medObj && medObj.cadence === "daily" ? "No dose logged yet — tap Log dose after your pill" : "No dose logged yet — tap Log dose after your injection")}</div></div>
           <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.surface, border: "none", borderRadius: 11, padding: "12px 18px", fontFamily: BODY, fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
         </div>)}</div>
       {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>

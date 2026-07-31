@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.49"
+version: "0.9.50"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.49: the safety net for the visual refresh. The test rig gains a
-  manifest suite - 143 exact pieces of interface text, every card title,
-  button, label and status message the app shows today, each verified
-  present on every run. As the new look rolls out tab by tab, nothing
-  can silently disappear: remove a section and the build fails before
-  it can ship. Also repairs four test paths that only worked in one
-  specific setup. No visible changes in this update.
+  v0.9.50: the new look begins - the chassis. Midnight deepens to a
+  true instrument dark, cards gain gradient depth and softer corners,
+  and every card title becomes a tracked-out monospace label, like a
+  readout on a device. On the GLP-1 tab: colour-coded edge marks on
+  Your protocol, Dose checkpoint and heart rate, key numbers switch
+  to the data typeface, and the heart-rate baseline band is wider and
+  easier to read. Every feature verified present by the new manifest
+  suite - nothing moved, nothing removed, only redrawn.
 dependencies: []
 path: ""
 defaultUsername: ""
