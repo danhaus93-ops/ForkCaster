@@ -3476,7 +3476,13 @@ export default function App() {
       </div>
 
       <div style={{ marginBottom: 14 }}>{card(<>
-        {sectionTitle("Scale report")}
+        {(() => { const ds0 = ((healthSync && healthSync.days) || []).filter((d0) => d0.bodyFatPct != null || d0.muscleMassLbs != null || d0.visceralFat != null);
+          const sc0 = ds0.length ? ds0[ds0.length - 1] : null;
+          const nM = sc0 ? ["bodyFatPct", "leanMassLbs", "muscleMassLbs", "visceralFat", "bodyWaterLbs", "subcutaneousFatPct"].filter((k0) => sc0[k0] != null).length : 0;
+          return (<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {sectionTitle("Scale report")}
+            {nM > 0 && <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>{nM} METRICS</span>}
+          </div>); })()}
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.45, marginBottom: 9 }}>A body-composition report carries more than Apple Health can store — visceral fat, body water and per-limb figures have no HealthKit fields. Snap or upload the report and the numbers come across.</div>
         <input ref={scanRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanBodyReport(e.target.files[0]); e.target.value = ""; }} />
         {(() => { const ds = ((healthSync && healthSync.days) || []).filter((d5) => d5.bodyFatPct != null || d5.muscleMassLbs != null || d5.visceralFat != null);
@@ -3531,9 +3537,21 @@ export default function App() {
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Waist (${isMetric ? "cm" : "in"})`, fmtLen(body.waist), (v) => setBody({ ...body, waist: parseLen(v) }))}{body.sex === "female" ? numField(`Hip (${isMetric ? "cm" : "in"})`, fmtLen(body.hip), (v) => setBody({ ...body, hip: parseLen(v) })) : numField(`Goal weight (${wtU})`, +fmtWt(goalWeight, 0), (v) => setGoalWeight(parseWt(v)))}</div>
         </>)}</div>
 
+      <div style={{ marginBottom: 14 }}>{card(<>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {sectionTitle("Prescriber report")}
+          <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>8 SECTIONS</span>
+        </div>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.45, marginBottom: 10 }}>Everything this app has measured about you, printed for a clinic visit: your per-dose response, your protocol and checkpoint, tolerability surveillance, training and intake. It reports; it never recommends a dose.</div>
+        <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Generate PDF</button>
+      </>)}</div>
+
       {card(
         <>
-          {sectionTitle("Progress photos")}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {sectionTitle("Progress photos")}
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.caution, border: `1px solid ${C.caution}55`, background: C.caution + "1A" }}>FRONT / BACK</span>
+          </div>
           {photos.length === 0 && (
             <div style={{ textAlign: "center", padding: "24px 12px", color: C.faint, fontSize: 13, lineHeight: 1.5 }}>Add photos to build a visual transformation timeline.<br /><span style={{ fontSize: 11 }}>Stored privately on your node.</span></div>
           )}
@@ -3561,6 +3579,16 @@ export default function App() {
             <div style={{ fontSize: 13.5, fontWeight: 700, color: C.violet }}>{PHASES[phaseIdx].label}</div>
             <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
           </div>
+          {(() => { const ws = weightSeries.map((w) => +fmtWt(w.lbs)); const st = ws.length ? ws[0] : null;
+            const rec = weightSeries.filter((w) => (Date.now() - new Date(w.date)) / 86400000 <= 21);
+            let rt = null; if (rec.length >= 2) { const a0 = rec[0], b0 = rec[rec.length - 1], dd0 = (new Date(b0.date) - new Date(a0.date)) / 86400000; if (dd0 >= 7) rt = (b0.lbs - a0.lbs) / (dd0 / 7); }
+            const cells = [[st != null ? fmtWt(st, 1) : "\u2014", "Start"], [lost > 0 ? "\u2212" + lost.toFixed(1) : "\u00b10", "Lost"], [rt != null ? (rt < 0 ? "\u2212" : "+") + Math.abs(rt).toFixed(1) + "/wk" : "\u2014", "Rate"], [goalWeight ? Math.max(0, +fmtWt(curWeight) - +fmtWt(goalWeight)).toFixed(1) : "\u2014", "To goal"]];
+            return (<div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              {cells.map(([v0, l0]) => (<div key={l0} style={{ flex: 1 }}>
+                <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l0}</div>
+                <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3 }}>{v0}</div>
+              </div>))}
+            </div>); })()}
           <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
             <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
             <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
@@ -3576,7 +3604,11 @@ export default function App() {
   const [protoEdit, setProtoEdit] = useState(false);
   const [protoRungs, setProtoRungs] = useState("");
   const rhrCardFor = (_rr) => { const RED = "#f05252"; return <div style={{ marginBottom: 14 }}>{card(<div>
-          {sectionTitle("Resting heart rate", RED)}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {sectionTitle("Resting heart rate", RED)}
+            {_rr.status === "collecting" ? <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>COLLECTING {_rr.have}/{_rr.need}</span>
+             : _rr.flagged ? <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: RED, border: `1px solid ${RED}66`, background: "rgba(240,82,82,0.12)" }}>FLAGGED</span> : null}
+          </div>
           {_rr.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
             Waiting for heart-rate data. When your watch is paired, add the <b>Resting Heart Rate</b> metric to your existing Health Auto Export automation and it lands here on its own. A small sustained rise is a known effect of this medication class — this card will watch yours against your own baseline, not the textbook's.</div>}
           {_rr.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted, marginTop: 8 }}>
@@ -5008,6 +5040,7 @@ function SymptomPatterns({ C, sideEffects, doseLog }) {
 }
 /* Deterministic 7-day report card */
 function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, fmtW, unit, goalLbs, onShareMilestone }) {
+  const msHit = (() => { const ws = (weightLog || []).map((w) => +w.lbs).filter(Boolean); if (ws.length < 2) return null; const l = ws[0] - ws[ws.length - 1]; const t = [5, 10, 15, 20, 25, 30, 40, 50].filter((x) => l >= x); return t.length ? t[t.length - 1] : null; })();
   const days = [];
   for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
   const byDay = {}; (mealLog || []).forEach((m) => { if (days.includes(m.date)) { byDay[m.date] = (byDay[m.date] || 0) + (m.protein || 0); } });
@@ -5025,7 +5058,10 @@ function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, 
   );
   return (
     <div>
-      <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>This week</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted }}>This week</div>
+        {msHit != null && <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, marginTop: 0, color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>MILESTONE · {msHit} {unit.toUpperCase()} DOWN</span>}
+      </div>
       <div style={{ display: "flex", gap: 8 }}>
         {kpi(adherence == null ? "—" : adherence + "%", "protein adherence", adherence == null ? C.muted : adherence >= 85 ? C.go : adherence >= 60 ? C.caution : C.avoid)}
         {kpi(wDelta == null ? "—" : (wDelta > 0 ? "+" : "") + fmtW(Math.abs(wDelta) * Math.sign(wDelta)) + " " + unit, "weight change", wDelta == null ? C.muted : wDelta <= 0 ? C.go : C.caution)}

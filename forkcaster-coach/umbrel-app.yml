@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.66"
+version: "0.9.67"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,12 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.66: the weight graph is the one from the redesign - green
-  gradient fill under the line, a glowing dot on your latest weigh-in
-  and a dashed goal rule labeled with your goal. The header now reads
-  weight, goal and pounds lost across one row, the three figures sit
-  as labeled cells, and the protein nudge is a tappable button that
-  sets the target for you.
+  v0.9.67: a full scan of the redesign against the live Body tab, and
+  everything missing is now in. The prescriber report gets its own
+  card here with a Generate PDF button. This week shows a milestone
+  badge when you pass a five-pound mark. Your journey gains start,
+  lost, rate and to-go figures. The scale report counts its metrics,
+  progress photos are labeled front and back, and the heart-rate card
+  shows whether it is still collecting or has flagged something.
 dependencies: []
 path: ""
 defaultUsername: ""
