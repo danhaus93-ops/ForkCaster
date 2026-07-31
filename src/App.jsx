@@ -4869,6 +4869,11 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const maxL = ssPeak * 1.08;
   const ssPct = Math.round((level(now) / ssPeak) * 100);
   const climbing = ssPct < 97;
+  // v0.9.62: HIS denominator restored. 7-day half-life means only ~13% bleeds off between weekly
+  // shots — the morning of dose 2 he was at ~86% OF HIS OWN PEAK while ~40% of steady state. Both
+  // true, different questions; v0.9.56 deleted the first and he rightly called the math wrong.
+  let peakSoFar = 0; { const t0 = doses[0].t; for (let i = 0; i <= 240; i++) peakSoFar = Math.max(peakSoFar, level(t0 + (i / 240) * Math.max(1, now - t0))); }
+  const peakPct = peakSoFar > 0 ? Math.round((level(now) / peakSoFar) * 100) : null;
   // v0.9.59: the morning of a shot, the level is RIGHT but reads wrong — a subQ dose absorbs over
   // days, it does not spike. Name the state so a fresh injection never looks unregistered again.
   const tPeakH = Math.log(ka / ke) / (ka - ke); // hours to single-dose peak
@@ -4962,11 +4967,21 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
       </svg>
       </div>
       {scrolls && <div style={{ fontFamily: DATA, fontSize: 8.5, letterSpacing: 1, color: C.faint, marginTop: 4, textAlign: "right" }}>← SCROLL TO REVIEW EVERY DOSE</div>}
+      <div style={{ display: "flex", gap: 7, marginTop: 8 }}>
+        <div style={{ flex: 1, background: C.violet + "14", border: `1px solid ${C.violet}44`, borderRadius: 10, padding: "8px 10px" }}>
+          <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.violet }}>{ssPct}%</div>
+          <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>OF STEADY STATE · THE CLIMB</div>
+        </div>
+        {peakPct != null && <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 10, padding: "8px 10px" }}>
+          <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink }}>{peakPct}%</div>
+          <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>OF YOUR OWN PEAK · IN YOU NOW</div>
+        </div>}
+      </div>
       {absorbing && <div style={{ display: "flex", alignItems: "center", gap: 7, background: C.go + "14", border: `1px solid ${C.go}44`, borderRadius: 10, padding: "8px 11px", marginTop: 8 }}>
         <span style={{ width: 7, height: 7, borderRadius: 7, background: C.go, flexShrink: 0 }} />
         <span style={{ fontSize: 11.5, color: C.ink2, lineHeight: 1.45 }}>Today's dose is <b>in</b> — still absorbing. A shot builds over days, not minutes: this one peaks around <b style={{ color: C.go }}>~{absPeakPct}%</b> in ~{absDays} day{absDays === 1 ? "" : "s"}, and each trough lands higher than the last. That climb is the medication accumulating.</span>
       </div>}
-      <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1. Each dose lands before the last has cleared, so the troughs climb — solid is logged, dashed is planned. Steady state is the highest of your peak levels this dose and schedule will produce; you're at ~{ssPct}% of it now. Informational only — not medical advice.</div>
+      <div style={{ fontSize: 10, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses. Dashed = projection, assuming your current schedule and dose continue — each dose lands on the remains of the last, so the level builds for a few weeks before flattening out. That climb is why the same dose feels stronger in week 4 than week 1. Each dose lands before the last has cleared, so the troughs climb — solid is logged, dashed is planned. Two honest numbers: with a ~{hl}-day half-life, only a small share bleeds off between shots — that's the OF-YOUR-OWN-PEAK figure. The climb toward steady state — the highest of your peak levels this dose and schedule will produce — is the OF-STEADY-STATE figure; you're at ~{ssPct}% of it now. Informational only — not medical advice.</div>
     </div>
   );
 }
