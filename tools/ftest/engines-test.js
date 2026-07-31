@@ -69,7 +69,12 @@ console.log('  glp1 picks:',JSON.stringify(picks.map(p=>p.item||p.name||p.id)));
   ok(out.map(w => w.date).join(',') === '2026-07-24,2026-07-25,2026-07-26', 'sorted by date');
   ok(M.mergeWeightSeries([], []).length === 0 && M.mergeWeightSeries(null, null).length === 0, 'empty and null inputs are safe');
   const SRC2 = require('fs').readFileSync(__FCROOT + '/src/App.jsx', 'utf8');
-  ok(/weightSeries\.length > 1 \? lineChart\(weightSeries/.test(SRC2), 'the Body chart reads the merged series');
+  // v0.9.66: the Body chart is the mock's own SVG now, not the shared lineChart helper. The
+  // INVARIANT is unchanged and is what this guards: it plots weightSeries (the MERGED series —
+  // manual + synced), not the raw weightLog, or synced weigh-ins vanish from the trend.
+  ok(/weightSeries\.length > 1 \?/.test(SRC2), 'the Body chart still branches on the merged series');
+  ok(/const vs = weightSeries\.map\(\(w\) => \+fmtWt\(w\.lbs\)\)/.test(SRC2), 'the Body chart plots the merged series (manual + synced), not raw weightLog');
+  ok(/url\(#wg\)/.test(SRC2) && /GOAL \{fmtWt\(goalWeight, 0\)\}/.test(SRC2), 'chart carries the gradient fill and the dashed goal rule from the design');
   ok(/w\.synced \? <span/.test(SRC2), 'synced rows are tagged and cannot be deleted from the list');
 }
 // v0.9.21: the projection honesty floor — same rule adaptiveRead lives by

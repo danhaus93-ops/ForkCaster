@@ -3407,18 +3407,41 @@ export default function App() {
             {sectionTitle("Path to your forecast", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, color: allOk ? C.go : C.caution, border: `1px solid ${(allOk ? C.go : C.caution)}55`, background: (allOk ? C.go : C.caution) + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>{allOk ? "ON TRACK" : "CHECK SIGNALS"}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
-            <span style={{ fontFamily: DATA, fontSize: 32, fontWeight: 700, color: C.ink }}>{fmtWt(cur)}</span>
-            <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint }}>{wtU}</span>
-            <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "4px 10px" }}>GOAL {fmtWt(goalWeight, 0)}</span>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
+            <div><span style={{ fontFamily: DATA, fontSize: 38, fontWeight: 700, color: C.ink }}><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: 6, background: C.go, marginRight: 8, verticalAlign: "middle" }} />{fmtWt(cur)}</span><span style={{ fontFamily: DATA, fontSize: 13, color: C.faint }}> {wtU}</span></div>
+            <div style={{ paddingBottom: 5 }}>
+              <span style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.2, color: C.faint, textTransform: "uppercase" }}>Goal</span>
+              <div style={{ fontFamily: DATA, fontSize: 14, color: C.muted }}>{fmtWt(goalWeight, 0)}</div>
+            </div>
+            <div style={{ marginLeft: "auto", paddingBottom: 5, textAlign: "right" }}>
+              <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.go }}>{lost > 0 ? `−${lost.toFixed(1)}` : "±0"} {wtU}</div>
+              <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>since start</div>
+            </div>
           </div>
-          <div style={{ fontFamily: DATA, fontSize: 11, color: C.go, marginBottom: 8 }}>{lost > 0 ? `−${lost.toFixed(1)} lbs` : "±0 lbs"} <span style={{ color: C.faint }}>since start</span></div>
-          {weightSeries.length > 1 ? lineChart(weightSeries.map((w) => ({ label: fmtDate(w.date), value: +fmtWt(w.lbs) })), { color: C.go, goal: +fmtWt(goalWeight), goalLabel: `Goal ${fmtWt(goalWeight, 0)}` }, C) : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
+          {weightSeries.length > 1 ? (() => { // v0.9.66: the mock's own weight chart — gradient fill, glow endpoint, dashed goal rule
+            const vs = weightSeries.map((w) => +fmtWt(w.lbs));
+            const gl = +fmtWt(goalWeight);
+            const W2 = 300, H2 = 70, GY = 63;
+            const hi = Math.max(...vs), lo = Math.min(...vs.concat([gl]));
+            const span = Math.max(1, hi - lo);
+            const xw = (i) => (vs.length === 1 ? W2 - 6 : (i / (vs.length - 1)) * (W2 - 6));
+            const yw = (v) => 8 + (1 - (v - lo) / span) * (GY - 14);
+            const line = vs.map((v, i) => `${i ? "L" : "M"}${xw(i).toFixed(1)} ${yw(v).toFixed(1)}`).join(" ");
+            const lastX = xw(vs.length - 1), lastY = yw(vs[vs.length - 1]);
+            return (<svg viewBox={`0 0 ${W2} ${H2}`} style={{ width: "100%", height: "auto", marginTop: 10, display: "block" }}>
+              <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={C.go} stopOpacity="0.38" /><stop offset="1" stopColor={C.go} stopOpacity="0" /></linearGradient></defs>
+              <path d={`${line} L${lastX.toFixed(1)} ${H2} L0 ${H2} Z`} fill="url(#wg)" />
+              <path d={line} fill="none" stroke={C.go} strokeWidth="2" strokeLinejoin="round" />
+              <circle cx={lastX} cy={lastY} r="7" fill={C.go} opacity="0.2" />
+              <circle cx={lastX} cy={lastY} r="3.6" fill={C.go} />
+              <path d={`M0 ${GY}h${W2}`} stroke={C.hair} strokeDasharray="3 4" />
+              <text x="2" y={GY - 3} fontFamily="ui-monospace,monospace" fontSize="7" fill={C.faint}>GOAL {fmtWt(goalWeight, 0)}</text>
+            </svg>); })() : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 13 }}>Log your first weight below to start the trend.</div>}
           {ct.status !== "incomplete" && <div style={{ display: "flex", gap: 7, marginTop: 10, marginBottom: 8 }}>
             {[[Math.round(ct.lean || 0) + " lb", "LEAN TO HOLD"], [Math.round(ct.fatToLose || 0) + " lb", "FAT TO LOSE"], [ct.bfAtGoal ? "~" + Math.round(ct.bfAtGoal) + "%" : "—", "AT GOAL"]].map(([v4, l4]) => (
-              <div key={l4} style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 10px" }}>
-                <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink }}>{v4}</div>
-                <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>{l4}</div>
+              <div key={l4} style={{ flex: 1 }}>
+                <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l4}</div>
+                <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3 }}>{v4}</div>
               </div>))}
           </div>}
           {ct.status !== "incomplete" && (ct.weeksTarget || ct.weeksAtCurrent) && <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.muted, marginBottom: 8 }}>{ct.weeksTarget ? `${ct.weeksTarget} wk at target rate` : ""}{ct.weeksAtCurrent ? `${ct.weeksTarget ? " · " : ""}${ct.weeksAtCurrent} wk at measured rate` : ""}</div>}
@@ -3430,7 +3453,7 @@ export default function App() {
               <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 0.7, color: PC[r4.st], border: `1px solid ${PC[r4.st]}55`, background: PC[r4.st] + "14", borderRadius: 999, padding: "3px 9px" }}>{r4.st === "ok" ? "OK" : r4.st === "flag" ? "MISS" : "WAIT"} · {r4.v}</span>
             </div>))}
           </div>
-          {pAvg != null && pAvg < pFloor && <div style={{ fontSize: 11.5, color: C.caution, marginTop: 9 }}>Raise protein — you averaged {pAvg} g against a {pFloor} g floor this week.</div>}
+          {pAvg != null && pAvg < pFloor && <button onClick={() => setTargets((t) => ({ ...t, protein: pFloor }))} style={{ width: "100%", marginTop: 11, background: "transparent", border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Raise protein target to {pFloor} g</button>}
           {weightSeries.length > 0 && <div style={{ marginTop: 10 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
             <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ fontFamily: DATA, fontSize: 12, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
