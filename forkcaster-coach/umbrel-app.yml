@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.60"
+version: "0.9.61"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,14 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.60: CRITICAL FIX - v0.9.59 crashed the app on the GLP-1 tab
-  for anyone with logged doses (a code-ordering error in the new
-  ghost-dose drawing). Fixed, and the test rig now deep-renders every
-  tab with real dose data before any release can ship, so this class
-  of crash cannot reach your phone again. Update immediately.
+  v0.9.61: the Body tab is rebuilt to the redesign, not just restyled.
+  The Body Forecaster becomes the hero card - your today photo beside
+  your at-goal render with a Re-forecast button. A new Path to your
+  forecast card reads your loss rate, protein floor, lifting sessions
+  and lean-mass trend as an ON TRACK ledger with an ETA at your
+  measured rate. Your latest scale scan shows as measured metric
+  tiles that outrank the Navy estimate, Body stats is labeled as the
+  estimate it is, and the journey card moves to the end of the tab.
 dependencies: []
 path: ""
 defaultUsername: ""

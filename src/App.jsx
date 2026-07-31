@@ -3375,6 +3375,80 @@ export default function App() {
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Body</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
 
+      {(() => { // v0.9.61: mock Body architecture — Forecaster promoted to hero with goal preview
+        const fronts = simShots.filter((sh) => (sh.view || "front") === "front");
+        const shot = fronts.length ? fronts[fronts.length - 1] : null;
+        if (!shot) return null;
+        const src = photos.find((ph) => ph.url === shot.srcUrl);
+        return (<div style={{ marginBottom: 14 }}>{card(<>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            {sectionTitle("Body Forecaster", C.violet)}
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, color: C.violet, border: `1px solid ${C.violet}55`, background: C.violet + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>GOAL PREVIEW</span>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[src && { url: src.url, tag: `TODAY · ${fmtWt(curWeight, 0)}` }, { url: shot.url, tag: `AT GOAL · ${fmtWt(goalWeight, 0)}` }].filter(Boolean).map((im, ii) => (
+              <div key={ii} style={{ flex: 1, position: "relative" }}>
+                <img src={im.url} alt="" style={{ width: "100%", borderRadius: 12, display: "block", border: `1px solid ${C.hair}` }} />
+                <div style={{ position: "absolute", left: 6, bottom: 6, fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 0.8, color: "#fff", background: "rgba(10,14,19,0.72)", borderRadius: 999, padding: "3px 8px" }}>{im.tag}</div>
+              </div>))}
+          </div>
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Rendered from your measurements at goal weight{leanShown ? ` — ${leanShown.toFixed(0)} lb lean held` : ""}{goalWeight && leanShown ? `, ~${Math.max(5, Math.round(((+fmtWt(goalWeight) - leanShown) / +fmtWt(goalWeight)) * 100))}% body fat` : ""}.</div>
+          <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 10, background: C.violet + "22", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 999, padding: "11px 0", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>✨ Re-forecast</button>
+        </>)}</div>);
+      })()}
+      {(() => { // Path to your forecast — the mock's signal ledger, derived from engines already on board
+        if (!weightSeries.length || !goalWeight) return null;
+        const cur = weightSeries[weightSeries.length - 1].lbs;
+        const recent = weightSeries.filter((w) => (Date.now() - new Date(w.date)) / 86400000 <= 21);
+        let rate = null;
+        if (recent.length >= 3) { const a = recent[0], b = recent[recent.length - 1], days = (new Date(b.date) - new Date(a.date)) / 86400000; if (days >= 7) rate = ((b.lbs - a.lbs) / a.lbs) * 100 / (days / 7); }
+        const wk = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+        const pDays = {}; (mealLog || []).forEach((mE) => { if (mE.date >= wk && mE.protein) pDays[mE.date] = (pDays[mE.date] || 0) + mE.protein; });
+        const pVals = Object.values(pDays);
+        const pAvg = pVals.length ? Math.round(pVals.reduce((a2, b2) => a2 + b2, 0) / pVals.length) : null;
+        const lifts = (workoutLog || []).filter((w2) => w2.kind !== "cardio" && w2.date >= wk).length;
+        const scans = ((healthSync && healthSync.days) || []).filter((d2) => d2.bodyFatPct != null);
+        let leanTrend = null;
+        if (scans.length >= 2) { const s1 = scans[scans.length - 2], s2 = scans.length ? scans[scans.length - 1] : null, dd = (new Date(s2.date) - new Date(s1.date)) / 86400000; if (dd >= 7 && s1.leanMassLbs && s2.leanMassLbs) leanTrend = ((s2.leanMassLbs - s1.leanMassLbs) / s1.leanMassLbs) * 100 / (dd / 7); }
+        const rows = [
+          { l: "Loss rate in band", v: rate == null ? "log weigh-ins" : rate.toFixed(2) + " %/wk", st: rate == null ? "wait" : rate <= -0.25 && rate >= -1.25 ? "ok" : "flag" },
+          { l: "Protein ≥ floor", v: pAvg == null ? "log meals" : pAvg + " / " + targets.protein, st: pAvg == null ? "wait" : pAvg >= targets.protein ? "ok" : "flag" },
+          { l: "Lifting sessions", v: lifts + " this week", st: lifts >= 2 ? "ok" : lifts >= 1 ? "flag" : "wait" },
+          { l: "Lean mass holding", v: leanTrend == null ? "add 2+ scans" : leanTrend.toFixed(2) + " %/wk", st: leanTrend == null ? "wait" : leanTrend > -0.35 ? "ok" : "flag" },
+        ];
+        const allOk = rows.every((r3) => r3.st === "ok");
+        const toGo = +fmtWt(cur) - +fmtWt(goalWeight);
+        const etaWk = rate && rate < -0.05 ? Math.ceil((toGo / cur) * 100 / Math.abs(rate)) : null;
+        const PC = { ok: C.go, flag: C.caution, wait: C.faint };
+        return (<div style={{ marginBottom: 14 }}>{card(<>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            {sectionTitle("Path to your forecast", C.muted)}
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, color: allOk ? C.go : C.caution, border: `1px solid ${(allOk ? C.go : C.caution)}55`, background: (allOk ? C.go : C.caution) + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>{allOk ? "ON TRACK" : "CHECK SIGNALS"}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+            <span style={{ fontFamily: DATA, fontSize: 28, fontWeight: 700, color: C.ink }}>{fmtWt(cur)}</span>
+            <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint }}>{wtU}</span>
+            <span style={{ color: C.faint }}>→</span>
+            <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "4px 10px" }}>GOAL {fmtWt(goalWeight, 0)}</span>
+          </div>
+          <div style={{ display: "flex", gap: 7, marginBottom: 10 }}>
+            {[[leanShown ? leanShown.toFixed(0) + " lb" : "—", "LEAN TO HOLD"], [toGo > 0 ? toGo.toFixed(0) + " lb" : "—", "TO LOSE"], [goalWeight && leanShown ? "~" + Math.max(5, Math.round(((+fmtWt(goalWeight) - leanShown) / +fmtWt(goalWeight)) * 100)) + "%" : "—", "AT GOAL"]].map(([v4, l4]) => (
+              <div key={l4} style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 10px" }}>
+                <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink }}>{v4}</div>
+                <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>{l4}</div>
+              </div>))}
+          </div>
+          {etaWk && <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.muted, marginBottom: 10 }}>~{etaWk} wk at measured rate · ETA {new Date(Date.now() + etaWk * 7 * 86400000).toLocaleDateString([], { month: "short", year: "numeric" })}</div>}
+          <div style={{ borderTop: `1px solid ${C.hair}` }}>
+            {rows.map((r4) => (<div key={r4.l} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
+              <span style={{ width: 6, height: 6, borderRadius: 6, background: PC[r4.st], flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, color: C.muted, flex: 1 }}>{r4.l}</span>
+              <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 0.7, color: PC[r4.st], border: `1px solid ${PC[r4.st]}55`, background: PC[r4.st] + "14", borderRadius: 999, padding: "3px 9px" }}>{r4.st === "ok" ? "OK" : r4.st === "flag" ? "MISS" : "WAIT"} · {r4.v}</span>
+            </div>))}
+          </div>
+          {rows[1].st === "flag" && pAvg != null && <div style={{ fontSize: 11.5, color: C.caution, marginTop: 9 }}>Raise protein — you averaged {pAvg} g against a {targets.protein} g floor this week.</div>}
+        </>)}</div>);
+      })()}
       <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />)}</div>
       <div style={{ marginBottom: 14 }}>{card(
         <>
@@ -3395,31 +3469,6 @@ export default function App() {
           </div>
         </>)}</div>
 
-      {/* Journey / phase — WHITE SPACE #3: the off-ramp nobody plans for */}
-      <div style={{ marginBottom: 14 }}>{card(
-        <>
-          {sectionTitle("Your journey", C.violet)}
-          <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
-            {PHASES.map((p, i) => {
-              const done = i < phaseIdx, cur = i === phaseIdx;
-              return (
-                <div key={p.key} style={{ flex: 1 }}>
-                  <div style={{ height: 6, borderRadius: 3, background: done ? C.violet : cur ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
-                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 0.4, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>{p.label}</div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ background: C.violet + "12", borderRadius: 12, padding: "12px 14px" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.violet }}>{PHASES[phaseIdx].label}</div>
-            <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
-          </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
-          </div>
-          <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
-        </>)}</div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
         {card(<>{stat("BMI", bmi ? bmi.toFixed(1) : "—", "")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>{bmiBand(bmi)}</div></>, { flex: 1 })}
@@ -3431,6 +3480,19 @@ export default function App() {
         {sectionTitle("Scale report")}
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.45, marginBottom: 9 }}>A body-composition report carries more than Apple Health can store — visceral fat, body water and per-limb figures have no HealthKit fields. Snap or upload the report and the numbers come across.</div>
         <input ref={scanRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanBodyReport(e.target.files[0]); e.target.value = ""; }} />
+        {(() => { const ds = ((healthSync && healthSync.days) || []).filter((d5) => d5.bodyFatPct != null || d5.muscleMassLbs != null || d5.visceralFat != null);
+          const sc = ds.length ? ds[ds.length - 1] : null;
+          if (!sc) return null;
+          const tiles = [["BODY FAT", sc.bodyFatPct != null ? sc.bodyFatPct + "%" : null], ["LEAN", sc.leanMassLbs != null ? sc.leanMassLbs + " lb" : null], ["MUSCLE", sc.muscleMassLbs != null ? sc.muscleMassLbs + " lb" : null], ["VISCERAL", sc.visceralFat != null ? String(sc.visceralFat) : null], ["WATER", sc.bodyWaterLbs != null ? sc.bodyWaterLbs + " lb" : null], ["SUBCUT", sc.subcutaneousFatPct != null ? sc.subcutaneousFatPct + "%" : null]].filter((t5) => t5[1] != null);
+          return (<div style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {tiles.map(([l5, v5]) => (<div key={l5} style={{ flex: "1 1 30%", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 10px" }}>
+                <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: C.ink }}>{v5}</div>
+                <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>{l5}</div>
+              </div>))}
+            </div>
+            <div style={{ fontFamily: DATA, fontSize: 9, letterSpacing: 0.8, color: C.go, marginTop: 7 }}>MEASURED · {sc.date || "LAST SCAN"} — outranks the Navy estimate.</div>
+          </div>); })()}
         <button onClick={() => scanRef.current && scanRef.current.click()} disabled={scanBusy}
           style={{ width: "100%", background: C.surfaceAlt, border: `1.5px dashed ${C.hair}`, color: C.ink, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: scanBusy ? 0.6 : 1 }}>
           {scanBusy ? "Reading the report…" : "Scan a scale report"}
@@ -3461,7 +3523,10 @@ export default function App() {
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
-          {sectionTitle("Body stats")}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {sectionTitle("Body stats")}
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, color: C.muted, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>NAVY ESTIMATE</span>
+          </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>{["male", "female"].map((s) => (<button key={s} onClick={() => setBody({ ...body, sex: s })} style={{ flex: 1, padding: "9px 0", borderRadius: 999, border: `1.5px solid ${body.sex === s ? C.go : C.hair}`, background: body.sex === s ? C.go + "22" : "transparent", color: body.sex === s ? C.go : C.muted, fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" }}>{s}</button>))}</div>
           <div style={{ display: "flex", gap: 10 }}>{numField(`Height (${isMetric ? "cm" : "in"})`, fmtLen(body.heightIn), (v) => setBody({ ...body, heightIn: parseLen(v) }))}{numField(`Neck (${isMetric ? "cm" : "in"})`, fmtLen(body.neck), (v) => setBody({ ...body, neck: parseLen(v) }))}</div>
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Waist (${isMetric ? "cm" : "in"})`, fmtLen(body.waist), (v) => setBody({ ...body, waist: parseLen(v) }))}{body.sex === "female" ? numField(`Hip (${isMetric ? "cm" : "in"})`, fmtLen(body.hip), (v) => setBody({ ...body, hip: parseLen(v) })) : numField(`Goal weight (${wtU})`, +fmtWt(goalWeight, 0), (v) => setGoalWeight(parseWt(v)))}</div>
@@ -3477,6 +3542,32 @@ export default function App() {
           {photoPanes("back", "Back", compareABack, setCompareABack, compareBBack, setCompareBBack, activeSideBack, setActiveSideBack, fileRefBack)}
           {photos.length > 0 && <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 12, background: C.violet + "22", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>✨ Body Forecaster →</button>}
         </>)}
+
+      {/* Journey / phase — WHITE SPACE #3: the off-ramp nobody plans for */}
+      <div style={{ marginBottom: 14 }}>{card(
+        <>
+          {sectionTitle("Your journey", C.violet)}
+          <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+            {PHASES.map((p, i) => {
+              const done = i < phaseIdx, cur = i === phaseIdx;
+              return (
+                <div key={p.key} style={{ flex: 1 }}>
+                  <div style={{ height: 6, borderRadius: 3, background: done ? C.violet : cur ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
+                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 0.4, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>{p.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ background: C.violet + "12", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.violet }}>{PHASES[phaseIdx].label}</div>
+            <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
+            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
+          </div>
+          <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
+        </>)}</div>
     </div>
   );
 
