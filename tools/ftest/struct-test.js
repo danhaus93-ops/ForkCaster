@@ -280,7 +280,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.35: updates must arrive — versioned bundle URLs + no-store HTML; CHECK 46 REBORN
 {
   const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  const srv=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
   ok(app.split('Object.values(keyIn).some((v) => String(v || \"\").trim())').length===4, 'ALL THREE key-gate sites (Save disabled, opacity, test-then-save) derive from every field');
   ok(!/if \(keyIn\.a\.trim\(\) \|\| keyIn\.g\.trim\(\)/.test(app), 'the test-then-save enumeration (the v0.6.2 site my v0.9.34 missed) is gone');
   ok(srv.includes('app.js?v=${APP_VERSION}') && srv.includes('"no-store"') && srv.includes('index: false'), 'server stamps the bundle URL with its version and never lets the HTML shell cache — a release IS a new URL');
@@ -294,7 +294,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.36 grounded itemization: model weighs, server resolves, code computes
 {
   const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  const srv=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
   ok(app.includes('required: [\"item\", \"grams\"'), 'NL schema REQUIRES grams — the model must weigh every item');
   ok(app.split('groundFoodItems(').length>=4, 'both estimate paths (described + photo) ground through the shared helper');
   ok(srv.includes('app.post(\"/api/food/ground\"') && srv.includes('${FDC_BASE}'), 'ground endpoint exists and is stubbable via FDC_BASE');
@@ -304,7 +304,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.37: RHR wired end to end — ingest (both shapes) -> summary passthrough -> card
 {
   const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  const srv=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
   ok(srv.includes('nm === \"resting_heart_rate\"'), 'HAE metric resting_heart_rate is ingested');
   ok(srv.includes('rec.restingHeartRate'), 'flat-shape rhr/restingHeartRate is ingested');
   ok(app.includes('rhrRead((healthSync && healthSync.days) || [], glp.doseLog)'), 'card reads the synced days + dose log');
@@ -364,7 +364,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // never sets a dose — that boundary is structural, not stylistic, for a compound with no label.
 {
   const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const srv=require('fs').readFileSync('/home/claude/forkcaster/server/server.js','utf8');
+  const srv=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
   ok(srv.includes('nm === \"sleep_analysis\"'), 'HAE sleep_analysis is ingested');
   ok(srv.includes('q <= 24 ? q * 60 : q'), 'sleep accepts hours OR minutes without export-format archaeology');
   ok(srv.includes('clean.sleepMin'), 'sleepMin survives into the stored day and the summary');
