@@ -360,7 +360,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.43: the projection and the calendar agree on the next dose
 {
   const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  ok(app.includes('function MedLevelChart({ C, doseLog, med, dueISO })'), 'chart receives the due date');
+  ok(app.includes('function MedLevelChart({ C, doseLog, med, dueISO, intervalDays })'), 'chart receives the due date AND the declared interval');
+  // v0.9.57: cadence must come from the DECLARED schedule, never inferred from logged gaps when a
+  // schedule exists — a Sunday start + Friday dose-day is a 5-day offset, not a 5-day schedule.
+  ok(app.includes('const declared = (MEDS[med] && MEDS[med].cadence === "daily") ? 1 : (+intervalDays || 7)'), 'declared schedule wins over median-gap inference');
   ok(app.includes('dueISO={dueISO}'), 'renderGlp passes the SAME dueISO the calendar chip uses');
   ok(app.includes('const firstT = dueT && dueT > lastDose.t ? Math.max(dueT, now)'), 'first projected dose anchors to DUE (clamped to now if overdue), cadence after');
   ok(app.includes('const nextDoseT = (dueT && dueT > lastDose.t'), 'the ~X%-at-next-dose marker uses the same anchor — one screen, one story');

@@ -3817,7 +3817,7 @@ export default function App() {
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>)}</div>}
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
-      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} />)}</div>}
+      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />)}</div>}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
       {(() => {
         const sl = sleepRead((healthSync && healthSync.days) || [], glp.doseLog);
@@ -4730,7 +4730,7 @@ export default function App() {
 }
 
 /* Estimated medication-level curve: one-compartment model from published half-lives. Informational only. */
-function MedLevelChart({ C, doseLog, med, dueISO }) {
+function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const HL_DAYS = { tirzepatide: 5, semaglutide: 7, retatrutide: 6, rybelsus: 7, orforglipron: 5 }; // reta = trial-data estimate
   const hl = HL_DAYS[med] || 6;
   const ke = Math.log(2) / (hl * 24), ka = ke * 10; // absorption tuned for ~1.5d peak
@@ -4743,8 +4743,13 @@ function MedLevelChart({ C, doseLog, med, dueISO }) {
   // schedule continues at the current dose — each dose lands on the remains of the last, so the
   // floor climbs for a few weeks before levelling. That accumulation is the most educational truth
   // this chart owns; hiding it made week-4 feel inexplicably stronger than week-1.
+  // v0.9.57: cadence = the user's DECLARED schedule (med cadence / chosen interval), never inferred
+  // from logged gaps when a schedule exists. His field find: shot 1 Sunday, shot 2 the chosen Friday
+  // — a 5-day start-up offset, not a 5-day schedule. Median-gap inference projected 5-day dosing
+  // forever, inflating the steady-state ceiling and reading "40%" the morning of his second shot.
+  const declared = (MEDS[med] && MEDS[med].cadence === "daily") ? 1 : (+intervalDays || 7);
   const gaps = doses.slice(1).map((d, i) => d.t - doses[i].t).sort((a, b) => a - b);
-  const cadence = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 7 * 86400000;
+  const cadence = declared * 86400000 || (gaps.length ? gaps[Math.floor(gaps.length / 2)] : 7 * 86400000);
   const lastDose = doses[doses.length - 1];
   // v0.9.43: the projection anchors its FIRST future dose to the DUE date (the chosen dose day,
   // the same truth the calendar chip renders), then continues at the inferred cadence. Before
