@@ -466,5 +466,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/surveillance: \{ rhr: _rhrRpt, sleep: _sleepRpt \}/.test(SRC), 'surveillance findings reach the payload');
   ok(!/function (checkpointRead|rungResponseRead|rhrRead|sleepRead)\(/.test(SRV), 'no engine is duplicated server-side — one implementation, one place to be wrong');
 }
+// --- v0.9.68: Readiness must never invent a signal it does not have ---
+// The whole card is only trustworthy if a missing input is EXCLUDED, not defaulted. A zero-filled
+// RHR or a guessed sleep would silently drag the score and bend his session for no reason.
+{
+  const app=SRC;
+  ok(/function readinessRead\(/.test(app), 'readiness is a module-level engine, testable like the others');
+  ok(/if \(rhr && rhr\.status === "ready"\)/.test(app), 'RHR contributes only once its baseline is banked');
+  ok(/if \(sd\.length\) \{/.test(app), 'sleep contributes only when a night is actually synced');
+  ok(/if \(c28 > 0\) \{/.test(app), 'load contributes only when there is a chronic baseline to compare against');
+  ok(/if \(!parts\.length\) return \{ status: "nodata"/.test(app), 'no measured inputs means no score at all — never a default');
+  ok(/parts\.reduce\(\(n, p\) => n \+ p\.score \* p\.w, 0\) \/ wsum/.test(app), 'the score is weighted over PRESENT parts only');
+  ok(/rd\.status !== "ok"\) return null/.test(app), 'the card renders nothing rather than an empty gauge');
+  // the band describes the SESSION, never the person
+  ok(/Top sets held, back-offs trimmed one set/.test(app), 'a gentle day states what changes in the session');
+  ok(!/you are (weak|unfit|tired)/i.test(app), 'the copy never characterises the person');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

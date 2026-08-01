@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.67"
+version: "0.9.68"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,13 +20,13 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.67: a full scan of the redesign against the live Body tab, and
-  everything missing is now in. The prescriber report gets its own
-  card here with a Generate PDF button. This week shows a milestone
-  badge when you pass a five-pound mark. Your journey gains start,
-  lost, rate and to-go figures. The scale report counts its metrics,
-  progress photos are labeled front and back, and the heart-rate card
-  shows whether it is still collecting or has flagged something.
+  v0.9.68: the Train tab gains Readiness - the card from the redesign
+  that was never built. It scores what has actually been measured:
+  your resting heart rate against your own banked baseline, last
+  nights sleep, how many days since your shot, and this weeks load
+  against your four-week average. It then says how the session bends
+  - what to hold and what to trim - and describes the session, never
+  you. Signals with no data are left out rather than guessed.
 dependencies: []
 path: ""
 defaultUsername: ""

@@ -1091,6 +1091,62 @@ function progressionAdvice(entries, plan) {
   if (stalled) return { action: "deload", suggested: Math.max(step, Math.round((w * 0.9) / step) * step), text: `Three sessions without progress — drop to ${Math.max(step, Math.round((w * 0.9) / step) * step)} lb, rebuild for two weeks.` };
   return { action: "add-reps", suggested: w, text: `Stay at ${w} lb and add reps until all sets reach ${repHigh}.` };
 }
+/* v0.9.68: Readiness — the Train tab's gate, per the redesign. Scores what is MEASURED (banked RHR
+   delta, last night's sleep, days since shot, acute:chronic load) and says how the session bends.
+   Never invents a number: an input with no data is excluded and the score is weighted over the rest.
+   GENTLE/MODERATE/STRONG describes the SESSION, never the person. */
+function readinessRead(healthDays, doseLog, workoutLog, rhr, sleep, todayISO_) {
+  const parts = [];
+  const now = Date.now();
+  // RHR: only once the baseline is banked — a rise above your own normal costs the most
+  let rhrDelta = null;
+  if (rhr && rhr.status === "ready") {
+    rhrDelta = rhr.delta;
+    const pen = rhrDelta <= 0 ? 0 : rhrDelta <= 2 ? 6 : rhrDelta <= 5 ? 18 : 32;
+    parts.push({ k: "RHR", v: (rhrDelta >= 0 ? "+" : "") + rhrDelta, score: 100 - pen, w: 1.1 });
+  }
+  // Sleep: last night, from the same synced days the surveillance engine reads
+  let sleepMin = null;
+  const sd = (healthDays || []).filter((d) => d.sleepMin != null);
+  if (sd.length) {
+    sleepMin = sd[sd.length - 1].sleepMin;
+    const h = sleepMin / 60;
+    const pen = h >= 7 ? 0 : h >= 6 ? 12 : h >= 5 ? 26 : 40;
+    parts.push({ k: "Sleep", v: Math.floor(h) + "h" + String(Math.round(sleepMin % 60)).padStart(2, "0"), score: 100 - pen, w: 1 });
+  }
+  // Post-dose day: the accumulation window his own protocol cares about
+  let postDose = null;
+  const dl = (doseLog || []).filter((d) => d.date).sort((a, b) => a.date.localeCompare(b.date));
+  if (dl.length) {
+    postDose = Math.floor((now - new Date(dl[dl.length - 1].date + "T09:00:00").getTime()) / 86400000);
+    const pen = postDose === 0 ? 14 : postDose === 1 ? 20 : postDose === 2 ? 8 : 0;
+    parts.push({ k: "Post-dose", v: postDose + " d", score: 100 - pen, w: 0.9 });
+  }
+  // Acute:chronic load — this week's sessions against the 4-week average
+  let acr = null;
+  const since = (n) => { const t = new Date(); t.setDate(t.getDate() - n); return t.toISOString().slice(0, 10); };
+  const wl = workoutLog || [];
+  const a7 = wl.filter((w) => w.date >= since(7)).length;
+  const c28 = wl.filter((w) => w.date >= since(28)).length / 4;
+  if (c28 > 0) {
+    acr = Math.round((a7 / c28) * 100) / 100;
+    const pen = acr <= 1.3 ? 0 : acr <= 1.5 ? 14 : 28;
+    parts.push({ k: "Load", v: acr.toFixed(2), score: 100 - pen, w: 0.9 });
+  }
+  if (!parts.length) return { status: "nodata", parts: [] };
+  const wsum = parts.reduce((n, p) => n + p.w, 0);
+  const score = Math.round(parts.reduce((n, p) => n + p.score * p.w, 0) / wsum);
+  const band = score >= 80 ? "STRONG" : score >= 60 ? "MODERATE" : "GENTLE";
+  // the session-shaping line: names the dominant reason, never a diagnosis
+  const worst = [...parts].sort((a, b) => a.score - b.score)[0];
+  let note = "All measured signals in range. Take the working sets as written.";
+  if (band !== "STRONG") {
+    const why = { "RHR": "Resting heart rate is above your banked baseline.", "Sleep": "Short sleep last night.", "Post-dose": postDose <= 1 ? "Day after your shot." : "Early in the dose window.", "Load": "This week is heavier than your usual four-week load." }[worst.k];
+    note = why + (band === "GENTLE" ? " Top sets held, back-offs trimmed one set." : " Hold the top set, keep everything else as written.");
+  }
+  return { status: "ok", score, band, note, parts, rhrDelta, sleepMin, postDose, acr };
+}
+
 function weeklySets(workoutLog, catalog, sinceISO) {
   const byId = new Map((catalog || []).map((e) => [e.id, e]));
   const out = {};
@@ -3183,7 +3239,7 @@ export default function App() {
     const nav = (
       <div style={{ display: "flex", gap: 7, margin: "0 0 12px", flexWrap: "wrap" }}>
         {[["today", "Today"], ["week", "Week"], ["lifts", "Lifts"], ["setup", "Routine"]].map(([k, l]) => (
-          <button key={k} onClick={() => setTrainView(k)} style={{ background: trainView === k ? C.ink : "none", color: trainView === k ? C.surface : C.muted, border: `1.5px solid ${trainView === k ? C.ink : C.hair}`, borderRadius: 20, padding: "7px 13px", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{l}</button>
+          <button key={k} onClick={() => setTrainView(k)} style={{ background: trainView === k ? C.go + "22" : "transparent", color: trainView === k ? C.go : C.muted, border: `1.5px solid ${trainView === k ? C.go : C.hair}`, borderRadius: 999, padding: "8px 15px", fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>{l}</button>
         ))}
       </div>
     );
@@ -3263,10 +3319,34 @@ export default function App() {
         <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Lifting is the half of muscle protection food can't do</div>
         {nav}
         {trainView === "today" && (!routine ? card(<div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>No routine yet — open <b style={{ color: C.ink }}>Routine</b> and generate one. Pick your days per week, equipment, and session length; everything else is automatic.</div>) : (<div>
+          {(() => { const rd = readinessRead((healthSync && healthSync.days) || [], glp.doseLog, workoutLog, rhrRead((healthSync && healthSync.days) || [], glp.doseLog), sleepRead((healthSync && healthSync.days) || [], glp.doseLog), todayISO());
+            if (rd.status !== "ok") return null;
+            const BC = { STRONG: C.go, MODERATE: C.caution, GENTLE: C.blue }[rd.band];
+            return (<div style={{ marginBottom: 10 }}>{card(<>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                {sectionTitle("Readiness", C.muted)}
+                <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: BC, border: `1px solid ${BC}55`, background: BC + "1A" }}>{rd.band}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
+                <span style={{ fontFamily: DATA, fontSize: 34, fontWeight: 700, color: C.ink, lineHeight: 1 }}>{rd.score}</span>
+                <span style={{ fontFamily: DATA, fontSize: 13, color: C.faint }}>/ 100</span>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                {rd.parts.map((pt) => (<div key={pt.k} style={{ flex: 1 }}>
+                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{pt.k}</div>
+                  <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: pt.score >= 90 ? C.ink : pt.score >= 75 ? C.caution : C.avoid, marginTop: 3 }}>{pt.v}</div>
+                </div>))}
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, borderTop: `1px solid ${C.hair}`, paddingTop: 9 }}>{rd.note}</div>
+            </>, { borderLeft: `2.5px solid ${BC}` })}</div>); })()}
           {fuel && card(<div style={{ fontSize: 12.5, color: C.caution, fontWeight: 700, lineHeight: 1.5 }}>{fuel}</div>, { marginBottom: 10 })}
           {nextSlot ? card(<div>
             {sectionTitle(nextSlot.iso === todayISO() ? "Today's session" : `Next session · ${nextSlot.label}`)}
-            <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink, marginBottom: 3 }}>{nextSlot.day.name}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3, gap: 8 }}>
+              <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>{nextSlot.day.name}</div>
+              {(() => { const mins = Math.round((nextSlot.day.exercises || []).reduce((n, e) => n + ((e.sets || 3) * 2.6 + 1.5), 0));
+                return mins > 0 ? <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A", borderRadius: 999, padding: "4px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>START · ~{mins} MIN</span> : null; })()}
+            </div>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: nextSlot.note ? 7 : 10 }}>{nextSlot.day.exercises.length} exercises · {nextSlot.day.focus.join(", ")}</div>
             {nextSlot.note && <div style={{ fontSize: 12, color: C.violet, fontWeight: 700, marginBottom: 10, lineHeight: 1.45 }}>{nextSlot.note}</div>}
             {nextSlot.day.exercises.map((x, i) => { const h = exHistory(x.exId); const last = h[h.length - 1]; const adv = progressionAdvice(h, x);
