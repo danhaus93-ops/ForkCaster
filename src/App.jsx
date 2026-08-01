@@ -3176,6 +3176,8 @@ export default function App() {
       return { iso, label: i === 0 ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" }),
         dose: _doses.has(iso) || (_schedDow != null && t.getDay() === _schedDow), after: _after.has(iso) }; });
     const doseDay = _schedDow != null ? ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][_schedDow] : null;
+    // the chip is terse by design; prose gets the whole word — "lands on FRI" reads like a telegram
+    const doseDayLong = _schedDow != null ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][_schedDow] : null;
     const counters = [
       ["Calories", (eaten.calories || 0).toLocaleString(), targets.calories ? "of " + targets.calories.toLocaleString() : "", "calories"],
       ["Carbs", (eaten.carbs || 0) + "g", targets.carbs ? "of " + targets.carbs + "g" : "", "carbs"],
@@ -3268,7 +3270,7 @@ export default function App() {
                 <div style={{ fontSize: 10, marginTop: 3, color: C.violet, lineHeight: 1 }}>{d.dose ? "💉" : d.after ? "·" : " "}</div>
               </div>))}
           </div>
-          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.5 }}>{wk7[0] && wk7[0].dose ? "Shot day — lighter, low-fat and carb-forward keeps it down." : wk7[0] && wk7[0].after ? "Day after the shot — targets ease; eat slowly and lead with protein." : doseDay ? `Next shot lands on ${doseDay}. Targets ease that day and the one after.` : "Set your injection day on the GLP-1 tab and the week syncs to it."}</div>
+          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.5 }}>{wk7[0] && wk7[0].dose ? "Shot day — lighter, low-fat and carb-forward keeps it down." : wk7[0] && wk7[0].after ? "Day after the shot — targets ease; eat slowly and lead with protein." : doseDay ? `Next shot lands on ${doseDayLong}. Targets ease that day and the one after.` : "Set your injection day on the GLP-1 tab and the week syncs to it."}</div>
         </>)}</div>
 
         <div>{card(<>
