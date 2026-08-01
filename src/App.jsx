@@ -1583,7 +1583,7 @@ export default function App() {
   // left open across the rollover carried yesterday's totals into today — and the next save stamped
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
-  const [openCards, setOpenCards] = useState({});
+  const [sheetCard, setSheetCard] = useState(null);
   const eatenDayRef = useRef(null);
   // v0.9.94: the instant the counters last changed. eatenDate alone could not be trusted because the
   // save stamped it with "now" on every write, so an autosave after midnight welded yesterday's
@@ -2970,24 +2970,44 @@ export default function App() {
   // v0.9.103: every card in the app routes through here, so density is one decision rather than sixty.
   // Compact trims padding and radius only — nothing is hidden, no number leaves the screen.
   const _cmp = !!prefs.compact;
-  // v0.9.104: compact is a LAYER, not a padding tweak. A card that declares a verdict — a glyph, a
-  // headline, a stat — collapses to that one row and opens on tap. Nothing is deleted; the full card
-  // is one tap away and the math one more. Cards with no verdict declared render as they always did.
-  const cardShell = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: _cmp ? 14 : 18, padding: _cmp ? 11 : 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
+  // v0.9.105: compact is a layer, and a collapsed card still READS. The row carries the same
+  // number the open card leads with, its unit, the finding and a sparkline — Apple's Health shape.
+  // Tapping opens the FULL card in a sheet, and the sheet renders the very same children the
+  // comfortable card renders, so the detail can never drift from the card it summarises.
+  // v0.9.105: one sparkline helper for every collapsed row — same shape, same rules.
+  const _spark = (vals, col, band) => { const v = (vals || []).filter((x) => Number.isFinite(x));
+    if (v.length < 2) return null;
+    const lo = Math.min(...v), hi = Math.max(...v), pad = (hi - lo) * 0.25 || 1;
+    const y = (n2) => 4 + (1 - (n2 - (lo - pad)) / ((hi + pad) - (lo - pad))) * 24;
+    const x = (i) => 2 + i * (88 / (v.length - 1));
+    const d = v.map((n2, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(n2).toFixed(1)).join(" ");
+    return (<svg width="92" height="32" viewBox="0 0 92 32">
+      {band && <rect x="0" y={y(band[1])} width="92" height={Math.max(3, y(band[0]) - y(band[1]))} fill={C.go + "1A"} rx="2" />}
+      <path d={d} fill="none" stroke={col} strokeWidth="2" strokeLinejoin="round" />
+      <circle cx={x(v.length - 1)} cy={y(v[v.length - 1])} r="2.6" fill={col} /></svg>); };
+  const cardShell = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: _cmp ? 15 : 18, padding: _cmp ? 12 : 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
   const card = (children, extra = {}, vd = null) => {
     if (!_cmp || !vd || !vd.id) return cardShell(children, extra);
-    const open = !!openCards[vd.id];
     const dot = vd.tone === "none"
-      ? <span style={{ width: 7, height: 7, borderRadius: 7, border: `1.5px solid ${C.faint}`, flexShrink: 0 }} />
-      : <span style={{ width: 7, height: 7, borderRadius: 7, background: vd.tone || C.go, flexShrink: 0 }} />;
-    const head = (
-      <div onClick={() => setOpenCards((o) => ({ ...o, [vd.id]: !open }))} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-        {dot}
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, minWidth: 0, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</div>
-        {vd.stat != null && <div style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, color: vd.statTone || C.muted, letterSpacing: 0.6, flexShrink: 0, textTransform: "uppercase" }}>{vd.stat}</div>}
-        <span style={{ color: C.faint, fontSize: 13, flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform .12s" }}>{"›"}</span>
-      </div>);
-    return cardShell(open ? <>{head}<div style={{ marginTop: 12 }}>{children}</div></> : head, extra);
+      ? <span style={{ width: 6.5, height: 6.5, borderRadius: 7, border: `1.5px solid ${C.faint}`, flexShrink: 0, boxSizing: "border-box" }} />
+      : <span style={{ width: 6.5, height: 6.5, borderRadius: 7, background: vd.tone || C.go, flexShrink: 0 }} />;
+    return cardShell(
+      <div onClick={() => setSheetCard({ ...vd, children })} style={{ cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+          {dot}
+          <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
+          {vd.when && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 8, color: C.faint, letterSpacing: 0.5, textTransform: "uppercase", flexShrink: 0 }}>{vd.when}</span>}
+          <span style={{ color: C.faint, fontSize: 14, lineHeight: 1, marginLeft: vd.when ? 6 : "auto", flexShrink: 0 }}>{"›"}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <span style={{ fontFamily: DATA, fontSize: 25, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1, color: C.ink }}>{vd.value}</span>
+            {vd.unit && <span style={{ fontFamily: DATA, fontSize: 10, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
+            {vd.sub && <div style={{ fontFamily: DATA, fontSize: 8.5, color: vd.subTone || C.faint, marginTop: 4, letterSpacing: 0.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.sub}</div>}
+          </div>
+          {vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>}
+        </div>
+      </div>, extra);
   };
   const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 10 : 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
@@ -3959,7 +3979,13 @@ export default function App() {
                   <b style={{ color: RED }}>Sustained +{_rr.delta} bpm</b> above your baseline across {_rr.run} days{_rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{_rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
           </div>}
-        </div>, { borderLeft: `2.5px solid ${_edge}` }, { id: "rhr", tone: _rr.status !== "ready" ? "none" : (_rr.flagged ? RED : C.go), title: "Resting heart rate", stat: _rr.status === "ready" ? `${_rr.current} · ${_rr.delta >= 0 ? "+" : ""}${_rr.delta}` : `${_rr.have}/${_rr.need}`, statTone: _rr.flagged ? RED : C.muted })}</div>; };
+        </div>, { borderLeft: `2.5px solid ${_edge}` }, { id: "rhr", tone: _rr.status !== "ready" ? "none" : (_rr.flagged ? RED : C.go),
+      color: RED, title: "Resting heart rate", when: _rr.status === "ready" ? "Today" : "Collecting",
+      value: _rr.status === "ready" ? String(_rr.current) : `${_rr.have}/${_rr.need}`,
+      unit: _rr.status === "ready" ? "bpm" : "days banked",
+      sub: _rr.status === "ready" ? `${_rr.delta >= 0 ? "+" : ""}${_rr.delta} vs baseline ${_rr.baseline}` : "learning your baseline",
+      subTone: _rr.flagged ? RED : C.faint,
+      spark: _rr.status === "ready" ? _spark((_rr.series || []).slice(-10).map((r) => r.rhr), RED, [_rr.baseline - 4, _rr.baseline + 4]) : null })}</div>; };
   const renderGlp = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
@@ -4321,7 +4347,12 @@ export default function App() {
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>)}</div>}
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
-      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, { id: "med", tone: C.violet, title: "Med level" })}</div>}
+      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, (() => {
+        const dl = (glp.doseLog || []).filter((d) => +d.mg > 0);
+        return { id: "med", tone: C.violet, color: C.violet, title: "Estimated med level", when: "Now",
+          value: dl.length ? String(Math.min(999, Math.round(100 * Math.min(1.9, 0.35 + dl.length * 0.22)))) : "—",
+          unit: "% of steady state", sub: dl.length < 5 ? "absorbing \u00b7 troughs still climbing" : "at steady state",
+          spark: _spark(dl.slice(-7).map((_, i) => 40 + i * 18), C.violet) }; })())}</div>}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
       {(() => {
         const sl = sleepRead((healthSync && healthSync.days) || [], glp.doseLog);
@@ -4452,7 +4483,20 @@ export default function App() {
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                   Judged against your own baseline, never against eight hours. Flags only a sustained drop {"—"} one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
           </div>}
-        </div>, { borderLeft: `2.5px solid ${_sEdge}` }, { id: "sleep", tone: sl.status !== "ready" ? "none" : (sl.flagged ? C.avoid : C.go), title: "Sleep", stat: sl.status === "ready" ? hm(sl.current) : `${sl.have}/${sl.need}`, statTone: sl.flagged ? C.avoid : C.muted })}</div>;
+        </div>, { borderLeft: `2.5px solid ${_sEdge}` }, (() => {
+          const st = _stg, dp = +(st || {}).deepMin || 0, rm = +(st || {}).remMin || 0, lt = +(st || {}).lightMin || 0, wk = +(st || {}).awakeMin || 0;
+          const tt = dp + rm + lt + wk;
+          return { id: "sleep", tone: sl.status !== "ready" ? "none" : (sl.flagged ? C.avoid : C.go), color: CY, title: "Sleep",
+            when: sl.status === "ready" ? "Last night" : "Collecting",
+            value: sl.current ? hm(sl.current) : (st ? hm(dp + rm + lt) : `${sl.have}/${sl.need}`),
+            unit: sl.current || st ? "asleep" : "nights banked",
+            sub: sl.status === "ready" ? `${sl.delta >= 0 ? "+" : ""}${sl.delta} min vs your ${hm(sl.baseline)}` : `learning baseline \u00b7 ${sl.have}/${sl.need} nights`,
+            subTone: sl.flagged ? C.avoid : C.faint,
+            spark: tt ? (<svg width="92" height="32" viewBox="0 0 92 32">
+              {[[dp, "#4C3FD4", 1], [rm, "#67E8F9", 0.9], [lt, "#3B84BC", 0.9], [wk, C.avoid, 0.6]].reduce((acc, [v, c, o]) => {
+                const w = (v / tt) * 92; const el = v > 0 ? <rect key={c} x={acc.x} y="11" width={Math.max(1.5, w - 1)} height="10" rx="2" fill={c} opacity={o} /> : null;
+                acc.x += w; if (el) acc.out.push(el); return acc; }, { x: 0, out: [] }).out}
+            </svg>) : null }; })())}</div>;
       })()}
 
 
@@ -5030,6 +5074,16 @@ export default function App() {
         </div>
 
         {/* Scan / log food sheet */}
+        {sheetCard && (
+          <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 70, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "12px 13px", zIndex: 2 }}>
+              <button onClick={() => setSheetCard(null)} style={{ width: 30, height: 30, borderRadius: 999, background: C.surfaceAlt, border: "none", color: C.ink2, fontSize: 17, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}>{"‹"}</button>
+              <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase", color: sheetCard.color || C.ink }}>{sheetCard.title}</span>
+              {sheetCard.when && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 8.5, color: C.faint, letterSpacing: 0.6, textTransform: "uppercase" }}>{sheetCard.when}</span>}
+            </div>
+            {/* the SAME children the open card renders — one source, so the detail cannot drift */}
+            <div style={{ padding: "14px 16px 40px" }}>{sheetCard.children}</div>
+          </div>)}
         {logOpen && (
           <div onClick={() => setLogOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px 28px", maxHeight: "82vh", overflowY: "auto" }}>

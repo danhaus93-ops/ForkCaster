@@ -493,11 +493,30 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 {
   const A9=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/const _cmp = !!prefs\.compact;/.test(A9),'density reads from one stored preference');
-  ok(/borderRadius: _cmp \? 14 : 18, padding: _cmp \? 11 : 16/.test(A9),'the card primitive is the only place geometry changes');
+  // v0.9.105: the radii moved a point when the collapsed row landed; the invariant is that ONE
+  // helper owns card geometry, not the exact numbers.
+  ok(/borderRadius: _cmp \? 1[45] : 18, padding: _cmp \? 1[12] : 16/.test(A9),'the card primitive is the only place geometry changes');
+  ok((A9.match(/const cardShell = /g) || []).length === 1,'exactly one card shell draws every card');
   ok(/marginBottom: _cmp \? 7 : 10/.test(A9),'section titles tighten with it');
   ok(!/_cmp \?[^:]*display: "none"/.test(A9),'compact never hides anything');
   ok(!/_cmp \?[^:]*fontSize: [0-9]\b/.test(A9),'compact never shrinks a reading below legibility');
   ok(/row\("Card density"/.test(A9),'the setting is reachable');
+}
+
+
+// v0.9.105: the collapsed row and its sheet
+{
+  const AA=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/setSheetCard\(\{ \.\.\.vd, children \}\)/.test(AA),'tapping a row opens the sheet with the card\'s OWN children');
+  ok(/\{sheetCard\.children\}/.test(AA),'the sheet renders those children — detail cannot drift from the summary');
+  ok((AA.match(/id: "(med|rhr|sleep)"/g) || []).length === 3,'exactly the three GLP-1 cards that earn a reading are wired');
+  ok(!/id: "(site|nudge|proto|journey)"/.test(AA),'diagrams, ladders and action cards are NOT collapsed');
+  ok(/const _spark = \(vals, col, band\)/.test(AA),'one sparkline helper for every row');
+  ok(/if \(v\.length < 2\) return null;/.test(AA),'a single reading draws no sparkline rather than a fake line');
+  // the row must read from the engines, never from a literal
+  const rhr = AA.slice(AA.indexOf('id: "rhr"'), AA.indexOf('id: "rhr"') + 700);
+  ok(/_rr\.current/.test(rhr) && /_rr\.baseline/.test(rhr),'the RHR row reads from rhrRead, not a hardcoded number');
+  ok(/_rr\.status !== "ready"/.test(rhr),'a card still learning shows its count, not a verdict');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
