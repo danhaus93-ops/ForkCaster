@@ -4380,11 +4380,11 @@ export default function App() {
             <path d={solid} fill="none" stroke={C.violet} strokeWidth="2" strokeLinejoin="round" />
             <path d={dash} fill="none" stroke={C.violet} strokeWidth="2" strokeLinejoin="round" strokeDasharray="3 3" opacity="0.5" />
             <circle cx={xx(nowK)} cy={yy(pts[nowK])} r="2.6" fill={C.violet} /></svg>); })();
-        return { id: "med", tone: C.violet, color: C.violet, title: "Estimated med level",
-          when: _M.absorbing ? "absorbing" : (_M.climbing ? "climbing" : "steady"),
-          value: String(_M.ssPct), unit: "% of steady state",
-          sub: _M.absorbing && _M.absPeakPct != null ? `peaks ~${_M.absPeakPct}% in ${_M.absDays} d`
-            : (_M.nextPct != null ? `~${_M.nextPct}% at next dose` : "at steady state"),
+        return { id: "med", tone: C.violet, color: C.violet, title: "Estimated med level", when: "Now",
+          // the chart's chip prints vsPeak — level against the highest prior cycle peak, the denominator
+          // restored in v0.9.62. The row must print the SAME number or the two disagree on one screen.
+          value: String(_M.vsPeak), unit: "% of peak",
+          sub: `${_M.absorbing ? "absorbing" : _M.climbing ? "climbing" : "steady"}${_M.cyc && _M.cyc[_M.nowIdx] ? ` · peaks ~${Math.round((_M.cyc[_M.nowIdx].pkL / Math.max(_M.refPeak, 1e-9)) * 100)}%` : ""}`,
           spark }; })())}</div>}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
       {(() => {

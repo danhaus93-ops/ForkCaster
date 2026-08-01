@@ -51,7 +51,18 @@ try {
   execSync(`cd ${R} && npx esbuild .smoke-entry.jsx --bundle --platform=node --format=cjs --outfile=${__dirname}/smoke/bundle.cjs --loader:.jsx=jsx --jsx=automatic --loader:.png=dataurl --log-level=error`, {stdio:'pipe'});
   const out = execSync(`node -e "require(__dirname + '/smoke/shim.js'); require(__dirname + '/smoke/bundle.cjs');"`, {stdio:'pipe'}).toString();
   console.log(out.trim());
-  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) ? 0 : 1);
+  // v0.9.112: the collapsed row and the chart's chip must print the SAME number. The chip uses
+  // vsPeak — level against the highest prior cycle peak — and the row briefly used ssPct, which is
+  // against steady state. Both honest, answering different questions, disagreeing on one screen.
+  const SRC = fs.readFileSync(R + '/src/App.jsx', 'utf8');
+  const at = SRC.indexOf('id: "med", tone: C.violet');
+  const row = at < 0 ? '' : SRC.slice(at, at + 900);
+  let denomOK = true;
+  if (!/value: String\(_M\.vsPeak\)/.test(row)) { console.log('MED_ROW_DENOMINATOR: row does not print vsPeak'); denomOK = false; }
+  if (/_M\.ssPct/.test(row)) { console.log('MED_ROW_DENOMINATOR: row still reads ssPct'); denomOK = false; }
+  if (!/\{vsPeak\}%/.test(SRC)) { console.log('MED_ROW_DENOMINATOR: chart chip no longer prints vsPeak'); denomOK = false; }
+  if (denomOK) console.log('MED_DENOMINATOR_OK');
+  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK ? 0 : 1);
 } catch (e) {
   console.log('RENDER SMOKE FAILED:\n' + (e.stdout||'').toString() + (e.stderr||'').toString().slice(0,900));
   process.exit(1);
