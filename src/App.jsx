@@ -3131,7 +3131,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={menuQ} onChange={(e) => setMenuQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askMenu(); }} placeholder="Ask about this menu… (swaps, carbs, drinks)"
                   style={{ flex: 1, fontFamily: BODY, fontSize: 13.5, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px", outline: "none" }} />
-                <button onClick={askMenu} disabled={menuQBusy} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "0 14px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: menuQBusy ? 0.6 : 1 }}>{menuQBusy ? "…" : "Ask"}</button>
+                <button onClick={askMenu} disabled={menuQBusy} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 16px", fontFamily: DATA, fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: menuQBusy ? 0.6 : 1 }}>{menuQBusy ? "…" : "Ask"}</button>
               </div>
               {menuA && <div style={{ marginTop: 8, fontSize: 13, color: C.ink2, lineHeight: 1.5, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "11px 13px" }}>{menuA}</div>}
             </div>
@@ -3152,8 +3152,8 @@ export default function App() {
       <div style={{ padding: "18px 18px 12px" }}>
         <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Today</div>
         <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{(() => { const k = todayISO(), plain = dayKeyAt(Date.now(), { rolloverHour: prefs.rolloverHour }); return k !== plain ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: C.violet, border: `1px solid ${C.violet}55`, borderRadius: 20, padding: "3px 9px" }}>NIGHT DAY · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short" })}</span> : null; })()}</div>
-        <button onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ width: "100%", marginBottom: 16, background: C.ink, color: C.surface, border: "none", borderRadius: 13, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.surface} strokeWidth="1.6" strokeLinecap="round" /></svg>
+        <button onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ width: "100%", marginBottom: 16, background: C.go, color: C.bg, border: "none", borderRadius: 13, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: `0 4px 16px ${C.go}33` }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.bg} strokeWidth="1.6" strokeLinecap="round" /></svg>
           Scan or log food
         </button>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -3304,10 +3304,10 @@ export default function App() {
           </div>, { marginBottom: 10 }) : null; })()}
         <button onClick={saveSession} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Finish &amp; log session ✓</button>
         {restEnd && (
-          <div style={{ position: "fixed", left: 12, right: 12, bottom: "calc(72px + env(safe-area-inset-bottom, 0px))", zIndex: 300, background: C.ink, color: C.surface, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
+          <div style={{ position: "fixed", left: 12, right: 12, bottom: "calc(72px + env(safe-area-inset-bottom, 0px))", zIndex: 300, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.go}55`, borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
             <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmtRest(restLeft)}</div>
             <div style={{ fontSize: 12, opacity: .8, flex: 1 }}>rest</div>
-            <button onClick={() => setRestEnd((t) => (t || Date.now()) + 30000)} style={{ background: "rgba(255,255,255,.15)", border: "none", color: C.surface, borderRadius: 9, padding: "8px 11px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+30s</button>
+            <button onClick={() => setRestEnd((t) => (t || Date.now()) + 30000)} style={{ background: C.go + "1A", border: `1px solid ${C.go}55`, color: C.go, borderRadius: 9, padding: "8px 11px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+30s</button>
             <button onClick={() => setRestEnd(null)} style={{ background: "none", border: "none", color: C.surface, opacity: .75, fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>skip</button>
           </div>
         )}
@@ -3486,11 +3486,11 @@ export default function App() {
             <div key={k} style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{label}</div>
               <div style={{ display: "flex", gap: 7 }}>{opts.map((o) => (
-                <button key={o} onClick={() => setTrainPrefs((t) => ({ ...t, [k]: o }))} style={{ flex: 1, background: trainPrefs[k] === o ? C.ink : C.surfaceAlt, color: trainPrefs[k] === o ? C.surface : C.ink, border: "none", borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{o}{k === "minutes" ? "m" : ""}</button>))}</div>
+                <button key={o} onClick={() => setTrainPrefs((t) => ({ ...t, [k]: o }))} style={{ flex: 1, background: trainPrefs[k] === o ? C.go + "14" : "transparent", color: trainPrefs[k] === o ? C.go : C.muted, border: `1px solid ${trainPrefs[k] === o ? C.go + "55" : C.hair}`, borderRadius: 10, padding: "10px 0", fontFamily: DATA, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{o}{k === "minutes" ? "m" : ""}</button>))}</div>
             </div>))}
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Goal</div>
           <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>{[["preserve", "Protect muscle"], ["build", "Build"], ["maintain", "Maintain"]].map(([k, l]) => (
-            <button key={k} onClick={() => setTrainPrefs((t) => ({ ...t, goal: k }))} style={{ flex: 1, background: trainPrefs.goal === k ? C.ink : C.surfaceAlt, color: trainPrefs.goal === k ? C.surface : C.ink, border: "none", borderRadius: 10, padding: "10px 4px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{l}</button>))}</div>
+            <button key={k} onClick={() => setTrainPrefs((t) => ({ ...t, goal: k }))} style={{ flex: 1, background: trainPrefs.goal === k ? C.go + "14" : "transparent", color: trainPrefs.goal === k ? C.go : C.muted, border: `1px solid ${trainPrefs.goal === k ? C.go + "55" : C.hair}`, borderRadius: 10, padding: "10px 4px", fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", cursor: "pointer" }}>{l}</button>))}</div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Equipment you actually have</div>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>{["bodyweight", "dumbbell", "barbell", "cable", "machine", "kettlebell", "bands", "ball", "other"].map((e) => {
             const on = trainPrefs.equipment.includes(e);
@@ -4237,7 +4237,7 @@ export default function App() {
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
         {coachMsgs.map((m, i) => (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
-            <div style={{ maxWidth: "82%", padding: "11px 14px", borderRadius: 16, fontSize: 14, lineHeight: 1.45, background: m.role === "user" ? C.ink : C.surface, color: m.role === "user" ? C.surface : C.ink2, border: m.role === "user" ? "none" : `1px solid ${C.hair}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div>
+            <div style={{ maxWidth: "82%", padding: "11px 14px", borderRadius: 16, fontSize: 14, lineHeight: 1.45, background: m.role === "user" ? C.surfaceAlt : C.surface, color: m.role === "user" ? C.ink : C.ink2, border: `1px solid ${C.hair}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div>
           </div>
         ))}
         {coachLoading && <div style={{ fontSize: 13, color: C.faint, padding: "4px 2px" }}>Coach is thinking…</div>}
@@ -4350,7 +4350,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <input value={shopPrice} onChange={(e) => setShopPrice(e.target.value)} placeholder="$ price" inputMode="decimal" style={{ width: 90, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "10px 11px", color: C.ink, fontFamily: BODY, fontSize: 13.5, outline: "none" }} />
                 <input value={shopStore} onChange={(e) => setShopStore(e.target.value)} placeholder="Store" style={{ flex: 1, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "10px 11px", color: C.ink, fontFamily: BODY, fontSize: 13.5, outline: "none" }} />
-                <button onClick={rememberShopPrice} style={{ background: C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "0 13px", fontFamily: BODY, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>Save</button>
+                <button onClick={rememberShopPrice} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 15px", fontFamily: DATA, fontWeight: 800, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Save</button>
               </div>
               <button onClick={() => { setShopScan({ status: "idle" }); setShopBc(""); }} style={{ marginTop: 8, background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 12, cursor: "pointer", textDecoration: "underline", padding: 0 }}>Scan another</button>
             </div>
@@ -4482,7 +4482,7 @@ export default function App() {
                   At {ct.rateBand.target}%/week that is about {ct.weeksTarget} weeks{fmtETA(ct.etaTarget) ? ` — ${fmtETA(ct.etaTarget)}` : ""}.
                   {ct.weeksAtCurrent ? ` Your measured rate puts it at ${ct.weeksAtCurrent} weeks${fmtETA(ct.etaCurrent) ? ` (${fmtETA(ct.etaCurrent)})` : ""}.` : " Log a few more weigh-ins and this switches to your real rate."}
                 </div>
-                {targets.protein < ct.proteinFloor && <button onClick={() => setTargets({ ...targets, protein: ct.proteinFloor })} style={{ marginTop: 10, width: "100%", background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Raise protein target to {ct.proteinFloor}g</button>}
+                {targets.protein < ct.proteinFloor && <button onClick={() => setTargets({ ...targets, protein: ct.proteinFloor })} style={{ marginTop: 10, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 11, padding: "11px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}33` }}>Raise protein target to {ct.proteinFloor}g</button>}
                 <div style={{ marginTop: 12 }}>
                   {contractScorecard({ mealLog, targets, workoutLog, adaptive: adaptiveRead(weightLog, hd0, glp, 0) || {}, contract: ct, todayISO: todayISO() }).map((r, i) => (
                     <div key={r.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderTop: i ? `1px solid ${C.hair}` : `1px solid ${C.hair}` }}>
@@ -4558,7 +4558,7 @@ export default function App() {
                 <div>
                   <div style={{ fontSize: 13, color: col, fontWeight: 700, lineHeight: 1.45 }}>{ar.detail}</div>
                   {ar.suggestion && ar.suggestion.extra && <div style={{ fontSize: 12, color: C.muted, marginTop: 5, lineHeight: 1.45 }}>{ar.suggestion.extra}</div>}
-                  {ar.suggestion && !applied && <button onClick={() => { const sg = ar.suggestion; setTargets({ ...targets, ...(sg.proteinDelta ? { protein: targets.protein + sg.proteinDelta } : {}), ...(sg.calDelta ? { calories: Math.max(1000, targets.calories + sg.calDelta) } : {}) }); setPrefs({ ...prefs, adaptiveAppliedOn: todayISO() }); }} style={{ marginTop: 9, width: "100%", background: C.ink, color: C.surface, border: "none", borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Apply: {ar.suggestion.label}</button>}
+                  {ar.suggestion && !applied && <button onClick={() => { const sg = ar.suggestion; setTargets({ ...targets, ...(sg.proteinDelta ? { protein: targets.protein + sg.proteinDelta } : {}), ...(sg.calDelta ? { calories: Math.max(1000, targets.calories + sg.calDelta) } : {}) }); setPrefs({ ...prefs, adaptiveAppliedOn: todayISO() }); }} style={{ marginTop: 9, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 11, padding: "11px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}33` }}>Apply: {ar.suggestion.label}</button>}
                   {applied && <div style={{ fontSize: 11.5, color: C.go, marginTop: 7, fontWeight: 700 }}>✓ Applied today — adjust anytime in Plan settings.</div>}
                   <div style={{ fontSize: 10.5, color: C.faint, marginTop: 7 }}>{ar.pts} weigh-ins over {ar.spanDays} days · a suggestion, not a prescription — your prescriber owns your targets</div>
                 </div>
