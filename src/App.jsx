@@ -3327,15 +3327,22 @@ export default function App() {
                 {sectionTitle("Readiness", C.muted)}
                 <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: BC, border: `1px solid ${BC}55`, background: BC + "1A" }}>{rd.band}</span>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
-                <span style={{ fontFamily: DATA, fontSize: 34, fontWeight: 700, color: C.ink, lineHeight: 1 }}>{rd.score}</span>
-                <span style={{ fontFamily: DATA, fontSize: 13, color: C.faint }}>/ 100</span>
-              </div>
-              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                {rd.parts.map((pt) => (<div key={pt.k} style={{ flex: 1 }}>
-                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{pt.k}</div>
-                  <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: pt.score >= 90 ? C.ink : pt.score >= 75 ? C.caution : C.avoid, marginTop: 3 }}>{pt.v}</div>
-                </div>))}
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 10 }}>
+                <svg width="86" height="86" viewBox="0 0 86 86" style={{ flexShrink: 0 }}>
+                  <circle cx="43" cy="43" r="34" fill="none" stroke={C.hair} strokeWidth="7.5" />
+                  <circle cx="43" cy="43" r="34" fill="none" stroke={BC} strokeWidth="7.5" strokeLinecap="round"
+                    strokeDasharray={`${Math.max(0, Math.min(100, rd.score)) / 100 * 213.6} 213.6`} transform="rotate(-90 43 43)" />
+                  <text x="43" y="46" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="25" fontWeight="700" fill={C.ink}>{rd.score}</text>
+                  <text x="43" y="59" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fill={C.faint}>/ 100</text>
+                </svg>
+                <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 12px" }}>
+                  {rd.parts.map((pt) => (<div key={pt.k}>
+                    <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{pt.k}</div>
+                    <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: pt.score >= 90 ? C.ink : pt.score >= 75 ? C.caution : C.avoid, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: 5, background: C.go, flexShrink: 0 }} />{pt.v}
+                    </div>
+                  </div>))}
+                </div>
               </div>
               <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, borderTop: `1px solid ${C.hair}`, paddingTop: 9 }}>{rd.note}</div>
             </>, { borderLeft: `2.5px solid ${BC}` })}</div>); })()}
@@ -3749,6 +3756,11 @@ export default function App() {
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication · titration · tolerability</div>
+      {daysToInjection <= 0 && !doseLogged && (
+        <div style={{ display: "flex", alignItems: "center", gap: 9, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+          {syr(C.violet, 17)}
+          <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violet }}>Dose due today — log it once taken</span>
+        </div>)}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? rhrCardFor(_r) : null; })()}
       {/* v0.9.44 PROTOCOL + CHECKPOINT. The ladder is HIS, not the trial's; the checkpoint reports
           whether his own conditions are met and never names a dose. */}
@@ -5239,6 +5251,9 @@ function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, 
   );
 }
 /* Adaptive injection-site avatar (violet-edge capsule style). Sites keep legacy names. */
+const syr = (color, s = 11) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg>
+);
 const SITE_NAMES = ["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"];
 function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite }) {
   const F = sex === "female";
@@ -5362,9 +5377,6 @@ function DoseCalendar({ C, pill, doseLog, dueISO, onRemove }) {
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
   for (let d = 1; d <= dim; d++) cells.push(d);
-  const syr = (color, s = 11) => (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg>
-  );
 const pillIc = (color, s = 12) => (
   <svg width={s} height={s} viewBox="0 0 20 20" style={{ display: "block" }}>
     <rect x="3.5" y="7" width="13" height="6" rx="3" transform="rotate(-45 10 10)" fill="none" stroke={color} strokeWidth="2" />
@@ -5375,12 +5387,6 @@ const pillIc = (color, s = 12) => (
   const navB = { background: "none", border: `1px solid ${C.hair}`, borderRadius: 8, color: C.ink2, width: 28, height: 28, fontSize: 15, cursor: "pointer", lineHeight: 1 };
   return (
     <div>
-      {dueISO === todayIso && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 10, padding: "9px 12px", marginBottom: 12 }}>
-          {syr(C.violet, 15)}
-          <span style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violet }}>Dose due today — log it once taken</span>
-        </div>
-      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <button onClick={() => setYm(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }))} style={navB}>‹</button>
         <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.muted }}>Dose calendar · {monthName}</div>

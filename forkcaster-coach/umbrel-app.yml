@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.72"
+version: "0.9.73"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The Train and GLP-1 leftovers from the conformance scan. The next-injection map now
-  names its suggestion outright with a NEXT chip. The titration tracker says where you
-  are in plain words: dose N of M at this rung, and holding longer is always valid.
-  When nothing is flagged, the checkpoint now says so instead of staying silent. And
-  the equipment picker got real labels and the house pill style.
+  Readiness finally looks like the instrument it is: the score now sits inside a
+  ring that fills with it, colored by the band, with the four signals beside it in
+  two columns and a measured dot on each. And the dose-due banner moved to the top
+  of the GLP-1 tab, so on the day a dose is due it is the first thing you see
+  instead of something you scroll to.
 dependencies: []
 path: ""
 defaultUsername: ""
