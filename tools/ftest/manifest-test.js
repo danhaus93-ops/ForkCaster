@@ -135,7 +135,8 @@ const MANIFEST = [
  "forecast",
  "is the maintenance dose. Holding here is the plan.",
  "lean mass holding",
- "lean mass to protect",
+ // v0.9.81: he called the journey card's stat cells redundant and they were — "lean to protect"
+ // still ships in the Path to your forecast card, which derives it from goalContract.
  "leave blank — searches all of YouTube",
  "of your nausea flares",
  "protein",
@@ -145,7 +146,8 @@ const MANIFEST = [
  "since start",
  "tap to retry",
  "this day",
- "to goal weight",
+ // v0.9.81: removed with the journey stat cells. Distance to goal still ships on the weight
+ // chart and in the Path to your forecast projection.
  "water to go",
  "your left",
  "your right"

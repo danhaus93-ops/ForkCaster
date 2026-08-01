@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.80"
+version: "0.9.81"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Today now shows the week your shot actually drives. A dose-sync strip marks the
-  next seven days, highlights shot day and the day after in violet, and says what
-  today means — shot day, the day after, or how far off the next one is. Without it,
-  an eased target looked like a missed one. The exact-vs-estimated link also stopped
-  cutting itself off mid-sentence.
+  Your journey stages moved to the GLP-1 tab, where they belong — ramp-up, active
+  loss, approaching goal and the off-ramp are things the medication does to you over
+  months, not things the scale measures. The stat cells that sat under it are gone:
+  start, lost, rate, to-goal and lean mass were already on the Body tab twice over.
 dependencies: []
 path: ""
 defaultUsername: ""

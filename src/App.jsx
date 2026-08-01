@@ -3798,41 +3798,6 @@ export default function App() {
           {photos.length > 0 && <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 12, background: C.violet + "22", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>✨ Body Forecaster →</button>}
         </>)}
 
-      {/* Journey / phase — WHITE SPACE #3: the off-ramp nobody plans for */}
-      <div style={{ marginBottom: 14 }}>{card(
-        <>
-          {sectionTitle("Your journey · stages", C.violet)}
-          <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
-            {PHASES.map((p, i) => {
-              const done = i < phaseIdx, cur = i === phaseIdx;
-              return (
-                <div key={p.key} style={{ flex: 1 }}>
-                  <div style={{ height: 6, borderRadius: 3, background: done ? C.violet : cur ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
-                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 0.4, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>{p.label}</div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ background: C.violet + "12", borderRadius: 12, padding: "12px 14px" }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.violet }}>{PHASES[phaseIdx].label}</div>
-            <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
-          </div>
-          {(() => { const ws = weightSeries.map((w) => +fmtWt(w.lbs)); const st = ws.length ? ws[0] : null;
-            const rec = weightSeries.filter((w) => (Date.now() - new Date(w.date)) / 86400000 <= 21);
-            let rt = null; if (rec.length >= 2) { const a0 = rec[0], b0 = rec[rec.length - 1], dd0 = (new Date(b0.date) - new Date(a0.date)) / 86400000; if (dd0 >= 7) rt = (b0.lbs - a0.lbs) / (dd0 / 7); }
-            const cells = [[st != null ? fmtWt(st, 1) : "\u2014", "Start"], [lost > 0 ? "\u2212" + lost.toFixed(1) : "\u00b10", "Lost"], [rt != null ? (rt < 0 ? "\u2212" : "+") + Math.abs(rt).toFixed(1) + "/wk" : "\u2014", "Rate"], [goalWeight ? Math.max(0, +fmtWt(curWeight) - +fmtWt(goalWeight)).toFixed(1) : "\u2014", "To goal"]];
-            return (<div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              {cells.map(([v0, l0]) => (<div key={l0} style={{ flex: 1 }}>
-                <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l0}</div>
-                <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3 }}>{v0}</div>
-              </div>))}
-            </div>); })()}
-          <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{Math.round(progress * 100)}%</div><div style={{ fontSize: 11, color: C.faint }}>to goal weight</div></div>
-            <div style={{ flex: 1 }}><div style={{ fontFamily: DATA, fontSize: 18, fontWeight: 700, color: C.ink }}>{leanMass ? leanMass.toFixed(0) : "—"}<span style={{ fontSize: 11, color: C.faint }}> lb</span></div><div style={{ fontSize: 11, color: C.faint }}>lean mass to protect</div></div>
-          </div>
-          <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
-        </>)}</div>
     </div>
   );
 
@@ -3876,6 +3841,28 @@ export default function App() {
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
       <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication · titration · tolerability</div>
+      {/* v0.9.81: the stages belong with the medication, not the scale. Ramp-up, active loss and the
+          off-ramp are things the DRUG does to you over months — the Body tab measures, this narrates. */}
+      <div style={{ marginBottom: 14 }}>{card(
+        <>
+          {sectionTitle("Your journey · stages", C.violet)}
+          <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+            {PHASES.map((p, i) => {
+              const done = i < phaseIdx, cur = i === phaseIdx;
+              return (
+                <div key={p.key} style={{ flex: 1 }}>
+                  <div style={{ height: 6, borderRadius: 3, background: done ? C.violet : cur ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
+                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 0.4, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>{p.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ background: C.violet + "12", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.violet }}>{PHASES[phaseIdx].label}</div>
+            <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
+          </div>
+          <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
+        </>)}</div>
       {daysToInjection <= 0 && !doseLogged && (
         <div style={{ display: "flex", alignItems: "center", gap: 9, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
           {syr(C.violet, 17)}
