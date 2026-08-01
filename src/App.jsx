@@ -5114,17 +5114,17 @@ export default function App() {
         {/* Scan / log food sheet */}
         {sheetCard && (
           <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 70, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
-            <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "12px 13px", zIndex: 2 }}>
+            <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>
               <button onClick={() => setSheetCard(null)} style={{ width: 30, height: 30, borderRadius: 999, background: C.surfaceAlt, border: "none", color: C.ink2, fontSize: 17, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}>{"‹"}</button>
               <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase", color: sheetCard.color || C.ink }}>{sheetCard.title}</span>
               {sheetCard.when && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 8.5, color: C.faint, letterSpacing: 0.6, textTransform: "uppercase" }}>{sheetCard.when}</span>}
             </div>
             {/* the SAME children the open card renders — one source, so the detail cannot drift */}
-            <div style={{ padding: "14px 16px 40px" }}>{sheetCard.children}</div>
+            <div style={{ padding: "14px 16px calc(40px + env(safe-area-inset-bottom, 0px))" }}>{sheetCard.children}</div>
           </div>)}
         {logOpen && (
           <div onClick={() => setLogOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px 28px", maxHeight: "82vh", overflowY: "auto" }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.8, textTransform: "uppercase", color: C.ink }}>Scan or log food</div>
                 <button onClick={() => { stopCam(); setLogOpen(false); }} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 99, color: C.muted, fontSize: 15, cursor: "pointer" }}>✕</button>
@@ -5291,7 +5291,7 @@ export default function App() {
         )}
         {settingsOpen && (
           <div onClick={() => setSettingsOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px 28px", maxHeight: "82vh", overflowY: "auto" }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
                 <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>Settings</div>
                 <button onClick={() => setSettingsOpen(false)} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 99, color: C.muted, fontSize: 15, cursor: "pointer" }}>✕</button>

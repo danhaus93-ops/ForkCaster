@@ -529,5 +529,16 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/_rr\.status !== "ready"/.test(rhr),'a card still learning shows its count, not a verdict');
 }
 
+
+// v0.9.107: overlays must clear the notch and the home indicator. The detail sheet is anchored to
+// the TOP, so without a top inset its back button sits under the status bar and is untappable.
+{
+  const AB=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const sh=AB.slice(AB.indexOf('{sheetCard && ('), AB.indexOf('{sheetCard && (') + 1400);
+  ok(/env\(safe-area-inset-top/.test(sh),'the detail sheet header clears the notch');
+  ok(/env\(safe-area-inset-bottom/.test(sh),'the detail sheet body clears the home indicator');
+  ok((AB.match(/padding: "20px 20px calc\(28px \+ env\(safe-area-inset-bottom/g) || []).length === 2,'both bottom sheets clear the home indicator');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
