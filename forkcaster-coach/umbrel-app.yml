@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.103"
+version: "0.9.104"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  A compact card density, in Settings under Preferences. It tightens the padding on
-  every card so more fits on a screen without hiding anything or shrinking a single
-  number. Comfortable stays the default.
+  Compact mode now does what it was meant to. Instead of only tightening padding, a
+  card in compact collapses to a single verdict line — a coloured dot, its name, and
+  its current reading — and opens to the full card when you tap it. Med level,
+  resting heart rate and sleep are converted; the rest follow.
 dependencies: []
 path: ""
 defaultUsername: ""

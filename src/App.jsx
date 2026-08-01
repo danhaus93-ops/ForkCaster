@@ -1583,6 +1583,7 @@ export default function App() {
   // left open across the rollover carried yesterday's totals into today — and the next save stamped
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
+  const [openCards, setOpenCards] = useState({});
   const eatenDayRef = useRef(null);
   // v0.9.94: the instant the counters last changed. eatenDate alone could not be trusted because the
   // save stamped it with "now" on every write, so an autosave after midnight welded yesterday's
@@ -2969,7 +2970,25 @@ export default function App() {
   // v0.9.103: every card in the app routes through here, so density is one decision rather than sixty.
   // Compact trims padding and radius only — nothing is hidden, no number leaves the screen.
   const _cmp = !!prefs.compact;
-  const card = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: _cmp ? 14 : 18, padding: _cmp ? 11 : 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
+  // v0.9.104: compact is a LAYER, not a padding tweak. A card that declares a verdict — a glyph, a
+  // headline, a stat — collapses to that one row and opens on tap. Nothing is deleted; the full card
+  // is one tap away and the math one more. Cards with no verdict declared render as they always did.
+  const cardShell = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: _cmp ? 14 : 18, padding: _cmp ? 11 : 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
+  const card = (children, extra = {}, vd = null) => {
+    if (!_cmp || !vd || !vd.id) return cardShell(children, extra);
+    const open = !!openCards[vd.id];
+    const dot = vd.tone === "none"
+      ? <span style={{ width: 7, height: 7, borderRadius: 7, border: `1.5px solid ${C.faint}`, flexShrink: 0 }} />
+      : <span style={{ width: 7, height: 7, borderRadius: 7, background: vd.tone || C.go, flexShrink: 0 }} />;
+    const head = (
+      <div onClick={() => setOpenCards((o) => ({ ...o, [vd.id]: !open }))} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+        {dot}
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.ink, minWidth: 0, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</div>
+        {vd.stat != null && <div style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, color: vd.statTone || C.muted, letterSpacing: 0.6, flexShrink: 0, textTransform: "uppercase" }}>{vd.stat}</div>}
+        <span style={{ color: C.faint, fontSize: 13, flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform .12s" }}>{"›"}</span>
+      </div>);
+    return cardShell(open ? <>{head}<div style={{ marginTop: 12 }}>{children}</div></> : head, extra);
+  };
   const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 10 : 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
   const stat = (label, value, unit, color = C.ink) => (
@@ -3940,7 +3959,7 @@ export default function App() {
                   <b style={{ color: RED }}>Sustained +{_rr.delta} bpm</b> above your baseline across {_rr.run} days{_rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{_rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
           </div>}
-        </div>, { borderLeft: `2.5px solid ${_edge}` })}</div>; };
+        </div>, { borderLeft: `2.5px solid ${_edge}` }, { id: "rhr", tone: _rr.status !== "ready" ? "none" : (_rr.flagged ? RED : C.go), title: "Resting heart rate", stat: _rr.status === "ready" ? `${_rr.current} · ${_rr.delta >= 0 ? "+" : ""}${_rr.delta}` : `${_rr.have}/${_rr.need}`, statTone: _rr.flagged ? RED : C.muted })}</div>; };
   const renderGlp = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
@@ -4302,7 +4321,7 @@ export default function App() {
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>)}</div>}
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
-      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />)}</div>}
+      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, { id: "med", tone: C.violet, title: "Med level" })}</div>}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
       {(() => {
         const sl = sleepRead((healthSync && healthSync.days) || [], glp.doseLog);
@@ -4433,7 +4452,7 @@ export default function App() {
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                   Judged against your own baseline, never against eight hours. Flags only a sustained drop {"—"} one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
           </div>}
-        </div>, { borderLeft: `2.5px solid ${_sEdge}` })}</div>;
+        </div>, { borderLeft: `2.5px solid ${_sEdge}` }, { id: "sleep", tone: sl.status !== "ready" ? "none" : (sl.flagged ? C.avoid : C.go), title: "Sleep", stat: sl.status === "ready" ? hm(sl.current) : `${sl.have}/${sl.need}`, statTone: sl.flagged ? C.avoid : C.muted })}</div>;
       })()}
 
 
