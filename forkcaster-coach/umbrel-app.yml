@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.88"
+version: "0.9.89"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Coach said the same thing three times — a badge, a row of counts and a greeting
-  all announcing that it can see your macros, weight and meds. The badge and the
-  greeting are gone. The counts stay, because they are the only version that proves
-  it instead of claiming it. That also clears the overlap the badge was causing.
+  The Order for me button was still white — the last one in the app. It is green
+  now, outlined until a place is selected. Each pick's reason is labelled Why so it
+  reads as an explanation rather than a subtitle, and the allergies you filter on
+  now show as removable chips on Now instead of being invisible.
 dependencies: []
 path: ""
 defaultUsername: ""

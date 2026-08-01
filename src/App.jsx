@@ -3018,7 +3018,14 @@ export default function App() {
         <div style={{ marginTop: 14, background: C.avoidSoft, border: `1px solid ${C.avoid}40`, borderRadius: 14, padding: "11px 14px", display: "flex", gap: 10, alignItems: "center" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7z" stroke={C.avoid} strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke={C.avoid} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <div style={{ fontSize: 12.5, color: C.ink2, lineHeight: 1.4 }}>
-            <b style={{ color: C.avoid }}>Filtering out:</b> {[...allergies, ...diets].join(", ")}. These are hidden from every suggestion.
+            <b style={{ color: C.avoid }}>Filtering out:</b>
+            <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 5, margin: "0 0 0 5px", verticalAlign: "middle" }}>
+              {allergies.map((a) => (
+                <span key={a} onClick={() => setAllergies((xs) => xs.filter((y) => y !== a))} style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, borderRadius: 999, padding: "3px 8px", color: C.avoid, border: `1px solid ${C.avoid}44`, cursor: "pointer" }}>{a} ✕</span>))}
+              {diets.map((d) => (
+                <span key={d} style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, borderRadius: 999, padding: "3px 8px", color: C.avoid, border: `1px solid ${C.avoid}44` }}>{d}</span>))}
+            </span>
+            <div style={{ marginTop: 4 }}>Hidden from every suggestion. Tap an allergy to drop it.</div>
           </div>
         </div>
       )}
@@ -3069,7 +3076,7 @@ export default function App() {
                   </div>
                 </div>
                 <div style={{ padding: 12 }}>
-                  <button onClick={() => orderForMe(r)} disabled={loading && active} style={{ width: "100%", background: active ? C.go : C.ink, color: C.surface, border: "none", borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 600, cursor: "pointer", opacity: loading && active ? 0.6 : 1 }}>{loading && active ? "Thinking…" : "Order for me"}</button>
+                  <button onClick={() => orderForMe(r)} disabled={loading && active} style={{ width: "100%", background: active ? C.go : "transparent", color: active ? C.bg : C.go, border: active ? "none" : `1px solid ${C.go}55`, borderRadius: 999, padding: "11px 0", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", opacity: loading && active ? 0.6 : 1 }}>{loading && active ? "Thinking…" : "Order for me"}</button>
                 </div>
               </div>
             );
@@ -3103,7 +3110,7 @@ export default function App() {
                   <FoodImg photo={PHOTOS[selected] || ((venues.find((v) => v.id === selected) || {}).photo)} kind={FOOD_BY_ID[selected] || "bowl"} sc={scoreColor(4.5)} />
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 99, background: medalColor(i), color: "#fff", fontSize: 11, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{p.why}</div></div>
+                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 12.5, color: C.muted, marginTop: 2, lineHeight: 1.45 }}>{p.why ? <><b style={{ color: C.go, fontWeight: 700 }}>Why:</b> {p.why}</> : null}</div></div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 11.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal{p.carbs != null ? ` · ${p.carbs}g carb` : ""}{p.fat != null ? ` · ${p.fat}g fat` : ""}</div></div>
                 <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0, fa = p.fat == null ? 0 : +p.fat || 0, cb = p.carbs == null ? 0 : +p.carbs || 0, fb = +p.fiber || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca, carbs: (e.carbs || 0) + cb, fat: (e.fat || 0) + fa, fiber: (e.fiber || 0) + fb })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: fa, carbs: cb, fiber: fb }]); setLoggedPicks((l) => [...l, nm]); }}
                   style={{ marginLeft: 10, flexShrink: 0, alignSelf: "center", background: loggedPicks.includes(p.item || p.name) ? C.goSoft : "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 9, padding: "7px 10px", fontFamily: BODY, fontSize: 11.5, fontWeight: 800, cursor: "pointer" }}>{loggedPicks.includes(p.item || p.name) ? "✓" : "Log"}</button>
