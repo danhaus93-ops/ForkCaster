@@ -4211,7 +4211,18 @@ export default function App() {
               </div>
             </div>)}
             </>)}
-          </div>, { borderLeft: `2.5px solid ${C.gold}` })}</div>
+          </div>, { borderLeft: `2.5px solid ${C.gold}` }, (() => {
+            const held = cp.daysHeld != null ? cp.daysHeld : (cp.have || 0);
+            const need = cp.minHoldDays != null ? cp.minHoldDays : ((glp.protocol && +glp.protocol.minHoldDays) || 28);
+            const pct = need ? Math.min(1, held / need) : 0;
+            return { id: "cp", tone: cp.status === "nodose" ? "none" : (cp.veto && cp.veto.length ? C.caution : C.go),
+              color: C.gold, title: "Dose checkpoint", when: curMg != null ? `${curMg} mg` : "no dose logged",
+              value: cp.status === "nodose" ? "\u2014" : String(held), unit: cp.status === "nodose" ? "log a dose to start" : `of ${need} days`,
+              sub: cp.veto && cp.veto.length ? `tolerability flags: ${cp.veto.length}` : (held < need ? `locked \u00b7 ${Math.max(0, need - held)} d to go` : "ready to evaluate"),
+              subTone: cp.veto && cp.veto.length ? C.caution : C.faint,
+              spark: (<svg width="92" height="32" viewBox="0 0 92 32">
+                <rect x="0" y="12" width="92" height="8" rx="4" fill={C.surfaceAlt} />
+                <rect x="0" y="12" width={Math.max(3, 92 * pct)} height="8" rx="4" fill={held >= need ? C.go : C.caution} /></svg>) }; })())}</div>
 
           <div style={{ marginBottom: 14 }}>{card(<div>
             {(() => { // v0.9.70: the fat-ceiling engine finally gets its card
@@ -4518,7 +4529,19 @@ export default function App() {
                : <><b>{t.need === 4 ? "Dose" : "Day"} {Math.min(t.n, t.need)} of {t.need}</b> at {t.cur} {t.unit}.{t.next != null && <> Next rung when complete: {t.next} {t.unit}.</>} Holding a dose longer is always valid — plenty of people never need the top of the ladder.</>}
             </div>
           </>
-        )}</div>); })()}
+        , {}, (() => {
+            const L9 = (glp.doseLog || []).filter((d) => +d.mg > 0);
+            let runN = 0; for (let i9 = L9.length - 1; i9 >= 0; i9--) { if (+L9[i9].mg === +curMg) runN++; else break; }
+            const holdWk = Math.max(1, Math.round((((glp.protocol || {}).minHoldDays) || 28) / 7));
+            const idx = rungs.findIndex((r) => +r === +curMg);
+            return { id: "tit", tone: C.go, color: C.go, title: "Titration tracker",
+              when: idx >= 0 ? `rung ${idx + 1} of ${rungs.length}` : "off ladder",
+              value: String(Math.max(1, runN)), unit: `of ${holdWk} doses`,
+              sub: idx >= 0 && idx + 1 < rungs.length ? `next rung ${rungs[idx + 1]} mg` : "top of your ladder",
+              spark: (<svg width="92" height="32" viewBox="0 0 92 32">
+                {Array.from({ length: Math.min(6, holdWk) }, (_, i) => (
+                  <circle key={i} cx={8 + i * 16} cy="16" r="5.5" fill={i < runN ? C.go : "none"} stroke={C.go} strokeWidth="1.4" opacity={i < runN ? 1 : 0.4} />))}
+              </svg>) }; })())}</div>); })()}
       <div style={{ marginBottom: 14 }}>{card(
         <>
           {sectionTitle("On-med nudges", C.violet)}
@@ -4582,7 +4605,22 @@ export default function App() {
             </div>
           ))}
           <div style={{ fontSize: 10.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Not medical advice. Severe or persistent symptoms — contact your prescriber. This log is designed to export for clinic visits.</div>
-        </>)}
+        </>, {}, (() => {
+          const se = (glp.sideEffects || []).slice();
+          const last = se[se.length - 1];
+          const rank = { mild: 1, moderate: 2, severe: 3 };
+          const worst = se.reduce((w, x) => Math.max(w, rank[String(x.severity || "").toLowerCase()] || 0), 0);
+          const hrs = last && last.at ? Math.round((Date.now() - new Date(last.at).getTime()) / 3600000) : null;
+          const wk = se.filter((x) => x.date && x.date >= new Date(Date.now() - 6 * 864e5).toLocaleDateString("sv-SE")).length;
+          return { id: "se", tone: !se.length ? "none" : (worst >= 3 ? C.avoid : worst === 2 ? C.caution : C.go),
+            color: C.caution, title: "Side-effect journal", when: last ? (hrs != null && hrs < 48 ? `${hrs} h ago` : last.date) : "nothing logged",
+            value: String(se.length), unit: se.length === 1 ? "logged" : "logged",
+            sub: se.length ? `${wk} this week \u00b7 worst ${["none", "mild", "moderate", "severe"][worst]}` : "no symptoms recorded",
+            subTone: worst >= 3 ? C.avoid : worst === 2 ? C.caution : C.faint,
+            spark: se.length ? (<svg width="92" height="32" viewBox="0 0 92 32">
+              {se.slice(-7).map((x, i) => { const h = 6 + (rank[String(x.severity || "").toLowerCase()] || 1) * 7;
+                return <rect key={i} x={4 + i * 13} y={28 - h} width="9" height={h} rx="2" fill={C.caution} opacity="0.8" />; })}
+            </svg>) : null }; })())}
     </div>
   );
 

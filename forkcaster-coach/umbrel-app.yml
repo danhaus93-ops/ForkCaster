@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.105"
+version: "0.9.106"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  In compact, three GLP-1 cards now collapse to a single row that still shows the
-  number, the finding and a small chart — med level, resting heart rate and sleep.
-  Tapping one opens the full card on its own screen. Everything else on the tab is
-  untouched, and comfortable mode is unchanged.
+  Three more GLP-1 cards collapse in compact: the dose checkpoint shows how far into
+  its hold you are with a progress bar, the titration tracker shows which dose of the
+  rung you are on as filled pips, and the side-effect journal shows how many are
+  logged and how bad. Tapping any of them still opens the whole card.
 dependencies: []
 path: ""
 defaultUsername: ""

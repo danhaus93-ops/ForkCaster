@@ -509,7 +509,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const AA=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/setSheetCard\(\{ \.\.\.vd, children \}\)/.test(AA),'tapping a row opens the sheet with the card\'s OWN children');
   ok(/\{sheetCard\.children\}/.test(AA),'the sheet renders those children — detail cannot drift from the summary');
-  ok((AA.match(/id: "(med|rhr|sleep)"/g) || []).length === 3,'exactly the three GLP-1 cards that earn a reading are wired');
+  // v0.9.106: six GLP-1 cards now carry a verdict — three readings, three states.
+  ok((AA.match(/id: "(med|rhr|sleep|cp|tit|se)"/g) || []).length === 6,'exactly six GLP-1 cards carry a verdict');
+  ok(/id: "cp"/.test(AA) && /id: "tit"/.test(AA) && /id: "se"/.test(AA),'checkpoint, titration and the journal are wired');
+  // each must read from its own source, never a literal
+  const cp2 = AA.slice(AA.indexOf('id: "cp"') - 700, AA.indexOf('id: "cp"') + 700);
+  ok(/cp\.veto/.test(cp2) && /minHoldDays/.test(cp2),'the checkpoint row reads the gate, not a number');
+  const ti = AA.slice(AA.indexOf('id: "tit"') - 700, AA.indexOf('id: "tit"') + 500);
+  ok(/glp\.doseLog/.test(ti) && /rungs\.findIndex/.test(ti),'the titration row counts his real ladder and doses');
+  const se2 = AA.slice(AA.indexOf('id: "se"') - 900, AA.indexOf('id: "se"') + 500);
+  ok(/glp\.sideEffects/.test(se2) && /severity/.test(se2),'the journal row weighs severity, not just a count');
+  ok(/tone: !se\.length \? "none"/.test(se2),'no symptoms logged shows a hollow dot, not a green all-clear');
   ok(!/id: "(site|nudge|proto|journey)"/.test(AA),'diagrams, ladders and action cards are NOT collapsed');
   ok(/const _spark = \(vals, col, band\)/.test(AA),'one sparkline helper for every row');
   ok(/if \(v\.length < 2\) return null;/.test(AA),'a single reading draws no sparkline rather than a fake line');
