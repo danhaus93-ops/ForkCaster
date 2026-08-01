@@ -4300,12 +4300,33 @@ export default function App() {
         const sl = sleepRead((healthSync && healthSync.days) || [], glp.doseLog);
         const CY = "#67e8f9";
         const hm = (m) => Math.floor(m / 60) + "h " + String(Math.round(m % 60)).padStart(2, "0") + "m";
+        // v0.9.97: stages, when the export carried them. Drawn from the newest night that HAS them —
+        // a night without a breakdown shows no bar rather than a fabricated one.
+        const _hd = ((healthSync && healthSync.days) || []).filter((d) => (+d.deepMin || 0) + (+d.remMin || 0) + (+d.lightMin || 0) > 0);
+        const _stg = _hd.length ? _hd[_hd.length - 1] : null;
+        const stageBar = !_stg ? null : (() => {
+          const parts = [["Deep", +_stg.deepMin || 0, "#5AB0E0"], ["REM", +_stg.remMin || 0, C.violet], ["Light", +_stg.lightMin || 0, "#3B84BC"], ["Wake", +_stg.awakeMin || 0, C.faint]].filter((p) => p[1] > 0);
+          const tot = parts.reduce((n, p) => n + p[1], 0) || 1;
+          return (<div style={{ marginTop: 10 }}>
+            <div style={{ display: "flex", gap: 3 }}>
+              {parts.map(([l, v, col]) => (<div key={l} style={{ flexGrow: v, flexBasis: 0, minWidth: 2 }}>
+                <div style={{ height: 9, borderRadius: 3, background: col, opacity: l === "Wake" ? 0.5 : 0.85 }} />
+              </div>))}
+            </div>
+            <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+              {parts.map(([l, v]) => (<div key={l} style={{ flexGrow: v, flexBasis: 0, minWidth: 0 }}>
+                <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.6, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden" }}>{l}</div>
+              </div>))}
+            </div>
+            <div style={{ fontFamily: DATA, fontSize: 9.5, color: C.faint, marginTop: 5 }}>{parts.map(([l, v]) => `${l} ${hm(v)}`).join("  ·  ")}</div>
+          </div>);
+        })();
         return <div style={{ marginBottom: 14 }}>{card(<div>
           {sectionTitle("Sleep", CY)}
           {sl.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
             Waiting for sleep data. Add the <b>Sleep Analysis</b> metric to your Health Auto Export automation and it lands here on its own. Sleep is what your watch derives resting heart rate from, so tracking it also makes that card more trustworthy.</div>}
-          {sl.status === "collecting" && <div style={{ fontSize: 12.5, color: C.muted }}>
-            Learning your baseline {"—"} {sl.have}/{sl.need} days banked.</div>}
+          {sl.status === "collecting" && <div><div style={{ fontSize: 12.5, color: C.muted }}>
+            Learning your baseline {"—"} {sl.have}/{sl.need} days banked.</div>{stageBar}</div>}
           {sl.status === "ready" && <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontFamily: DISPLAY, fontSize: 29, fontWeight: 700, color: C.ink }}>{hm(sl.current)}</span>

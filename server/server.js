@@ -329,6 +329,14 @@ app.post("/api/health/sync", (req, res) => {
         if (v == null) v = num(pt.inBed);                              // last resort, and it overstates
         if (v != null) { const mins = v <= 24 ? v * 60 : v;            // <=24 is hours, above is minutes
           if (mins >= 30 && mins <= 1200) rec.sleepMin = Math.round((+rec.sleepMin || 0) + mins); }
+        // v0.9.97: keep the stage breakdown too. sleepMin above is unchanged and still drives
+        // sleepRead and the checkpoint; these are additive so a night without stages simply has none.
+        // Apple calls light sleep "core"; awake is stored but never counted as sleep.
+        const toMin = (x) => { const n = num(x); if (n == null) return null; const m = n <= 24 ? n * 60 : n; return m >= 1 && m <= 1200 ? Math.round(m) : null; };
+        for (const [src, field] of [["deep", "deepMin"], ["rem", "remMin"], ["core", "lightMin"], ["light", "lightMin"], ["awake", "awakeMin"]]) {
+          const m2 = toMin(pt[src]);
+          if (m2 != null) rec[field] = Math.round((+rec[field] || 0) + m2);
+        }
         continue;
       }
       const q = +pt.qty; if (!Number.isFinite(q)) continue;
