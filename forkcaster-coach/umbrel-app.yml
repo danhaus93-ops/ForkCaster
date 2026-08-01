@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.102"
+version: "0.9.103"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,8 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The goal mode buttons are back to the cards you had — two across, name on top and
-  the targets beneath. The preference value chips from the last release stay.
+  A compact card density, in Settings under Preferences. It tightens the padding on
+  every card so more fits on a screen without hiding anything or shrinking a single
+  number. Comfortable stays the default.
 dependencies: []
 path: ""
 defaultUsername: ""

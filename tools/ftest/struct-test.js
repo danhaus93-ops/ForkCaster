@@ -488,5 +488,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/you are (weak|unfit|tired)/i.test(app), 'the copy never characterises the person');
 }
 
+
+// v0.9.103: compact density
+{
+  const A9=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const _cmp = !!prefs\.compact;/.test(A9),'density reads from one stored preference');
+  ok(/borderRadius: _cmp \? 14 : 18, padding: _cmp \? 11 : 16/.test(A9),'the card primitive is the only place geometry changes');
+  ok(/marginBottom: _cmp \? 7 : 10/.test(A9),'section titles tighten with it');
+  ok(!/_cmp \?[^:]*display: "none"/.test(A9),'compact never hides anything');
+  ok(!/_cmp \?[^:]*fontSize: [0-9]\b/.test(A9),'compact never shrinks a reading below legibility');
+  ok(/row\("Card density"/.test(A9),'the setting is reachable');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

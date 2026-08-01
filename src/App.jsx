@@ -2966,8 +2966,11 @@ export default function App() {
   const scoreColor = (s) => (s >= 4.3 ? C.go : s >= 3.8 ? C.caution : C.avoid);
   const medalColor = (i) => [C.gold, C.silver, C.bronze][i] || C.muted;
 
-  const card = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: 18, padding: 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
-  const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10 }}>{t}</div>);
+  // v0.9.103: every card in the app routes through here, so density is one decision rather than sixty.
+  // Compact trims padding and radius only — nothing is hidden, no number leaves the screen.
+  const _cmp = !!prefs.compact;
+  const card = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: _cmp ? 14 : 18, padding: _cmp ? 11 : 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
+  const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 10 : 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
   const stat = (label, value, unit, color = C.ink) => (
     <div style={{ flex: 1 }}>
@@ -5267,6 +5270,7 @@ export default function App() {
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.faint, letterSpacing: 0.8, textTransform: "uppercase", margin: "6px 0 2px" }}>Day & units</div>
                       {row("Work schedule", sel(P.shiftMode || "days", [["days", "Day shift"], ["nights", "Nights — fixed"], ["varies", "Nights — rotating"]], (v) => set("shiftMode")(v)))}
+                      {row("Card density", sel(prefs.compact ? "compact" : "comfortable", [["comfortable", "Comfortable"], ["compact", "Compact"]], (v) => setPrefs({ ...prefs, compact: v === "compact" })))}
                       {(P.shiftMode === "nights" || P.shiftMode === "varies") && row("Night day rolls at", sel(String(P.nightRollHour == null ? 11 : P.nightRollHour), [["9", "9 AM"], ["10", "10 AM"], ["11", "11 AM"], ["12", "Noon"], ["13", "1 PM"], ["14", "2 PM"]], (v) => set("nightRollHour")(+v)))}
                       {P.shiftMode === "varies" && <div style={{ margin: "10px 0 4px" }}>
                         <div style={{ fontSize: 12, color: C.muted, marginBottom: 7 }}>Tap the nights you work — everything else behaves like a normal day.</div>
