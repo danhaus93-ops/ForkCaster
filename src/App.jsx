@@ -758,11 +758,11 @@ const coreScheme = (name) => {
 /* A core DAY runs as a circuit: rounds through the movements with a short gap between them and a
    longer one between rounds. Same total work, less standing around — the 4-8 minute block format. */
 const prescription = (e) => {
-  if (!e) return "10\u201320 reps";
+  if (!e) return "10–20 reps";
   const lo = e.workLow != null ? e.workLow : e.holdLow;      // holdLow: routines saved by v0.9.0
   const hi = e.workHigh != null ? e.workHigh : e.holdHigh;
-  if (lo != null) return `${lo}\u2013${hi}s${e.hold ? " hold" : ""}`;
-  return `${e.repLow || 10}\u2013${e.repHigh || 20} reps`;
+  if (lo != null) return `${lo}–${hi}s${e.hold ? " hold" : ""}`;
+  return `${e.repLow || 10}–${e.repHigh || 20} reps`;
 };
 /* An escape hatch to an app he already owns, not a recommendation and not content: on a day the
    generated core block does not appeal, hand off to 6 Pack Promise. The App Store link is the
@@ -3339,7 +3339,28 @@ export default function App() {
               </div>
               <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, borderTop: `1px solid ${C.hair}`, paddingTop: 9 }}>{rd.note}</div>
             </>, { borderLeft: `2.5px solid ${BC}` })}</div>); })()}
-          {fuel && card(<div style={{ fontSize: 12.5, color: C.caution, fontWeight: 700, lineHeight: 1.5 }}>{fuel}</div>, { marginBottom: 10 })}
+          {fuel && <div style={{ marginBottom: 10 }}>{card(<>
+            {sectionTitle("Fuel guard", C.caution)}
+            <div style={{ fontSize: 12.5, color: C.caution, fontWeight: 700, lineHeight: 1.5 }}>{fuel}</div>
+          </>, { borderLeft: `2.5px solid ${C.caution}` })}</div>}
+          {nextSlot && (() => { // v0.9.69: mock's warm-up / cool-down movement chips, chosen by session focus
+            const foci = (nextSlot.day.focus || []).join(" ").toLowerCase();
+            const up = foci.includes("leg") || foci.includes("lower") || foci.includes("quad") || foci.includes("glute")
+              ? ["Leg swings", "Bodyweight squat ×10", "Hip hinge drill", "Empty bar ×2"]
+              : foci.includes("pull") || foci.includes("back")
+                ? ["Arm circles", "Band pull-apart", "Scap pull-up", "Empty bar ×2"]
+                : ["Arm circles", "Band pull-apart", "Scap push-up", "Empty bar ×2"];
+            const down = foci.includes("leg") || foci.includes("lower")
+              ? ["Couch stretch 45s", "Hamstring fold 45s", "Child's pose 45s"]
+              : ["Doorway pec 45s", "Lat hang 30s", "Child's pose 45s"];
+            const row = (title, list) => (<div style={{ marginBottom: 10 }}>{card(<>
+              {sectionTitle(title, C.muted)}
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                {list.map((m) => (<span key={m} style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, color: C.ink2, border: `1px solid ${C.hair}`, background: "rgba(255,255,255,0.03)", borderRadius: 999, padding: "7px 13px" }}>{m}</span>))}
+              </div>
+            </>)}</div>);
+            return (<>{row("Warm-up · before the working sets", up)}</>);
+          })()}
           {nextSlot ? card(<div>
             {sectionTitle(nextSlot.iso === todayISO() ? "Today's session" : `Next session · ${nextSlot.label}`)}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3, gap: 8 }}>
@@ -3401,7 +3422,17 @@ export default function App() {
             </div>))}
         </div>)}
         {trainView === "lifts" && (workoutLog.length === 0 ? card(<div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>No sessions logged yet. Finish one and this fills with per-lift bests, estimated one-rep maxes, and weekly volume by muscle.</div>) : (<div>
-          {card(<div>{sectionTitle("Weekly sets by muscle")}
+          {nextSlot && (() => { const foci = (nextSlot.day.focus || []).join(" ").toLowerCase();
+            const down = foci.includes("leg") || foci.includes("lower")
+              ? ["Couch stretch 45s", "Hamstring fold 45s", "Child's pose 45s"]
+              : ["Doorway pec 45s", "Lat hang 30s", "Child's pose 45s"];
+            return (<div style={{ margin: "10px 0" }}>{card(<>
+              {sectionTitle("Cool-down · hold these after, not before", C.muted)}
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                {down.map((m) => (<span key={m} style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, color: C.ink2, border: `1px solid ${C.hair}`, background: "rgba(255,255,255,0.03)", borderRadius: 999, padding: "7px 13px" }}>{m}</span>))}
+              </div>
+            </>)}</div>); })()}
+          {card(<div><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>{sectionTitle("Weekly sets by muscle")}<span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>TARGET 10–20</span></div>
             {Object.entries(sets7).sort((a, b) => b[1] - a[1]).map(([g, n], i) => (
               <div key={g} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
                 <span style={{ fontSize: 13, color: C.ink }}>{g}</span>
@@ -3568,7 +3599,7 @@ export default function App() {
         {(() => { const ds = ((healthSync && healthSync.days) || []).filter((d5) => d5.bodyFatPct != null || d5.muscleMassLbs != null || d5.visceralFat != null);
           const sc = ds.length ? ds[ds.length - 1] : null;
           if (!sc) return null;
-          const tiles = [["BODY FAT", sc.bodyFatPct != null ? sc.bodyFatPct + "%" : null], ["LEAN", sc.leanMassLbs != null ? sc.leanMassLbs + " lb" : null], ["MUSCLE", sc.muscleMassLbs != null ? sc.muscleMassLbs + " lb" : null], ["VISCERAL", sc.visceralFat != null ? String(sc.visceralFat) : null], ["WATER", sc.bodyWaterLbs != null ? sc.bodyWaterLbs + " lb" : null], ["SUBCUT", sc.subcutaneousFatPct != null ? sc.subcutaneousFatPct + "%" : null]].filter((t5) => t5[1] != null);
+          const tiles = [["BODY FAT", sc.bodyFatPct != null ? sc.bodyFatPct + "%" : null], ["LEAN", sc.leanMassLbs != null ? sc.leanMassLbs + " lb" : null], ["MUSCLE", sc.muscleMassLbs != null ? sc.muscleMassLbs + " lb" : null], ["VISCERAL", sc.visceralFat != null ? String(sc.visceralFat) : null], ["WATER", sc.bodyWaterLbs != null ? sc.bodyWaterLbs + " lb" : null], ["SUBCUT. FAT", sc.subcutaneousFatPct != null ? sc.subcutaneousFatPct + "%" : null]].filter((t5) => t5[1] != null);
           return (<div style={{ marginBottom: 10 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
               {tiles.map(([l5, v5]) => (<div key={l5} style={{ flex: "1 1 30%", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 10px" }}>
@@ -3643,7 +3674,7 @@ export default function App() {
       {/* Journey / phase — WHITE SPACE #3: the off-ramp nobody plans for */}
       <div style={{ marginBottom: 14 }}>{card(
         <>
-          {sectionTitle("Your journey", C.violet)}
+          {sectionTitle("Your journey · stages", C.violet)}
           <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
             {PHASES.map((p, i) => {
               const done = i < phaseIdx, cur = i === phaseIdx;
@@ -3924,7 +3955,7 @@ export default function App() {
               const TONE_C = { go: C.go, caution: C.caution, avoid: C.avoid, none: C.faint };
               const cell = (lbl, v, kind, raw) => (
                 <div style={{ flex: 1, minWidth: 58 }}>
-                  <div style={{ fontSize: 8.5, letterSpacing: 0.4, color: C.muted }}>{lbl}</div>
+                  <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1, color: C.muted, textTransform: "uppercase" }}>{lbl}</div>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: TONE_C[rungCellTone(kind, raw)], fontVariantNumeric: "tabular-nums" }}>{v == null ? "—" : v}</div>
                 </div>);
               return (<div>
@@ -3933,13 +3964,14 @@ export default function App() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{r.mg} mg
                         <span style={{ fontSize: 10.5, fontWeight: 500, color: C.faint }}>{"\u2002·\u2002" + r.doses + (r.doses === 1 ? " dose" : " doses") + " · " + r.weeks + " wk" + (r.episodes > 1 ? " · " + r.episodes + " stays" : "")}</span></span>
-                      <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: 0.5, color: r.tier === "holding" ? C.go : C.faint,
-                        border: `1px solid ${r.tier === "holding" ? C.go + "55" : C.hair}`, borderRadius: 99, padding: "2px 7px", flexShrink: 0 }}>
+                      <span style={{ fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 0.9, color: r.tier === "holding" ? C.go : C.faint,
+                        background: r.tier === "holding" ? C.go + "14" : "transparent",
+                        border: `1px solid ${r.tier === "holding" ? C.go + "55" : C.hair}`, borderRadius: 999, padding: "3px 9px", flexShrink: 0 }}>
                         {r.tier === "holding" ? "PATTERN HOLDING" : "DIRECTIONAL"}</span>
                     </div>
                     <div style={{ display: "flex", gap: 7 }}>
-                      {cell("WT \u0394/WK", r.dWk == null ? null : (r.dWk > 0 ? "+" : r.dWk < 0 ? "−" : "") + fmtWt(Math.abs(r.dWk)) + " " + wtU, "wt", r.dWk)}
-                      {cell("SYMPT/WK", r.symWk, "sym", r.symWk)}
+                      {cell("WT/WK", r.dWk == null ? null : (r.dWk > 0 ? "+" : r.dWk < 0 ? "−" : "") + fmtWt(Math.abs(r.dWk)) + " " + wtU, "wt", r.dWk)}
+                      {cell("SYM DAYS", r.symWk, "sym", r.symWk)}
                       {cell("RHR \u0394", r.rhrDelta == null ? null : (r.rhrDelta > 0 ? "+" : "") + r.rhrDelta, "rhr", r.rhrDelta)}
                       {cell("PROTEIN", r.protein == null ? null : r.protein + "%", "protein", r.protein)}
                       {cell("LIFTS/WK", r.trainWk, "lifts", r.trainWk)}
@@ -4459,6 +4491,13 @@ export default function App() {
             const col = ar.flag === "lean-mass" ? C.avoid : ar.flag === "on-track" ? C.go : C.caution;
             return card(<div>
               {sectionTitle("Adaptive targets · learned from your trend")}
+              <div style={{ display: "flex", gap: 10, marginBottom: 9 }}>
+                {[["Formula", "trend vs dose"], ["Measured", "your weigh-ins"], ["Confidence", "grows weekly"]].map(([l6, v6]) => (
+                  <div key={l6} style={{ flex: 1 }}>
+                    <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l6}</div>
+                    <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.ink2, marginTop: 3 }}>{v6}</div>
+                  </div>))}
+              </div>
               {ar.status === "collecting" ? (
                 <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>Watching quietly — {ar.pts}/4 weigh-ins across {ar.spanDays}/12 days so far. Log weight every few days (or sync a scale) and this wakes up with a verdict on your real loss rate, dose-aware.</div>
               ) : (
@@ -5106,7 +5145,7 @@ function SymptomPatterns({ C, sideEffects, doseLog }) {
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const peakDay = +sorted[0][0];
     const windowN = (counts[peakDay] || 0) + (counts[peakDay + 1] || 0);
-    const label = peakDay === 0 ? "dose day" : `day ${peakDay}\u2013${peakDay + 1} after your dose`;
+    const label = peakDay === 0 ? "dose day" : `day ${peakDay}–${peakDay + 1} after your dose`;
     return { sym, text: `${sym} clusters around ${label} (${Math.min(windowN, offs.length)} of ${offs.length} episodes).` };
   });
   if (!lines.length) return null;
@@ -5319,7 +5358,7 @@ const pillIc = (color, s = 12) => (
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <button onClick={() => setYm(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }))} style={navB}>‹</button>
-        <div style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.muted }}>{monthName}</div>
+        <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.muted }}>Dose calendar · {monthName}</div>
         <button onClick={() => setYm(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }))} style={navB}>›</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>

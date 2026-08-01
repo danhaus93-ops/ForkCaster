@@ -437,7 +437,8 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(SRC.includes('function rungCellTone('), 'cell tone is a module-level pure function, not inline styling');
   ok(SRC.includes('const TONE_C = { go: C.go, caution: C.caution, avoid: C.avoid, none: C.faint }'), 'tones map onto the theme palette, so every theme stays legible');
   ok(/rungCellTone\(kind, raw\)/.test(SRC), 'colour is computed from the RAW number, never the formatted string');
-  ok(SRC.includes('letterSpacing: 0.4, color: C.muted }}>{lbl}'), 'column labels use muted, not faint — readable at 8.5px');
+  // v0.9.69: labels moved to the chassis mono treatment; the INVARIANT stays: muted, never faint.
+  ok(SRC.includes('letterSpacing: 1, color: C.muted, textTransform: "uppercase" }}>{lbl}'), 'column labels use muted, not faint — readable at small size');
 }
 // --- v0.9.47: symptom + dose instants — the phase-map's raw material starts accruing NOW ---
 {
