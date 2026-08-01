@@ -4330,7 +4330,7 @@ export default function App() {
 
   const renderCoach = () => (
     <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
-      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 12, cursor: "pointer", fontFamily: BODY }}>Clear</button></div><div style={{ marginTop: 5 }}><span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>Knows macros · weight · meds — live</span></div></div>
+      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 12, cursor: "pointer", fontFamily: BODY }}>Clear</button></div></div>
       {(() => { const hd = (healthSync && healthSync.days) || [];
         const cells = [["Doses", ((glp && glp.doseLog) || []).length], ["Meals", (mealLog || []).length],
           ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
@@ -4359,7 +4359,7 @@ export default function App() {
           <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Your prescriber owns your numbers. Bring these screens to that conversation — the report prints them.</div>
         </div>)}
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
-        {coachMsgs.map((m, i) => (
+        {coachMsgs.map((m, i) => (coachMsgs.length <= 1 && i === 0 && m.role !== "user") ? null : (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
             <div style={{ maxWidth: "82%", padding: "11px 14px", borderRadius: 16, fontSize: 14, lineHeight: 1.45, background: m.role === "user" ? C.surfaceAlt : C.surface, color: m.role === "user" ? C.ink : C.ink2, border: `1px solid ${C.hair}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div>
           </div>

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.87"
+version: "0.9.88"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The Coach tab now shows what it is reading before you ask it anything — doses,
-  meals, sessions, scans and nights, with a dot on the ones it actually has. On an
-  empty conversation it also states plainly what it does and the one thing it will
-  not do, which is give medical advice. The net-after-activity line is gone.
+  Coach said the same thing three times — a badge, a row of counts and a greeting
+  all announcing that it can see your macros, weight and meds. The badge and the
+  greeting are gone. The counts stay, because they are the only version that proves
+  it instead of claiming it. That also clears the overlap the badge was causing.
 dependencies: []
 path: ""
 defaultUsername: ""
