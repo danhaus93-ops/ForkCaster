@@ -5201,13 +5201,13 @@ export default function App() {
               </div>
 
               {sectionTitle("Goal mode")}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 22, alignItems: "flex-start" }}>
                 {Object.entries(MODES).map(([k, m]) => {
                   const on = mode === k;
                   return (
-                    <button key={k} onClick={() => pickMode(k)} style={{ textAlign: "left", padding: "12px 14px", borderRadius: 12, cursor: "pointer", border: `1.5px solid ${on ? C.go : C.hair}`, background: on ? C.goSoft : C.surface }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: on ? C.go : C.ink }}>{m.label}</div>
-                      <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{m.targets.protein}g P · {m.targets.calories} cal</div>
+                    <button key={k} onClick={() => pickMode(k)} style={{ textAlign: "left", padding: "9px 13px", borderRadius: 999, cursor: "pointer", border: `1px solid ${on ? C.go + "88" : C.hair}`, background: on ? C.go + "14" : "transparent", display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
+                      <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", color: on ? C.go : C.ink2 }}>{m.label}</div>
+                      <div style={{ fontFamily: DATA, fontSize: 9.5, color: on ? C.go : C.faint, letterSpacing: 0.5 }}>{m.targets.protein}g P · {m.targets.calories} cal</div>
                     </button>
                   );
                 })}
@@ -5257,7 +5257,7 @@ export default function App() {
                     </div>
                   );
                   const sel = (val, opts, on) => (
-                    <select value={val} onChange={(e) => on(e.target.value)} style={{ background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "7px 9px", fontFamily: BODY, fontSize: 12.5 }}>
+                    <select value={val} onChange={(e) => on(e.target.value)} style={{ background: "transparent", color: C.muted, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "5px 11px", fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 0.9, textTransform: "uppercase", WebkitAppearance: "none", appearance: "none", textAlign: "center" }}>
                       {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   );
@@ -5799,7 +5799,10 @@ function NumFieldC({ label, value, onChange, C, DISPLAY, w, step, bare }) {
       onBlur={() => { setFocus(false); if (draft === "" || isNaN(parseFloat(draft))) setDraft(value == null ? "" : String(value)); }}
       onChange={(e) => { const r = e.target.value; setDraft(r); const n = parseFloat(r); if (r !== "" && !isNaN(n)) onChange(n); }}
       style={bare
-        ? { width: w || 64, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "7px 9px", fontFamily: "inherit", fontSize: 12.5, boxSizing: "border-box" }
+        ? { width: w || 64, background: "transparent",
+            color: C.muted, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "5px 9px",
+            fontFamily: "ui-monospace, monospace", fontSize: 10, fontWeight: 700, letterSpacing: 0.6,
+            textAlign: "center", outline: "none", boxSizing: "border-box"}
         : { width: "100%", boxSizing: "border-box", fontFamily: DISPLAY, fontSize: 17, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "9px 11px", outline: "none" }} />
   );
   if (bare) return input;

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.100"
+version: "0.9.101"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The coloured stripe on a card now always means the same thing. Resting heart rate
-  wore a red one even while it was still learning your baseline — it is grey until
-  there is a verdict, then green or red. Sleep gained the same stripe so the two read
-  as a pair. Settings also joined the rest of the app: every control in it now uses
-  the same pills and lettering as everywhere else.
+  Settings now reads the way the rest of the app does. Every value on the right of a
+  preference row is a small outline chip instead of a grey box, and the goal modes
+  are pills carrying their own protein and calorie numbers. Tapping still opens the
+  same native pickers underneath.
 dependencies: []
 path: ""
 defaultUsername: ""
