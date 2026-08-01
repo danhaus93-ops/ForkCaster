@@ -1579,6 +1579,10 @@ export default function App() {
   const [simSel, setSimSel] = useState(0);
   const fileRef = useRef(null);
   const photoRef = useRef(null);
+  // v0.9.91: the day the counters currently belong to. Reset used to happen only at load, so an app
+  // left open across the rollover carried yesterday's totals into today — and the next save stamped
+  // the new date onto them, welding them there.
+  const eatenDayRef = useRef(null);
   const labelRef = useRef(null);
 
   const [glp, setGlp] = useState(__T && __T.glp ? __T.glp : {
@@ -1669,6 +1673,19 @@ export default function App() {
   useEffect(() => { (async () => { try { const su = await fetch("/api/health/setup").then((r) => r.json()); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ token: su.token, days: sm.days || [] }); } catch {} })(); }, []);
   // Returning to the foreground re-pulls synced health data and re-renders clocks (PK "now", steps tile).
   const [, setFgTick] = useState(0);
+  // Zero the counters the moment the day key changes, wherever that change is noticed — on resume,
+  // or on the minute tick if the app simply sat open through 4am (or 11am on a night day).
+  const rollDayIfNeeded = () => {
+    const k = dayKeyAt(Date.now(), prefs);
+    if (!eatenDayRef.current) { eatenDayRef.current = k; return; }
+    if (eatenDayRef.current === k) return;
+    eatenDayRef.current = k;
+    setEaten({ protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
+  };
+  useEffect(() => {
+    const id = setInterval(rollDayIfNeeded, 60000);
+    return () => clearInterval(id);
+  });
   useEffect(() => {
     let lastRefresh = 0;
     const refresh = () => {
@@ -1677,6 +1694,7 @@ export default function App() {
       if (now - lastRefresh < 2000) return; // visibilitychange + pageshow both fire on resume — one refresh is plenty
       lastRefresh = now;
       setFgTick((t) => t + 1); // re-render time-dependent surfaces even if data is unchanged
+      rollDayIfNeeded();
       fetch("/api/health/summary").then((r) => r.json()).then((sm) => { if (sm && sm.days) setHealthSync((h) => ({ ...(h || {}), days: sm.days })); }).catch(() => {});
     };
     document.addEventListener("visibilitychange", refresh);
@@ -1775,7 +1793,7 @@ export default function App() {
         if (s.targets) setTargets(s.targets); if (s.mealPlan) { setMealPlan(s.mealPlan); setPlanView("week"); } if (s.priceLog) setPriceLog(s.priceLog); if (s.lastStore) setShopStore(s.lastStore);
         const roll = s.prefs || {};
         if (s.prefs) setPrefs({ ...DEFAULT_PREFS, ...s.prefs });
-        if (s.eaten) setEaten(s.eatenDate === dayKeyAt(Date.now(), roll) ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
+        if (s.eaten) { const k0 = dayKeyAt(Date.now(), roll); eatenDayRef.current = k0; setEaten(s.eatenDate === k0 ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 }); }
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) }));
