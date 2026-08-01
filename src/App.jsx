@@ -1583,6 +1583,10 @@ export default function App() {
   // left open across the rollover carried yesterday's totals into today — and the next save stamped
   // the new date onto them, welding them there.
   const eatenDayRef = useRef(null);
+  // v0.9.94: the instant the counters last changed. eatenDate alone could not be trusted because the
+  // save stamped it with "now" on every write, so an autosave after midnight welded yesterday's
+  // totals onto today and the load check then saw a match forever.
+  const eatenAtRef = useRef(null);
   const labelRef = useRef(null);
 
   const [glp, setGlp] = useState(__T && __T.glp ? __T.glp : {
@@ -1682,8 +1686,10 @@ export default function App() {
     if (!eatenDayRef.current) { eatenDayRef.current = k; return; }
     if (eatenDayRef.current === k) return;
     eatenDayRef.current = k;
+    eatenAtRef.current = new Date().toISOString();
     setEaten({ protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
   };
+  useEffect(() => { eatenAtRef.current = new Date().toISOString(); }, [eaten]);
   useEffect(() => {
     const id = setInterval(rollDayIfNeeded, 60000);
     return () => clearInterval(id);
@@ -1795,7 +1801,20 @@ export default function App() {
         if (s.targets) setTargets(s.targets); if (s.mealPlan) { setMealPlan(s.mealPlan); setPlanView("week"); } if (s.priceLog) setPriceLog(s.priceLog); if (s.lastStore) setShopStore(s.lastStore);
         const roll = s.prefs || {};
         if (s.prefs) setPrefs({ ...DEFAULT_PREFS, ...s.prefs });
-        if (s.eaten) { const k0 = dayKeyAt(Date.now(), roll); eatenDayRef.current = k0; setEaten(s.eatenDate === k0 ? s.eaten : { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 }); }
+        if (s.eaten) { const k0 = dayKeyAt(Date.now(), roll); eatenDayRef.current = k0; eatenAtRef.current = s.eatenAt || null;
+          const ZERO = { protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 };
+          const someEaten = Object.keys(ZERO).some((f) => +(s.eaten[f] || 0) > 0);
+          let stale;
+          if (s.eatenAt) {
+            // authoritative: which day was the last change actually made on
+            stale = dayKeyAt(new Date(s.eatenAt).getTime(), roll) !== k0;
+          } else if (someEaten) {
+            // legacy state written before eatenAt existed, possibly already welded by the old stamp.
+            // Only a logged meal proves the totals belong to today; hand entries left no trace back then.
+            const mlog = s.mealLog || [];
+            stale = !mlog.some((m) => m.date === k0) && mlog.some((m) => m.date && m.date < k0);
+          } else stale = s.eatenDate !== k0;
+          setEaten(stale ? ZERO : s.eaten); }
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) }));
@@ -1844,7 +1863,7 @@ export default function App() {
     const r3 = (n) => Math.round(n * 1000) / 1000;
     setSavedGeo((p) => (p && r3(p.lat) === r3(geo.lat) && r3(p.lng) === r3(geo.lng) ? p : { lat: r3(geo.lat), lng: r3(geo.lng) }));
   }, [geo.status, geo.lat, geo.lng]);
-  const stateBlob = JSON.stringify({ saved: true, eatenDate: dayKeyAt(Date.now(), prefs), theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore, trainPrefs, routine, workoutLog });
+  const stateBlob = JSON.stringify({ saved: true, eatenDate: eatenDayRef.current || dayKeyAt(Date.now(), prefs), eatenAt: eatenAtRef.current, theme, mode, targets, eaten, allergies, diets, body, weightLog, goalWeight, glp, mealLog, photos, savedGeo, prefs, savedRank, coachMsgs, simShots, mealPlan, priceLog, lastStore: shopStore, trainPrefs, routine, workoutLog });
   useEffect(() => {
     if (!hydrated.current) return;
     blobRef.current = stateBlob; // the flush hook below reads this — always current, no closure lag

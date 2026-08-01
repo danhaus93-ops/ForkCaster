@@ -32,7 +32,12 @@ ok(M.dayKeyAt(at(2026,7,26,22), V)==='2026-07-26','varies: evening of the marked
 ok(/const todayISO = \(\) => dayKeyAt\(Date\.now\(\), _dayPrefs\)/.test(SRC),'todayISO delegates to the one clock');
 ok(/useEffect\(\(\) => \{ setDayPrefs\(prefs\); \}, \[prefs\]\)/.test(SRC),'component keeps the bridge current');
 ok(!/const todayISO = \(\) => new Date\(\)\.toISOString/.test(SRC),'the UTC day boundary is dead');
-ok(/eatenDate: dayKeyAt\(Date\.now\(\), prefs\)/.test(SRC),'eaten reset stamps through the one clock');
+// v0.9.94: the stamp moved but the invariant did not — the day the counters belong to must still
+// come from dayKeyAt and nothing else. It is now tracked in eatenDayRef, which is only ever
+// assigned from dayKeyAt, and the save writes that ref instead of re-deriving from now.
+ok(/eatenDayRef\.current = dayKeyAt\(/.test(SRC) || /eatenDayRef\.current = k0/.test(SRC),'the tracked day comes from the one clock');
+ok(/eatenDate: eatenDayRef\.current/.test(SRC),'the save stamps the tracked day, not the wall clock');
+ok(!/eatenDate: dayKeyAt\(Date\.now\(\), prefs\)/.test(SRC),'the old now-stamp that welded totals is gone');
 ok(!/dayISOAt\(prefs\.rolloverHour\)/.test(SRC),'no consumer bypasses the clock with the old helper');
 
 // prefs fields exist with safe defaults; doses stay calendar-anchored

@@ -27,5 +27,35 @@ ok(/Night day/.test(SRC),'night days are named as such');
 ok(/resets \$\{h12\(rollAt\)\}|resets \{h12\(rollAt\)\}/.test(SRC),'the roll hour is shown');
 ok(!/setSettingsTab/.test(SRC),'no handler that does not exist');
 
+
+// v0.9.94: THE WELD. The save stamped eatenDate with "now", so an autosave after midnight
+// wrote today's date onto yesterday's totals and the load check matched forever.
+const LOAD=SRC.slice(SRC.indexOf('if (s.eaten) { const k0'), SRC.indexOf('if (s.allergies) setAllergies'));
+ok(!/eatenDate: dayKeyAt\(Date\.now\(\), prefs\)/.test(SRC),'save no longer stamps eatenDate with now');
+ok(/eatenDate: eatenDayRef\.current/.test(SRC),'save writes the tracked day');
+ok(/eatenAt: eatenAtRef\.current/.test(SRC),'save records when the counters last changed');
+ok(/dayKeyAt\(new Date\(s\.eatenAt\)\.getTime\(\), roll\) !== k0/.test(LOAD),'load trusts the instant over the stamp');
+ok(/mlog\.some\(\(m\) => m\.date === k0\)/.test(LOAD),'legacy heal looks for a meal logged today');
+ok(/mlog\.some\(\(m\) => m\.date && m\.date < k0\)/.test(LOAD),'legacy heal requires evidence of an earlier day');
+ok(/someEaten/.test(LOAD),'legacy heal only fires when totals are non-zero');
+// simulate the three states the load must distinguish
+const sim=(st,k0)=>{
+  const ZERO={protein:0,calories:0,carbs:0,fat:0,waterOz:0,fiber:0,steps:0,exerciseCal:0};
+  const someEaten=Object.keys(ZERO).some(f=>+(st.eaten[f]||0)>0);
+  let stale;
+  if(st.eatenAt){ stale = st.eatenAtDay !== k0; }
+  else if(someEaten){ const m=st.mealLog||[]; stale=!m.some(x=>x.date===k0)&&m.some(x=>x.date&&x.date<k0); }
+  else stale = st.eatenDate!==k0;
+  return stale;
+};
+ok(sim({eaten:{protein:163},eatenAt:'x',eatenAtDay:'2026-07-31',eatenDate:'2026-08-01'},'2026-08-01')===true,
+   'welded state with an instant is detected stale');
+ok(sim({eaten:{protein:163},eatenDate:'2026-08-01',mealLog:[{date:'2026-07-31'}]},'2026-08-01')===true,
+   'welded LEGACY state (his node) is healed');
+ok(sim({eaten:{protein:40},eatenDate:'2026-08-01',mealLog:[{date:'2026-08-01'}]},'2026-08-01')===false,
+   'a real meal logged today is never wiped');
+ok(sim({eaten:{protein:40},eatenAt:'x',eatenAtDay:'2026-08-01',eatenDate:'2026-08-01'},'2026-08-01')===false,
+   'same-day hand entry survives once the instant exists');
+
 console.log('\nDAYROLL: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
