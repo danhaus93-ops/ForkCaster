@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.94"
+version: "0.9.95"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Yesterday's totals are cleared and cannot stick again. The save was stamping the
-  counters with today's date every time it ran, so the first save after midnight
-  relabelled yesterday's protein and calories as today's and nothing could tell the
-  difference afterwards. It now records when the counters last changed and clears
-  them when that was a different day. Anything you logged today is untouched.
+  Carbs, fat, water and fiber are rings now — the arc reads before the number does,
+  and each still shows what you have left and still opens the hand-log on tap. The
+  med level chart also stopped crowding itself: NOW, the peak and the next-dose
+  marker can no longer print on top of each other as the curve flattens.
 dependencies: []
 path: ""
 defaultUsername: ""

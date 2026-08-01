@@ -3046,23 +3046,27 @@ export default function App() {
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 12, color: C.muted, fontVariantNumeric: "tabular-nums" }}><span>{eaten.protein}g eaten</span><span>{targets.protein}g goal</span></div>
       </div>
 
-      {/* Remaining today — carbs, fat budget, hydration, fiber */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 14 }}>
+      {/* Remaining today — carbs, fat budget, hydration, fiber. Rings, because the mock has drawn
+          them since the first pass and an arc reads before a digit does. The number inside stays
+          the "to go" figure: what is left is the thing he acts on, not what is spent. */}
+      <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
         {[
           { field: "carbs", short: "carbs", label: "carbs to go", left: Math.max(0, (targets.carbs || 0) - (eaten.carbs || 0)), unit: "g", pct: Math.min(100, ((eaten.carbs || 0) / Math.max(1, targets.carbs || 1)) * 100), col: C.ink },
           { field: "fat", short: "fat", label: "fat budget left", left: Math.max(0, (targets.fat || 0) - (eaten.fat || 0)), unit: "g", pct: Math.min(100, ((eaten.fat || 0) / Math.max(1, targets.fat || 1)) * 100), col: C.avoid },
           { field: "waterOz", short: "water", label: "water to go", left: waterLeft, unit: "oz", pct: waterPct, col: C.blue },
           { field: "fiber", short: "fiber", label: "fiber to go", left: fiberLeft, unit: "g", pct: fiberPct, col: C.caution },
-        ].map((m) => (
-          <div key={m.label} onClick={() => openQuick(m.field, m.short, m.unit)} style={{ flex: "1 1 45%", background: C.surface, border: `1px solid ${quick && quick.field === m.field ? C.go : C.hair}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-              <span style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{Math.round(m.left)}</span>
-              <span style={{ fontSize: 13, color: C.muted }}>{m.unit}</span>
-            </div>
-            <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8 }}>{m.label}</div>
-            <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4, overflow: "hidden" }}><div style={{ width: `${m.pct}%`, height: "100%", background: m.col }} /></div>
-          </div>
-        ))}
+        ].map((m) => { const R = 26, CIRC = 2 * Math.PI * R, sel = quick && quick.field === m.field;
+          return (
+          <div key={m.label} onClick={() => openQuick(m.field, m.short, m.unit)} style={{ flex: 1, minWidth: 0, textAlign: "center", cursor: "pointer" }}>
+            <svg viewBox="0 0 68 68" style={{ width: "100%", maxWidth: 78, height: "auto" }}>
+              <circle cx="34" cy="34" r={R} fill="none" stroke={sel ? C.go : C.surfaceAlt} strokeWidth="6" />
+              <circle cx="34" cy="34" r={R} fill="none" stroke={m.col} strokeWidth="6" strokeLinecap="round"
+                strokeDasharray={`${(m.pct / 100) * CIRC} ${CIRC}`} transform="rotate(-90 34 34)" />
+              <text x="34" y="34" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="16" fontWeight="700" fill={C.ink}>{Math.round(m.left)}</text>
+              <text x="34" y="44" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8" fill={C.faint}>{m.unit}</text>
+            </svg>
+            <div style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: m.col, marginTop: 2, lineHeight: 1.3 }}>{m.label}</div>
+          </div>); })}
       </div>
 
       {quickRow()}
@@ -5369,6 +5373,12 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   let nowIdx = 0, nowFrac = 0;
   for (let i = 0; i < fullSeq.length; i++) if (fullSeq[i].t <= now) { nowIdx = i; nowFrac = Math.min(0.98, (now - fullSeq[i].t) / cycLen(i)); }
   const nowX = xi(nowIdx, nowFrac), nowY = y(fnAll(now));
+  // v0.9.95: NOW and the peak marker sit on the same dose, so their labels collided as soon as the
+  // curve flattened near steady state. Place them as a pair: NOW keeps its spot, the peak label is
+  // pushed clear above it, and both are clamped inside the plot.
+  const nowLabY = Math.max(nowY - 8, 11);
+  const pkRawY = absorbing ? Math.max(y(cyc[nowIdx].pkL) - 6, 11) : 0;
+  const pkLabY = absorbing && Math.abs(pkRawY - nowLabY) < 12 ? Math.max(9, nowLabY - 13) : pkRawY;
   const ptsSeq = [];
   cyc.forEach((c, i) => { ptsSeq.push({ i, f: 0.02, L: c.trough }); ptsSeq.push({ i, f: c.pkFrac, L: c.pkL }); });
   const before = ptsSeq.filter((p) => p.i < nowIdx || (p.i === nowIdx && p.f <= nowFrac));
@@ -5404,17 +5414,17 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
         {ghost && <polyline points={ghost} fill="none" stroke={C.violet} strokeWidth="1.6" strokeDasharray="3 5" opacity="0.22" />}
         {steadyIdx >= 0 && <text x={xi(steadyIdx, 0.3)} y={y(ssPeak) + 10} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" letterSpacing="1" fill={C.go} opacity="0.85">STEADY ≈ D{steadyIdx + 1}</text>}
         {absorbing && <g><circle cx={xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac))} cy={y(cyc[nowIdx].pkL)} r="2.6" fill="none" stroke={C.go} strokeWidth="1.4" />
-          <text x={Math.min(xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac)) + 5, W - 60)} y={Math.max(y(cyc[nowIdx].pkL) - 6, 10)} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" fill={C.go}>peaks ~{Math.round((cyc[nowIdx].pkL / Math.max(refPeak, 1e-9)) * 100)}%</text></g>}
+          <text x={Math.min(xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac)) + 5, W - 60)} y={pkLabY} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" fill={C.go}>peaks ~{Math.round((cyc[nowIdx].pkL / Math.max(refPeak, 1e-9)) * 100)}%</text></g>}
         <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
         {fullSeq.map((d, i) => (
           <text key={i} x={xi(i, 0.5)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={i <= nowIdx ? C.muted : C.faint} opacity={i >= nLedger ? 0.4 : 1}>D{i + 1}</text>
         ))}
         <circle cx={nowX} cy={nowY} r="7" fill={C.violet} opacity="0.22" />
         <circle cx={nowX} cy={nowY} r="3.4" fill={C.violet} />
-        <text x={Math.min(nowX + 6, W - 74)} y={Math.max(nowY - 8, 10)} fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.ink}>NOW · {vsPeak}%</text>
+        <text x={Math.min(nowX + 6, W - 74)} y={nowLabY} fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.ink}>NOW · {vsPeak}%</text>
         {nextPct != null && nextDoseIdx > 0 && <g>
           <circle cx={xi(nextDoseIdx, 0.02)} cy={y(cyc[nextDoseIdx].trough)} r="3" fill="none" stroke={C.violet} strokeWidth="1.5" />
-          <text x={Math.min(xi(nextDoseIdx, 0.02) + 5, W - 70)} y={Math.min(H - PADB - 6, y(cyc[nextDoseIdx].trough) + 11)} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextVsPeak}% at next dose</text>
+          <text x={Math.min(xi(nextDoseIdx, 0.02) + 5, W - 70)} y={Math.min(H - PADB - 6, Math.max(y(cyc[nextDoseIdx].trough) + 11, nowLabY + 13))} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextVsPeak}% at next dose</text>
         </g>}
       </svg>
       </div>
