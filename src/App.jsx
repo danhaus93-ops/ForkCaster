@@ -3264,7 +3264,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 5 }}>
             {wk7.map((d, i) => (
               <div key={i} style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "7px 0 6px", background: d.dose ? C.violet + "1A" : d.after ? C.violet + "0D" : "transparent", border: `1px solid ${d.dose ? C.violet + "55" : d.after ? C.violet + "22" : C.hair}` }}>
-                <div style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 0.6, color: d.dose || d.after ? C.violet : (i === 0 ? C.ink : C.faint), textTransform: "uppercase" }}>{d.label.slice(0, 3)}</div>
+                <div style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 0.2, color: d.dose || d.after ? C.violet : (i === 0 ? C.ink : C.faint), textTransform: "uppercase" }}>{d.label}</div>
                 <div style={{ fontSize: 10, marginTop: 3, color: C.violet, lineHeight: 1 }}>{d.dose ? "💉" : d.after ? "·" : " "}</div>
               </div>))}
           </div>
@@ -3538,7 +3538,7 @@ export default function App() {
             return (<div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 46, marginBottom: 12 }}>
               {W.map((d, i) => (<div key={i} style={{ flex: 1, textAlign: "center" }}>
                 <div style={{ height: hOf(d), background: cOf(d), borderRadius: 5, marginBottom: 4 }} />
-                <div style={{ fontFamily: DATA, fontSize: 8.5, color: (d.dose || d.after) ? C.violet : C.faint, fontWeight: 700 }}>{(d.label || "").slice(0, 3)}</div>
+                <div style={{ fontFamily: DATA, fontSize: 8.5, color: (d.dose || d.after) ? C.violet : C.faint, fontWeight: 700 }}>{d.label || ""}</div>
               </div>))}
             </div>); })()}
           {(week.length ? week : trainDates()).map((d, i) => (
