@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.71"
+version: "0.9.72"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,11 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.71: reverts the icons added to the Injections and Daily pill
-  switch in v0.9.70 - they rendered doubled on-device. The switch is
-  back to clean text pills exactly as before. Nothing else changes.
+  The Train and GLP-1 leftovers from the conformance scan. The next-injection map now
+  names its suggestion outright with a NEXT chip. The titration tracker says where you
+  are in plain words: dose N of M at this rung, and holding longer is always valid.
+  When nothing is flagged, the checkpoint now says so instead of staying silent. And
+  the equipment picker got real labels and the house pill style.
 dependencies: []
 path: ""
 defaultUsername: ""

@@ -3469,7 +3469,7 @@ export default function App() {
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Equipment you actually have</div>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>{["bodyweight", "dumbbell", "barbell", "cable", "machine", "kettlebell", "bands", "ball", "other"].map((e) => {
             const on = trainPrefs.equipment.includes(e);
-            return (<button key={e} onClick={() => setTrainPrefs((t) => ({ ...t, equipment: on ? t.equipment.filter((x) => x !== e) : [...t.equipment, e] }))} style={{ background: on ? C.go : C.surfaceAlt, color: on ? C.surface : C.muted, border: "none", borderRadius: 18, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{e}</button>); })}</div>
+            return (<button key={e} onClick={() => setTrainPrefs((t) => ({ ...t, equipment: on ? t.equipment.filter((x) => x !== e) : [...t.equipment, e] }))} style={{ background: on ? C.go + "14" : "transparent", color: on ? C.go : C.muted, border: `1px solid ${on ? C.go + "55" : C.hair}`, borderRadius: 999, padding: "7px 12px", fontFamily: DATA, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>{({ bodyweight: "Bodyweight", dumbbell: "Dumbbells", barbell: "Barbell", cable: "Cables", machine: "Machines", kettlebell: "Kettlebell", bands: "Bands", ball: "Ball", other: "Other" })[e] || e}</button>); })}</div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Prefer one coach's channel for form videos (optional)</div>
           <input value={trainPrefs.videoChannel || ""} onChange={(e) => setTrainPrefs((t) => ({ ...t, videoChannel: e.target.value.replace(/^@/, "").replace(/[^A-Za-z0-9_.-]/g, "") }))} placeholder="leave blank — searches all of YouTube" autoCapitalize="none" autoCorrect="off" spellCheck={false}
             style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 4 }} />
@@ -3809,6 +3809,7 @@ export default function App() {
                   {on && <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 1, color: C.faint, marginTop: 2 }}>YOU ARE HERE</div>}
                 </div>); })}
             </div>
+            {!protoEdit && curMg != null && (() => { const L9 = (glp.doseLog || []).filter((d) => +d.mg > 0); let runN = 0; for (let i9 = L9.length - 1; i9 >= 0; i9--) { if (+L9[i9].mg === +curMg) runN++; else break; } const holdWk = Math.max(1, Math.round((((glp.protocol || {}).minHoldDays) || 28) / 7)); return (<div style={{ fontSize: 10.5, color: C.faint, marginTop: 7 }}>Dose {Math.max(1, runN)} of {holdWk} at this rung. Holding longer is always valid.</div>); })()}
             {protoEdit ? (<div style={{ marginTop: 11 }}>
               <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>Rungs (mg, separated by spaces or commas)</div>
               <input value={protoRungs} onChange={(e) => setProtoRungs(e.target.value)} type="text"
@@ -3862,6 +3863,8 @@ export default function App() {
                 <b style={{ color: C.avoid }}>Tolerability flags right now:</b> {cp.veto.join("; ")}. Your protocol
                 holds escalation while these stand, whatever the scale is doing.
               </div>)}
+            {cp.veto.length === 0 && cp.status !== "nodose" && rr.status === "ready" && sl.status === "ready" && (
+              <div style={{ fontSize: 11, color: C.faint, marginBottom: 11 }}>Tolerability flags right now: none — RHR steady, sleep steady.</div>)}
 
             {locked ? (<div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 7 }}>
@@ -5342,6 +5345,7 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
           );
         })}
       </svg>
+      {suggested && !pendingSite && (<div style={{ marginTop: 8 }}><span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.violet, border: `1px solid ${C.violet}55`, background: C.violet + "1A", textTransform: "uppercase" }}>NEXT: {suggested}</span></div>)}
       <div style={{ fontSize: 10, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>L/R are <b>your</b> left and right (front view, so they appear mirrored — same as the R marker on an X-ray). Arm dots mean the <b>back</b> of the upper arm. Tap a site, then Log dose — it saves with the dose. Faded sites are used up this cycle.</div>
     </div>
   );
