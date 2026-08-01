@@ -374,7 +374,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const app=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const srv=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
   ok(srv.includes('nm === \"sleep_analysis\"'), 'HAE sleep_analysis is ingested');
-  ok(srv.includes('q <= 24 ? q * 60 : q'), 'sleep accepts hours OR minutes without export-format archaeology');
+  // v0.9.96: the rule is unchanged — one number, hours at or under 24 and minutes above it — but
+  // sleep now parses ahead of the qty guard, where the name q is still in its temporal dead zone,
+  // so the same expression is written over v. The invariant is the arithmetic, not the letter.
+  ok(srv.includes('v <= 24 ? v * 60 : v'), 'sleep accepts hours OR minutes without export-format archaeology');
+  ok(srv.indexOf('if (nm === "sleep_analysis"') < srv.indexOf('const q = +pt.qty;'), 'sleep parses before the qty guard that once dropped it');
   ok(srv.includes('clean.sleepMin'), 'sleepMin survives into the stored day and the summary');
   ok(app.includes('function sleepRead(') && app.includes('function checkpointRead('), 'both engines are module-level and testable');
   ok(app.includes('i.appetite === \"returning\"'), 'escalation requires appetite RETURNING — a flat scale with appetite already gone is not an under-dosing signal');

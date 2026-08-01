@@ -316,6 +316,21 @@ app.post("/api/health/sync", (req, res) => {
     const nm = String(m.name || "").toLowerCase(), unit = String(m.units || "").toLowerCase();
     for (const pt of (m.data || [])) {
       const rec = day(pt.date); if (!rec) continue;
+      // v0.9.96: sleep points carry NO qty. Health Auto Export writes stage fields instead
+      // (totalSleep / asleep / deep / core / rem / inBed), so every sleep record was being
+      // dropped by the qty guard below before its branch could run. Handle it first.
+      if (nm === "sleep_analysis" || nm === "sleep" || nm === "asleep") {
+        const num = (x) => { const v = +x; return Number.isFinite(v) && v > 0 ? v : null; };
+        let v = num(pt.totalSleep) || num(pt.asleep) || num(pt.qty);
+        if (v == null) {
+          const stages = ["deep", "core", "rem", "light"].map((k) => num(pt[k])).filter(Boolean);
+          if (stages.length) v = stages.reduce((a, b) => a + b, 0);   // asleep only — awake is not sleep
+        }
+        if (v == null) v = num(pt.inBed);                              // last resort, and it overstates
+        if (v != null) { const mins = v <= 24 ? v * 60 : v;            // <=24 is hours, above is minutes
+          if (mins >= 30 && mins <= 1200) rec.sleepMin = Math.round((+rec.sleepMin || 0) + mins); }
+        continue;
+      }
       const q = +pt.qty; if (!Number.isFinite(q)) continue;
       if (nm === "body_mass" || nm === "weight_body_mass") rec.weightLbs = Math.round((unit.startsWith("kg") ? q * 2.20462 : q) * 10) / 10;
       else if (nm === "step_count") rec.steps = (rec.steps || 0) + Math.round(q);
@@ -328,10 +343,7 @@ app.post("/api/health/sync", (req, res) => {
       // at or under 24 is read as hours, above that as minutes — one number, no export-format
       // archaeology. Episodes land on the day the client's clock says, so a night-shift 9 a.m.
       // bedtime files correctly and a normal schedule collapses to plain "last night".
-      else if (nm === "sleep_analysis" || nm === "sleep" || nm === "asleep") {
-        const mins = q <= 24 ? q * 60 : q;
-        if (mins >= 30 && mins <= 1200) rec.sleepMin = Math.round((+rec.sleepMin || 0) + mins);
-      }
+
     }
   }
   for (const w of workouts) {
