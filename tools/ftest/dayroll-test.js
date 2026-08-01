@@ -20,5 +20,12 @@ const body=SRC.slice(SRC.indexOf('const rollDayIfNeeded'),SRC.indexOf('const rol
 for(const f of ['protein','calories','carbs','fat','waterOz','fiber','steps','exerciseCal'])
   ok(new RegExp(f+':\\s*0').test(body),'roll zeroes '+f);
 ok(/if \(!eatenDayRef\.current\)/.test(body),'first run seeds the ref instead of wiping');
+// v0.9.92: the Now tab must state which day the counters belong to — an invisible
+// night-day roll is indistinguishable from a broken reset, which is what he hit.
+ok(/counts toward/.test(SRC),'Now states which day the counters belong to');
+ok(/Night day/.test(SRC),'night days are named as such');
+ok(/resets \$\{h12\(rollAt\)\}|resets \{h12\(rollAt\)\}/.test(SRC),'the roll hour is shown');
+ok(!/setSettingsTab/.test(SRC),'no handler that does not exist');
+
 console.log('\nDAYROLL: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

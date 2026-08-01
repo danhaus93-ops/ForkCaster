@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.91"
+version: "0.9.92"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Your counters now reset the moment the day turns over, even if the app was left
-  open. Before this they only reset when the app was freshly loaded, so a session
-  that spanned 4am carried yesterday's protein and calories into today — and saving
-  anything after that stamped the new date onto the old numbers.
+  Now says which day your counters belong to and what time they reset. Your schedule
+  is set to fixed nights, which means a day runs until 11am — so at 6am the numbers
+  are still yesterday's on purpose, and there was nothing on screen saying so. Tap
+  the marker to change your work schedule.
 dependencies: []
 path: ""
 defaultUsername: ""

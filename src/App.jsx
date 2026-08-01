@@ -2976,6 +2976,15 @@ export default function App() {
         <div style={{ fontSize: 11, color: C.go, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: 99, background: C.go }} /> {MODES[mode].label}</div>
       </div>
 
+      {(() => { const k = dayKeyAt(Date.now(), prefs); const plain = new Date().toLocaleDateString("sv-SE");
+        const night = k !== plain;
+        const rollAt = prefs.shiftMode === "nights" || night ? (prefs.nightRollHour == null ? 11 : prefs.nightRollHour) : (prefs.rolloverHour || 0);
+        const h12 = (h) => `${((h + 11) % 12) + 1}${h < 12 ? "am" : "pm"}`;
+        return (<div onClick={() => setSettingsOpen(true)} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", cursor: "pointer" }}>
+          <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: night ? C.violet : C.faint, border: `1px solid ${night ? C.violet + "55" : C.hair}`, background: night ? C.violet + "14" : "transparent", textTransform: "uppercase" }}>{night ? "Night day" : "Day"} · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}</span>
+          <span style={{ fontSize: 10.5, color: C.faint }}>resets {h12(rollAt)}</span>
+        </div>); })()}
+
       <div style={{ marginTop: 16, display: "flex", alignItems: "baseline", gap: 10 }}>
         <div onClick={() => openQuick("protein", "protein", "g")} style={{ fontFamily: DISPLAY, fontSize: 54, fontWeight: 700, color: C.ink, lineHeight: 0.9, fontVariantNumeric: "tabular-nums", cursor: "pointer" }}>{proteinLeft}<span style={{ fontSize: 22, color: C.muted }}>g</span></div>
         <div style={{ paddingBottom: 6 }}><div onClick={() => openQuick("protein", "protein", "g")} style={{ fontSize: 15, fontWeight: 600, color: C.ink, cursor: "pointer" }}>protein to go</div><div onClick={() => openQuick("calories", "calories", "cal")} style={{ fontSize: 13, color: C.muted, cursor: "pointer" }}>{calLeft} cal left today</div></div>
