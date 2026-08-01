@@ -3903,7 +3903,11 @@ export default function App() {
   const [cpOpenFor, setCpOpenFor] = useState(null);
   const [protoEdit, setProtoEdit] = useState(false);
   const [protoRungs, setProtoRungs] = useState("");
-  const rhrCardFor = (_rr) => { const RED = "#f05252"; return <div style={{ marginBottom: 14 }}>{card(<div>
+  const rhrCardFor = (_rr) => { const RED = "#f05252";
+    // v0.9.100: the edge states the verdict, so it cannot be hardcoded. A card still learning has
+    // no verdict to state — a red stripe over "collecting 2/7" reads as an alarm about nothing.
+    const _edge = _rr.status !== "ready" ? C.hair : _rr.flagged ? RED : C.go;
+    return <div style={{ marginBottom: 14 }}>{card(<div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {sectionTitle("Resting heart rate", RED)}
             {_rr.status === "collecting" ? <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>COLLECTING {_rr.have}/{_rr.need}</span>
@@ -3933,7 +3937,7 @@ export default function App() {
                   <b style={{ color: RED }}>Sustained +{_rr.delta} bpm</b> above your baseline across {_rr.run} days{_rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{_rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
           </div>}
-        </div>, { borderLeft: `2.5px solid ${RED}` })}</div>; };
+        </div>, { borderLeft: `2.5px solid ${_edge}` })}</div>; };
   const renderGlp = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
@@ -4391,6 +4395,7 @@ export default function App() {
           </div>);
         })();
         const showWeek = weekReady && sleepView === "week";
+        const _sEdge = sl.status !== "ready" ? C.hair : sl.flagged ? C.avoid : C.go;
         return <div style={{ marginBottom: 14 }}>{card(<div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {sectionTitle(weekReady ? (showWeek ? "Sleep · 7 nights" : "Sleep · last night") : "Sleep", CY)}
@@ -4425,7 +4430,7 @@ export default function App() {
               : <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                   Judged against your own baseline, never against eight hours. Flags only a sustained drop {"—"} one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
           </div>}
-        </div>)}</div>;
+        </div>, { borderLeft: `2.5px solid ${_sEdge}` })}</div>;
       })()}
 
 
@@ -5214,13 +5219,13 @@ export default function App() {
                 {ALLERGENS.map((a) => {
                   const on = allergies.includes(a);
                   return (
-                    <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 20, cursor: "pointer", fontFamily: BODY, fontSize: 13, fontWeight: 600, border: `1.5px solid ${on ? C.avoid : C.hair}`, background: on ? C.avoid : C.surface, color: on ? "#fff" : C.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                    <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 20, cursor: "pointer", fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", border: `1px solid ${on ? C.avoid : C.hair}`, background: on ? C.avoid : C.surface, color: on ? "#fff" : C.muted, display: "flex", alignItems: "center", gap: 6 }}>
                       {on && <span style={{ fontSize: 12 }}>✕</span>}{a}
                     </button>
                   );
                 })}
                 {allergies.filter((a) => !ALLERGENS.includes(a)).map((a) => (
-                  <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 20, cursor: "pointer", fontFamily: BODY, fontSize: 13, fontWeight: 600, border: `1.5px solid ${C.avoid}`, background: C.avoid, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                  <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 20, cursor: "pointer", fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", border: `1px solid ${C.avoid}`, background: C.avoid, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 12 }}>✕</span>{a}
                   </button>
                 ))}
@@ -5228,7 +5233,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 8, marginBottom: 20, marginTop: -10 }}>
                 <input value={customAllergy} onChange={(e) => setCustomAllergy(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} placeholder="Add another allergy (e.g. mustard, avocado)"
                   style={{ flex: 1, fontFamily: BODY, fontSize: 13, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "10px 12px", outline: "none" }} />
-                <button onClick={() => { if (customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} style={{ background: C.avoid, color: "#fff", border: "none", borderRadius: 10, padding: "0 14px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
+                <button onClick={() => { if (customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} style={{ background: "transparent", color: C.avoid, border: `1px solid ${C.avoid}66`, borderRadius: 999, padding: "0 15px", fontFamily: DATA, fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Add</button>
               </div>
 
               {sectionTitle("Diet")}
@@ -5236,7 +5241,7 @@ export default function App() {
                 {DIETS.map((d) => {
                   const on = diets.includes(d);
                   return (
-                    <button key={d} onClick={() => toggleIn(diets, setDiets, d)} style={{ padding: "8px 13px", borderRadius: 20, cursor: "pointer", fontFamily: BODY, fontSize: 13, fontWeight: 600, border: `1.5px solid ${on ? C.go : C.hair}`, background: on ? C.go : C.surface, color: on ? "#fff" : C.muted }}>{d}</button>
+                    <button key={d} onClick={() => toggleIn(diets, setDiets, d)} style={{ padding: "8px 13px", borderRadius: 20, cursor: "pointer", fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", border: `1px solid ${on ? C.go : C.hair}`, background: on ? C.go : C.surface, color: on ? "#fff" : C.muted }}>{d}</button>
                   );
                 })}
               </div>
@@ -5267,7 +5272,7 @@ export default function App() {
                         <div style={{ fontSize: 12, color: C.muted, marginBottom: 7 }}>Tap the nights you work — everything else behaves like a normal day.</div>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5 }}>
                           {Array.from({ length: 14 }, (_, i) => { const t = new Date(); t.setDate(t.getDate() - 2 + i); const iso = t.toLocaleDateString("sv-SE"); const on = (P.workNights || []).includes(iso); return (
-                            <button key={iso} onClick={() => { const cur = P.workNights || []; const keepFrom = (() => { const q = new Date(); q.setDate(q.getDate() - 30); return q.toLocaleDateString("sv-SE"); })(); set("workNights")((on ? cur.filter((x) => x !== iso) : [...cur, iso]).filter((x) => x >= keepFrom).sort()); }} style={{ padding: "8px 0", borderRadius: 9, border: `1.5px solid ${on ? C.violet : C.hair}`, background: on ? C.violet : C.surfaceAlt, color: on ? "#fff" : C.muted, fontFamily: BODY, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                            <button key={iso} onClick={() => { const cur = P.workNights || []; const keepFrom = (() => { const q = new Date(); q.setDate(q.getDate() - 30); return q.toLocaleDateString("sv-SE"); })(); set("workNights")((on ? cur.filter((x) => x !== iso) : [...cur, iso]).filter((x) => x >= keepFrom).sort()); }} style={{ padding: "8px 0", borderRadius: 9, border: `1.5px solid ${on ? C.violet : C.hair}`, background: on ? C.violet : C.surfaceAlt, color: on ? "#fff" : C.muted, fontFamily: DATA, fontSize: 9.5, fontWeight: 800, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer" }}>
                               <div>{t.toLocaleDateString([], { weekday: "short" }).slice(0, 2)}</div><div style={{ fontSize: 12.5 }}>{t.getDate()}</div>
                             </button>); })}
                         </div>
@@ -5312,8 +5317,8 @@ export default function App() {
                 <input value={keyIn.sp || ""} onChange={(e) => setKeyIn({ ...keyIn, sp: e.target.value })} placeholder="Spoonacular key (optional) — recipe discovery for the Plan tab" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <input value={keyIn.fdc || ""} onChange={(e) => setKeyIn({ ...keyIn, fdc: e.target.value })} placeholder="USDA FoodData Central key (optional) — food search; free at api.data.gov, works without one at low volume" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 13, marginBottom: 8 }} />
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={saveKeys} disabled={!Object.values(keyIn).some((v) => String(v || "").trim())} style={{ flex: 1, background: C.go, color: "#fff", border: "none", borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: !Object.values(keyIn).some((v) => String(v || "").trim()) ? 0.5 : 1 }}>Save keys</button>
-                  <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Test AI key</button>
+                  <button onClick={saveKeys} disabled={!Object.values(keyIn).some((v) => String(v || "").trim())} style={{ flex: 1, background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", opacity: !Object.values(keyIn).some((v) => String(v || "").trim()) ? 0.5 : 1 }}>Save keys</button>
+                  <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 10, padding: "11px 0", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Test AI key</button>
                 </div>
                 {keyMsg && <div style={{ fontSize: 12, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}
               </div>
@@ -5321,20 +5326,20 @@ export default function App() {
               <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("Danger zone")}
                 {sectionTitle("Reminders")}
-                <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", marginBottom: 6, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
+                <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 11, padding: "12px 0", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", marginBottom: 6, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
                 <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>Fires at your reminder hour on dose day with the suggested site. iPhone: add ForkCaster to the Home Screen first (Share → Add to Home Screen).</div>
                 {sectionTitle("Export & backup")}
-                <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", marginBottom: 8 }}>Export PDF report — for your prescriber</button>
+                <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "13px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", marginBottom: 8 }}>Export PDF report — for your prescriber</button>
                 <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                  <button onClick={exportJSON} style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Backup (JSON)</button>
-                  <label style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>Restore…<input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) restoreJSON(e.target.files[0]); e.target.value = ""; }} /></label>
+                  <button onClick={exportJSON} style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: DATA, fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Backup (JSON)</button>
+                  <label style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 11, padding: "11px 0", fontFamily: DATA, fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", textAlign: "center" }}>Restore…<input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) restoreJSON(e.target.files[0]); e.target.value = ""; }} /></label>
                 </div>
                 <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>The PDF is a clean, organized report (doses &amp; sites, weight, side effects, nutrition) you can email or AirDrop to your care team. JSON is the full-fidelity backup for restore.</div>
                 <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 11, padding: "11px 12px" }}>
                   <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 700 }}>Restore a previous save</div>
                   <div style={{ fontSize: 11, color: C.faint, marginTop: 3, lineHeight: 1.45 }}>Your node keeps recent snapshots of your data. If a save ever comes back emptier than it should, restore the one before it.</div>
                   <button onClick={async () => { try { const d = await fetch("/api/state/backups").then((r) => r.json()); setBackups(d.backups || []); } catch { setBackups([]); } }}
-                    style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Show snapshots</button>
+                    style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: DATA, fontSize: 10, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Show snapshots</button>
                   {backups && backups.map((b) => (
                     <div key={b.file} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "8px 0", borderTop: `1px solid ${C.hair}`, marginTop: 8 }}>
                       <div>
@@ -5343,11 +5348,11 @@ export default function App() {
                       </div>
                       <button onClick={async () => { if (!window.confirm(`Restore this snapshot? Everything logged since then is replaced. A copy of your current data is kept first.`)) return;
                         try { await fetch("/api/state/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file: b.file }) }); window.location.reload(); } catch {} }}
-                        style={{ background: C.surface, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "7px 11px", fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>Restore</button>
+                        style={{ background: C.surface, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "7px 11px", fontFamily: DATA, fontSize: 9.5, fontWeight: 800, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>Restore</button>
                     </div>))}
                   {backups && backups.length === 0 && <div style={{ fontSize: 11, color: C.faint, marginTop: 8 }}>No snapshots yet — one is kept the first time your data changes after an update.</div>}
                 </div>
-                {prefs.hideHealthCard && <button onClick={() => setPrefs({ ...prefs, hideHealthCard: false })} style={{ width: "100%", marginBottom: 12, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 11, padding: "11px 0", fontFamily: BODY, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>Show the Apple Health card again</button>}
+                {prefs.hideHealthCard && <button onClick={() => setPrefs({ ...prefs, hideHealthCard: false })} style={{ width: "100%", marginBottom: 12, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 11, padding: "11px 0", fontFamily: DATA, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Show the Apple Health card again</button>}
                 <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 11, padding: "11px 12px" }}>
                   <div style={{ fontSize: 12.5, color: C.ink, fontWeight: 700 }}>Images on your node</div>
                   <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{photoUsage ? (photoUsage.count == null ? "storage unreadable — check the node" : `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB`) : "checking…"}</div>
@@ -5358,10 +5363,10 @@ export default function App() {
                       const u = await fetch("/api/photos/usage").then((x) => x.json()); setPhotoUsage(u);
                       alert(r.deleted ? `Removed ${r.deleted} unreferenced image${r.deleted === 1 ? "" : "s"} (${Math.round((r.freed || 0) / 1024)} KB freed).` : "Nothing to sweep — every image on the node is still in use.");
                     } catch { alert("Sweep failed."); }
-                  }} style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: BODY, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Sweep orphaned images</button>
+                  }} style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: DATA, fontSize: 10, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Sweep orphaned images</button>
                   <div style={{ fontSize: 10.5, color: C.faint, marginTop: 6 }}>Deletes only images the app no longer references — photos, comparisons and forecasts in use are kept.</div>
                 </div>
-                <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.")) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Reset all data — start fresh</button>
+                <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.")) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
               <div style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
             </div>
