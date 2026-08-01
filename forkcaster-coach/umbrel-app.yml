@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.70"
+version: "0.9.71"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.70: deep text scan of the redesign against Train and GLP-1.
-  The fat-ceiling engine finally gets its card on the GLP-1 tab - it
-  has been learning your dose-window fat tolerance since v0.4 and
-  shaping meal picks, but never showed itself; now it reports its
-  ceiling, its evidence counts, and an honest collecting state. Your
-  protocol shows RUNG X OF N, the editor names itself, the tab
-  subtitle matches the design, the form switch gets its icons,
-  side-effect entries show hours post-dose, weekly sets use the
-  designed muscle labels, and the week view explains eased days.
+  v0.9.71: reverts the icons added to the Injections and Daily pill
+  switch in v0.9.70 - they rendered doubled on-device. The switch is
+  back to clean text pills exactly as before. Nothing else changes.
 dependencies: []
 path: ""
 defaultUsername: ""
