@@ -3166,7 +3166,13 @@ export default function App() {
     const hDay = ((healthSync && healthSync.days) || []).find((d) => d.date === tk) || {};
     const syn = hDay.steps || 0;
     const stepsShown = Math.max(+eaten.steps || 0, syn);
-    const exMin = (workoutLog || []).filter((w) => w.date === todayISO() && w.kind === "cardio").reduce((n, w) => n + (+w.minutes || 0), 0);
+    const loggedCardioMin = (workoutLog || []).filter((w) => w.date === todayISO() && w.kind === "cardio").reduce((n, w) => n + (+w.minutes || 0), 0);
+    // v0.9.84: the server has stored activeKcal/exerciseMin since the HAE mapping went in — the card
+    // just never read them, so a synced burn showed as a dash. Synced wins; manual is the fallback.
+    const synKcal = +hDay.activeKcal || 0;
+    const synExMin = +hDay.exerciseMin || 0;
+    const exMin = Math.max(synExMin, loggedCardioMin);
+    const activeKcal = Math.max(synKcal, +eaten.exerciseCal || 0);
     const stepHist = ((healthSync && healthSync.days) || []).slice(-13).map((d) => ({ v: +d.steps || 0 })).filter((d) => d.v > 0);
     const _doses = new Set(((glp && glp.doseLog) || []).map((d) => d.date));
     const _after = new Set([...(_doses)].map((d) => { const t = new Date(d + "T12:00:00"); t.setDate(t.getDate() + 1); return t.toLocaleDateString("sv-SE"); }));
@@ -3280,8 +3286,8 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             {[["Steps", stepsShown ? stepsShown.toLocaleString() : null, syn > 0, syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"],
-              ["Exercise", exMin ? exMin + " min" : null, exMin > 0, "logged cardio"],
-              ["Active kcal", eaten.exerciseCal ? String(eaten.exerciseCal) : null, false, "burned today"]].map(([l, v, measured, sub]) => (
+              ["Exercise", exMin ? exMin + " min" : null, synExMin > 0, synExMin > 0 ? "synced" : "logged cardio"],
+              ["Active kcal", activeKcal ? String(activeKcal) : null, synKcal > 0, synKcal > 0 ? "synced \u00b7 burned today" : "burned today"]].map(([l, v, measured, sub]) => (
               <div key={l} style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
                 <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
