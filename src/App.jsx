@@ -3142,11 +3142,18 @@ export default function App() {
   );
 
   const renderToday = () => {
-    const rings = [
-      { label: "Protein", val: eaten.protein, goal: targets.protein, unit: "g", color: C.go },
-      { label: "Calories", val: eaten.calories, goal: targets.calories, unit: "", color: C.blue },
-      { label: "Carbs", val: eaten.carbs, goal: targets.carbs, unit: "g", color: C.caution },
-      { label: "Fat", val: eaten.fat, goal: targets.fat, unit: "g", color: C.violet },
+    const pPct = targets.protein ? Math.min(100, Math.round((eaten.protein / targets.protein) * 100)) : 0;
+    const pGap = Math.max(0, (targets.protein || 0) - (eaten.protein || 0));
+    const pTone = pPct >= 90 ? C.go : pPct >= 70 ? C.caution : C.avoid;
+    const tk = dayKeyAt(Date.now(), prefs);
+    const hDay = ((healthSync && healthSync.days) || []).find((d) => d.date === tk) || {};
+    const syn = hDay.steps || 0;
+    const stepsShown = Math.max(+eaten.steps || 0, syn);
+    const counters = [
+      ["Calories", (eaten.calories || 0).toLocaleString(), targets.calories ? "of " + targets.calories.toLocaleString() : ""],
+      ["Carbs", (eaten.carbs || 0) + "g", targets.carbs ? "of " + targets.carbs + "g" : ""],
+      ["Fat", (eaten.fat || 0) + "g", targets.fat ? "of " + targets.fat + "g" : ""],
+      ["Fiber", (eaten.fiber || 0) + "g", targets.fiber ? "of " + targets.fiber + "g" : ""],
     ];
     return (
       <div style={{ padding: "18px 18px 12px" }}>
@@ -3156,46 +3163,73 @@ export default function App() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.bg} strokeWidth="1.6" strokeLinecap="round" /></svg>
           Scan or log food
         </button>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {rings.map((r) => (
-            <div key={r.label} style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-              {ring(Math.min(100, (r.val / r.goal) * 100), r.color, C)}
-              <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.3 }}>{r.label}</div><div style={{ fontFamily: DISPLAY, fontSize: 18, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{r.val}{r.unit}</div><div style={{ fontSize: 11, color: C.faint }}>of {r.goal}{r.unit}</div></div>
+
+        {/* PROTEIN LEADS. The contract names it the one lever that decides whether the weight
+            coming off is fat or muscle, so it gets the hero and everything else compresses. */}
+        <div style={{ marginBottom: 10 }}>{card(<>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            {sectionTitle("Protein · your lead lever", C.muted)}
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: pTone, border: `1px solid ${pTone}55`, background: pTone + "1A" }}>{pPct}% OF FLOOR</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
+            <span style={{ width: 6, height: 6, borderRadius: 6, background: C.go, alignSelf: "center" }} />
+            <span style={{ fontFamily: DATA, fontSize: 38, fontWeight: 700, color: C.ink, lineHeight: 1 }}>{eaten.protein || 0}</span>
+            <span style={{ fontFamily: DATA, fontSize: 13, color: C.muted }}>/ {targets.protein}g</span>
+          </div>
+          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 9 }}>
+            <div style={{ width: `${pPct}%`, height: "100%", background: pTone, borderRadius: 6 }} />
+          </div>
+          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 9, lineHeight: 1.5 }}>{pGap > 0 ? `${pGap}g short. A shake or a palm of chicken closes most of it.` : "Floor met. This is the day that protects the muscle."}</div>
+        </>, { borderLeft: `2.5px solid ${pTone}` })}</div>
+
+        <div style={{ marginBottom: 10 }}>{card(<>
+          {sectionTitle("Counters", C.muted)}
+          <div style={{ display: "flex", gap: 8 }}>
+            {counters.map(([l, v, sub]) => (<div key={l} style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
+              <div style={{ fontFamily: DATA, fontSize: 14.5, fontWeight: 700, color: C.ink, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>{v}</div>
+              <div style={{ fontFamily: DATA, fontSize: 9, color: C.faint, marginTop: 1 }}>{sub}</div>
+            </div>))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 13, paddingTop: 11, borderTop: `1px solid ${C.hair}` }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Water</div>
+            <div style={{ fontFamily: DATA, fontWeight: 700, color: C.blue }}>{fmtVol(eaten.waterOz)} / {fmtVol(targets.waterOz)} {volU}</div>
+          </div>
+          <div style={{ height: 8, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 8 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
+        </>)}</div>
+
+        {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ marginBottom: 10 }}>{card(<>
+          <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Logged today — tap ✕ to undo a mistake</div>
+          {mealLog.filter((m) => m.date === todayISO()).map((m) => (
+            <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
+              <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div><div style={{ fontSize: 11, color: C.faint }}>{m.protein}g protein · {m.calories} cal</div></div>
+              <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button>
             </div>
           ))}
-        </div>
+        </>)}</div>}
 
-        <div style={{ marginTop: 14 }}>{card(
-          <>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Water</div><div style={{ fontFamily: DISPLAY, fontWeight: 700, color: C.blue }}>{fmtVol(eaten.waterOz)} / {fmtVol(targets.waterOz)} {volU}</div></div>
-            <div style={{ height: 10, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 8 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
-      {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ marginTop: 14 }}>{card(<>
-        <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Logged today — tap ✕ to undo a mistake</div>
-        {mealLog.filter((m) => m.date === todayISO()).map((m) => (
-          <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
-            <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div><div style={{ fontSize: 11, color: C.faint }}>{m.protein}g protein · {m.calories} cal</div></div>
-            <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button>
+        <div>{card(<>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            {sectionTitle("Activity", C.muted)}
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: syn > 0 ? C.go : C.faint, border: `1px solid ${syn > 0 ? C.go + "55" : C.hair}`, background: syn > 0 ? C.go + "1A" : "transparent" }}>{syn > 0 ? "SYNCED" : "NOT SYNCED"}</span>
           </div>
-        ))}
-      </>)}</div>}
-          </>)}</div>
-
-        <div style={{ display: "flex", gap: 12, marginTop: 14 }}>
-          {card(<>{(() => {
-            const tk = dayKeyAt(Date.now(), prefs);
-            const syn = (((healthSync && healthSync.days) || []).find((d) => d.date === tk) || {}).steps || 0;
-            const shown = Math.max(+eaten.steps || 0, syn);
-            return <>{stat("Steps", shown.toLocaleString(), "")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>{syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"}</div></>;
-          })()}</>, { flex: 1 })}
-          {card(<>{stat("Exercise", eaten.exerciseCal, " cal")}<div style={{ fontSize: 11, color: C.faint, marginTop: 2 }}>burned today</div></>, { flex: 1 })}
-        </div>
-
-        <div style={{ marginTop: 14 }}>{card(
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div><div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Wearables</div><div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>Apple Health · Garmin · Whoop · Fitbit</div></div>
-            <div style={{ fontSize: 11.5, color: C.go, fontWeight: 600, border: `1px solid ${C.go}55`, borderRadius: 20, padding: "5px 11px" }}>Auto-syncing</div>
-          </div>)}</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>Steps</div>
+              <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                {syn > 0 && <span style={{ width: 5, height: 5, borderRadius: 5, background: C.go, flexShrink: 0 }} />}{stepsShown.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>{syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"}</div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>Active kcal</div>
+              <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3 }}>{eaten.exerciseCal || 0}</div>
+              <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>burned today</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 11, paddingTop: 10, borderTop: `1px solid ${C.hair}`, lineHeight: 1.5 }}>Wearables · Apple Health · Garmin · Whoop · Fitbit</div>
+        </>)}</div>
       </div>
     );
   };

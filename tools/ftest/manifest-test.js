@@ -16,7 +16,9 @@ const MANIFEST = [
  "Approaching goal",
  "Ask about this menu… (swaps, carbs, drinks)",
  "Ask your coach…",
- "Auto-syncing",
+ // v0.9.76: the Wearables card claimed "Auto-syncing" unconditionally, even when nothing had
+ // ever synced. The Activity card now reports the day's real state, so the manifest guards that.
+ "NOT SYNCED",
  "Back to current plan",
  "Backup (JSON)",
  "Barcode number",
