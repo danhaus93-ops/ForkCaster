@@ -3162,11 +3162,6 @@ export default function App() {
       <div style={{ padding: "18px 18px 12px" }}>
         <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Today</div>
         <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{(() => { const k = todayISO(), plain = dayKeyAt(Date.now(), { rolloverHour: prefs.rolloverHour }); return k !== plain ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 800, color: C.violet, border: `1px solid ${C.violet}55`, borderRadius: 20, padding: "3px 9px" }}>NIGHT DAY · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short" })}</span> : null; })()}</div>
-        <button onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ width: "100%", marginBottom: 16, background: C.go, color: C.bg, border: "none", borderRadius: 13, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: `0 4px 16px ${C.go}33` }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.bg} strokeWidth="1.6" strokeLinecap="round" /></svg>
-          Scan or log food
-        </button>
-
         {/* PROTEIN LEADS. The contract names it the one lever that decides whether the weight
             coming off is fat or muscle, so it gets the hero and everything else compresses. */}
         <div style={{ marginBottom: 10 }}>{card(<>
@@ -3203,10 +3198,13 @@ export default function App() {
 
         {/* THE LADDER. Every number in this app came from one of these five, and they are not equally
             exact. Naming the tier is how the app stays honest about its own inputs. */}
-        <div style={{ marginBottom: 10 }}>{card(<>
+        <div style={{ marginBottom: 10 }} onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             {sectionTitle("Log a meal", C.muted)}
-            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.caution, border: `1px solid ${C.caution}55`, background: C.caution + "1A" }}>ACCURACY LADDER</span>
+            <span style={{ display: "flex", gap: 6, marginTop: -8 }}>
+              <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.caution, border: `1px solid ${C.caution}55`, background: C.caution + "1A" }}>ACCURACY LADDER</span>
+              <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>TAP TO LOG</span>
+            </span>
           </div>
           {[["Barcode scan", "Most exact", C.go], ["Nutrition label photo", "Exact", C.go], ["Search USDA / Open Food Facts", "Good", C.muted], ["Photo estimate — snap your plate", "Estimate", C.caution], ["Describe it — AI estimate", "Least exact", C.caution]].map(([l, tier, tone], i) => (
             <div key={l} onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none", cursor: "pointer" }}>
@@ -4731,7 +4729,7 @@ export default function App() {
           <div onClick={() => setLogOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px 28px", maxHeight: "82vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>Scan or log food</div>
+                <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.8, textTransform: "uppercase", color: C.ink }}>Scan or log food</div>
                 <button onClick={() => { stopCam(); setLogOpen(false); }} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 99, color: C.muted, fontSize: 15, cursor: "pointer" }}>✕</button>
               </div>
 
@@ -4748,26 +4746,26 @@ export default function App() {
               ) : (
                 <button onClick={startCam} style={{ width: "100%", borderRadius: 14, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "22px 16px", textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 8px", display: "block" }}><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.go} strokeWidth="1.8" strokeLinecap="round" /></svg>
-                  <div style={{ fontFamily: BODY, fontSize: 14.5, fontWeight: 700, color: C.go }}>Scan with camera</div>
-                  <div style={{ fontFamily: BODY, fontSize: 11.5, color: C.muted, marginTop: 3 }}>Point at any food barcode — or type it below</div>
+                  <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.6, textTransform: "uppercase", color: C.go }}>Scan with camera</div>
+                  <div style={{ fontFamily: BODY, fontSize: 11.5, color: C.muted, marginTop: 5 }}>Point at any food barcode — or type it below</div>
                 </button>
               )}
               {camErr && <div style={{ fontSize: 12, color: C.avoid, marginTop: -6, marginBottom: 10 }}>{camErr}</div>}
 
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                 <input value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") lookupBarcode(barcode); }} placeholder="Barcode number" inputMode="numeric"
-                  style={{ flex: 1, fontFamily: DISPLAY, fontSize: 16, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
-                <button onClick={() => lookupBarcode(barcode)} disabled={scan.status === "loading"} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 10, padding: "0 18px", fontFamily: BODY, fontWeight: 700, fontSize: 14, cursor: "pointer", opacity: scan.status === "loading" ? 0.6 : 1 }}>{scan.status === "loading" ? "…" : "Look up"}</button>
+                  style={{ flex: 1, fontFamily: DATA, fontSize: 14.5, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 13px", outline: "none", boxSizing: "border-box" }} />
+                <button onClick={() => lookupBarcode(barcode)} disabled={scan.status === "loading"} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 18px", fontFamily: DATA, fontWeight: 800, fontSize: 11, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", opacity: scan.status === "loading" ? 0.6 : 1 }}>{scan.status === "loading" ? "…" : "Look up"}</button>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <input value={foodQuery} onChange={(e) => setFoodQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") searchFood(); }} placeholder="Or search food by name (e.g. grilled chicken breast)"
-                  style={{ flex: 1, fontFamily: BODY, fontSize: 14, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "12px 14px", outline: "none" }} />
-                <button onClick={searchFood} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 11, padding: "0 16px", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>Search</button>
+                  style={{ flex: 1, fontFamily: DATA, fontSize: 12.5, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 14px", outline: "none" }} />
+                <button onClick={searchFood} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 16px", fontFamily: DATA, fontSize: 11, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>Search</button>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <input value={nlText} onChange={(e) => setNlText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") logByDescription(); }} placeholder={'Or describe it: "2 eggs, buttered toast, black coffee"'}
-                  style={{ flex: 1, fontFamily: BODY, fontSize: 14, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 11, padding: "12px 14px", outline: "none" }} />
-                <button onClick={logByDescription} disabled={nlBusy} style={{ background: C.violet, color: "#fff", border: "none", borderRadius: 11, padding: "0 14px", fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", opacity: nlBusy ? 0.6 : 1 }}>{nlBusy ? "…" : "Log it"}</button>
+                  style={{ flex: 1, fontFamily: DATA, fontSize: 12.5, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 14px", outline: "none" }} />
+                <button onClick={logByDescription} disabled={nlBusy} style={{ background: C.violet, color: C.bg, border: "none", borderRadius: 999, padding: "0 16px", fontFamily: DATA, fontSize: 11, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", opacity: nlBusy ? 0.6 : 1 }}>{nlBusy ? "…" : "Log it"}</button>
               </div>
               {foodResults === "loading" && <div style={{ fontSize: 12.5, color: C.faint, padding: "8px 2px" }}>Searching…</div>}
               {foodResults && foodResults.error && <div style={{ fontSize: 12.5, color: C.avoid, padding: "8px 2px", lineHeight: 1.45 }}>Food search couldn't reach its sources — the node may be offline or the databases are down. The barcode and describe-it paths still work.</div>}
