@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.89"
+version: "0.9.90"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The Order for me button was still white — the last one in the app. It is green
-  now, outlined until a place is selected. Each pick's reason is labelled Why so it
-  reads as an explanation rather than a subtitle, and the allergies you filter on
-  now show as removable chips on Now instead of being invisible.
+  The meal you are actually about to eat is now marked TONIGHT on your plan, with a
+  green edge on its row, so the day's list has an obvious next step instead of four
+  equal cards. Skip today also says where its list comes from — your fat ceiling and
+  the symptoms you logged.
 dependencies: []
 path: ""
 defaultUsername: ""

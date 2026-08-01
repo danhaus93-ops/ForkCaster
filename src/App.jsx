@@ -3140,6 +3140,7 @@ export default function App() {
             {(result.avoid || []).length > 0 && (
               <div style={{ marginTop: 18 }}>
                 {sectionTitle("Skip today", C.avoid)}
+                <div style={{ fontSize: 10.5, color: C.faint, marginTop: -4, marginBottom: 8, lineHeight: 1.45 }}>From your fat ceiling and today's symptom load.</div>
                 {result.avoid.map((a, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderBottom: i < result.avoid.length - 1 ? `1px solid ${C.hair}` : "none" }}>
                     <span style={{ fontSize: 13.5, color: C.ink, fontWeight: 500 }}>{a.item || a.name}</span><span style={{ fontSize: 12.5, color: C.muted, textAlign: "right", maxWidth: "48%" }}>{a.reason}</span>
@@ -4513,6 +4514,8 @@ export default function App() {
     // week view
     const day = mealPlan.days[Math.min(planSel, mealPlan.days.length - 1)];
     const tot = planTotals(day); const hit = tot.p >= day.target.protein;
+    // the next unlogged slot on today's day — the one meal he is actually about to eat
+    const tonightIdx = (day.iso === todayISO() || day.label === "Today") ? day.slots.findIndex((x) => !x.logged) : -1;
     return (
       <div>
         {sectionTitle("Your week")}
@@ -4535,11 +4538,14 @@ export default function App() {
         {planPhotoNote && day.slots.some((x) => !x.photo && !x.image) && <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>Dish photos unavailable right now ({/402/.test(planPhotoNote) ? "Spoonacular daily quota used up — they'll fill in automatically tomorrow" : /401|unauthor/i.test(planPhotoNote) ? "key rejected — check Settings" : planPhotoNote}).</div>}
         {(day.dose || day.after || day.night || day.postNights) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 12, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()}{(day.dose || day.after) ? ` · TARGET EASED TO ${day.target.protein}G` : ""}</div><div style={{ fontSize: 13, color: C.ink, marginTop: 3, lineHeight: 1.45 }}>{day.night ? "Your day runs into tomorrow morning — meals after midnight still count here." : day.postNights ? "Sleep is the workout today. Protein when you wake; don't chase the full target." : "Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal."}</div></div>}
         {day.slots.map((slot, si) => (
-          <div key={si} onClick={() => { setPlanMealRef([Math.min(planSel, mealPlan.days.length - 1), si]); setPlanView("meal"); }} style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 16, display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", marginBottom: 10, cursor: "pointer" }}>
+          <div key={si} onClick={() => { setPlanMealRef([Math.min(planSel, mealPlan.days.length - 1), si]); setPlanView("meal"); }} style={{ background: C.surface, border: `1px solid ${si === tonightIdx ? C.go + "66" : C.hair}`, borderRadius: 16, display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", marginBottom: 10, cursor: "pointer" }}>
             <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: (day.dose || day.after) ? C.violet : medalColor(si) }} />
             <div style={{ width: 46, height: 46, borderRadius: 11, flexShrink: 0, background: C.surfaceAlt, overflow: "hidden" }}>{(slot.photo || slot.image) ? <img src={slot.photo || slot.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{slot.slot === "snack2" ? "snack" : slot.slot}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{slot.slot === "snack2" ? "snack" : slot.slot}</div>
+                {si === tonightIdx && <span style={{ fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "2px 7px", color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>TONIGHT</span>}
+              </div>
               <div style={{ fontSize: 14.5, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{slot.name}</div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
