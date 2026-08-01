@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.84"
+version: "0.9.85"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Active kcal and exercise minutes now show the numbers your watch already sent.
-  The node has been storing both since the Apple Health mapping went in, but the
-  Activity card only ever looked at manually entered values, so a synced burn
-  displayed as a dash. Synced numbers win, manual entry is the fallback, and each
-  cell says which one you are looking at.
+  Calories burned now subtract on screen. A net-after-activity line under the
+  counters shows what you ate minus what you burned, and how far under target that
+  leaves you. The calorie target itself does not move — moving more widens the
+  deficit instead of quietly buying back food.
 dependencies: []
 path: ""
 defaultUsername: ""
