@@ -5522,7 +5522,7 @@ export default function App() {
 // v0.9.109: THE MODEL, lifted out of the chart so the collapsed row reads the same numbers the
 // chart draws. It was inline, so the compact row had nothing to read and I approximated it —
 // which is precisely the invented figure this app exists not to show.
-function medLevelModel({ doseLog, med, dueISO, intervalDays }) {
+export function medLevelModel({ doseLog, med, dueISO, intervalDays }) {
   const HL_DAYS = { tirzepatide: 5, semaglutide: 7, retatrutide: 6, rybelsus: 7, orforglipron: 5 }; // reta = trial-data estimate
   const hl = HL_DAYS[med] || 6;
   const ke = Math.log(2) / (hl * 24), ka = ke * 10; // absorption tuned for ~1.5d peak
@@ -5640,16 +5640,16 @@ function medLevelModel({ doseLog, med, dueISO, intervalDays }) {
   const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null; // kept: ss-relative internals
   const nextVsPeak = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / Math.max(refPeak, 1e-9)) * 100) : null;
   const nextDoseIdx = fullSeq.findIndex((d) => d.t >= nextDoseT - 3600000 && d.t > now);
-  return { hl, doses, now, start, declared, gaps, cadence, lastDose, dueT, firstT, virtual, level, levelProj, ssVirtual, ssLevel, maxL, climbing, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nD, nLedger, PER, scrolls, W, H, PADB, xi, y, cycLen, nowIdx0, refPeak, vsPeak, nowIdx, nowFrac, nowX, nowY, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextVsPeak, nextDoseIdx };
+  return { HL_DAYS, hl, ke, ka, doses, now, start, end, declared, gaps, cadence, lastDose, dueT, firstT, virtual, mk, level, levelProj, ssVirtual, ssLevel, ssPeak, maxL, ssPct, climbing, tPeakH, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nD, nLedger, PER, scrolls, W, H, PADB, xi, y, cycLen, cyc, nowIdx0, refPeak, vsPeak, nowIdx, nowFrac, nowX, nowY, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextPct, nextVsPeak, nextDoseIdx };
 }
 
-function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
+export function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const M = medLevelModel({ doseLog, med, dueISO, intervalDays });
   const scrollRef = useRef(null);
   const nD = M ? M.nD : 1, nowIdx = M ? M.nowIdx : 0;
   useEffect(() => { const el = scrollRef.current; if (el) { const target = ((nowIdx + 0.5) / nD) * el.scrollWidth - el.clientWidth * 0.45; el.scrollLeft = Math.max(0, target); } }, [nD, nowIdx]);
   if (!M) return null;
-  const { hl, doses, now, start, declared, gaps, cadence, lastDose, dueT, firstT, virtual, level, levelProj, ssVirtual, ssLevel, maxL, climbing, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nLedger, PER, scrolls, W, H, PADB, xi, y, cycLen, nowIdx0, refPeak, vsPeak, nowFrac, nowX, nowY, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextVsPeak, nextDoseIdx } = M;
+  const { HL_DAYS, hl, ke, ka, doses, now, start, end, declared, gaps, cadence, lastDose, dueT, firstT, virtual, mk, level, levelProj, ssVirtual, ssLevel, ssPeak, maxL, ssPct, climbing, tPeakH, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nLedger, PER, scrolls, W, H, PADB, xi, y, cycLen, cyc, nowIdx0, refPeak, vsPeak, nowFrac, nowX, nowY, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextPct, nextVsPeak, nextDoseIdx } = M;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
