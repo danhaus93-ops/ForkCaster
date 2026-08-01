@@ -1579,6 +1579,7 @@ export default function App() {
   const [simSel, setSimSel] = useState(0);
   const fileRef = useRef(null);
   const photoRef = useRef(null);
+  const labelRef = useRef(null);
 
   const [glp, setGlp] = useState(__T && __T.glp ? __T.glp : {
     med: "tirzepatide", dose: 2.5, injectionDay: "SU",
@@ -2610,11 +2611,27 @@ export default function App() {
     c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
     return c.toDataURL("image/jpeg", q).split(",")[1]; // always JPEG, well under API limits
   }
-  async function estimateFromPhoto(e) {
+  async function estimateFromPhoto(e, mode = "plate") {
     const file = (e.target.files || [])[0]; if (!file) return;
     setScan({ status: "loading" });
     try {
       const b64 = await shrinkToJpeg(file);
+      // v0.9.79: LABEL MODE is the ladder's second rung. It transcribes and refuses to guess —
+      // an estimate returned under a label's name would be the dishonest case the ladder exists to prevent.
+      if (mode === "label") {
+        const lp = "Transcribe the Nutrition Facts panel in this photo EXACTLY as printed, per serving. Do not estimate, infer, or round. " +
+          "Return ONLY minified JSON, no markdown: {\"name\":\"<product name if visible, else Labeled item>\",\"serving\":\"<serving size as printed>\",\"calories\":int,\"protein\":int,\"carbs\":int,\"fat\":int,\"fiber\":int,\"readable\":true}. " +
+          "If no Nutrition Facts panel is legible in the photo, return exactly {\"readable\":false} and nothing else.";
+        const lt = await callClaude(lp, null, { data: b64, media_type: "image/jpeg" });
+        const lf = salvageJSONObject(lt);
+        if (!lf || lf.readable === false || !(+lf.calories || +lf.protein)) { setScan({ status: "error", message: "No readable Nutrition Facts panel in that photo. Try filling the frame with the label, or use the plate estimate instead." }); return; }
+        setScan({ status: "found", food: {
+          name: lf.name || "Labeled item", brand: "", items: null, adjusted: false,
+          basis: lf.serving ? `${lf.serving} (from label)` : "1 serving (from label)",
+          source: "nutrition label read from photo",
+          calories: Math.round(+lf.calories || 0), protein: Math.round(+lf.protein || 0), carbs: Math.round(+lf.carbs || 0), fat: Math.round(+lf.fat || 0), fiber: Math.round(+lf.fiber || 0) } });
+        return;
+      }
       const prompt = "FIRST: if a Nutrition Facts label is readable ANYWHERE in this photo, TRANSCRIBE its per-serving numbers exactly — do not estimate — and set src to label with flat fields: {\"name\":string,\"calories\":int,\"protein\":int,\"carbs\":int,\"fat\":int,\"fiber\":int,\"grams\":int,\"src\":\"label\"}. " +
         "OTHERWISE itemize every distinct food visible and COMPUTE each item from its estimated portion using visual scale cues (dinner plate ~26 cm, fork length): state each portion in qty (grams or household measure). Be realistic about size — packaged single-serve bakery/deli items are typically 60–100 g, not restaurant portions — but compute accurately from the portion you state; do not shade numbers low. " +
         "Return ONLY minified JSON, no markdown: {\"name\":\"<short name>\",\"src\":\"estimate\",\"items\":[{\"item\":string,\"qty\":string,\"calories\":int,\"protein\":int,\"carbs\":int,\"fat\":int,\"fiber\":int}]}.";
@@ -3207,7 +3224,7 @@ export default function App() {
             </span>
           </div>
           {[["Barcode scan", "Most exact", C.go], ["Nutrition label photo", "Exact", C.go], ["Search USDA / Open Food Facts", "Good", C.muted], ["Photo estimate — snap your plate", "Estimate", C.caution], ["Describe it — AI estimate", "Least exact", C.caution]].map(([l, tier, tone], i) => (
-            <div key={l} onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none", cursor: "pointer" }}>
+            <div key={l} onClick={(ev) => { if (i === 1) { ev.stopPropagation(); labelRef.current && labelRef.current.click(); return; } setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none", cursor: "pointer" }}>
               <span style={{ fontSize: 13, color: C.ink2 }}>{l}</span>
               <span style={{ fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 8px", color: tone, border: `1px solid ${tone}55`, whiteSpace: "nowrap", textTransform: "uppercase" }}>{tier}</span>
             </div>))}
@@ -4791,9 +4808,15 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 14px" }}>
                 <div style={{ flex: 1, height: 1, background: C.hair }} /><span style={{ fontSize: 11, color: C.faint }}>or</span><div style={{ flex: 1, height: 1, background: C.hair }} />
               </div>
+              <input ref={labelRef} type="file" accept="image/*" capture="environment" onChange={(e) => estimateFromPhoto(e, "label")} style={{ display: "none" }} />
+              <button onClick={() => labelRef.current && labelRef.current.click()} disabled={scan.status === "loading"} style={{ width: "100%", marginBottom: 8, background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, opacity: scan.status === "loading" ? 0.6 : 1, boxShadow: `0 4px 14px ${C.go}33` }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" stroke={C.bg} strokeWidth="1.8" /><path d="M8 8h8M8 12h8M8 16h5" stroke={C.bg} strokeWidth="1.8" strokeLinecap="round" /></svg>
+                {scan.status === "loading" ? "Reading…" : "Photograph a nutrition label"}
+              </button>
+              <div style={{ fontSize: 10.5, color: C.faint, textAlign: "center", marginBottom: 14, lineHeight: 1.45 }}>Read digit-for-digit — as exact as the label itself.</div>
               <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={estimateFromPhoto} style={{ display: "none" }} />
-              <button onClick={() => photoRef.current && photoRef.current.click()} disabled={scan.status === "loading"} style={{ width: "100%", marginBottom: 16, background: C.violet, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, opacity: scan.status === "loading" ? 0.6 : 1 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke={C.surface} strokeWidth="1.8" strokeLinejoin="round" /><circle cx="12" cy="13" r="3.2" stroke={C.surface} strokeWidth="1.8" /></svg>
+              <button onClick={() => photoRef.current && photoRef.current.click()} disabled={scan.status === "loading"} style={{ width: "100%", marginBottom: 16, background: C.violet, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, opacity: scan.status === "loading" ? 0.6 : 1 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke={C.bg} strokeWidth="1.8" strokeLinejoin="round" /><circle cx="12" cy="13" r="3.2" stroke={C.bg} strokeWidth="1.8" /></svg>
                 {scan.status === "loading" ? "Analyzing…" : "Estimate a plate from photo (AI)"}
               </button>
               <button onClick={() => setInfoOpen(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 11.5, cursor: "pointer", padding: "7px 0 0", textDecoration: "underline" }}>ⓘ What's exact vs estimated? Tap to read</button>
@@ -4820,7 +4843,7 @@ export default function App() {
                 </div>
               )}
               {scan.status === "miss" && <div style={{ fontSize: 13, color: C.muted, padding: "4px 2px" }}>Not found in Open Food Facts, USDA, or FatSecret. Try another barcode, or use the AI photo estimate below.</div>}
-              {scan.status === "error" && <div style={{ fontSize: 13, color: C.avoid, padding: "4px 2px" }}>Couldn't reach your node — check the connection (or log into the Umbrel dashboard once) and retry.</div>}
+              {scan.status === "error" && <div style={{ fontSize: 13, color: C.avoid, padding: "4px 2px", lineHeight: 1.45 }}>{scan.message || "Couldn't reach your node — check the connection (or log into the Umbrel dashboard once) and retry."}</div>}
             </div>
           </div>
         )}
