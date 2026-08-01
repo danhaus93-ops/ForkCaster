@@ -61,8 +61,16 @@ try {
   if (!/value: String\(_M\.vsPeak\)/.test(row)) { console.log('MED_ROW_DENOMINATOR: row does not print vsPeak'); denomOK = false; }
   if (/_M\.ssPct/.test(row)) { console.log('MED_ROW_DENOMINATOR: row still reads ssPct'); denomOK = false; }
   if (!/\{vsPeak\}%/.test(SRC)) { console.log('MED_ROW_DENOMINATOR: chart chip no longer prints vsPeak'); denomOK = false; }
-  if (denomOK) console.log('MED_DENOMINATOR_OK');
-  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK ? 0 : 1);
+  // v0.9.113: the sparkline must be the chart's curve, not a decay. Sampling level() past now loses
+  // every planned dose and the saw-tooth with it, so the row showed a fading line under a climbing chart.
+  const sp = SRC.slice(SRC.indexOf('const spark = (() => {'), SRC.indexOf('const spark = (() => {') + 1200);
+  let shapeOK = true;
+  if (!/_M\.levelProj\(t\)/.test(sp)) { console.log('MED_SPARK_SHAPE: spark does not project future doses'); shapeOK = false; }
+  if (!/t0 = _M\.start, t1 = _M\.end/.test(sp)) { console.log('MED_SPARK_SHAPE: spark window is not the chart window'); shapeOK = false; }
+  if (!/t <= _M\.now \? _M\.level\(t\)/.test(sp)) { console.log('MED_SPARK_SHAPE: logged history must use level()'); shapeOK = false; }
+  if (shapeOK) console.log('MED_SPARK_OK');
+  if (denomOK && shapeOK) console.log('MED_DENOMINATOR_OK');
+  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK && shapeOK ? 0 : 1);
 } catch (e) {
   console.log('RENDER SMOKE FAILED:\n' + (e.stdout||'').toString() + (e.stderr||'').toString().slice(0,900));
   process.exit(1);

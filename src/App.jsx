@@ -4368,12 +4368,17 @@ export default function App() {
         const _M = medLevelModel({ doseLog: glp.doseLog, med: glp.med, dueISO, intervalDays: medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7) });
         if (!_M) return { id: "med", tone: "none", color: C.violet, title: "Estimated med level", when: "no doses",
           value: "—", unit: "log a dose to model it", sub: "nothing to project yet" };
-        const spark = (() => { const n = 26, t0 = _M.now - 14 * 86400000, t1 = _M.now + 7 * 86400000;
-          const pts = Array.from({ length: n }, (_, k) => { const t = t0 + (k / (n - 1)) * (t1 - t0); return _M.level(t) / _M.ssPeak; });
-          const lo = Math.min(...pts), hi = Math.max(...pts), pad = (hi - lo) * 0.2 || 0.05;
-          const yy = (q) => 4 + (1 - (q - (lo - pad)) / ((hi + pad) - (lo - pad))) * 24;
+        const spark = (() => {
+          // v0.9.113: the same window and the same two functions the chart uses — level() up to now,
+          // levelProj() after it. Sampling level() past now decayed to nothing and lost the saw-tooth
+          // entirely, because level() knows only logged doses; the climb comes from the planned ones.
+          const n = 40, t0 = _M.start, t1 = _M.end;
+          const pts = Array.from({ length: n }, (_, k) => { const t = t0 + (k / (n - 1)) * (t1 - t0);
+            return (t <= _M.now ? _M.level(t) : _M.levelProj(t)) / Math.max(_M.ssPeak, 1e-9); });
+          const lo = Math.min(...pts), hi = Math.max(...pts), pad = (hi - lo) * 0.12 || 0.05;
+          const yy = (q) => 3 + (1 - (q - (lo - pad)) / ((hi + pad) - (lo - pad))) * 26;
           const xx = (k) => 2 + k * (88 / (n - 1));
-          const nowK = Math.round(((_M.now - t0) / (t1 - t0)) * (n - 1));
+          const nowK = Math.max(1, Math.round(((_M.now - t0) / (t1 - t0)) * (n - 1)));
           const solid = pts.slice(0, nowK + 1).map((q, k) => (k ? "L" : "M") + xx(k).toFixed(1) + "," + yy(q).toFixed(1)).join(" ");
           const dash = pts.slice(nowK).map((q, k) => (k ? "L" : "M") + xx(nowK + k).toFixed(1) + "," + yy(q).toFixed(1)).join(" ");
           return (<svg width="92" height="32" viewBox="0 0 92 32">
