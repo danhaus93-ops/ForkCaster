@@ -1582,6 +1582,7 @@ export default function App() {
   // v0.9.91: the day the counters currently belong to. Reset used to happen only at load, so an app
   // left open across the rollover carried yesterday's totals into today — and the next save stamped
   // the new date onto them, welding them there.
+  const [sleepView, setSleepView] = useState("week");
   const eatenDayRef = useRef(null);
   // v0.9.94: the instant the counters last changed. eatenDate alone could not be trusted because the
   // save stamped it with "now" on every write, so an autosave after midnight welded yesterday's
@@ -4304,6 +4305,52 @@ export default function App() {
         // a night without a breakdown shows no bar rather than a fabricated one.
         const _hd = ((healthSync && healthSync.days) || []).filter((d) => (+d.deepMin || 0) + (+d.remMin || 0) + (+d.lightMin || 0) > 0);
         const _stg = _hd.length ? _hd[_hd.length - 1] : null;
+        // v0.9.99: seven nights side by side. Only drawn once seven are banked — below that there is
+        // no week, and a toggle leading to an empty chart is worse than no toggle. Bar height is time
+        // asleep, so a short night is short on the page; the shot night is marked because the whole
+        // point of this view is seeing whether a dose costs him deep sleep.
+        const _n7 = ((healthSync && healthSync.days) || []).filter((d) => (+d.sleepMin || 0) > 0).slice(-7);
+        const _doseDays = new Set(((glp && glp.doseLog) || []).map((d) => d.date));
+        const weekReady = _n7.length >= 7;
+        const weekChart = !weekReady ? null : (() => {
+          const H = 74, BASE = 104, cols = _n7.length, colW = 26, gap = (260 - cols * colW) / Math.max(1, cols - 1);
+          const totals = _n7.map((d) => (+d.deepMin || 0) + (+d.remMin || 0) + (+d.lightMin || 0) + (+d.awakeMin || 0) || (+d.sleepMin || 0));
+          const scale = Math.max(540, ...totals);
+          const yOf = (m) => BASE - (m / scale) * H;
+          const avg = Math.round(_n7.reduce((n, d) => n + (+d.sleepMin || 0), 0) / cols);
+          return (<div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginBottom: 4 }}>
+              <span style={{ fontFamily: DATA, fontSize: 24, fontWeight: 700, color: C.ink }}>{hm(avg)}</span>
+              <span style={{ fontFamily: DATA, fontSize: 11, color: C.faint }}>average</span>
+              {sl.status === "ready" && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 11, fontWeight: 700, color: sl.flagged ? C.avoid : C.go }}>{sl.delta >= 0 ? "+" : ""}{sl.delta} min vs baseline</span>}
+            </div>
+            <svg viewBox="0 0 300 126" style={{ width: "100%", display: "block", marginTop: 6 }}>
+              {[[420, "7H", C.hair2 || "#2C3742"], [300, "5H", C.hair]].map(([m, lab, col]) => (
+                <g key={lab}>
+                  <line x1="34" y1={yOf(m)} x2="300" y2={yOf(m)} stroke={col} strokeDasharray="2 4" />
+                  <text x="0" y={yOf(m) + 3} fontFamily="ui-monospace, monospace" fontSize="7" fill={C.faint}>{lab}</text>
+                </g>))}
+              {_n7.map((d, i) => { const x = 40 + i * (colW + gap);
+                const seg = [["awake", +d.awakeMin || 0, C.avoid, 0.55], ["rem", +d.remMin || 0, "#67E8F9", 0.9], ["light", +d.lightMin || 0, "#3B84BC", 0.9], ["deep", +d.deepMin || 0, "#4C3FD4", 1]];
+                const known = seg.reduce((n, sg) => n + sg[1], 0);
+                let yb = BASE;
+                const stack = (known ? seg.slice().reverse() : [["sleep", +d.sleepMin || 0, C.faint, 0.4]]).map(([k, v, col, op]) => {
+                  const h = (v / scale) * H; yb -= h;
+                  return v > 0 ? <rect key={k} x={x} y={yb} width={colW} height={Math.max(1.5, h)} rx="2" fill={col} opacity={op} /> : null; });
+                const dose = _doseDays.has(d.date);
+                return (<g key={d.date || i}>
+                  {stack}
+                  {dose && <text x={x + colW / 2} y={yOf(totals[i]) - 5} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="7" fill={C.violet}>SHOT</text>}
+                  <text x={x + colW / 2} y="118" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8" fill={dose ? C.violet : (i === cols - 1 ? C.ink : C.faint)}>{d.date ? new Date(d.date + "T12:00:00").toLocaleDateString([], { weekday: "short" }).slice(0, 2) : ""}</text>
+                </g>); })}
+            </svg>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
+              {[["Deep", "#4C3FD4", 1], ["REM", "#67E8F9", 0.9], ["Light", "#3B84BC", 0.9], ["Awake", C.avoid, 0.55]].map(([l, col, op]) => (
+                <span key={l} style={{ fontFamily: DATA, fontSize: 8.5, letterSpacing: 0.7, textTransform: "uppercase", color: C.muted }}>
+                  <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 2, background: col, opacity: op, marginRight: 6, verticalAlign: -1 }} />{l}</span>))}
+            </div>
+          </div>);
+        })();
         const stageBar = !_stg ? null : (() => {
           // v0.9.98: each stage against the range that is typical for an adult, because the minutes
           // alone never answered the only question worth asking — was that enough. Bands are
@@ -4343,13 +4390,22 @@ export default function App() {
             </div>
           </div>);
         })();
+        const showWeek = weekReady && sleepView === "week";
         return <div style={{ marginBottom: 14 }}>{card(<div>
-          {sectionTitle("Sleep", CY)}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {sectionTitle(weekReady ? (showWeek ? "Sleep · 7 nights" : "Sleep · last night") : "Sleep", CY)}
+            {weekReady && (
+              <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,.04)", padding: 3, borderRadius: 9, marginTop: -8 }}>
+                {["night", "week"].map((v) => (
+                  <button key={v} onClick={() => setSleepView(v)} style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 0.8, padding: "4px 10px", borderRadius: 7, border: "none", cursor: "pointer", textTransform: "capitalize", background: sleepView === v ? C.surfaceAlt : "transparent", color: sleepView === v ? C.ink : C.faint }}>{v}</button>))}
+              </div>)}
+          </div>
           {sl.status === "empty" && <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
             Waiting for sleep data. Add the <b>Sleep Analysis</b> metric to your Health Auto Export automation and it lands here on its own. Sleep is what your watch derives resting heart rate from, so tracking it also makes that card more trustworthy.</div>}
-          {sl.status === "collecting" && <div><div style={{ fontSize: 12.5, color: C.muted }}>
+          {showWeek && weekChart}
+          {!showWeek && sl.status === "collecting" && <div><div style={{ fontSize: 12.5, color: C.muted }}>
             Learning your baseline {"—"} {sl.have}/{sl.need} days banked.</div>{stageBar}</div>}
-          {sl.status === "ready" && <div>
+          {!showWeek && sl.status === "ready" && <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontFamily: DISPLAY, fontSize: 29, fontWeight: 700, color: C.ink }}>{hm(sl.current)}</span>
               <span style={{ fontSize: 12, color: C.faint }}>this day</span>

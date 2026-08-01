@@ -70,5 +70,23 @@ ok(/came in below typical/.test(SRC),'the finding is stated in words');
 ok(/low \? C\.caution : C\.go/.test(SRC),'tone keys off low only');
 ok(!/high \? C\.caution/.test(SRC),'above typical is never toned as a warning');
 
+
+// v0.9.99: the week view and its switch
+ok(/const weekReady = _n7\.length >= 7;/.test(SRC),'the week is only real at seven banked nights');
+ok(/const showWeek = weekReady && sleepView === "week";/.test(SRC),'week is shown only when it exists');
+ok(/\{weekReady && \(/.test(SRC),'the toggle itself is hidden below seven nights');
+ok(/useState\("week"\)/.test(SRC),'week is the default once it appears');
+ok(/!showWeek && sl\.status === "collecting"/.test(SRC),'the collecting night view yields to the week');
+ok(/!showWeek && sl\.status === "ready"/.test(SRC),'the ready night view yields to the week');
+ok(SRC.includes('["Deep", "#4C3FD4", 1], ["REM", "#67E8F9", 0.9], ["Light", "#3B84BC", 0.9], ["Awake", C.avoid, 0.55]'),'the key names all four stages');
+ok(/_doseDays\.has\(d\.date\)/.test(SRC),'shot nights are marked on the week');
+ok(/\[\[420, "7H"/.test(SRC),'a 7h target line is drawn');
+ok(/Math\.max\(540, \.\.\.totals\)/.test(SRC),'the scale never shrinks below 9h, so bar heights stay comparable week to week');
+// a night with a total but no stage breakdown must still draw, as one neutral block
+ok(/known \? seg\.slice\(\)\.reverse\(\) : \[\["sleep"/.test(SRC),'a night with no stages draws its total rather than vanishing');
+// stack order: deep on the bottom, matching the key
+const stk=SRC.slice(SRC.indexOf('const seg = [["awake"'), SRC.indexOf('const known'));
+ok(stk.indexOf('"awake"') < stk.indexOf('"deep"'),'segments listed top-down so the reverse stacks deep at the base');
+
 console.log('\nSLEEP: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
