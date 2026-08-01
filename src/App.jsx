@@ -3226,15 +3226,15 @@ export default function App() {
             </div>))}
           </div>
           {activeKcal > 0 && (() => { const net = Math.max(0, Math.round((eaten.calories || 0) - activeKcal));
-            const deficit = targets.calories ? Math.round(targets.calories - net) : null;
             return (<div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.hair}` }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>Net after activity</div>
                 <div style={{ fontFamily: DATA, fontSize: 9.5, color: C.faint, marginTop: 3 }}>{(eaten.calories || 0).toLocaleString()} eaten − {activeKcal.toLocaleString()} burned</div>
+                <div style={{ fontSize: 10, color: C.faint, marginTop: 4, lineHeight: 1.4 }}>Context only — your calorie target already assumes you move, so this is not extra deficit.</div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{net.toLocaleString()}</div>
-                {deficit != null && <div style={{ fontFamily: DATA, fontSize: 9.5, color: deficit > 0 ? C.go : C.caution, marginTop: 2 }}>{deficit > 0 ? `${deficit.toLocaleString()} under target` : `${Math.abs(deficit).toLocaleString()} over target`}</div>}
+                <div style={{ fontFamily: DATA, fontSize: 9, color: C.faint, marginTop: 2 }}>kcal</div>
               </div>
             </div>); })()}
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 11 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
