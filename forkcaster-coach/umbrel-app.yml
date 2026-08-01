@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.101"
+version: "0.9.102"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Settings now reads the way the rest of the app does. Every value on the right of a
-  preference row is a small outline chip instead of a grey box, and the goal modes
-  are pills carrying their own protein and calorie numbers. Tapping still opens the
-  same native pickers underneath.
+  The goal mode buttons are back to the cards you had — two across, name on top and
+  the targets beneath. The preference value chips from the last release stay.
 dependencies: []
 path: ""
 defaultUsername: ""
