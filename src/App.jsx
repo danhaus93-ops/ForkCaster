@@ -3168,6 +3168,14 @@ export default function App() {
     const stepsShown = Math.max(+eaten.steps || 0, syn);
     const exMin = (workoutLog || []).filter((w) => w.date === todayISO() && w.kind === "cardio").reduce((n, w) => n + (+w.minutes || 0), 0);
     const stepHist = ((healthSync && healthSync.days) || []).slice(-13).map((d) => ({ v: +d.steps || 0 })).filter((d) => d.v > 0);
+    const _doses = new Set(((glp && glp.doseLog) || []).map((d) => d.date));
+    const _after = new Set([...(_doses)].map((d) => { const t = new Date(d + "T12:00:00"); t.setDate(t.getDate() + 1); return t.toLocaleDateString("sv-SE"); }));
+    const _DOW = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const _schedDow = _DOW[glp && glp.injectionDay];
+    const wk7 = Array.from({ length: 7 }, (_, i) => { const t = new Date(); t.setDate(t.getDate() + i); const iso = t.toLocaleDateString("sv-SE");
+      return { iso, label: i === 0 ? "Today" : t.toLocaleDateString(undefined, { weekday: "short" }),
+        dose: _doses.has(iso) || (_schedDow != null && t.getDay() === _schedDow), after: _after.has(iso) }; });
+    const doseDay = _schedDow != null ? ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"][_schedDow] : null;
     const counters = [
       ["Calories", (eaten.calories || 0).toLocaleString(), targets.calories ? "of " + targets.calories.toLocaleString() : "", "calories"],
       ["Carbs", (eaten.carbs || 0) + "g", targets.carbs ? "of " + targets.carbs + "g" : "", "carbs"],
@@ -3245,6 +3253,23 @@ export default function App() {
             </div>
           ))}
         </>)}</div>}
+
+        {/* THE SHOT DRIVES THE WEEK. Dose days and the day after get eased targets, so the week
+            has to show where the shot falls — otherwise an eased day reads as a missed day. */}
+        <div style={{ marginBottom: 10 }}>{card(<>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            {sectionTitle("Your week · dose sync", C.muted)}
+            <span style={{ fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: doseDay ? C.go : C.faint, border: `1px solid ${doseDay ? C.go + "55" : C.hair}`, background: doseDay ? C.go + "1A" : "transparent", whiteSpace: "nowrap" }}>{doseDay ? `✓ SYNCED · SHOT ${doseDay}` : "NO SHOT DAY SET"}</span>
+          </div>
+          <div style={{ display: "flex", gap: 5 }}>
+            {wk7.map((d, i) => (
+              <div key={i} style={{ flex: 1, textAlign: "center", borderRadius: 10, padding: "7px 0 6px", background: d.dose ? C.violet + "1A" : d.after ? C.violet + "0D" : "transparent", border: `1px solid ${d.dose ? C.violet + "55" : d.after ? C.violet + "22" : C.hair}` }}>
+                <div style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 0.6, color: d.dose || d.after ? C.violet : (i === 0 ? C.ink : C.faint), textTransform: "uppercase" }}>{d.label.slice(0, 3)}</div>
+                <div style={{ fontSize: 10, marginTop: 3, color: C.violet, lineHeight: 1 }}>{d.dose ? "💉" : d.after ? "·" : " "}</div>
+              </div>))}
+          </div>
+          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.5 }}>{wk7[0] && wk7[0].dose ? "Shot day — lighter, low-fat and carb-forward keeps it down." : wk7[0] && wk7[0].after ? "Day after the shot — targets ease; eat slowly and lead with protein." : doseDay ? `Next shot lands on ${doseDay}. Targets ease that day and the one after.` : "Set your injection day on the GLP-1 tab and the week syncs to it."}</div>
+        </>)}</div>
 
         <div>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -4819,7 +4844,7 @@ export default function App() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke={C.bg} strokeWidth="1.8" strokeLinejoin="round" /><circle cx="12" cy="13" r="3.2" stroke={C.bg} strokeWidth="1.8" /></svg>
                 {scan.status === "loading" ? "Analyzing…" : "Estimate a plate from photo (AI)"}
               </button>
-              <button onClick={() => setInfoOpen(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 11.5, cursor: "pointer", padding: "7px 0 0", textDecoration: "underline" }}>ⓘ What's exact vs estimated? Tap to read</button>
+              <button onClick={() => setInfoOpen(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 11.5, cursor: "pointer", padding: "7px 0 0", textDecoration: "underline" }}>ⓘ What's exact vs estimated? Tap to read — how ForkCaster gets its numbers</button>
 
               {scan.status === "found" && (
                 <div ref={resultRef} style={{ background: C.goSoft, border: `1px solid ${C.go}44`, borderRadius: 14, padding: 15, marginBottom: 12 }}>
