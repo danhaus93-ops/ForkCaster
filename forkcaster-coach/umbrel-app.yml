@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.97"
+version: "0.9.98"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Sleep now keeps the breakdown. Your export already sends deep, core, REM and awake
-  every night and all four were being thrown away after being added up. They are
-  stored separately now and drawn as a stage bar on the Sleep card, from the newest
-  night that actually has them. Nights without a breakdown show no bar rather than
-  an invented one. Your total sleep and everything that reads it are unchanged.
+  The sleep card now shows each stage against the range that is typical for an adult,
+  so you can see whether last night was enough rather than only how it split. Deep
+  and REM are the two that matter for recovery, and a shaded band behind each bar
+  shows where they should land. Coming in low is called out; coming in high never is.
 dependencies: []
 path: ""
 defaultUsername: ""

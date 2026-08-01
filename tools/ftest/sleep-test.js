@@ -38,7 +38,37 @@ ok(Object.keys(S({})).length===0,'a night with no stages stores nothing');
 ok(mins({totalSleep:6.5})===390,'sleepMin still computed the same way after the stage change');
 // the client must not fabricate a bar
 ok(/deepMin \|\| 0\) \+ \(\+d\.remMin/.test(SRC) || /d\.deepMin/.test(SRC),'client filters to nights that actually have stages');
-ok(SRC.includes('.filter((p) => p[1] > 0)'),'zero-length stages are not drawn');
+ok(SRC.includes('if (!asleep) return null;'),'a night with no sleep renders no bar at all');
+ok(/rows\.map\(\(r\) =>/.test(SRC),'every stage keeps its row, including a zero one — zero deep IS the finding');
+
+
+// v0.9.98: stage bands. Re-implement the classification the card uses and prove it on real nights.
+const cls=(deep,rem,light,wake)=>{
+  const asleep=deep+rem+light;
+  const R=[{k:'Deep',v:deep,lo:13,hi:23,of:asleep},{k:'REM',v:rem,lo:20,hi:25,of:asleep},
+           {k:'Light',v:light,lo:45,hi:55,of:asleep},{k:'Wake',v:wake,lo:null,hi:null,of:asleep+wake}];
+  return R.map(r=>{const pct=r.of?(r.v/r.of)*100:0;return {k:r.k,pct,low:r.lo!=null&&pct<r.lo,high:r.hi!=null&&pct>r.hi};});
+};
+// his Aug 1 night: deep 71, rem 94, light 178, wake 7
+const n=cls(71,94,178,7);
+ok(Math.round(n[0].pct)===21,'deep 21% of asleep');
+ok(Math.round(n[1].pct)===27,'REM 27% of asleep');
+ok(Math.round(n[2].pct)===52,'light 52% of asleep');
+ok(n.every(r=>!r.low),'no stage below typical on that night');
+ok(Math.round(n[3].pct)===2,'wake measured against time in bed, not time asleep');
+// a deep-deprived night must be caught
+const d=cls(20,90,250,40);
+ok(d[0].low===true,'low deep is flagged');
+ok(d[3].pct>9,'a fragmented night shows a high wake share');
+// bands are proportions, so a short night with good structure is not punished
+const short=cls(50,60,130,5);
+ok(!short[0].low && !short[1].low,'a short but well-structured night is not flagged');
+// the card must not divide by zero
+ok(/if \(!asleep\) return null;/.test(SRC),'a night with stages but no sleep renders nothing');
+ok(/Typical range for an adult/.test(SRC),'the band is labelled');
+ok(/came in below typical/.test(SRC),'the finding is stated in words');
+ok(/low \? C\.caution : C\.go/.test(SRC),'tone keys off low only');
+ok(!/high \? C\.caution/.test(SRC),'above typical is never toned as a warning');
 
 console.log('\nSLEEP: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

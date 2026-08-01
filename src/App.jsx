@@ -4305,20 +4305,42 @@ export default function App() {
         const _hd = ((healthSync && healthSync.days) || []).filter((d) => (+d.deepMin || 0) + (+d.remMin || 0) + (+d.lightMin || 0) > 0);
         const _stg = _hd.length ? _hd[_hd.length - 1] : null;
         const stageBar = !_stg ? null : (() => {
-          const parts = [["Deep", +_stg.deepMin || 0, "#5AB0E0"], ["REM", +_stg.remMin || 0, C.violet], ["Light", +_stg.lightMin || 0, "#3B84BC"], ["Wake", +_stg.awakeMin || 0, C.faint]].filter((p) => p[1] > 0);
-          const tot = parts.reduce((n, p) => n + p[1], 0) || 1;
-          return (<div style={{ marginTop: 10 }}>
-            <div style={{ display: "flex", gap: 3 }}>
-              {parts.map(([l, v, col]) => (<div key={l} style={{ flexGrow: v, flexBasis: 0, minWidth: 2 }}>
-                <div style={{ height: 9, borderRadius: 3, background: col, opacity: l === "Wake" ? 0.5 : 0.85 }} />
+          // v0.9.98: each stage against the range that is typical for an adult, because the minutes
+          // alone never answered the only question worth asking — was that enough. Bands are
+          // proportions of time ASLEEP (deep + REM + light); wake is measured against time in bed,
+          // since being awake is not part of sleeping. Low deep or low REM is the finding that
+          // matters on a GLP-1; above typical is never flagged.
+          const deep = +_stg.deepMin || 0, rem = +_stg.remMin || 0, light = +_stg.lightMin || 0, wake = +_stg.awakeMin || 0;
+          const asleep = deep + rem + light;
+          if (!asleep) return null;
+          const rows = [
+            { k: "Deep", v: deep, lo: 13, hi: 23, col: "#4C3FD4", of: asleep },
+            { k: "REM", v: rem, lo: 20, hi: 25, col: "#67E8F9", of: asleep },
+            { k: "Light", v: light, lo: 45, hi: 55, col: "#3B84BC", of: asleep },
+            { k: "Wake", v: wake, lo: null, hi: null, col: C.avoid, of: asleep + wake },
+          ].map((r) => { const pct = r.of ? (r.v / r.of) * 100 : 0;
+            const low = r.lo != null && pct < r.lo, high = r.hi != null && pct > r.hi;
+            const tone = r.lo == null ? (pct > 10 ? C.caution : C.faint) : low ? C.caution : C.go;
+            return { ...r, pct, low, high, tone }; });
+          const SCALE = 60;   // a bar spans the track at 60% of its category — keeps all four comparable
+          const lowNames = rows.filter((r) => r.low).map((r) => r.k);
+          return (<div style={{ marginTop: 11 }}>
+            {rows.map((r) => (
+              <div key={r.k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 0.9, color: C.faint, textTransform: "uppercase", width: 34, flexShrink: 0 }}>{r.k}</div>
+                <div style={{ flex: 1, minWidth: 0, position: "relative", height: 11, borderRadius: 4, background: "rgba(255,255,255,.05)" }}>
+                  {r.lo != null && <div style={{ position: "absolute", left: `${Math.min(100, (r.lo / SCALE) * 100)}%`, width: `${Math.min(100, ((r.hi - r.lo) / SCALE) * 100)}%`, top: 0, bottom: 0, background: C.go + "26" }} />}
+                  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.max(2, Math.min(100, (r.pct / SCALE) * 100))}%`, borderRadius: 4, background: r.col, opacity: r.k === "Wake" ? 0.75 : 1 }} />
+                </div>
+                <div style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, color: r.tone, width: 26, textAlign: "right", flexShrink: 0 }}>{Math.round(r.pct)}%</div>
+                <div style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, color: C.ink, width: 38, textAlign: "right", flexShrink: 0 }}>{hm(r.v)}</div>
               </div>))}
+            <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.6, color: C.faint, textTransform: "uppercase", marginTop: 2 }}>
+              <span style={{ display: "inline-block", width: 12, height: 7, background: C.go + "26", borderRadius: 2, verticalAlign: "middle", marginRight: 6 }} />Typical range for an adult
             </div>
-            <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
-              {parts.map(([l, v]) => (<div key={l} style={{ flexGrow: v, flexBasis: 0, minWidth: 0 }}>
-                <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 0.6, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap", overflow: "hidden" }}>{l}</div>
-              </div>))}
+            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
+              {lowNames.length ? `${lowNames.join(" and ")} came in below typical — the stages that do the most recovery.` : "Every stage landed in or above its typical range."} {hm(wake)} awake.
             </div>
-            <div style={{ fontFamily: DATA, fontSize: 9.5, color: C.faint, marginTop: 5 }}>{parts.map(([l, v]) => `${l} ${hm(v)}`).join("  ·  ")}</div>
           </div>);
         })();
         return <div style={{ marginBottom: 14 }}>{card(<div>
