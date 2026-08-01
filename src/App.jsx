@@ -3435,8 +3435,8 @@ export default function App() {
           {card(<div><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>{sectionTitle("Weekly sets by muscle")}<span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>TARGET 10–20</span></div>
             {Object.entries(sets7).sort((a, b) => b[1] - a[1]).map(([g, n], i) => (
               <div key={g} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
-                <span style={{ fontSize: 13, color: C.ink }}>{g}</span>
-                <span style={{ fontSize: 13, color: n >= 10 ? C.go : C.caution, fontWeight: 700 }}>{n} sets{n < 10 ? " · light" : ""}</span>
+                <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.ink2, textTransform: "uppercase" }}>{({ shoulders: "SHLDR", hamstrings: "HAMS", quads: "QUADS", triceps: "TRI", biceps: "ARMS", glutes: "GLUTES", calves: "CALVES", chest: "CHEST", back: "BACK", core: "CORE" }[g] || g)}</span>
+                <span style={{ fontFamily: DATA, fontSize: 12.5, color: n >= 10 ? C.go : C.caution, fontWeight: 700 }}>{n} sets{n < 10 ? " · light" : ""}</span>
               </div>))}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${C.hair}` }}>
               <span style={{ fontSize: 13, color: C.ink }}>cardio</span>
@@ -3476,7 +3476,7 @@ export default function App() {
           <div style={{ fontSize: 10.5, color: C.faint, marginBottom: 12, lineHeight: 1.45 }}>Handle only, no @. Demos are searched inside this channel first — leave blank to search all of YouTube for short clips instead.</div>
           <button onClick={() => { const r = buildRoutine(exCatalog, trainPrefs); setRoutine(r); setTrainView("today"); }} disabled={!exCatalog.length || !trainPrefs.equipment.length}
             style={{ width: "100%", background: exCatalog.length && trainPrefs.equipment.length ? C.go : C.hair, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>{routine ? "Rebuild routine" : "Generate routine"}</button>
-          {routine && <div style={{ fontSize: 11.5, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>{routine.blurb} Heavy days are kept off your shot day and the day after. Sessions log to Apple Health as strength training, which feeds the lean-mass engine on the Body tab.</div>}
+          {routine && <div style={{ fontSize: 11.5, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>{routine.blurb} Heavy days are kept off your shot day and the day after — your shot day eased around the injection; work nights eased too. Sessions log to Apple Health as strength training, which feeds the lean-mass engine on the Body tab.</div>}
         </div>)}
       </div>
     );
@@ -3748,7 +3748,7 @@ export default function App() {
   const renderGlp = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>GLP-1</div>
-      <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication, titration &amp; side effects</div>
+      <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Medication · titration · tolerability</div>
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? rhrCardFor(_r) : null; })()}
       {/* v0.9.44 PROTOCOL + CHECKPOINT. The ladder is HIS, not the trial's; the checkpoint reports
           whether his own conditions are met and never names a dose. */}
@@ -3795,7 +3795,10 @@ export default function App() {
         return (<>
           <div style={{ marginBottom: 14 }}>{card(<div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              {sectionTitle("Your protocol", C.muted)}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {sectionTitle(protoEdit ? "Your protocol · editor" : "Your protocol", C.muted)}
+                {curMg != null && rungs.length > 0 && rungs.findIndex((rr9) => +rr9 === +curMg) >= 0 && <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.violet, border: `1px solid ${C.violet}55`, background: C.violet + "1A" }}>RUNG {rungs.findIndex((rr9) => +rr9 === +curMg) + 1} OF {rungs.length}</span>}
+              </div>
               <span onClick={() => { if (!protoEdit) setProtoRungs(rungs.join(", ")); setProtoEdit((v) => !v); }} style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
@@ -3940,6 +3943,24 @@ export default function App() {
           </div>, { borderLeft: `2.5px solid ${C.gold}` })}</div>
 
           <div style={{ marginBottom: 14 }}>{card(<div>
+            {(() => { // v0.9.70: the fat-ceiling engine finally gets its card
+              const fr = doseResponseRead(mealLog, glp);
+              const A9 = fr.status === "ok";
+              return (<div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${C.hair}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10 }}>Your fat ceiling · dose window</div>
+                  <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: A9 ? C.go : C.faint, border: `1px solid ${A9 ? C.go + "55" : C.hair}`, background: A9 ? C.go + "1A" : "transparent" }}>{A9 ? "ACTIVE" : "COLLECTING"}</span>
+                </div>
+                {A9 ? (<div style={{ fontSize: 12.5, color: C.ink2, lineHeight: 1.55 }}>In your first 48 h post-dose, meals over <b style={{ fontFamily: DATA, color: C.caution }}>~{Math.round(fr.ceiling)} g fat</b> have run with more symptom days in your own log. Meal picks respect this ceiling automatically inside the window.</div>)
+                : (<div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.55 }}>Learning your dose-window fat ceiling from your own logs — needs 5 symptom days and 10 meal days before a verdict.</div>)}
+                <div style={{ display: "flex", gap: 10, marginTop: 9 }}>
+                  {[[fr.inWin ?? 0, "In window"], [fr.days ?? 0, "Meal days"], [fr.sym ?? 0, "Sym days"]].map(([v7, l7]) => (
+                    <div key={l7} style={{ flex: 1 }}>
+                      <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l7}</div>
+                      <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: C.ink, marginTop: 3 }}>{v7}</div>
+                    </div>))}
+                </div>
+              </div>); })()}
             {sectionTitle("Your dose-response", C.muted)}
             {(() => {
               const dr2 = rungResponseRead({ doseLog: glp.doseLog, med: glp.med, today: todayISO(),
@@ -3999,7 +4020,7 @@ export default function App() {
             return (<>
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             {[["inj", "\uD83D\uDC89 Injections"], ["oral", "\uD83D\uDC8A Daily pill"]].map(([f, lbl]) => (
-              <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
+              <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{f === "injection" ? "💉 " : "💊 "}{lbl}</button>
             ))}
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", padding: "8px 14px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
@@ -4165,7 +4186,7 @@ export default function App() {
           </div>
           {[...glp.sideEffects].reverse().map((s) => (
             <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${C.hair}` }}>
-              <div><span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{s.symptom}</span><span style={{ fontSize: 12, color: C.faint, marginLeft: 8 }}>{fmtDate(s.date)}{s.at ? " " + new Date(s.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</span></div>
+              <div><span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink }}>{s.symptom}</span><span style={{ fontSize: 12, color: C.faint, marginLeft: 8 }}>{fmtDate(s.date)}{s.at ? " " + new Date(s.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + (() => { const dl9 = (glp.doseLog || []).map((d9) => new Date((d9.at || d9.date + "T09:00:00")).getTime()).filter((t9) => t9 <= new Date(s.at).getTime()); if (!dl9.length) return ""; const h9 = Math.round((new Date(s.at).getTime() - Math.max(...dl9)) / 3600000); return h9 >= 0 && h9 < 200 ? " · " + h9 + " h post-dose" : ""; })() : ""}</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: [C.go, C.caution, C.avoid][s.severity - 1], background: [C.goSoft, C.cautionSoft, C.avoidSoft][s.severity - 1], borderRadius: 999, padding: "4px 11px" }}>{["Mild", "Moderate", "Severe"][s.severity - 1]}</span>
                 <button onClick={() => setGlp((g) => ({ ...g, sideEffects: g.sideEffects.filter((x) => x.id !== s.id) }))} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4 }}>✕</button>
