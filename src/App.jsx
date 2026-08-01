@@ -1597,6 +1597,8 @@ export default function App() {
   const [planView, setPlanView] = useState("setup");   // setup | week | grocery | meal
   const [planSel, setPlanSel] = useState(0);
   const [planMealRef, setPlanMealRef] = useState([0, 0]);
+  const [swapList, setSwapList] = useState(null);   // null = closed, [] = searched and empty
+  const [swapBusy, setSwapBusy] = useState(false);
   const [planDaysN, setPlanDaysN] = useState(7);
   const [planMealCount, setPlanMealCount] = useState(4);
   const _slotsFor = (n) => (n === 3 ? ["breakfast", "lunch", "dinner"] : n === 5 ? ["breakfast", "lunch", "dinner", "snack", "snack2"] : ["breakfast", "lunch", "dinner", "snack"]);
@@ -2706,6 +2708,34 @@ export default function App() {
     const env = {};
     for (const m of on) env[m] = { protein: Math.round((share[m][0] / pSum) * day.target.protein), calories: Math.round((share[m][1] / cSum) * day.target.calories) };
     return env;
+  }
+  // Swap reuses the week builder's own sources so a swapped meal is the same kind of
+  // object as a generated one — cookbook first (ingredients+steps guaranteed), then Spoonacular.
+  async function findSwaps(slot) {
+    setSwapBusy(true); setSwapList(null);
+    try {
+      const env = { protein: (slot.perServing && slot.perServing.protein) || 30, calories: (slot.perServing && slot.perServing.calories) || 450 };
+      const kind = slot.slot === "breakfast" ? "breakfast" : /snack/.test(slot.slot || "") ? "snack" : "main course";
+      const book = await fetchSeedBook().catch(() => []);
+      const near = (r) => Math.abs((r.p || 0) - env.protein) + Math.abs((r.cal || 0) - env.calories) / 20;
+      const banned = new Set(allergies.map((a) => String(a).toLowerCase()));
+      const clean = (r) => !(r.ingredients || []).some((i) => [...banned].some((b) => String(i.name || i).toLowerCase().includes(b)));
+      let cand = book.filter((r) => (r.slot ? r.slot === slot.slot : true)).filter(clean).sort((a, b) => near(a) - near(b)).slice(0, 3);
+      const web = await searchSpoon(kind === "snack" ? "snack" : kind === "breakfast" ? "breakfast" : "dinner", env, true).catch(() => []);
+      cand = [...cand, ...web.filter(clean).sort((a, b) => near(a) - near(b)).slice(0, 3)];
+      const seen = new Set(); cand = cand.filter((r) => { const k = (r.name || "").toLowerCase(); if (seen.has(k) || k === String(slot.name || "").toLowerCase()) return false; seen.add(k); return true; }).slice(0, 4);
+      setSwapList(cand);
+    } catch { setSwapList([]); }
+    setSwapBusy(false);
+  }
+  function applySwap(di, si, r) {
+    setMealPlan((mp) => { if (!mp) return mp;
+      const days = mp.days.map((d, i) => i !== di ? d : { ...d, slots: d.slots.map((sl, j) => j !== si ? sl : ({
+        ...sl, name: r.name, image: r.image || null, photo: null, url: r.url || null,
+        perServing: r.perServing || { protein: r.p, calories: r.cal, fat: r.f || 0 },
+        ingredients: r.ingredients || [], steps: r.steps || [], logged: false })) });
+      return { ...mp, days }; });
+    setSwapList(null);
   }
   async function fetchSeedBook() {
     if (seedRef.current) return seedRef.current;
@@ -4535,7 +4565,29 @@ export default function App() {
         {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 13.5, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, { marginBottom: 12 })}
         {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 9, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 13 }}>{i + 1}</b><span style={{ fontSize: 13.5, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, { marginBottom: 12 })}
         {slot.url && <a href={slot.url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 11.5, color: C.faint, marginBottom: 12, textDecoration: "underline" }}>Original recipe source ↗</a>}
-        <button onClick={() => logPlannedMeal(di, si)} style={{ width: "100%", background: slot.logged ? C.surfaceAlt : C.go, color: slot.logged ? C.go : C.surface, border: slot.logged ? `1.5px solid ${C.go}` : "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>{slot.logged ? "Logged ✓" : "Log this meal ✓"}</button>
+        <button onClick={() => logPlannedMeal(di, si)} style={{ width: "100%", background: slot.logged ? C.surfaceAlt : C.go, color: slot.logged ? C.go : C.bg, border: slot.logged ? `1.5px solid ${C.go}` : "none", borderRadius: 12, padding: "14px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{slot.logged ? "Logged ✓" : "Log this meal ✓"}</button>
+
+        {/* SWAP. Same two sources the week builder uses, so a swapped meal carries ingredients and
+            steps like every other slot — a swap that lands a name with no recipe is worse than none. */}
+        <button onClick={() => (swapList === null ? findSwaps(slot) : setSwapList(null))} disabled={swapBusy} style={{ width: "100%", marginTop: 9, background: "transparent", color: C.go, border: `1px solid ${C.go}55`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", opacity: swapBusy ? 0.6 : 1 }}>{swapBusy ? "Searching recipes for your macros…" : swapList === null ? "Swap this meal" : "Close"}</button>
+
+        {swapList !== null && !swapBusy && (
+          <div style={{ marginTop: 10 }}>
+            {swapList.length === 0 ? (
+              <div style={{ fontSize: 12, color: C.faint, lineHeight: 1.45, padding: "4px 2px" }}>No swap matched this slot's macros without hitting your filters. Try again later, or edit the meal by hand.</div>
+            ) : (<>
+              <div style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint, marginBottom: 7 }}>Matched to this slot</div>
+              {swapList.map((r, i) => (
+                <div key={i} onClick={() => applySwap(di, si, r)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 14, padding: "11px 13px", marginBottom: 8, cursor: "pointer" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{r.name}</div>
+                    <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 3 }}>{Math.round(r.p || 0)} P · {Math.round(r.cal || 0)} cal · {(r.ingredients || []).length} ingredients</div>
+                  </div>
+                  <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "4px 10px", flexShrink: 0 }}>Swap</span>
+                </div>))}
+              <div style={{ fontSize: 10.5, color: C.faint, lineHeight: 1.45 }}>Candidates match this slot's protein and calories and skip your allergies. Swapping keeps the rest of the week untouched.</div>
+            </>)}
+          </div>)}
       </div>
     ); }
     // week view

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.92"
+version: "0.9.93"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Now says which day your counters belong to and what time they reset. Your schedule
-  is set to fixed nights, which means a day runs until 11am — so at 6am the numbers
-  are still yesterday's on purpose, and there was nothing on screen saying so. Tap
-  the marker to change your work schedule.
+  You can swap a meal now. Open any meal in your week and Swap this meal offers up
+  to four alternatives matched to that slot's protein and calories, skipping your
+  allergies, each one carrying its full ingredients and steps. Swapping changes only
+  that meal — the rest of the week stays as it was.
 dependencies: []
 path: ""
 defaultUsername: ""
