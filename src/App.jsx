@@ -4363,11 +4363,28 @@ export default function App() {
       </>)}</div>}
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, (() => {
-        const dl = (glp.doseLog || []).filter((d) => +d.mg > 0);
-        return { id: "med", tone: C.violet, color: C.violet, title: "Estimated med level", when: "Now",
-          value: dl.length ? String(Math.min(999, Math.round(100 * Math.min(1.9, 0.35 + dl.length * 0.22)))) : "—",
-          unit: "% of steady state", sub: dl.length < 5 ? "absorbing \u00b7 troughs still climbing" : "at steady state",
-          spark: _spark(dl.slice(-7).map((_, i) => 40 + i * 18), C.violet) }; })())}</div>}
+        // reads the SAME model the chart draws — no approximation, no second formula
+        const _M = medLevelModel({ doseLog: glp.doseLog, med: glp.med, dueISO, intervalDays: medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7) });
+        if (!_M) return { id: "med", tone: "none", color: C.violet, title: "Estimated med level", when: "no doses",
+          value: "—", unit: "log a dose to model it", sub: "nothing to project yet" };
+        const spark = (() => { const n = 26, t0 = _M.now - 14 * 86400000, t1 = _M.now + 7 * 86400000;
+          const pts = Array.from({ length: n }, (_, k) => { const t = t0 + (k / (n - 1)) * (t1 - t0); return _M.level(t) / _M.ssPeak; });
+          const lo = Math.min(...pts), hi = Math.max(...pts), pad = (hi - lo) * 0.2 || 0.05;
+          const yy = (q) => 4 + (1 - (q - (lo - pad)) / ((hi + pad) - (lo - pad))) * 24;
+          const xx = (k) => 2 + k * (88 / (n - 1));
+          const nowK = Math.round(((_M.now - t0) / (t1 - t0)) * (n - 1));
+          const solid = pts.slice(0, nowK + 1).map((q, k) => (k ? "L" : "M") + xx(k).toFixed(1) + "," + yy(q).toFixed(1)).join(" ");
+          const dash = pts.slice(nowK).map((q, k) => (k ? "L" : "M") + xx(nowK + k).toFixed(1) + "," + yy(q).toFixed(1)).join(" ");
+          return (<svg width="92" height="32" viewBox="0 0 92 32">
+            <path d={solid} fill="none" stroke={C.violet} strokeWidth="2" strokeLinejoin="round" />
+            <path d={dash} fill="none" stroke={C.violet} strokeWidth="2" strokeLinejoin="round" strokeDasharray="3 3" opacity="0.5" />
+            <circle cx={xx(nowK)} cy={yy(pts[nowK])} r="2.6" fill={C.violet} /></svg>); })();
+        return { id: "med", tone: C.violet, color: C.violet, title: "Estimated med level",
+          when: _M.absorbing ? "absorbing" : (_M.climbing ? "climbing" : "steady"),
+          value: String(_M.ssPct), unit: "% of steady state",
+          sub: _M.absorbing && _M.absPeakPct != null ? `peaks ~${_M.absPeakPct}% in ${_M.absDays} d`
+            : (_M.nextPct != null ? `~${_M.nextPct}% at next dose` : "at steady state"),
+          spark }; })())}</div>}
       {(() => { const _r = rhrRead((healthSync && healthSync.days) || [], glp.doseLog); return _r.flagged ? null : rhrCardFor(_r); })()}
       {(() => {
         const sl = sleepRead((healthSync && healthSync.days) || [], glp.doseLog);
@@ -5501,7 +5518,10 @@ export default function App() {
 }
 
 /* Estimated medication-level curve: one-compartment model from published half-lives. Informational only. */
-function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
+// v0.9.109: THE MODEL, lifted out of the chart so the collapsed row reads the same numbers the
+// chart draws. It was inline, so the compact row had nothing to read and I approximated it —
+// which is precisely the invented figure this app exists not to show.
+function medLevelModel({ doseLog, med, dueISO, intervalDays }) {
   const HL_DAYS = { tirzepatide: 5, semaglutide: 7, retatrutide: 6, rybelsus: 7, orforglipron: 5 }; // reta = trial-data estimate
   const hl = HL_DAYS[med] || 6;
   const ke = Math.log(2) / (hl * 24), ka = ke * 10; // absorption tuned for ~1.5d peak
@@ -5619,8 +5639,16 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null; // kept: ss-relative internals
   const nextVsPeak = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / Math.max(refPeak, 1e-9)) * 100) : null;
   const nextDoseIdx = fullSeq.findIndex((d) => d.t >= nextDoseT - 3600000 && d.t > now);
+  return { HL_DAYS, hl, ke, doses, now, start, end, declared, gaps, cadence, lastDose, dueT, firstT, virtual, mk, level, ssVirtual, ssLevel, ssPeak, maxL, ssPct, climbing, tPeakH, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nD, PER, W, xi, y, cycLen, cyc, nowIdx0, refPeak, vsPeak, nowIdx, nowX, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextPct, nextVsPeak, nextDoseIdx };
+}
+
+function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
+  const M = medLevelModel({ doseLog, med, dueISO, intervalDays });
   const scrollRef = useRef(null);
+  const nD = M ? M.nD : 1, nowIdx = M ? M.nowIdx : 0;
   useEffect(() => { const el = scrollRef.current; if (el) { const target = ((nowIdx + 0.5) / nD) * el.scrollWidth - el.clientWidth * 0.45; el.scrollLeft = Math.max(0, target); } }, [nD, nowIdx]);
+  if (!M) return null;
+  const { HL_DAYS, hl, ke, doses, now, start, end, declared, gaps, cadence, lastDose, dueT, firstT, virtual, mk, level, ssVirtual, ssLevel, ssPeak, maxL, ssPct, climbing, tPeakH, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, PER, W, xi, y, cycLen, cyc, nowIdx0, refPeak, vsPeak, nowX, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextPct, nextVsPeak, nextDoseIdx } = M;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>

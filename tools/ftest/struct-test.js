@@ -510,7 +510,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/setSheetCard\(\{ \.\.\.vd, children \}\)/.test(AA),'tapping a row opens the sheet with the card\'s OWN children');
   ok(/\{sheetCard\.children\}/.test(AA),'the sheet renders those children — detail cannot drift from the summary');
   // v0.9.106: six GLP-1 cards now carry a verdict — three readings, three states.
-  ok((AA.match(/id: "(med|rhr|sleep|cp|tit|se)"/g) || []).length === 6,'exactly six GLP-1 cards carry a verdict');
+  // distinct ids, not occurrences — a card may declare a verdict twice (empty state and normal).
+  ok(new Set((AA.match(/id: "(?:med|rhr|sleep|cp|tit|se)"/g) || [])).size === 6,'exactly six GLP-1 cards carry a verdict');
+  // the med row must read the shared model, never a formula of its own
+  ok(/const _M = medLevelModel\(/.test(AA),'the med row calls the same model the chart draws');
+  ok(!/0\.35 \+ dl\.length \* 0\.22/.test(AA),'the invented med-level approximation is gone');
+  ok((AA.match(/function medLevelModel/g) || []).length === 1,'one med model exists');
+  ok(/const M = medLevelModel\(/.test(AA),'the chart consumes it too — one source, not two');
   ok(/id: "cp"/.test(AA) && /id: "tit"/.test(AA) && /id: "se"/.test(AA),'checkpoint, titration and the journal are wired');
   // each must read from its own source, never a literal
   const cp2 = AA.slice(AA.indexOf('id: "cp"') - 700, AA.indexOf('id: "cp"') + 700);
