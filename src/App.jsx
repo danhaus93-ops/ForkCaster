@@ -2635,7 +2635,7 @@ export default function App() {
     if (scan.status !== "found") return;
     const f = scan.food;
     setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat, fiber: (e.fiber || 0) + (f.fiber || 0) }));
-    setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: f.name, fat: f.fat || 0, protein: f.protein || 0, calories: f.calories || 0, carbs: f.carbs || 0, fiber: f.fiber || 0 }]);
+    setMealLog((m) => [...m, { id: uid(), date: todayISO(), at: new Date().toISOString(), src: f.source || "", name: f.name, fat: f.fat || 0, protein: f.protein || 0, calories: f.calories || 0, carbs: f.carbs || 0, fiber: f.fiber || 0 }]);
     setScan({ status: "idle" }); setBarcode(""); setLogOpen(false);
   }
 
@@ -2837,7 +2837,7 @@ export default function App() {
     if (slot.logged) return;
     const f = { protein: Math.round(slot.perServing.protein * slot.servings), calories: Math.round(slot.perServing.calories * slot.servings), fat: Math.round((slot.perServing.fat || 0) * slot.servings), carbs: Math.round((slot.perServing.carbs || 0) * slot.servings) };
     setEaten((e) => ({ ...e, protein: e.protein + f.protein, calories: e.calories + f.calories, carbs: e.carbs + f.carbs, fat: e.fat + f.fat, fiber: (e.fiber || 0) + (+f.fiber || 0) }));
-    setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: slot.name, fat: f.fat || 0, protein: f.protein || 0, calories: f.calories || 0, carbs: f.carbs || 0, fiber: f.fiber || 0 }]);
+    setMealLog((m) => [...m, { id: uid(), date: todayISO(), at: new Date().toISOString(), src: "planned meal", name: slot.name, fat: f.fat || 0, protein: f.protein || 0, calories: f.calories || 0, carbs: f.carbs || 0, fiber: f.fiber || 0 }]);
     setMealPlan((pl) => { const d = pl.days.map((day, i) => i !== di ? day : { ...day, slots: day.slots.map((x, j) => j !== si ? x : { ...x, logged: true }) }); return { ...pl, days: d }; });
   }
   async function shopLookup(codeArg) {
@@ -3149,11 +3149,14 @@ export default function App() {
     const hDay = ((healthSync && healthSync.days) || []).find((d) => d.date === tk) || {};
     const syn = hDay.steps || 0;
     const stepsShown = Math.max(+eaten.steps || 0, syn);
+    const exMin = (workoutLog || []).filter((w) => w.date === todayISO() && w.kind === "cardio").reduce((n, w) => n + (+w.minutes || 0), 0);
+    const stepHist = ((healthSync && healthSync.days) || []).slice(-13).map((d) => ({ v: +d.steps || 0 })).filter((d) => d.v > 0);
     const counters = [
-      ["Calories", (eaten.calories || 0).toLocaleString(), targets.calories ? "of " + targets.calories.toLocaleString() : ""],
-      ["Carbs", (eaten.carbs || 0) + "g", targets.carbs ? "of " + targets.carbs + "g" : ""],
-      ["Fat", (eaten.fat || 0) + "g", targets.fat ? "of " + targets.fat + "g" : ""],
-      ["Fiber", (eaten.fiber || 0) + "g", targets.fiber ? "of " + targets.fiber + "g" : ""],
+      ["Calories", (eaten.calories || 0).toLocaleString(), targets.calories ? "of " + targets.calories.toLocaleString() : "", "calories"],
+      ["Carbs", (eaten.carbs || 0) + "g", targets.carbs ? "of " + targets.carbs + "g" : "", "carbs"],
+      ["Fat", (eaten.fat || 0) + "g", targets.fat ? "of " + targets.fat + "g" : "", "fat"],
+      ["Fiber", (eaten.fiber || 0) + "g", targets.fiber ? "of " + targets.fiber + "g" : "", "fiber"],
+      ["Water", fmtVol(eaten.waterOz) + " " + volU, targets.waterOz ? "of " + fmtVol(targets.waterOz) : "", ""],
     ];
     return (
       <div style={{ padding: "18px 18px 12px" }}>
@@ -3183,28 +3186,47 @@ export default function App() {
         </>, { borderLeft: `2.5px solid ${pTone}` })}</div>
 
         <div style={{ marginBottom: 10 }}>{card(<>
-          {sectionTitle("Counters", C.muted)}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+            {sectionTitle("Counters", C.muted)}
+            <span onClick={() => openQuick("calories", "Calories", "")} style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.go, cursor: "pointer", marginTop: -8 }}>Set / add</span>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {counters.map(([l, v, sub]) => (<div key={l} style={{ flex: 1, minWidth: 0 }}>
+            {counters.map(([l, v, sub, fld]) => (<div key={l} onClick={() => fld && openQuick(fld, l, "")} style={{ flex: 1, minWidth: 0, cursor: fld ? "pointer" : "default" }}>
               <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
               <div style={{ fontFamily: DATA, fontSize: 14.5, fontWeight: 700, color: C.ink, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>{v}</div>
               <div style={{ fontFamily: DATA, fontSize: 9, color: C.faint, marginTop: 1 }}>{sub}</div>
             </div>))}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 13, paddingTop: 11, borderTop: `1px solid ${C.hair}` }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>Water</div>
-            <div style={{ fontFamily: DATA, fontWeight: 700, color: C.blue }}>{fmtVol(eaten.waterOz)} / {fmtVol(targets.waterOz)} {volU}</div>
+          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 11 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
+          <div style={{ display: "flex", gap: 8, marginTop: 9 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
+        </>)}</div>
+
+        {/* THE LADDER. Every number in this app came from one of these five, and they are not equally
+            exact. Naming the tier is how the app stays honest about its own inputs. */}
+        <div style={{ marginBottom: 10 }}>{card(<>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            {sectionTitle("Log a meal", C.muted)}
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.caution, border: `1px solid ${C.caution}55`, background: C.caution + "1A" }}>ACCURACY LADDER</span>
           </div>
-          <div style={{ height: 8, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 8 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
+          {[["Barcode scan", "Most exact", C.go], ["Nutrition label photo", "Exact", C.go], ["Search USDA / Open Food Facts", "Good", C.muted], ["Photo estimate — snap your plate", "Estimate", C.caution], ["Describe it — AI estimate", "Least exact", C.caution]].map(([l, tier, tone], i) => (
+            <div key={l} onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none", cursor: "pointer" }}>
+              <span style={{ fontSize: 13, color: C.ink2 }}>{l}</span>
+              <span style={{ fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 8px", color: tone, border: `1px solid ${tone}55`, whiteSpace: "nowrap", textTransform: "uppercase" }}>{tier}</span>
+            </div>))}
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>Trends beat single meals. Snap labels when you can.</div>
         </>)}</div>
 
         {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ marginBottom: 10 }}>{card(<>
-          <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>Logged today — tap ✕ to undo a mistake</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            {sectionTitle("Logged today", C.muted)}
+            <span onClick={() => openQuick("calories", "Calories", "")} style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.go, cursor: "pointer", marginTop: -8 }}>+ Quick add</span>
+          </div>
           {mealLog.filter((m) => m.date === todayISO()).map((m) => (
             <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
-              <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div><div style={{ fontSize: 11, color: C.faint }}>{m.protein}g protein · {m.calories} cal</div></div>
-              <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button>
+              <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+                <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>{[m.at ? new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null, `${m.protein} P`, m.src ? String(m.src).toLowerCase().replace(/ \(.*\)$/, "") : null].filter(Boolean).join(" · ")}</div></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}><span style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.ink2 }}>{m.calories}</span>
+              <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button></div>
             </div>
           ))}
         </>)}</div>}
@@ -3212,23 +3234,29 @@ export default function App() {
         <div>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             {sectionTitle("Activity", C.muted)}
-            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: syn > 0 ? C.go : C.faint, border: `1px solid ${syn > 0 ? C.go + "55" : C.hair}`, background: syn > 0 ? C.go + "1A" : "transparent" }}>{syn > 0 ? "SYNCED" : "NOT SYNCED"}</span>
+            <span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: syn > 0 ? C.go : C.faint, border: `1px solid ${syn > 0 ? C.go + "55" : C.hair}`, background: syn > 0 ? C.go + "1A" : "transparent" }}>{syn > 0 ? (prefs.stepSource || "SYNCED") : "NOT SYNCED"}</span>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>Steps</div>
-              <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
-                {syn > 0 && <span style={{ width: 5, height: 5, borderRadius: 5, background: C.go, flexShrink: 0 }} />}{stepsShown.toLocaleString()}
-              </div>
-              <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>{syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"}</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>Active kcal</div>
-              <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3 }}>{eaten.exerciseCal || 0}</div>
-              <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>burned today</div>
-            </div>
+            {[["Steps", stepsShown ? stepsShown.toLocaleString() : null, syn > 0, syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"],
+              ["Exercise", exMin ? exMin + " min" : null, exMin > 0, "logged cardio"],
+              ["Active kcal", eaten.exerciseCal ? String(eaten.exerciseCal) : null, false, "burned today"]].map(([l, v, measured, sub]) => (
+              <div key={l} style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
+                <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                  {v && measured ? <span style={{ width: 5, height: 5, borderRadius: 5, background: C.go, flexShrink: 0 }} /> : null}
+                  {v || <><span style={{ width: 7, height: 1.5, background: C.faint, flexShrink: 0 }} />—</>}
+                </div>
+                <div style={{ fontSize: 10, color: C.faint, marginTop: 2 }}>{sub}</div>
+              </div>))}
           </div>
-          <div style={{ fontSize: 11, color: C.faint, marginTop: 11, paddingTop: 10, borderTop: `1px solid ${C.hair}`, lineHeight: 1.5 }}>Wearables · Apple Health · Garmin · Whoop · Fitbit</div>
+          {stepHist.length > 1 && (() => { const mx = Math.max(...stepHist.map((d) => d.v), 1);
+            return (<div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 40, marginTop: 12 }}>
+              {stepHist.map((d, i) => (<div key={i} style={{ flex: 1, height: `${Math.max(6, (d.v / mx) * 100)}%`, background: i === stepHist.length - 1 ? C.go : C.go + "44", borderRadius: 3 }} />))}
+            </div>); })()}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: `1px solid ${C.hair}`, gap: 8 }}>
+            <div style={{ fontSize: 11, color: C.faint, lineHeight: 1.5, minWidth: 0 }}>Wearables · Apple Health · Garmin · Whoop · Fitbit</div>
+            <span style={{ fontFamily: DATA, fontSize: 8, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 8px", color: C.go, border: `1px solid ${C.go}55`, whiteSpace: "nowrap", textTransform: "uppercase" }}>Auto-syncing</span>
+          </div>
         </>)}</div>
       </div>
     );
