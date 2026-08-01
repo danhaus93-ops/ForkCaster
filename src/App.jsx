@@ -3225,18 +3225,6 @@ export default function App() {
               <div style={{ fontFamily: DATA, fontSize: 9, color: C.faint, marginTop: 1 }}>{sub}</div>
             </div>))}
           </div>
-          {activeKcal > 0 && (() => { const net = Math.max(0, Math.round((eaten.calories || 0) - activeKcal));
-            return (<div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, marginTop: 12, paddingTop: 11, borderTop: `1px solid ${C.hair}` }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>Net after activity</div>
-                <div style={{ fontFamily: DATA, fontSize: 9.5, color: C.faint, marginTop: 3 }}>{(eaten.calories || 0).toLocaleString()} eaten − {activeKcal.toLocaleString()} burned</div>
-                <div style={{ fontSize: 10, color: C.faint, marginTop: 4, lineHeight: 1.4 }}>Context only — your calorie target already assumes you move, so this is not extra deficit.</div>
-              </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: C.ink, fontVariantNumeric: "tabular-nums" }}>{net.toLocaleString()}</div>
-                <div style={{ fontFamily: DATA, fontSize: 9, color: C.faint, marginTop: 2 }}>kcal</div>
-              </div>
-            </div>); })()}
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 6, overflow: "hidden", marginTop: 11 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
           <div style={{ display: "flex", gap: 8, marginTop: 9 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
         </>)}</div>
@@ -4342,7 +4330,34 @@ export default function App() {
 
   const renderCoach = () => (
     <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
-      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 12, cursor: "pointer", fontFamily: BODY }}>Clear</button></div><div style={{ fontSize: 13, color: C.muted }}>Knows your macros, weight &amp; meds — live</div></div>
+      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 12, cursor: "pointer", fontFamily: BODY }}>Clear</button></div><div style={{ marginTop: 5 }}><span style={{ fontFamily: DATA, fontSize: 8.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>Knows macros · weight · meds — live</span></div></div>
+      {(() => { const hd = (healthSync && healthSync.days) || [];
+        const cells = [["Doses", ((glp && glp.doseLog) || []).length], ["Meals", (mealLog || []).length],
+          ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
+          ["Scans", hd.filter((d) => d.bodyFatPct != null).length], ["Nights", hd.filter((d) => d.sleepMin).length]];
+        return (<div style={{ padding: "0 18px 4px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint }}>Reading from</span>
+          </div>
+          <div style={{ display: "flex", gap: 7 }}>
+            {cells.map(([l, v]) => (<div key={l} style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: DATA, fontSize: 7.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
+              <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                {v > 0 && <span style={{ width: 4, height: 4, borderRadius: 4, background: C.go, flexShrink: 0 }} />}{v}
+              </div>
+            </div>))}
+          </div>
+        </div>); })()}
+      {coachMsgs.length <= 1 && (
+        <div style={{ padding: "10px 18px 2px" }}>
+          <div style={{ fontFamily: DATA, fontSize: 9, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint, marginBottom: 7 }}>What it actually does</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {["Plans your week", "Ranks nearby spots", "Proposes orders", "Writes lists & tips"].map((t) => (
+              <span key={t} style={{ fontFamily: DATA, fontSize: 9, fontWeight: 600, letterSpacing: 0.6, borderRadius: 999, padding: "4px 9px", color: C.go, border: `1px solid ${C.go}44`, background: C.go + "12" }}>{t}</span>))}
+            <span style={{ fontFamily: DATA, fontSize: 9, fontWeight: 600, letterSpacing: 0.6, borderRadius: 999, padding: "4px 9px", color: C.avoid, border: `1px solid ${C.avoid}44`, background: C.avoid + "12" }}>✕ Give medical advice</span>
+          </div>
+          <div style={{ fontSize: 11, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>Your prescriber owns your numbers. Bring these screens to that conversation — the report prints them.</div>
+        </div>)}
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
         {coachMsgs.map((m, i) => (
           <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
@@ -4352,7 +4367,7 @@ export default function App() {
         {coachLoading && <div style={{ fontSize: 13, color: C.faint, padding: "4px 2px" }}>Coach is thinking…</div>}
       </div>
       <div style={{ padding: "10px 14px", borderTop: `1px solid ${C.hair}`, background: C.surfaceAlt }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 8, overflowX: "auto" }}>{["Am I on pace?", "No appetite today — what do I eat?", "Cheat meal — recover how?"].map((q) => (<button key={q} onClick={() => setCoachInput(q)} style={{ ...chipBtn, whiteSpace: "nowrap", flexShrink: 0, fontSize: 11.5 }}>{q}</button>))}</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8, overflowX: "auto" }}>{["Am I on pace?", "No appetite today — what do I eat?", "Cheat meal — recover how?", "How do I use imperfect numbers?"].map((q) => (<button key={q} onClick={() => setCoachInput(q)} style={{ background: "transparent", border: `1px solid ${C.hair}`, borderRadius: 999, padding: "7px 12px", color: C.muted, fontFamily: DATA, fontSize: 9.5, fontWeight: 700, letterSpacing: 0.6, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>{q}</button>))}</div>
         <div style={{ display: "flex", gap: 8 }}>
           <input value={coachInput} onChange={(e) => setCoachInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendCoach(); }} placeholder="Ask your coach…" style={{ flex: 1, fontFamily: BODY, fontSize: 14, color: C.ink, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 22, padding: "11px 16px", outline: "none" }} />
           <button onClick={sendCoach} disabled={coachLoading} style={{ background: C.go, color: C.surface, border: "none", borderRadius: 22, width: 46, fontSize: 18, cursor: "pointer", opacity: coachLoading ? 0.6 : 1 }}>↑</button>
