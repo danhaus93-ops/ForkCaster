@@ -549,5 +549,26 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok((AB.match(/padding: "20px 20px calc\(28px \+ env\(safe-area-inset-bottom/g) || []).length === 2,'both bottom sheets clear the home indicator');
 }
 
+
+// v0.9.110: the model lift dropped bindings the chart still used, and a ReferenceError shipped.
+// Pin the contract statically: everything the model returns is destructured by the chart.
+{
+  const AC=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const ret=/\n  return \{ ([^\n]+?) \};\n\}\n/.exec(AC.slice(AC.indexOf('function medLevelModel')));
+  const dst=/  const \{ ([^\n]+?) \} = M;/.exec(AC.slice(AC.indexOf('function MedLevelChart')));
+  ok(!!ret && !!dst,'model return and chart destructure both found');
+  if (ret && dst) {
+    const R=new Set(ret[1].split(',').map(x=>x.trim()));
+    const D=dst[1].split(',').map(x=>x.trim());
+    const missing=D.filter(n=>!R.has(n));
+    ok(missing.length===0,'chart destructures nothing the model does not return: '+missing.join(','));
+    ok(R.has('scrolls') && R.has('nowY') && R.has('H'),'the bindings the crash exposed are returned');
+  }
+  // the checkpoint row must use the engine's real field names
+  const cpb=AC.slice(AC.indexOf('id: "cp"')-900, AC.indexOf('id: "cp"'));
+  ok(/\+cp\.days/.test(cpb),'the checkpoint row reads cp.days');
+  ok(!/cp\.daysHeld|cp\.have/.test(cpb),'no invented checkpoint field names remain');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

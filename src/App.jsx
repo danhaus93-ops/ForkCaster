@@ -4216,11 +4216,12 @@ export default function App() {
             // different block and this IIFE cannot see them.
             const _dl = (glp.doseLog || []).filter((d) => +d.mg > 0);
             const _cur = _dl.length ? +_dl[_dl.length - 1].mg : null;
-            const held = cp.daysHeld != null ? cp.daysHeld : (cp.have || 0);
-            const need = cp.minHoldDays != null ? cp.minHoldDays : ((glp.protocol && +glp.protocol.minHoldDays) || 28);
+            // checkpointRead exposes days + need — the row must read those, not invented names
+            const held = +cp.days || 0;
+            const need = +cp.need || ((glp.protocol && +glp.protocol.minHoldDays) || 28);
             const pct = need ? Math.min(1, held / need) : 0;
             return { id: "cp", tone: cp.status === "nodose" ? "none" : (cp.veto && cp.veto.length ? C.caution : C.go),
-              color: C.gold, title: "Dose checkpoint", when: _cur != null ? `${_cur} mg` : "no dose logged",
+              color: C.gold, title: "Dose checkpoint", when: cp.cur != null ? `${cp.cur} mg` : (_cur != null ? `${_cur} mg` : "no dose logged"),
               value: cp.status === "nodose" ? "\u2014" : String(held), unit: cp.status === "nodose" ? "log a dose to start" : `of ${need} days`,
               sub: cp.veto && cp.veto.length ? `tolerability flags: ${cp.veto.length}` : (held < need ? `locked \u00b7 ${Math.max(0, need - held)} d to go` : "ready to evaluate"),
               subTone: cp.veto && cp.veto.length ? C.caution : C.faint,
@@ -5639,7 +5640,7 @@ function medLevelModel({ doseLog, med, dueISO, intervalDays }) {
   const nextPct = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / ssPeak) * 100) : null; // kept: ss-relative internals
   const nextVsPeak = nextDoseT > now ? Math.round((levelProj(nextDoseT - 3600000) / Math.max(refPeak, 1e-9)) * 100) : null;
   const nextDoseIdx = fullSeq.findIndex((d) => d.t >= nextDoseT - 3600000 && d.t > now);
-  return { HL_DAYS, hl, ke, doses, now, start, end, declared, gaps, cadence, lastDose, dueT, firstT, virtual, mk, level, ssVirtual, ssLevel, ssPeak, maxL, ssPct, climbing, tPeakH, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nD, PER, W, xi, y, cycLen, cyc, nowIdx0, refPeak, vsPeak, nowIdx, nowX, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextPct, nextVsPeak, nextDoseIdx };
+  return { hl, doses, now, start, declared, gaps, cadence, lastDose, dueT, firstT, virtual, level, levelProj, ssVirtual, ssLevel, maxL, climbing, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nD, nLedger, PER, scrolls, W, H, PADB, xi, y, cycLen, nowIdx0, refPeak, vsPeak, nowIdx, nowFrac, nowX, nowY, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextVsPeak, nextDoseIdx };
 }
 
 function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
@@ -5648,7 +5649,7 @@ function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const nD = M ? M.nD : 1, nowIdx = M ? M.nowIdx : 0;
   useEffect(() => { const el = scrollRef.current; if (el) { const target = ((nowIdx + 0.5) / nD) * el.scrollWidth - el.clientWidth * 0.45; el.scrollLeft = Math.max(0, target); } }, [nD, nowIdx]);
   if (!M) return null;
-  const { HL_DAYS, hl, ke, doses, now, start, end, declared, gaps, cadence, lastDose, dueT, firstT, virtual, mk, level, ssVirtual, ssLevel, ssPeak, maxL, ssPct, climbing, tPeakH, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, PER, W, xi, y, cycLen, cyc, nowIdx0, refPeak, vsPeak, nowX, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextPct, nextVsPeak, nextDoseIdx } = M;
+  const { hl, doses, now, start, declared, gaps, cadence, lastDose, dueT, firstT, virtual, level, levelProj, ssVirtual, ssLevel, maxL, climbing, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nLedger, PER, scrolls, W, H, PADB, xi, y, cycLen, nowIdx0, refPeak, vsPeak, nowFrac, nowX, nowY, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextVsPeak, nextDoseIdx } = M;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
