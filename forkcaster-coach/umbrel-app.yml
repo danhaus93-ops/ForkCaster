@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.107"
+version: "0.9.108"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The back arrow on an opened card was sliding under the status bar, so there was no
-  way back. The detail screen now clears the notch at the top and the home indicator
-  at the bottom, and the scan and settings sheets clear it too.
+  Fixes the crash on the GLP-1 tab in compact mode. Two of the new collapsed rows
+  reached for values that live in a different part of the code; they now work out
+  their own dose and ladder. The test rig also renders every tab in compact from now
+  on, which is what should have caught this before it reached your phone.
 dependencies: []
 path: ""
 defaultUsername: ""

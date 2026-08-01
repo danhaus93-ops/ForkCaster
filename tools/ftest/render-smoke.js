@@ -20,12 +20,22 @@ for (const t of ["now", "today", "plan", "body", "train", "glp1", "coach"]) {
   catch (e) { console.log("DEEP_THREW " + t + ": " + e.message); deepFail++; }
 }
 if (deepFail) process.exitCode = 1; else console.log("DEEP_RENDER_OK");
+// v0.9.108: COMPACT pass. The collapsed rows are built inside verdict closures that never execute
+// with compact off, so a scope error in one of them rendered green here and crashed on his phone.
+globalThis.__FC_TEST_STATE = { ...globalThis.__FC_TEST_STATE, prefs: { ...(globalThis.__FC_TEST_STATE.prefs || {}), compact: true } };
+let cmpFail = 0;
+for (const t of ["now", "today", "plan", "body", "train", "glp1", "coach"]) {
+  globalThis.__FC_TEST_TAB = t;
+  try { renderToString(React.createElement(App)); console.log("COMPACT_OK " + t); }
+  catch (e) { console.log("COMPACT_THREW " + t + ": " + e.message); cmpFail++; }
+}
+if (cmpFail) process.exitCode = 1; else console.log("COMPACT_RENDER_OK");
 `);
 try {
   execSync(`cd ${R} && npx esbuild .smoke-entry.jsx --bundle --platform=node --format=cjs --outfile=${__dirname}/smoke/bundle.cjs --loader:.jsx=jsx --jsx=automatic --loader:.png=dataurl --log-level=error`, {stdio:'pipe'});
   const out = execSync(`node -e "require(__dirname + '/smoke/shim.js'); require(__dirname + '/smoke/bundle.cjs');"`, {stdio:'pipe'}).toString();
   console.log(out.trim());
-  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) ? 0 : 1);
+  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) ? 0 : 1);
 } catch (e) {
   console.log('RENDER SMOKE FAILED:\n' + (e.stdout||'').toString() + (e.stderr||'').toString().slice(0,900));
   process.exit(1);

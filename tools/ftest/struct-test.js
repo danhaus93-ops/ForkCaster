@@ -516,7 +516,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const cp2 = AA.slice(AA.indexOf('id: "cp"') - 700, AA.indexOf('id: "cp"') + 700);
   ok(/cp\.veto/.test(cp2) && /minHoldDays/.test(cp2),'the checkpoint row reads the gate, not a number');
   const ti = AA.slice(AA.indexOf('id: "tit"') - 700, AA.indexOf('id: "tit"') + 500);
-  ok(/glp\.doseLog/.test(ti) && /rungs\.findIndex/.test(ti),'the titration row counts his real ladder and doses');
+  // v0.9.108: the row derives its own ladder rather than borrowing a caller's local — that borrow
+  // is exactly what crashed on his phone, so the assertion now pins the self-contained form.
+  ok(/glp\.doseLog/.test(ti) && /_rungs9\.findIndex/.test(ti),'the titration row counts his real ladder and doses');
+  ok(/const _rungs9 = /.test(ti) && /const _cur9 = /.test(ti),'the titration row declares its own locals');
   const se2 = AA.slice(AA.indexOf('id: "se"') - 900, AA.indexOf('id: "se"') + 500);
   ok(/glp\.sideEffects/.test(se2) && /severity/.test(se2),'the journal row weighs severity, not just a count');
   ok(/tone: !se\.length \? "none"/.test(se2),'no symptoms logged shows a hollow dot, not a green all-clear');

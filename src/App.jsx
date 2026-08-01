@@ -4212,11 +4212,15 @@ export default function App() {
             </div>)}
             </>)}
           </div>, { borderLeft: `2.5px solid ${C.gold}` }, (() => {
+            // v0.9.108: derive from glp, never from a caller's locals — curMg and rungs live in a
+            // different block and this IIFE cannot see them.
+            const _dl = (glp.doseLog || []).filter((d) => +d.mg > 0);
+            const _cur = _dl.length ? +_dl[_dl.length - 1].mg : null;
             const held = cp.daysHeld != null ? cp.daysHeld : (cp.have || 0);
             const need = cp.minHoldDays != null ? cp.minHoldDays : ((glp.protocol && +glp.protocol.minHoldDays) || 28);
             const pct = need ? Math.min(1, held / need) : 0;
             return { id: "cp", tone: cp.status === "nodose" ? "none" : (cp.veto && cp.veto.length ? C.caution : C.go),
-              color: C.gold, title: "Dose checkpoint", when: curMg != null ? `${curMg} mg` : "no dose logged",
+              color: C.gold, title: "Dose checkpoint", when: _cur != null ? `${_cur} mg` : "no dose logged",
               value: cp.status === "nodose" ? "\u2014" : String(held), unit: cp.status === "nodose" ? "log a dose to start" : `of ${need} days`,
               sub: cp.veto && cp.veto.length ? `tolerability flags: ${cp.veto.length}` : (held < need ? `locked \u00b7 ${Math.max(0, need - held)} d to go` : "ready to evaluate"),
               subTone: cp.veto && cp.veto.length ? C.caution : C.faint,
@@ -4531,13 +4535,17 @@ export default function App() {
           </>
         , {}, (() => {
             const L9 = (glp.doseLog || []).filter((d) => +d.mg > 0);
-            let runN = 0; for (let i9 = L9.length - 1; i9 >= 0; i9--) { if (+L9[i9].mg === +curMg) runN++; else break; }
-            const holdWk = Math.max(1, Math.round((((glp.protocol || {}).minHoldDays) || 28) / 7));
-            const idx = rungs.findIndex((r) => +r === +curMg);
+            const _cur9 = L9.length ? +L9[L9.length - 1].mg : null;
+            const _proto9 = glp.protocol || {};
+            const _steps9 = (MEDS[glp.med] && MEDS[glp.med].steps) || [];
+            const _rungs9 = (Array.isArray(_proto9.rungs) && _proto9.rungs.length ? _proto9.rungs : _steps9).map(Number).filter((x) => x > 0);
+            let runN = 0; for (let i9 = L9.length - 1; i9 >= 0; i9--) { if (+L9[i9].mg === +_cur9) runN++; else break; }
+            const holdWk = Math.max(1, Math.round((+_proto9.minHoldDays || 28) / 7));
+            const idx = _rungs9.findIndex((r) => +r === +_cur9);
             return { id: "tit", tone: C.go, color: C.go, title: "Titration tracker",
-              when: idx >= 0 ? `rung ${idx + 1} of ${rungs.length}` : "off ladder",
+              when: idx >= 0 ? `rung ${idx + 1} of ${_rungs9.length}` : "off ladder",
               value: String(Math.max(1, runN)), unit: `of ${holdWk} doses`,
-              sub: idx >= 0 && idx + 1 < rungs.length ? `next rung ${rungs[idx + 1]} mg` : "top of your ladder",
+              sub: idx >= 0 && idx + 1 < _rungs9.length ? `next rung ${_rungs9[idx + 1]} mg` : "top of your ladder",
               spark: (<svg width="92" height="32" viewBox="0 0 92 32">
                 {Array.from({ length: Math.min(6, holdWk) }, (_, i) => (
                   <circle key={i} cx={8 + i * 16} cy="16" r="5.5" fill={i < runN ? C.go : "none"} stroke={C.go} strokeWidth="1.4" opacity={i < runN ? 1 : 0.4} />))}
