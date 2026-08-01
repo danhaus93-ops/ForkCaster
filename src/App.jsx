@@ -4369,22 +4369,22 @@ export default function App() {
         if (!_M) return { id: "med", tone: "none", color: C.violet, title: "Estimated med level", when: "no doses",
           value: "—", unit: "log a dose to model it", sub: "nothing to project yet" };
         const spark = (() => {
-          // v0.9.113: the same window and the same two functions the chart uses — level() up to now,
-          // levelProj() after it. Sampling level() past now decayed to nothing and lost the saw-tooth
-          // entirely, because level() knows only logged doses; the climb comes from the planned ones.
-          const n = 40, t0 = _M.start, t1 = _M.end;
+          // v0.9.114: same window and functions as the chart — level() to now, levelProj() after.
+          // Bigger box and a tighter domain because the teeth are only about a third of the full
+          // rise: honest proportions, but they need room and an unbroken stroke to read as a shape.
+          const W2 = 116, H2 = 40, n = 90, t0 = _M.start, t1 = _M.end;
           const pts = Array.from({ length: n }, (_, k) => { const t = t0 + (k / (n - 1)) * (t1 - t0);
             return (t <= _M.now ? _M.level(t) : _M.levelProj(t)) / Math.max(_M.ssPeak, 1e-9); });
-          const lo = Math.min(...pts), hi = Math.max(...pts), pad = (hi - lo) * 0.12 || 0.05;
-          const yy = (q) => 3 + (1 - (q - (lo - pad)) / ((hi + pad) - (lo - pad))) * 26;
-          const xx = (k) => 2 + k * (88 / (n - 1));
+          const lo = Math.min(...pts), hi = Math.max(...pts), pad = (hi - lo) * 0.04 || 0.05;
+          const yy = (q) => 3 + (1 - (q - (lo - pad)) / ((hi + pad) - (lo - pad))) * (H2 - 6);
+          const xx = (k) => 1.5 + k * ((W2 - 3) / (n - 1));
           const nowK = Math.max(1, Math.round(((_M.now - t0) / (t1 - t0)) * (n - 1)));
           const solid = pts.slice(0, nowK + 1).map((q, k) => (k ? "L" : "M") + xx(k).toFixed(1) + "," + yy(q).toFixed(1)).join(" ");
           const dash = pts.slice(nowK).map((q, k) => (k ? "L" : "M") + xx(nowK + k).toFixed(1) + "," + yy(q).toFixed(1)).join(" ");
-          return (<svg width="92" height="32" viewBox="0 0 92 32">
-            <path d={solid} fill="none" stroke={C.violet} strokeWidth="2" strokeLinejoin="round" />
-            <path d={dash} fill="none" stroke={C.violet} strokeWidth="2" strokeLinejoin="round" strokeDasharray="3 3" opacity="0.5" />
-            <circle cx={xx(nowK)} cy={yy(pts[nowK])} r="2.6" fill={C.violet} /></svg>); })();
+          return (<svg width={W2} height={H2} viewBox={`0 0 ${W2} ${H2}`}>
+            <path d={dash} fill="none" stroke={C.violet} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" strokeDasharray="5 2.5" opacity="0.75" />
+            <path d={solid} fill="none" stroke={C.violet} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx={xx(nowK)} cy={yy(pts[nowK])} r="2.8" fill={C.violet} /></svg>); })();
         return { id: "med", tone: C.violet, color: C.violet, title: "Estimated med level", when: "Now",
           // the chart's chip prints vsPeak — level against the highest prior cycle peak, the denominator
           // restored in v0.9.62. The row must print the SAME number or the two disagree on one screen.

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.113"
+version: "0.9.114"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The little chart on the med level row is now your actual curve. It was fading away
-  after today instead of showing the climb, because it was drawing only the doses
-  you have already taken. It now covers the same span as the full chart and includes
-  the planned doses, so the same rising saw-tooth appears in miniature.
+  The little curve on the med level row is bigger and now reads as the saw-tooth it
+  is. The data was already right — each planned dose landing on the last — but the
+  box was too small and the dashes too broken to see it. Four peaks, wider spacing,
+  and a scale that uses the height available.
 dependencies: []
 path: ""
 defaultUsername: ""
