@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.73"
+version: "0.9.74"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,11 +20,12 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Readiness finally looks like the instrument it is: the score now sits inside a
-  ring that fills with it, colored by the band, with the four signals beside it in
-  two columns and a measured dot on each. And the dose-due banner moved to the top
-  of the GLP-1 tab, so on the day a dose is due it is the first thing you see
-  instead of something you scroll to.
+  Four things from the Train tab. The big white Start session button and the white
+  cardio chip now wear the app's own green instead of standing out like a system
+  dialog. Readiness always shows all four signals — RHR, sleep, post-dose and load —
+  with a dash where there is no data yet, so the card reads the same whether one is
+  measured or all four. And the Week view gained the bar strip: sessions tall, cardio
+  short, rest a stub, shot days violet.
 dependencies: []
 path: ""
 defaultUsername: ""

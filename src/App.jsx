@@ -3336,12 +3336,21 @@ export default function App() {
                   <text x="43" y="59" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8.5" fill={C.faint}>/ 100</text>
                 </svg>
                 <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 12px" }}>
-                  {rd.parts.map((pt) => (<div key={pt.k}>
-                    <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{pt.k}</div>
-                    <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: pt.score >= 90 ? C.ink : pt.score >= 75 ? C.caution : C.avoid, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
-                      <span style={{ width: 5, height: 5, borderRadius: 5, background: C.go, flexShrink: 0 }} />{pt.v}
-                    </div>
-                  </div>))}
+                  {["RHR", "Sleep", "Post-dose", "Load"].map((slot) => {
+                    const pt = rd.parts.find((x) => x.k === slot);
+                    return (<div key={slot}>
+                      <div style={{ fontFamily: DATA, fontSize: 8, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{slot}</div>
+                      {pt ? (
+                        <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: pt.score >= 90 ? C.ink : pt.score >= 75 ? C.caution : C.avoid, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: 5, background: C.go, flexShrink: 0 }} />{pt.v}
+                        </div>
+                      ) : (
+                        <div style={{ fontFamily: DATA, fontSize: 14, fontWeight: 700, color: C.faint, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                          <span style={{ width: 7, height: 1.5, background: C.faint, flexShrink: 0 }} />—
+                        </div>
+                      )}
+                    </div>);
+                  })}
                 </div>
               </div>
               <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.5, borderTop: `1px solid ${C.hair}`, paddingTop: 9 }}>{rd.note}</div>
@@ -3395,12 +3404,12 @@ export default function App() {
                   {last ? `last: ${Math.max(...last.sets.map((y) => +y.w || 0))} lb × ${Math.max(...last.sets.map((y) => +y.reps || 0))} · ` : ""}{adv.action === "add-weight" ? `▲ go to ${adv.suggested} lb` : adv.action === "deload" ? `▼ deload to ${adv.suggested} lb` : adv.action === "start" ? "first time" : "add reps"}
                 </div>
               </div>); })}
-            <button onClick={() => startSession(nextSlot.day)} style={{ marginTop: 12, width: "100%", background: C.ink, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>Start session</button>
+            <button onClick={() => startSession(nextSlot.day)} style={{ marginTop: 12, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 16px ${C.go}33` }}>Start session</button>
           </div>, { marginBottom: 12 }) : card(<div style={{ fontSize: 13, color: C.muted }}>Rest day — next session is on the Week view.</div>, { marginBottom: 12 })}
           {card(<div>
             {sectionTitle("Log cardio")}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 9 }}>{CARDIO_TYPES.map((t) => (
-              <button key={t} onClick={() => setCardioDraft((d) => ({ ...d, type: t }))} style={{ background: cardioDraft.type === t ? C.ink : C.surfaceAlt, color: cardioDraft.type === t ? C.surface : C.muted, border: "none", borderRadius: 16, padding: "7px 11px", fontFamily: BODY, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{t}</button>))}</div>
+              <button key={t} onClick={() => setCardioDraft((d) => ({ ...d, type: t }))} style={{ background: cardioDraft.type === t ? C.go + "14" : "transparent", color: cardioDraft.type === t ? C.go : C.muted, border: `1px solid ${cardioDraft.type === t ? C.go + "55" : C.hair}`, borderRadius: 999, padding: "7px 12px", fontFamily: DATA, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>{t}</button>))}</div>
             <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
               <input inputMode="numeric" value={cardioDraft.minutes} onChange={(e) => setCardioDraft((d) => ({ ...d, minutes: e.target.value.replace(/[^\d]/g, "") }))} style={{ width: 74, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 9, padding: "10px 8px", fontFamily: BODY, fontSize: 14, color: C.ink, textAlign: "center" }} />
               <span style={{ fontSize: 12.5, color: C.muted }}>min</span>
@@ -3421,6 +3430,15 @@ export default function App() {
         </div>))}
         {trainView === "week" && card(<div>
           {sectionTitle("Your week · shot window respected")}
+          {(() => { const W = (week.length ? week : trainDates()); if (!W.length) return null;
+            const hOf = (d) => { if (d.day) return 34; const c = (weekCardio.find((x) => x.iso === d.iso) || {}).cardio; return c ? 18 : 7; };
+            const cOf = (d) => { if (d.dose || d.after) return C.violet; if (d.day) return C.go; const c = (weekCardio.find((x) => x.iso === d.iso) || {}).cardio; return c ? C.go + "77" : C.hair; };
+            return (<div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 46, marginBottom: 12 }}>
+              {W.map((d, i) => (<div key={i} style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ height: hOf(d), background: cOf(d), borderRadius: 5, marginBottom: 4 }} />
+                <div style={{ fontFamily: DATA, fontSize: 8.5, color: (d.dose || d.after) ? C.violet : C.faint, fontWeight: 700 }}>{(d.label || "").slice(0, 3)}</div>
+              </div>))}
+            </div>); })()}
           {(week.length ? week : trainDates()).map((d, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
               <div><div style={{ fontSize: 13.5, fontWeight: 700, color: d.day ? C.ink : C.faint }}>{d.label}{(d.dose || d.after) ? " · shot window" : ""}</div>
