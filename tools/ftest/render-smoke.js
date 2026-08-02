@@ -14,7 +14,7 @@ catch (e) { console.log("RENDER_THREW: " + e.message); console.log((e.stack||"")
 // med chart's full geometry, the checkpoint, the weight chart. The v0.9.59 TDZ dies here forever.
 globalThis.__FC_TEST_STATE = { glp: { med: "semaglutide", dose: 0.25, injectionDay: "FR", lastInjection: "2026-07-31", weeksOn: 2, lastDoseChangeWk: 0, doseLog: [{ date: "2026-07-26", mg: 0.25 }, { date: "2026-07-31", mg: 0.25 }], sideEffects: [{ id: 1, symptom: "Nausea", severity: 1, date: "2026-07-26" }], protocol: { rungs: [0.25, 0.5, 1, 1.7, 2.4], minHoldDays: 28 } }, weightLog: [{ date: "2026-07-20", lbs: 230 }, { date: "2026-07-27", lbs: 228.4 }, { date: "2026-07-31", lbs: 227.1 }] };
 let deepFail = 0;
-for (const t of ["now", "today", "plan", "body", "train", "glp1", "coach"]) {
+for (const t of ["now", "today", "plan", "body", "train", "glp", "coach"]) {
   globalThis.__FC_TEST_TAB = t;
   try { renderToString(React.createElement(App)); console.log("DEEP_OK " + t); }
   catch (e) { console.log("DEEP_THREW " + t + ": " + e.message); deepFail++; }
@@ -24,12 +24,32 @@ if (deepFail) process.exitCode = 1; else console.log("DEEP_RENDER_OK");
 // with compact off, so a scope error in one of them rendered green here and crashed on his phone.
 globalThis.__FC_TEST_STATE = { ...globalThis.__FC_TEST_STATE, prefs: { ...(globalThis.__FC_TEST_STATE.prefs || {}), compact: true } };
 let cmpFail = 0;
-for (const t of ["now", "today", "plan", "body", "train", "glp1", "coach"]) {
+for (const t of ["now", "today", "plan", "body", "train", "glp", "coach"]) {
   globalThis.__FC_TEST_TAB = t;
   try { renderToString(React.createElement(App)); console.log("COMPACT_OK " + t); }
   catch (e) { console.log("COMPACT_THREW " + t + ": " + e.message); cmpFail++; }
 }
 if (cmpFail) process.exitCode = 1; else console.log("COMPACT_RENDER_OK");
+// v0.9.135: this proves card ids EXIST and are stable between two server renders. It cannot prove
+// the churn bug is fixed — renderToString builds a fresh component each call, so its refs reset on
+// their own and the drift never appears. The reset itself is pinned statically in struct-test, and
+// the id-derivation logic is unit-tested there against a persistent counter, which is where the
+// bug actually lives.
+{
+  let churn = 0;
+  // v0.9.135: the fixture said "glp1" for years; the app's tab is "glp". Every pass over that tab
+  // rendered an empty page and reported OK, which is why nothing on GLP-1 was ever really covered.
+  const APP_TABS = ["now", "today", "plan", "body", "train", "glp", "coach"];
+  for (const t of ["today", "body", "glp"]) {
+    globalThis.__FC_TEST_TAB = t;
+    const ids = (h) => (h.match(/data-card-id="([^"]+)"/g) || []).join(",");
+    const a = ids(renderToString(React.createElement(App)));
+    const b = ids(renderToString(React.createElement(App)));
+    if (!a) { console.log("ID_CHURN " + t + ": no card ids rendered at all"); churn++; }
+    else if (a !== b) { console.log("ID_CHURN " + t + ": card ids changed between identical renders"); churn++; }
+  }
+  if (churn) process.exitCode = 1; else console.log("RENDER_STABLE_OK");
+}
 // v0.9.125: a card that DECLARES a verdict must actually collapse in compact. Body's weight card
 // declared one and still rendered its full prose, so the declaration alone proves nothing.
 globalThis.__FC_TEST_TAB = "body";
@@ -99,7 +119,7 @@ try {
   if (!/t <= _M\.now \? _M\.level\(t\)/.test(sp)) { console.log('MED_SPARK_SHAPE: logged history must use level()'); shapeOK = false; }
   if (shapeOK) console.log('MED_SPARK_OK');
   if (denomOK && shapeOK) console.log('MED_DENOMINATOR_OK');
-  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK && shapeOK && /SITE_AVATAR_OK/.test(out) && /COLLAPSE_OK/.test(out) ? 0 : 1);
+  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK && shapeOK && /SITE_AVATAR_OK/.test(out) && /COLLAPSE_OK/.test(out) && /RENDER_STABLE_OK/.test(out) ? 0 : 1);
 } catch (e) {
   console.log('RENDER SMOKE FAILED:\n' + (e.stdout||'').toString() + (e.stderr||'').toString().slice(0,900));
   process.exit(1);

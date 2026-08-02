@@ -1598,6 +1598,7 @@ export default function App() {
   const seqRef = useRef(0);
   const holdRef = useRef(null);
   const holdStartRef = useRef(0);
+  const idSeenRef = useRef({});
   const cardElsRef = useRef({});
   const dragFromRef = useRef(0);
   const orderList = () => dragRef.current.order || ((prefs.cardOrder || {})[tab]) || [];
@@ -3051,6 +3052,12 @@ export default function App() {
 
   // v0.9.103: every card in the app routes through here, so density is one decision rather than sixty.
   // Compact trims padding and radius only — nothing is hidden, no number leaves the screen.
+  // v0.9.135: these are per-RENDER, not per-session. Left to accumulate, the sequence climbed
+  // forever and the duplicate-id guard then rewrote every text-derived id on every render, so only
+  // verdict cards — whose id comes from the verdict — could ever be dragged.
+  seqRef.current = 0;
+  idSeenRef.current = {};
+  if (rowsRef.current) rowsRef.current[tab] = [];
   const _cmp = !!prefs.compact;
   // v0.9.105: compact is a layer, and a collapsed card still READS. The row carries the same
   // number the open card leads with, its unit, the finding and a sparkline — Apple's Health shape.
@@ -3075,7 +3082,6 @@ export default function App() {
     if (n.props) return _firstText(n.props.children, d + 1);
     return null; };
   const _slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 28);
-  const idSeenRef = useRef({});
   const _cardId = (vd, children, seq) => {
     if (vd && vd.id) return vd.id;
     const t = _firstText(children, 0);
@@ -3090,6 +3096,7 @@ export default function App() {
     const arming = arrangeTab === tab;
     const lifted = dragRef.current.id === id;
     return (<div
+      data-card-id={id || undefined}
       ref={arrangeable ? ((el) => { if (el) cardElsRef.current[id] = el; }) : undefined}
       onTouchStart={arrangeable ? ((e) => {
         const y = e.touches[0].clientY;

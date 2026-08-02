@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.134"
+version: "0.9.135"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Dragging actually works now. Two things were stopping it: a setting that told the
-  browser it owned vertical swipes, so it scrolled the page and cancelled the drag
-  the moment it began, and a hold that any tiny finger movement cancelled before it
-  could start. Hold a card, it lifts, drag it, let go.
+  Every card can be dragged now, not only the ones that collapse. Cards without a
+  collapsed view were being given a new internal name on every redraw, so the app
+  could never find the one you were holding. Today, Body and GLP-1 all rearrange.
 dependencies: []
 path: ""
 defaultUsername: ""

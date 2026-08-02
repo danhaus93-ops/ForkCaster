@@ -771,5 +771,28 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/r\.top \+ r\.height \/ 2/.test(AN),'the drop slot comes from real card midpoints');
 }
 
+
+// v0.9.135: card ids must not drift between renders. The counters are per-render; when they were
+// left to accumulate, the duplicate-id guard rewrote every text-derived id each time, so only
+// verdict cards could be dragged. SSR cannot reproduce it (a fresh component resets its own refs),
+// so the reset is pinned statically and the derivation is exercised directly here.
+{
+  const AO=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/seqRef\.current = 0;/.test(AO),'the sequence resets every render');
+  ok(/idSeenRef\.current = \{\};/.test(AO),'and so does the duplicate-id table');
+  const body=AO.slice(AO.indexOf('seqRef.current = 0;'));
+  ok(body.indexOf('const _cmp') < body.indexOf('const card ='),'the reset runs before any card is built');
+  ok(AO.indexOf('const idSeenRef = useRef') < AO.indexOf('idSeenRef.current = {};'),'idSeenRef is declared before it is reset');
+  ok(/data-card-id=\{id \|\| undefined\}/.test(AO),'each card exposes its id, so drift is observable');
+  // the derivation itself, run twice with a persistent counter — the live-browser condition
+  const mk = () => { let seq = 0; const seen = {};
+    return (text) => { const s = seq++; let id = text; if (seen[id] != null && seen[id] !== s) id = id + "-" + s; seen[id] = s; return id; }; };
+  const withReset = () => { const f = mk(); return ["counters","log-a-meal"].map(f); };
+  const f2 = mk();
+  const r1 = ["counters","log-a-meal"].map(f2), r2 = ["counters","log-a-meal"].map(f2);
+  ok(r1.join() !== r2.join(),'without a reset the ids provably drift — this is the bug');
+  ok(withReset().join() === withReset().join(),'with a reset they are identical every render');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
