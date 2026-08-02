@@ -4361,8 +4361,46 @@ export default function App() {
       </>)}</div>}
       {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
-      </>)}</div>}
-      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />)}</div>
+      </>, {}, (() => {
+        const _ps = Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)));
+        const _rot = siteRotation(glp.doseLog || [], _ps);
+        const _sited = (glp.doseLog || []).filter((d) => d.site);
+        const _last = _sited.length ? _sited[_sited.length - 1].site : null;
+        const _rested = SITE_NAMES.filter((z) => (_rot.used[z] || 0) === 0).length;
+        return { id: "site", tone: _rot.suggested ? C.violet : "none", color: C.violet, title: "Injection site",
+          when: _rot.suggested ? "Next" : "Board full",
+          value: _rot.suggested || "\u2014", unit: "",
+          sub: _rot.suggested
+            ? `${SITE_NAMES.length} sites \u00b7 ${_rested} rested${_last ? ` \u00b7 last was ${String(_last).toLowerCase()}` : ""}`
+            : "every site used this cycle \u2014 it resets on the next dose",
+          // the SAME avatar the open card draws, shrunk and made inert — never a second drawing
+          spark: (<div style={{ width: 46, pointerEvents: "none", opacity: 0.95 }}>
+            <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
+          </div>) }; })())}</div>}
+      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />, {}, (() => {
+        const _log = (glp.doseLog || []).filter((d) => +d.mg > 0);
+        const _lastD = _log.length ? _log[_log.length - 1].date : null;
+        const _due = dueISO, _today = todayISO();
+        const _d = Math.round((new Date(_due + "T12:00:00") - new Date(_today + "T12:00:00")) / 86400000);
+        const _pretty = (iso) => new Date(iso + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+        const overdue = _d < 0, dueToday = _d === 0;
+        return { id: "cal", tone: overdue ? C.avoid : dueToday ? C.violet : C.go, color: C.violet,
+          title: "Dose calendar", when: new Date(_today + "T12:00:00").toLocaleDateString([], { month: "long" }),
+          value: overdue ? String(Math.abs(_d)) : dueToday ? "Today" : String(_d),
+          unit: overdue ? (Math.abs(_d) === 1 ? "day late" : "days late") : dueToday ? "" : (_d === 1 ? "day to next shot" : "days to next shot"),
+          sub: `${_pretty(_due)}${_lastD ? ` · last dose ${_pretty(_lastD)}` : ""}`,
+          subTone: overdue ? C.avoid : C.faint,
+          // the next fortnight in the calendar's own marks: logged solid, due ringed
+          spark: (() => { const N = 14, t0 = new Date(_today + "T12:00:00").getTime();
+            const logged = new Set(_log.map((x) => x.date));
+            return (<svg width="116" height="34" viewBox="0 0 116 34">
+              {Array.from({ length: N }, (_, k) => { const iso = new Date(t0 + k * 86400000).toLocaleDateString("sv-SE");
+                const x = 2 + k * 8;
+                if (logged.has(iso)) return <rect key={k} x={x} y="13" width="6" height="8" rx="1.5" fill={C.go} opacity="0.85" />;
+                if (iso === _due) return <rect key={k} x={x - 0.8} y="12.2" width="7.6" height="9.6" rx="2" fill="none" stroke={overdue ? C.avoid : C.violet} strokeWidth="1.4" strokeDasharray="2 1.6" />;
+                return <rect key={k} x={x} y="15" width="6" height="4" rx="1.5" fill={C.hair} />; })}
+              <text x="58" y="31" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="6.5" fill={C.faint}>next 14 days</text>
+            </svg>); })() }; })())}</div>
       {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, (() => {
         // reads the SAME model the chart draws — no approximation, no second formula
         const _M = medLevelModel({ doseLog: glp.doseLog, med: glp.med, dueISO, intervalDays: medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7) });
@@ -5785,6 +5823,29 @@ const syr = (color, s = 11) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m18 2 4 4" /><path d="m17 7 3-3" /><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" /><path d="m9 11 4 4" /><path d="m5 19-3 3" /><path d="m14 4 6 6" /></svg>
 );
 const SITE_NAMES = ["Abdomen L", "Abdomen R", "Thigh L", "Thigh R", "Arm L", "Arm R"];
+// v0.9.115: the rotation board, lifted so the collapsed row and the avatar answer "where next"
+// from one computation. The row shows the name; the avatar draws the same site filled.
+export function siteRotation(doseLog, perSite) {
+  const sited = (doseLog || []).filter((d) => d.site).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+  const cyc = SITE_NAMES.length * perSite;
+  // content-aware rotation: a cycle only completes when EVERY site has hit its per-site limit
+  const used = {}; SITE_NAMES.forEach((z) => { used[z] = 0; });
+  const boardFull = () => SITE_NAMES.every((z) => used[z] >= perSite);
+  const resetBoard = () => SITE_NAMES.forEach((z) => { used[z] = 0; });
+  for (const d of sited) {
+    if (boardFull()) resetBoard();                      // previous rotation finished -> fresh board
+    if (!(d.site in used)) continue;
+    if (used[d.site] >= perSite) resetBoard();          // legacy over-use of a site -> treat as new rotation
+    used[d.site] += 1;
+  }
+  if (boardFull()) resetBoard();                        // a just-completed rotation shows a fresh board
+  const cycleLogged = SITE_NAMES.reduce((s, z) => s + used[z], 0);
+  const daysSince = (z) => { const u = (doseLog || []).filter((d) => d.site === z); if (!u.length) return 9999; return Math.floor((Date.now() - new Date(u.map((d) => d.date).sort().slice(-1)[0] + "T12:00:00")) / 86400000); };
+  const avail = SITE_NAMES.filter((z) => used[z] < perSite);
+  const suggested = avail.length ? avail.reduce((a, b) => (daysSince(b) > daysSince(a) ? b : a)) : null;
+  return { used, cycleLogged, suggested, daysSince };
+}
+
 function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite }) {
   const F = sex === "female";
   const g = Math.max(0, Math.min(1, ((bmi || 30) - 22) / 18));
@@ -5820,23 +5881,7 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
       "C " + P(ax1 - armW * 0.5, ay1 - 22) + " " + P(ax0 - armW * 0.6, ay0 + 8) + " " + P(ax0 - armW * 0.4, ay0), "Z"].join(" ");
   };
   // rotation cycle math: pure derivation from sited doses
-  const sited = (doseLog || []).filter((d) => d.site).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
-  const cyc = SITE_NAMES.length * perSite;
-  // content-aware rotation: a cycle only completes when EVERY site has hit its per-site limit
-  const used = {}; SITE_NAMES.forEach((z) => { used[z] = 0; });
-  const boardFull = () => SITE_NAMES.every((z) => used[z] >= perSite);
-  const resetBoard = () => SITE_NAMES.forEach((z) => { used[z] = 0; });
-  for (const d of sited) {
-    if (boardFull()) resetBoard();                      // previous rotation finished -> fresh board
-    if (!(d.site in used)) continue;
-    if (used[d.site] >= perSite) resetBoard();          // legacy over-use of a site -> treat as new rotation
-    used[d.site] += 1;
-  }
-  if (boardFull()) resetBoard();                        // a just-completed rotation shows a fresh board
-  const cycleLogged = SITE_NAMES.reduce((s, z) => s + used[z], 0);
-  const daysSince = (z) => { const u = (doseLog || []).filter((d) => d.site === z); if (!u.length) return 9999; return Math.floor((Date.now() - new Date(u.map((d) => d.date).sort().slice(-1)[0] + "T12:00:00")) / 86400000); };
-  const avail = SITE_NAMES.filter((z) => used[z] < perSite);
-  const suggested = avail.length ? avail.reduce((a, b) => (daysSince(b) > daysSince(a) ? b : a)) : null;
+  const { used, cycleLogged, suggested } = siteRotation(doseLog, perSite);
   const belly = waist * 0.5 + 1.5 * g;
   const pos = {
     // v0.9.41: ANATOMICAL sides. This is a front view, so YOUR left renders on the VIEWER'S right —

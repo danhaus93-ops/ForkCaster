@@ -511,7 +511,16 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/\{sheetCard\.children\}/.test(AA),'the sheet renders those children — detail cannot drift from the summary');
   // v0.9.106: six GLP-1 cards now carry a verdict — three readings, three states.
   // distinct ids, not occurrences — a card may declare a verdict twice (empty state and normal).
-  ok(new Set((AA.match(/id: "(?:med|rhr|sleep|cp|tit|se)"/g) || [])).size === 6,'exactly six GLP-1 cards carry a verdict');
+  ok(new Set((AA.match(/id: "(?:med|rhr|sleep|cp|tit|se|site|cal)"/g) || [])).size === 8,'exactly eight GLP-1 cards carry a verdict');
+  // the collapsed site map must BE the avatar, not a second drawing of it
+  const sr = AA.slice(AA.indexOf('id: "site"') - 1200, AA.indexOf('id: "site"') + 900);
+  ok(/spark: \(<div[^>]*>\s*<SiteAvatar/.test(sr.replace(/\n\s*/g, ' ')),'the collapsed site spark renders the real SiteAvatar');
+  ok(/pointerEvents: "none"/.test(sr),'the collapsed avatar is inert');
+  ok((AA.match(/function siteRotation/g) || []).length === 1,'one rotation board exists');
+  ok(/const \{ used, cycleLogged, suggested \} = siteRotation\(/.test(AA),'the avatar consumes it too');
+  // the calendar row must handle due-today and overdue, not just a countdown
+  const cr = AA.slice(AA.indexOf('id: "cal"') - 900, AA.indexOf('id: "cal"') + 700);
+  ok(/dueToday/.test(cr) && /overdue/.test(cr),'the calendar row has due-today and overdue states');
   // the med row must read the shared model, never a formula of its own
   ok(/const _M = medLevelModel\(/.test(AA),'the med row calls the same model the chart draws');
   ok(!/0\.35 \+ dl\.length \* 0\.22/.test(AA),'the invented med-level approximation is gone');
@@ -529,7 +538,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const se2 = AA.slice(AA.indexOf('id: "se"') - 900, AA.indexOf('id: "se"') + 500);
   ok(/glp\.sideEffects/.test(se2) && /severity/.test(se2),'the journal row weighs severity, not just a count');
   ok(/tone: !se\.length \? "none"/.test(se2),'no symptoms logged shows a hollow dot, not a green all-clear');
-  ok(!/id: "(site|nudge|proto|journey)"/.test(AA),'diagrams, ladders and action cards are NOT collapsed');
+  // v0.9.115: he asked for the calendar and the injection map, so the line moved — but it still
+  // exists. The protocol ladder, the on-med nudges and the journey stages stay whole.
+  ok(!/id: "(nudge|proto|journey)"/.test(AA),'the ladder, the nudges and the stages are NOT collapsed');
+  ok(/id: "site"/.test(AA) && /id: "cal"/.test(AA),'the injection map and the calendar carry verdicts');
   ok(/const _spark = \(vals, col, band\)/.test(AA),'one sparkline helper for every row');
   ok(/if \(v\.length < 2\) return null;/.test(AA),'a single reading draws no sparkline rather than a fake line');
   // the row must read from the engines, never from a literal

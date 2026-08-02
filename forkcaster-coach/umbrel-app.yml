@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.114"
+version: "0.9.115"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The little curve on the med level row is bigger and now reads as the saw-tooth it
-  is. The data was already right — each planned dose landing on the last — but the
-  box was too small and the dashes too broken to see it. Four peaks, wider spacing,
-  and a scale that uses the height available.
+  The dose calendar and the injection map collapse now too. The calendar says how
+  many days until your next shot — or that it is due today, or how late it is — with
+  the next fortnight beside it. The map names the site that comes next and draws your
+  own body figure in miniature. Tap either for the full card.
 dependencies: []
 path: ""
 defaultUsername: ""
