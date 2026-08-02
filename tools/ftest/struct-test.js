@@ -757,10 +757,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // iOS raises a selection callout on a long press unless told not to
   ok(/WebkitTouchCallout: arrangeable/.test(AN),'holding a card does not raise the selection callout');
   ok(/WebkitUserSelect: arrangeable/.test(AN),'and selects no text');
-  ok(/lifted \? "none" : "pan-y"/.test(AN),'the page still scrolls until a card is actually lifted');
-  ok(/setLiveOrder\(null\); setArrangeTab\(null\);/.test(AN),'dropping ends the session — there is no Done step');
+  // v0.9.134: pan-y was the bug, not the fix — it hands vertical movement to the browser, which
+  // then ignores preventDefault and cancels the pointer. Unset until lifted, none while dragging.
+  ok(/touchAction: lifted \? "none" : undefined/.test(AN),'the page scrolls normally until a card is lifted');
+  ok(!/touchAction[^\n]*pan-y/.test(AN),'nothing declares pan-y on a draggable card');
+  ok(/document\.addEventListener\("touchmove", onDocMove, \{ passive: false \}\)/.test(AN),'the drag is driven by a non-passive listener the browser cannot cancel');
+  ok(/> 12\) clearTimeout\(holdRef\.current\)/.test(AN),'only real movement cancels the hold, not finger jitter');
+  ok(/d\.startY \+= \(after - before\)/.test(AN),'the card rebases on reorder so it stays under the finger');
+  ok(/dragRef\.current = \{ id: null, startY: 0, dy: 0, order: null \};\s*setArrangeTab\(null\);/.test(AN.replace(/\n\s*/g,' ')),'dropping ends the session — there is no Done step');
+  ok(/removeEventListener\("touchmove", onDocMove/.test(AN),'and the listeners come off');
   ok(!/>Done<\/button>/.test(AN),'and no bar at the bottom');
-  ok(/transform: lifted \? `translateY\(\$\{dragDy\}px\) scale\(1\.03\)`/.test(AN),'the held card lifts and follows the finger');
+  ok(/transform: lifted \? `translateY\(\$\{dragRef\.current\.dy\}px\) scale\(1\.03\)`/.test(AN),'the held card lifts and follows the finger');
   ok(/r\.top \+ r\.height \/ 2/.test(AN),'the drop slot comes from real card midpoints');
 }
 

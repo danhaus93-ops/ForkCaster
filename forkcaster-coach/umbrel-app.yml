@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.133"
+version: "0.9.134"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Dragging works on all three tabs now, for every card. Holding no longer pops up the
-  copy and look-up bar, the cards have their spacing back, and letting go of a card
-  finishes the job — there is no bar at the bottom any more.
+  Dragging actually works now. Two things were stopping it: a setting that told the
+  browser it owned vertical swipes, so it scrolled the page and cancelled the drag
+  the moment it began, and a hold that any tiny finger movement cancelled before it
+  could start. Hold a card, it lifts, drag it, let go.
 dependencies: []
 path: ""
 defaultUsername: ""

@@ -1589,44 +1589,78 @@ export default function App() {
   // at the end of somebody's saved list.
   const ARRANGE_TABS = ["today", "body", "glp"];
   const [arrangeTab, setArrangeTab] = useState(null);
-  const [dragId, setDragId] = useState(null);
-  const [dragDy, setDragDy] = useState(0);
-  const [liveOrder, setLiveOrder] = useState(null);
+  // v0.9.134: the gesture lives in a ref and is driven by NATIVE non-passive touch listeners.
+  // React's pointer events could not work: touch-action pan-y hands vertical movement to the
+  // browser, which starts scrolling and fires pointercancel, killing the drag the instant it began.
+  const dragRef = useRef({ id: null, startY: 0, dy: 0, order: null });
+  const [dragTick, setDragTick] = useState(0);
+  const rerender = () => setDragTick((n) => n + 1);
   const seqRef = useRef(0);
   const holdRef = useRef(null);
+  const holdStartRef = useRef(0);
   const cardElsRef = useRef({});
   const dragFromRef = useRef(0);
-  const orderList = () => liveOrder || ((prefs.cardOrder || {})[tab]) || [];
+  const orderList = () => dragRef.current.order || ((prefs.cardOrder || {})[tab]) || [];
   const orderOf = (id) => { const at = orderList().indexOf(id); return at >= 0 ? at : 100 + seqRef.current; };
   // the order the tab is currently showing, whatever the source of truth is
   const visualOrder = () => (rowsRef.current[tab] || []).slice().sort((a, b) => orderOf(a) - orderOf(b));
   // while dragging, work out which slot the finger is over by comparing it to each card's midpoint
   const dragTo = (y) => {
-    const rows = visualOrder();
-    const from = rows.indexOf(dragId);
+    const d = dragRef.current;
+    const rows = (d.order || []).slice();
+    const from = rows.indexOf(d.id);
     if (from < 0) return;
     let to = from;
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i] === dragId) continue;
+      if (rows[i] === d.id) continue;
       const el = cardElsRef.current[rows[i]];
       if (!el) continue;
       const r = el.getBoundingClientRect(), mid = r.top + r.height / 2;
-      if (i < from && y < mid) { to = Math.min(to, i); }
-      if (i > from && y > mid) { to = Math.max(to, i); }
+      if (i < from && y < mid) to = Math.min(to, i);
+      if (i > from && y > mid) to = Math.max(to, i);
     }
     if (to !== from) {
-      const next = rows.slice();
-      next.splice(to, 0, next.splice(from, 1)[0]);
-      setLiveOrder(next);
-      const el = cardElsRef.current[dragId];
-      if (el) dragFromRef.current = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+      rows.splice(to, 0, rows.splice(from, 1)[0]);
+      const el = cardElsRef.current[d.id];
+      const before = el ? el.getBoundingClientRect().top : 0;
+      d.order = rows;
+      // the card jumped to a new slot; rebase so it stays under the finger instead of snapping
+      if (el) { const after = el.getBoundingClientRect().top; d.startY += (after - before); }
       if (navigator.vibrate) navigator.vibrate(8);
     }
   };
-  const endDrag = () => {
-    if (liveOrder) setPrefs({ ...prefs, cardOrder: { ...(prefs.cardOrder || {}), [tab]: liveOrder } });
-    setDragId(null); setDragDy(0); setLiveOrder(null); setArrangeTab(null);
+  const onDocMove = (e) => {
+    const d = dragRef.current;
+    if (!d.id) return;
+    e.preventDefault();                       // non-passive: this is what stops the page scrolling
+    const y = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY);
+    d.dy = y - d.startY;
+    dragTo(y);
+    rerender();
   };
+  const onDocEnd = () => {
+    const d = dragRef.current;
+    document.removeEventListener("touchmove", onDocMove, { passive: false });
+    document.removeEventListener("touchend", onDocEnd);
+    document.removeEventListener("touchcancel", onDocEnd);
+    if (d.order) setPrefs({ ...prefs, cardOrder: { ...(prefs.cardOrder || {}), [tab]: d.order } });
+    dragRef.current = { id: null, startY: 0, dy: 0, order: null };
+    setArrangeTab(null);
+    rerender();
+  };
+  const beginHold = (id, y) => {
+    clearTimeout(holdRef.current);
+    holdRef.current = setTimeout(() => {
+      dragRef.current = { id, startY: y, dy: 0, order: visualOrder() };
+      setArrangeTab(tab);
+      document.addEventListener("touchmove", onDocMove, { passive: false });
+      document.addEventListener("touchend", onDocEnd);
+      document.addEventListener("touchcancel", onDocEnd);
+      if (navigator.vibrate) navigator.vibrate(18);
+      rerender();
+    }, 320);
+  };
+
   const rowsRef = useRef({});
   // v0.9.119: card children are re-registered every render and the sheet reads them from here.
   // Storing the children in state froze them: tapping a site called setPendingSite, the app
@@ -3054,35 +3088,30 @@ export default function App() {
   const cardShell = (children, extra = {}, id = null) => {
     const arrangeable = id && ARRANGE_TABS.includes(tab);
     const arming = arrangeTab === tab;
-    const lifted = dragId === id;
+    const lifted = dragRef.current.id === id;
     return (<div
       ref={arrangeable ? ((el) => { if (el) cardElsRef.current[id] = el; }) : undefined}
-      onPointerDown={arrangeable ? ((e) => {
-        clearTimeout(holdRef.current);
-        const y0 = e.clientY;
-        holdRef.current = setTimeout(() => {
-          setArrangeTab(tab); setDragId(id); setDragDy(0);
-          dragFromRef.current = y0;
-          try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch {}
-          if (navigator.vibrate) navigator.vibrate(18);
-        }, 380);
+      onTouchStart={arrangeable ? ((e) => {
+        const y = e.touches[0].clientY;
+        holdStartRef.current = y;
+        beginHold(id, y);
       }) : undefined}
-      onPointerMove={arrangeable ? ((e) => {
-        if (dragId !== id) { clearTimeout(holdRef.current); return; }
-        e.preventDefault();
-        setDragDy(e.clientY - dragFromRef.current);
-        dragTo(e.clientY);
+      onTouchMove={arrangeable ? ((e) => {
+        // only a real movement cancels the hold — a finger is never perfectly still, and cancelling
+        // on any jitter meant the timer almost never survived to fire
+        if (dragRef.current.id) return;
+        if (Math.abs(e.touches[0].clientY - holdStartRef.current) > 12) clearTimeout(holdRef.current);
       }) : undefined}
-      onPointerUp={arrangeable ? (() => { clearTimeout(holdRef.current); if (dragId === id) endDrag(); }) : undefined}
-      onPointerCancel={arrangeable ? (() => { clearTimeout(holdRef.current); if (dragId === id) endDrag(); }) : undefined}
+      onTouchEnd={arrangeable ? (() => { if (!dragRef.current.id) clearTimeout(holdRef.current); }) : undefined}
+      onContextMenu={arrangeable ? ((e) => e.preventDefault()) : undefined}
       style={{ marginBottom: _cmp ? 9 : 14,
         background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface,
         border: `1px solid ${lifted ? C.go : C.hair}`, borderRadius: _cmp ? 15 : 18, padding: _cmp ? 12 : 16,
         boxShadow: lifted ? `0 18px 40px rgba(0,0,0,.55), 0 0 0 1px ${C.go}55` : (C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none"),
-        transform: lifted ? `translateY(${dragDy}px) scale(1.03)` : (arming ? "scale(0.99)" : "none"),
+        transform: lifted ? `translateY(${dragRef.current.dy}px) scale(1.03)` : (arming ? "scale(0.99)" : "none"),
         transition: lifted ? "none" : "transform .16s ease, box-shadow .16s ease",
         zIndex: lifted ? 40 : undefined, position: lifted ? "relative" : undefined,
-        touchAction: arrangeable ? (lifted ? "none" : "pan-y") : undefined,
+        touchAction: lifted ? "none" : undefined,
         WebkitUserSelect: arrangeable ? "none" : undefined, userSelect: arrangeable ? "none" : undefined,
         WebkitTouchCallout: arrangeable ? "none" : undefined,
         ...extra }}>{children}</div>);
