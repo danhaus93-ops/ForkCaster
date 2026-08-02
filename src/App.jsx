@@ -4261,7 +4261,7 @@ export default function App() {
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               {rungs.map((r) => { const on = curMg != null && +r === +curMg; const done = curMg != null && +r < +curMg; return (
-                <div key={r} onClick={() => setGlp({ ...glp, dose: +r, lastDoseChangeWk: 0 })} style={{ flex: 1, cursor: "pointer" }}>
+                <div key={r} style={{ flex: 1 }}>
                   <div style={{ height: 6, borderRadius: 4, background: on || done ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
                   <div style={{ fontFamily: DATA, fontSize: 13.5, marginTop: 6, fontWeight: on ? 700 : 500, color: on ? C.violet : C.faint }}>{r} <span style={{ fontSize: 10.5, color: C.faint }}>mg</span></div>
                   {on && <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, marginTop: 2 }}>YOU ARE HERE</div>}
@@ -4520,7 +4520,8 @@ export default function App() {
           ) : (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {donut(glp.dose, medObj.steps[medObj.steps.length - 1], C.violet, `${glp.dose}`, medObj.unit, C)}
-              <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 13.5, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontFamily: DATA, fontSize: 13.5, color: C.muted, marginTop: 6 }}>Week {glp.weeksOn} · current dose {glp.dose} {medObj.unit}</div></div>
+              <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 13.5, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontFamily: DATA, fontSize: 13.5, color: C.muted, marginTop: 6 }}>Week {glp.weeksOn} · current dose {(() => { const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+                      return L.length ? +L[L.length - 1].mg : glp.dose; })()} {medObj.unit}</div></div>
             </div>
           )}
         </>)}</div>
@@ -4560,7 +4561,7 @@ export default function App() {
           spark: (<div style={{ width: 46, flexShrink: 0, pointerEvents: "none" }}>
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
-      <div style={{ display: "contents" }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />, {}, (() => {
+      <div style={{ display: "contents" }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />, {}, (() => {
         const _log = (glp.doseLog || []).filter((d) => +d.mg > 0);
         const _lastD = _log.length ? _log[_log.length - 1].date : null;
         const _due = dueISO, _today = todayISO();

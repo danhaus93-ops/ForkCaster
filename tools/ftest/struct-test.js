@@ -810,7 +810,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/if \(el0\) el0\.style\.transform = "";/.test(AP),'and the node is handed back to React on drop');
   // the two ladders were the same rungs twice
   ok(!/sectionTitle\("Titration ladder"\)/.test(AP),'the duplicate titration ladder card is gone');
-  ok(/onClick=\{\(\) => setGlp\(\{ \.\.\.glp, dose: \+r, lastDoseChangeWk: 0 \}\)\}/.test(AP),'the protocol rungs took over recording the dose');
+  // v0.9.137: REVERSED. Making the rungs tappable put a silent dose change one stray touch away on
+  // a medication card, and it wrote a stored value the rest of the tab does not read. A dose is
+  // recorded by logging one, nowhere else.
+  ok(!/onClick=\{\(\) => setGlp\(\{ \.\.\.glp, dose: \+r/.test(AP),'a tap on a rung cannot change the recorded dose');
+  // one source of truth: what is displayed comes from the log whenever a log exists
+  ok(/current dose \{\(\(\) => \{ const L = \(glp\.doseLog/.test(AP.replace(/\n\s*/g,' ')),'the med card shows the last logged dose, not a separate stored number');
+  ok(/dose: log\.length \? \+log\[log\.length - 1\]\.mg : g\.dose/.test(AP),'removing a dose puts the stored dose back in step with the log');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
