@@ -431,6 +431,56 @@ app.post("/api/keys", (req, res) => {
 });
 
 /* ── AI proxy (ranking, coach, photo estimation) ── */
+/* ── Lab report parsing ────────────────────────────────────────────────────────
+   Takes a PDF (or a photo of one) and returns the markers it can find. It NEVER
+   writes anything: the client shows every value for confirmation against the
+   source document before it is saved. A misread lab value is worse than no lab
+   value, so the human stays in the loop by construction. */
+const LAB_KEYS = ["lipase","amylase","alt","ast","trig","hdl","ldl","glucose","a1c","egfr","creat"];
+app.post("/api/labs/parse", async (req, res) => {
+  const ANTHROPIC_KEY = key("ANTHROPIC_API_KEY");
+  if (!ANTHROPIC_KEY) return res.json({ error: "No Anthropic key configured on this node." });
+  try {
+    const { pdf, image } = req.body || {};
+    let text = "";
+    if (pdf) text = await pdfText(Buffer.from(pdf, "base64"));
+    if (!text && !image) return res.json({ error: "Could not read text from that file. A photo of the page also works." });
+
+    const system = "You extract laboratory values from a report. Return ONLY minified JSON, no prose, no markdown fences. " +
+      "Schema: {\"date\":\"YYYY-MM-DD or null\",\"values\":{key:number}} using ONLY these keys: " + LAB_KEYS.join(", ") + ". " +
+      "Map: ALT/SGPT->alt, AST/SGOT->ast, TRIGLYCERIDES->trig, HDL CHOLESTEROL->hdl, LDL->ldl, " +
+      "GLUCOSE->glucose, HEMOGLOBIN A1c->a1c, EGFR->egfr, CREATININE->creat, LIPASE->lipase, AMYLASE->amylase. " +
+      "date is the COLLECTED date, not reported. Omit any key you do not find — never guess a value, " +
+      "never carry a reference range in as a result. If a value is unreadable, omit it.";
+    const content = image
+      ? [{ type: "image", source: { type: "base64", media_type: image.media_type || "image/jpeg", data: image.data } },
+         { type: "text", text: "Extract the lab values." }]
+      : "Extract the lab values from this report text:\n\n" + text.slice(0, 24000);
+
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 900, system,
+        messages: [{ role: "user", content }] }),
+      signal: AbortSignal.timeout(75000),
+    });
+    const j = await r.json();
+    const raw = ((j.content || []).filter((c) => c.type === "text").map((c) => c.text).join("")).trim();
+    let out;
+    try { out = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
+    catch { return res.json({ error: "Could not read values from that report." }); }
+
+    // keep only known keys with finite numbers — the model does not get to invent a marker
+    const values = {};
+    for (const k of LAB_KEYS) {
+      const v = out && out.values ? Number(out.values[k]) : NaN;
+      if (Number.isFinite(v)) values[k] = v;
+    }
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(out && out.date)) ? out.date : null;
+    res.json({ date, values, found: Object.keys(values).length });
+  } catch (e) { res.json({ error: String(e && e.message ? e.message : e) }); }
+});
+
 app.post("/api/ai", async (req, res) => {
   const ANTHROPIC_KEY = key("ANTHROPIC_API_KEY");
   if (!ANTHROPIC_KEY) return res.json({ error: "No Anthropic key. Create data/secrets.json on the node with {\"ANTHROPIC_API_KEY\":\"sk-ant-...\"} — no restart needed." });

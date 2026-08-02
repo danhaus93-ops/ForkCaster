@@ -915,5 +915,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/needs a clinician the same day/.test(AU),'and says so once, on the journal');
 }
 
+
+// v0.9.144: lab report import. The parser proposes, the human confirms — a misread lab value that
+// silently entered the record would be worse than no value at all.
+{
+  const AV=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const SV=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  ok(/app\.post\("\/api\/labs\/parse"/.test(SV),'the parse route exists');
+  ok(/const LAB_KEYS = \[/.test(SV),'it accepts only known marker keys');
+  ok(/if \(Number\.isFinite\(v\)\) values\[k\] = v;/.test(SV),'non-numeric output is dropped rather than stored');
+  ok(/never guess a value/.test(SV),'the prompt forbids guessing a value');
+  ok(/never carry a reference range in as a result/.test(SV),'and forbids reading a reference range as a result');
+  ok(/pdfText\(Buffer\.from\(pdf, "base64"\)\)/.test(SV),'a PDF is read through the existing extractor');
+  ok(/accept="application\/pdf,image\/\*"/.test(AV),'the picker takes a PDF or a photo of one');
+  // nothing is written by the parser
+  ok(/setLabDraft\(\{ date: j\.date \|\| todayISO\(\)/.test(AV),'a parsed report lands in a DRAFT, not in the record');
+  ok(!/setLabs\(\[\.\.\.\(labs \|\| \[\]\), \{ id: uid\(\), date: j\./.test(AV),'the parser never saves directly');
+  ok(/Check every number against your report before saving/.test(AV),'the draft says to check the numbers against the source');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

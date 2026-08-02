@@ -1704,6 +1704,28 @@ export default function App() {
 
   const [labs, setLabs] = useState(__T && __T.labs ? __T.labs : []);
   const [labDraft, setLabDraft] = useState(null);
+  const [labBusy, setLabBusy] = useState(false);
+  const [labParsed, setLabParsed] = useState(null);   // keys the parser filled, for the confirm state
+  const labFileRef = useRef(null);
+  async function parseLabFile(file) {
+    if (!file) return;
+    setLabBusy(true);
+    try {
+      const b64 = await new Promise((res, rej) => { const r = new FileReader();
+        r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
+      const isPdf = /pdf/i.test(file.type) || /\.pdf$/i.test(file.name || "");
+      const body = isPdf ? { pdf: b64 } : { image: { data: b64, media_type: file.type || "image/jpeg" } };
+      const r = await fetch("/api/labs/parse", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
+      const j = await r.json();
+      if (j.error) { alert(j.error); return; }
+      if (!j.found) { alert("No lab values were found in that file. You can still enter them by hand."); return; }
+      // parsed values are a DRAFT — nothing is saved until he has checked them against the report
+      setLabDraft({ date: j.date || todayISO(), values: Object.fromEntries(Object.entries(j.values).map(([k, v]) => [k, String(v)])) });
+      setLabParsed(Object.keys(j.values));
+    } catch (e) { alert("Import failed: " + (e && e.message ? e.message : e)); }
+    finally { setLabBusy(false); }
+  }
   const [glp, setGlp] = useState(__T && __T.glp ? __T.glp : {
     med: "tirzepatide", dose: 2.5, injectionDay: "SU",
     lastInjection: null, weeksOn: 1, lastDoseChangeWk: 99, doseLog: [],
@@ -4213,6 +4235,15 @@ export default function App() {
 
           {labDraft ? (
             <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.hair}` }}>
+              {labParsed && (
+                <div style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12,
+                  background: C.caution + "1A", border: `1px solid ${C.caution}4D`, marginBottom: 10 }}>
+                  <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.caution,
+                    textTransform: "uppercase", whiteSpace: "nowrap", paddingTop: 1 }}>Read {labParsed.length}</span>
+                  <span style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.45 }}>
+                    Check every number against your report before saving — nothing is stored until you do.
+                    A misread value would sit in your history as though it were measured.</span>
+                </div>)}
               {numField("Draw date (YYYY-MM-DD)", labDraft.date, (v) => setLabDraft({ ...labDraft, date: v }))}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                 {LAB_MARKERS.map((m) => (
@@ -4222,7 +4253,7 @@ export default function App() {
                   </div>))}
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={() => { setLabs([...(labs || []), { id: uid(), date: labDraft.date, values: labDraft.values }]); setLabDraft(null); }}
+                <button onClick={() => { setLabs([...(labs || []), { id: uid(), date: labDraft.date, values: labDraft.values }]); setLabDraft(null); setLabParsed(null); }}
                   style={{ flex: 1, background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: 13,
                     fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>Save draw</button>
                 <button onClick={() => setLabDraft(null)}
@@ -4232,10 +4263,19 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <button onClick={() => setLabDraft({ date: todayISO(), values: {} })}
-              style={{ display: "block", width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999,
-                padding: 13, marginTop: 14, fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.1,
-                textTransform: "uppercase", cursor: "pointer" }}>Import a lab report</button>)}
+            <>
+              <input ref={labFileRef} type="file" accept="application/pdf,image/*" style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; parseLabFile(f); }} />
+              <button onClick={() => labFileRef.current && labFileRef.current.click()} disabled={labBusy}
+                style={{ display: "block", width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999,
+                  padding: 13, marginTop: 14, fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.1,
+                  textTransform: "uppercase", cursor: "pointer", opacity: labBusy ? 0.6 : 1 }}>
+                {labBusy ? "Reading\u2026" : "Import a lab report"}</button>
+              <button onClick={() => { setLabParsed(null); setLabDraft({ date: todayISO(), values: {} }); }}
+                style={{ display: "block", width: "100%", background: "transparent", color: C.violet,
+                  border: `1.5px solid ${C.violet}73`, borderRadius: 999, padding: 13, marginTop: 8, fontFamily: DATA,
+                  fontSize: 12.5, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>Enter by hand</button>
+            </>)}
 
           <div style={{ fontSize: 12.5, color: C.faint, lineHeight: 1.5, marginTop: 11 }}>
             Reference ranges are the lab's; flag thresholds come from the published trial. This card
