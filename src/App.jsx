@@ -2015,7 +2015,9 @@ export default function App() {
   // v0.9.138: the last dose date DERIVES from the log. lastInjection was a second stored copy of
   // what the log already knows — the same split that corrupted the dose display in .136. The log
   // is newest-date wins, not last-array-entry, so a backdated entry cannot masquerade as latest.
-  const lastDoseEntry = (() => { const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+  const lastDoseEntry = (() => { const all = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+    const mine = all.filter((d) => d.med === glp.med);
+    const L = mine.length ? mine : all.filter((d) => !d.med);
     if (!L.length) return null;
     return L.reduce((a, b) => (a.date >= b.date ? a : b)); })();
   const lastDoseDate = lastDoseEntry ? lastDoseEntry.date : null;
@@ -4500,7 +4502,13 @@ export default function App() {
           {(() => {
             const curForm = medObj && medObj.cadence === "daily" ? "oral" : "inj";
             const form = medFormSel || curForm;
-            const pickMed = (k) => { const m = MEDS[k]; const steps = m.steps || []; const near = steps.length ? steps.reduce((a, b) => Math.abs(b - (glp.dose || 0)) < Math.abs(a - (glp.dose || 0)) ? b : a) : glp.dose; setGlp({ ...glp, med: k, dose: near }); };
+            const pickMed = (k) => {
+    const m = MEDS[k]; const steps = m.steps || [];
+    const priorForK = (glp.doseLog || []).filter((d) => d && d.med === k && +d.mg > 0);
+    const resume = priorForK.length ? +priorForK.reduce((a, b) => (a.date >= b.date ? a : b)).mg : null;
+    const start = resume != null ? resume : (steps.length ? steps[0] : glp.dose);
+    setGlp({ ...glp, med: k, dose: start });
+  };
             const switchForm = (f) => { setMedFormSel(f); const list = Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === f); if (list.length && (MEDS[glp.med] && (MEDS[glp.med].cadence === "daily" ? "oral" : "inj")) !== f) pickMed(list[0][0]); };
             return (<>
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>

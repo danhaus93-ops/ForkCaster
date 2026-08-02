@@ -879,5 +879,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/Trials for this drug ran weekly only/.test(AS),'an investigational drug says its trials ran weekly');
 }
 
+
+// v0.9.142: dose is per medication. mg do not carry across these molecules — 2 mg of retatrutide is
+// not 2 mg of semaglutide — and the derived last dose was reading the whole log regardless of drug.
+{
+  const AT=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const mine = all\.filter\(\(d\) => d\.med === glp\.med\);/.test(AT),'the last dose is scoped to the selected medication');
+  ok(/all\.filter\(\(d\) => !d\.med\)/.test(AT),'entries logged before drugs were tagged still count, but only as a fallback');
+  ok(!/steps\.reduce\(\(a, b\) => Math\.abs\(b - \(glp\.dose/.test(AT),'switching no longer maps your dose onto the nearest rung of another drug');
+  ok(/const start = resume != null \? resume : \(steps\.length \? steps\[0\] : glp\.dose\);/.test(AT),'an unused drug starts at its lowest rung');
+  ok(/priorForK\.reduce\(\(a, b\) => \(a\.date >= b\.date \? a : b\)\)/.test(AT),'a drug you have used before resumes where you left it');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
