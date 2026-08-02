@@ -3753,8 +3753,6 @@ export default function App() {
   };
   const renderBody = () => (
     <div style={{ padding: "18px 18px 12px" }}>
-      <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Body</div>
-      <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
 
       {(() => { // v0.9.63: Path to your forecast — the EXISTING goalContract engine wearing the mock's
         // design, with the weight graph + logged entries folded in (his markup: one weight card, not two)
@@ -3849,7 +3847,7 @@ export default function App() {
           const _start = weightSeries[0] ? weightSeries[0].lbs : null;
           const _lost = _start != null ? _start - cur : null;
           const _toGo = goalWeight ? cur - goalWeight : null;
-          return { id: "wt", tone: C.go, color: C.go, title: "Path to your forecast",
+          return { id: "wt", tone: C.go, color: C.go, title: "Weight",
             when: new Date(weightSeries[weightSeries.length - 1].date + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" }),
             value: fmtWt(cur, 1), unit: wtU,
             sub: [_lost != null ? `${_lost >= 0 ? "−" : "+"}${Math.abs(_lost).toFixed(1)} ${wtU}` : null,
@@ -4349,7 +4347,7 @@ export default function App() {
               <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, overflowX: "auto", paddingBottom: 2 }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", padding: "8px 14px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", padding: "8px 10px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
             </>);
           })()}
           {medObj.investigational ? (
@@ -5015,7 +5013,13 @@ export default function App() {
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: "calc(88px + env(safe-area-inset-bottom, 0px))" }}>
           {tab === "now" && renderNow()}
           {tab === "today" && renderToday()}
-          {tab === "body" && <div>{(() => {
+          {tab === "body" && <div>
+        {/* v0.9.126: the heading leads the tab. It used to live inside renderBody, which runs AFTER
+            the engine cards, so four cards appeared above the word Body. */}
+        <div style={{ padding: "18px 18px 0" }}>
+          <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Body</div>
+          <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
+        </div>{(() => {
             const hd0 = healthSync && healthSync.days ? healthSync.days : [];
             const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null);
             const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
@@ -5052,7 +5056,7 @@ export default function App() {
             </div>, { marginBottom: 12 }, ct && ct.status === "ok" ? {
               id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
-              sub: `${Math.round(ct.leanToProtect)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
+              sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
             } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
               value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {

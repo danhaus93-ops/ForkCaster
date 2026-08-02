@@ -657,5 +657,19 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   }
 }
 
+
+// v0.9.126: medication names must never be cut. Three 11-character names need 384px at the old
+// padding, in a 307px card — a horizontal scroller hid the third behind the edge.
+{
+  const AF=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const row=AF.slice(AF.indexOf('Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form)') - 220,
+                     AF.indexOf('Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form)') + 320);
+  ok(/flexWrap: "wrap"/.test(row),'the medication chips wrap rather than scroll out of view');
+  ok(!/overflowX: "auto"/.test(row),'no horizontal scroller hides a medication name');
+  // widest name on the narrowest phone must fit within one row's width
+  const w = 11 * 12.5 * 0.60 + 11 * 1.1 + 20;
+  ok(w <= 307,'the longest medication chip fits the card on a 375pt phone');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.125"
+version: "0.9.126"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The top of Body is four rows instead of four paragraphs — your forecast, health
-  data, adaptive targets and dose response all collapse now, and open on tap. The
-  health card is called Health data and names whichever platform actually sent the
-  numbers. The weight card is called Weight, since two cards shared a name.
+  Body now starts with its own title instead of four cards. The weight card is called
+  Weight, so no two cards share a name. Medication names wrap onto a second line
+  rather than sliding off the edge — Retatrutide was hidden past the screen. And the
+  lean figure on the forecast row read NaN; it was reading a field that never existed.
 dependencies: []
 path: ""
 defaultUsername: ""
