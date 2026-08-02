@@ -831,7 +831,16 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const cal=AQ.slice(AQ.indexOf('{card(<><DoseCalendar'), AQ.indexOf('{card(<><DoseCalendar') + 3400);
   ok(/onClick=\{logInjection\}/.test(cal),'Log dose lives in the calendar card now');
   ok(/Last dose \$\{fmtDate\(lastDoseDate\)\}/.test(cal),'with the last-dose line beside it');
-  ok((AQ.match(/onClick=\{logInjection\}/g) || []).length === 1,'and exactly one Log dose button exists');
+  // v0.9.139: the button moved to the site card, where the site it saves is chosen — logInjection
+  // records pendingSite, and picking a site then scrolling elsewhere to press the button was how a
+  // selection silently evaporated. Pill mode has no site card, so the calendar keeps a copy gated
+  // to daily cadence. Exactly one button is ever VISIBLE; two exist in source, one per mode.
+  ok((AQ.match(/onClick=\{logInjection\}/g) || []).length === 2,'one Log dose button per mode exists in source');
+  const siteCard=AQ.slice(AQ.indexOf('id: "site"') - 2600, AQ.indexOf('id: "site"'));
+  ok(/onClick=\{logInjection\}/.test(siteCard),'the injectable button lives in the site card');
+  ok(/pendingSite \? `Log [^`]{1,6}\$\{pendingSite\}` : "Log dose"/.test(AQ),'and shows the site it is about to save');
+  const calRow=AQ.slice(AQ.indexOf('medObj.cadence === "daily" && (() => { const _wk'), AQ.indexOf('medObj.cadence === "daily" && (() => { const _wk') + 900);
+  ok(/onClick=\{logInjection\}/.test(calRow),'the calendar copy exists only behind the daily-pill gate');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

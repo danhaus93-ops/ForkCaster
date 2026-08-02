@@ -4547,6 +4547,14 @@ export default function App() {
       </>)}</div>}
       {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
+      {(() => (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+          <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
+            {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${glp.weeksOn}` : "No dose logged yet"}
+          </div>
+          <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.bg, border: "none", borderRadius: 999, padding: "11px 18px", fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", flexShrink: 0 }}>
+            {doseLogged ? "✓ Logged" : pendingSite ? `Log · ${pendingSite}` : "Log dose"}</button>
+        </div>))()}
       </>, {}, (() => {
         const _ps = Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)));
         const _rot = siteRotation(glp.doseLog || [], _ps);
@@ -4565,7 +4573,7 @@ export default function App() {
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
       <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
-      {(() => { const _wk = glp.weeksOn; return (
+      {medObj && medObj.cadence === "daily" && (() => { const _wk = glp.weeksOn; return (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 11 }}>
           <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
             {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${_wk}` : "No dose logged yet"}
