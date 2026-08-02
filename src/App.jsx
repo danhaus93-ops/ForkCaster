@@ -2010,7 +2010,8 @@ export default function App() {
   const lost = startWeight - curWeight;
 
   const medObj = MEDS[glp.med];
-  const injInterval = medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7);
+  const injInterval = medObj && medObj.cadence === "daily" ? 1
+    : (((prefs.medIntervalDays || {})[glp.med]) || prefs.injIntervalDays || 7);
   // v0.9.138: the last dose date DERIVES from the log. lastInjection was a second stored copy of
   // what the log already knows — the same split that corrupted the dose display in .136. The log
   // is newest-date wins, not last-array-entry, so a backdated entry cannot masquerade as latest.
@@ -4537,7 +4538,29 @@ export default function App() {
 
       <div style={{ display: "contents" }}></div>
       {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
-        <div style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted, marginBottom: 8 }}>Dose day{(prefs.injIntervalDays || 7) !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {prefs.injIntervalDays} days)</span> : null}</div>
+        <div style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted, marginBottom: 8 }}>Dose day{injInterval !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {injInterval} days)</span> : null}</div>
+        {/* v0.9.141: interval is per medication. Half-life sets how much accumulates at a given
+            interval; it does not set the interval. The card states the accumulation so a shorter
+            cycle is chosen knowing it raises the trough, not smooths it. */}
+        {medObj && medObj.cadence !== "daily" && (() => {
+          const hl = { semaglutide: 7, tirzepatide: 5, retatrutide: 6 }[glp.med] || 7;
+          const acc = (d) => 1 / (1 - Math.pow(0.5, d / hl));
+          const cur = injInterval;
+          return (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[5, 6, 7, 10, 14].map((d) => (
+                  <button key={d} onClick={() => setPrefs({ ...prefs, medIntervalDays: { ...(prefs.medIntervalDays || {}), [glp.med]: d } })}
+                    style={{ flex: 1, height: 34, borderRadius: 999, border: `1.5px solid ${cur === d ? C.violet : C.hair}`,
+                      background: cur === d ? C.violet + "2E" : "transparent", color: cur === d ? C.violet : C.muted,
+                      fontFamily: DATA, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{d}d</button>))}
+              </div>
+              <div style={{ fontSize: 12.5, color: C.faint, marginTop: 7, lineHeight: 1.45 }}>
+                {medObj.label} half-life ~{hl} d · at every {cur} days you settle around {acc(cur).toFixed(2)}× a single dose
+                {cur !== 7 ? `, versus ${acc(7).toFixed(2)}× weekly — a higher trough, not a flatter curve` : ""}.
+                {medObj.investigational ? " Trials for this drug ran weekly only." : ""}
+              </div>
+            </div>); })()}
         <div style={{ display: "flex", gap: 6 }}>
           {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
             <button key={k} onClick={() => setGlp({ ...glp, injectionDay: k })}
@@ -4606,9 +4629,9 @@ export default function App() {
                 return <rect key={k} x={x} y="15" width="6" height="4" rx="1.5" fill={C.hair} />; })}
               <text x="58" y="31" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="6.5" fill={C.faint}>next 14 days</text>
             </svg>); })() }; })())}</div>
-      {onMed && (glp.doseLog || []).length > 0 && <div style={{ display: "contents" }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, (() => {
+      {onMed && (glp.doseLog || []).length > 0 && <div style={{ display: "contents" }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={injInterval} />, {}, (() => {
         // reads the SAME model the chart draws — no approximation, no second formula
-        const _M = medLevelModel({ doseLog: glp.doseLog, med: glp.med, dueISO, intervalDays: medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7) });
+        const _M = medLevelModel({ doseLog: glp.doseLog, med: glp.med, dueISO, intervalDays: injInterval });
         if (!_M) return { id: "med", tone: "none", color: C.violet, title: "Estimated med level", when: "no doses",
           value: "—", unit: "log a dose to model it", sub: "nothing to project yet" };
         const spark = (() => {

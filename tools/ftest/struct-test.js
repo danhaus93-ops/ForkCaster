@@ -867,5 +867,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   }
 }
 
+
+// v0.9.141: dosing interval is per medication, and the card states what a shorter one does.
+{
+  const AS=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/\(\(prefs\.medIntervalDays \|\| \{\}\)\[glp\.med\]\)/.test(AS),'the interval is looked up per medication');
+  ok(!/intervalDays: medObj && medObj\.cadence === "daily" \? 1 : \(prefs\.injIntervalDays/.test(AS),'the med-level chart uses that same interval');
+  ok(/const hl = \{ semaglutide: 7, tirzepatide: 5, retatrutide: 6 \}/.test(AS),'each drug carries its published half-life');
+  ok(/1 \/ \(1 - Math\.pow\(0\.5, d \/ hl\)\)/.test(AS),'accumulation is computed, not asserted');
+  ok(/a higher trough, not a flatter curve/.test(AS),'and the card says what a shorter interval actually does');
+  ok(/Trials for this drug ran weekly only/.test(AS),'an investigational drug says its trials ran weekly');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
