@@ -819,5 +819,20 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/dose: log\.length \? \+log\[log\.length - 1\]\.mg : g\.dose/.test(AP),'removing a dose puts the stored dose back in step with the log');
 }
 
+
+// v0.9.138: the last dose derives from the log, and the injection countdown merged into the calendar.
+{
+  const AQ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const lastDoseEntry = /.test(AQ),'a single derived last-dose exists');
+  ok(/L\.reduce\(\(a, b\) => \(a\.date >= b\.date \? a : b\)\)/.test(AQ),'and it is newest-DATE wins, not last-array-entry');
+  ok(!/glp\.lastInjection \? new Date/.test(AQ),'the next-shot maths reads the derived date, not the stored copy');
+  ok(!/Last dose: \$\{fmtDate\(glp\.lastInjection\)\}/.test(AQ),'no display reads the stored copy either');
+  ok(!/"Next dose" : "Next injection"/.test(AQ),'the separate countdown card is gone');
+  const cal=AQ.slice(AQ.indexOf('{card(<><DoseCalendar'), AQ.indexOf('{card(<><DoseCalendar') + 3400);
+  ok(/onClick=\{logInjection\}/.test(cal),'Log dose lives in the calendar card now');
+  ok(/Last dose \$\{fmtDate\(lastDoseDate\)\}/.test(cal),'with the last-dose line beside it');
+  ok((AQ.match(/onClick=\{logInjection\}/g) || []).length === 1,'and exactly one Log dose button exists');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

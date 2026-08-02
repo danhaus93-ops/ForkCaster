@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.137"
+version: "0.9.138"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Fixes a dose display problem from the last release. Tapping a rung on the protocol
-  card could change your recorded dose, and the card at the top of the tab was
-  reading a different number than the rest of the tab. Both cards now show your last
-  logged dose, and removing a logged dose puts everything back where it was.
+  The wrong last-dose date is fixed — it was a leftover stored copy; the date now
+  always comes from your dose log, newest entry wins. The next-injection card has
+  merged into the dose calendar, which already showed the countdown: Log dose and
+  your last-dose line live there now, so the tab has one card about timing.
 dependencies: []
 path: ""
 defaultUsername: ""

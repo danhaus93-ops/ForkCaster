@@ -2011,16 +2011,23 @@ export default function App() {
 
   const medObj = MEDS[glp.med];
   const injInterval = medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7);
+  // v0.9.138: the last dose date DERIVES from the log. lastInjection was a second stored copy of
+  // what the log already knows — the same split that corrupted the dose display in .136. The log
+  // is newest-date wins, not last-array-entry, so a backdated entry cannot masquerade as latest.
+  const lastDoseEntry = (() => { const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+    if (!L.length) return null;
+    return L.reduce((a, b) => (a.date >= b.date ? a : b)); })();
+  const lastDoseDate = lastDoseEntry ? lastDoseEntry.date : null;
   const nextInjection = (() => {
     if (injInterval !== 7) {
-      return glp.lastInjection
-        ? new Date(new Date(glp.lastInjection).getTime() + injInterval * 86400000)
+      return lastDoseDate
+        ? new Date(new Date(lastDoseDate).getTime() + injInterval * 86400000)
         : new Date(Date.now() + injInterval * 86400000);
     }
     // weekly: next occurrence of the chosen dose day after the last dose (or after today)
     const map = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
     const target = map[glp.injectionDay] ?? 0;
-    const base = glp.lastInjection ? new Date(glp.lastInjection + "T12:00:00") : new Date();
+    const base = lastDoseDate ? new Date(lastDoseDate + "T12:00:00") : new Date();
     base.setHours(0, 0, 0, 0);
     let add = (target - base.getDay() + 7) % 7; if (add === 0) add = 7;
     const x = new Date(base); x.setDate(x.getDate() + add); return x;
@@ -4528,11 +4535,7 @@ export default function App() {
 
       
 
-      <div style={{ display: "contents" }}>{card(
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted }}>{medObj && medObj.cadence === "daily" ? "Next dose" : "Next injection"}</div><div style={{ fontFamily: DATA, fontSize: 28, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 14, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 13, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : (medObj && medObj.cadence === "daily" ? "No dose logged yet — tap Log dose after your pill" : "No dose logged yet — tap Log dose after your injection")}</div></div>
-          <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.bg, border: "none", borderRadius: 999, padding: "12px 20px", fontFamily: DATA, fontWeight: 800, fontSize: 14, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 16px ${(doseLogged ? C.go : C.violet)}44` }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
-        </div>, { borderLeft: `2.5px solid ${C.violet}` })}</div>
+      <div style={{ display: "contents" }}></div>
       {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
         <div style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted, marginBottom: 8 }}>Dose day{(prefs.injIntervalDays || 7) !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {prefs.injIntervalDays} days)</span> : null}</div>
         <div style={{ display: "flex", gap: 6 }}>
@@ -4561,7 +4564,17 @@ export default function App() {
           spark: (<div style={{ width: 46, flexShrink: 0, pointerEvents: "none" }}>
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
-      <div style={{ display: "contents" }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />, {}, (() => {
+      <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
+      {(() => { const _wk = glp.weeksOn; return (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 11 }}>
+          <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
+            {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${_wk}` : "No dose logged yet"}
+          </div>
+          <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.bg, border: "none", borderRadius: 999, padding: "11px 20px", fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", flexShrink: 0 }}>
+            {doseLogged ? "✓ Logged" : "Log dose"}</button>
+        </div>); })()}
+      </>
+, {}, (() => {
         const _log = (glp.doseLog || []).filter((d) => +d.mg > 0);
         const _lastD = _log.length ? _log[_log.length - 1].date : null;
         const _due = dueISO, _today = todayISO();
