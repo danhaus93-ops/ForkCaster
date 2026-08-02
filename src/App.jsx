@@ -1587,20 +1587,45 @@ export default function App() {
   // v0.9.131: hold-to-arrange. Order lives in prefs.cardOrder[tab] as a list of card ids; anything
   // absent keeps its source position, so a new card appears where the developer put it rather than
   // at the end of somebody's saved list.
+  const ARRANGE_TABS = ["today", "body", "glp"];
   const [arrangeTab, setArrangeTab] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [dragDy, setDragDy] = useState(0);
+  const [liveOrder, setLiveOrder] = useState(null);
   const seqRef = useRef(0);
   const holdRef = useRef(null);
-  const orderOf = (id) => {
-    const list = ((prefs.cardOrder || {})[tab]) || [];
-    const at = list.indexOf(id);
-    return at >= 0 ? at : 100 + seqRef.current;
+  const cardElsRef = useRef({});
+  const dragFromRef = useRef(0);
+  const orderList = () => liveOrder || ((prefs.cardOrder || {})[tab]) || [];
+  const orderOf = (id) => { const at = orderList().indexOf(id); return at >= 0 ? at : 100 + seqRef.current; };
+  // the order the tab is currently showing, whatever the source of truth is
+  const visualOrder = () => (rowsRef.current[tab] || []).slice().sort((a, b) => orderOf(a) - orderOf(b));
+  // while dragging, work out which slot the finger is over by comparing it to each card's midpoint
+  const dragTo = (y) => {
+    const rows = visualOrder();
+    const from = rows.indexOf(dragId);
+    if (from < 0) return;
+    let to = from;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i] === dragId) continue;
+      const el = cardElsRef.current[rows[i]];
+      if (!el) continue;
+      const r = el.getBoundingClientRect(), mid = r.top + r.height / 2;
+      if (i < from && y < mid) { to = Math.min(to, i); }
+      if (i > from && y > mid) { to = Math.max(to, i); }
+    }
+    if (to !== from) {
+      const next = rows.slice();
+      next.splice(to, 0, next.splice(from, 1)[0]);
+      setLiveOrder(next);
+      const el = cardElsRef.current[dragId];
+      if (el) dragFromRef.current = el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2;
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
   };
-  const moveCard = (id, dir) => {
-    const rows = (rowsRef.current[tab] || []).slice().sort((a, b) => orderOf(a) - orderOf(b));
-    const i = rows.indexOf(id), j = i + dir;
-    if (i < 0 || j < 0 || j >= rows.length) return;
-    rows.splice(j, 0, rows.splice(i, 1)[0]);
-    setPrefs({ ...prefs, cardOrder: { ...(prefs.cardOrder || {}), [tab]: rows } });
+  const endDrag = () => {
+    if (liveOrder) setPrefs({ ...prefs, cardOrder: { ...(prefs.cardOrder || {}), [tab]: liveOrder } });
+    setDragId(null); setDragDy(0); setLiveOrder(null);
   };
   const rowsRef = useRef({});
   // v0.9.119: card children are re-registered every render and the sheet reads them from here.
@@ -3008,26 +3033,74 @@ export default function App() {
       {band && <rect x="0" y={y(band[1])} width="92" height={Math.max(3, y(band[0]) - y(band[1]))} fill={C.go + "1A"} rx="2" />}
       <path d={d} fill="none" stroke={col} strokeWidth="2" strokeLinejoin="round" />
       <circle cx={x(v.length - 1)} cy={y(v[v.length - 1])} r="2.6" fill={col} /></svg>); };
-  const cardShell = (children, extra = {}) => (<div style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface, border: `1px solid ${C.hair}`, borderRadius: _cmp ? 15 : 18, padding: _cmp ? 12 : 16, boxShadow: C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none", ...extra }}>{children}</div>);
+  // v0.9.132: a card's identity comes from the heading it already renders. Numbering by source
+  // position would corrupt every saved order the moment a conditional card appears or vanishes.
+  const _firstText = (n, d) => { if (d > 6 || n == null || n === false) return null;
+    if (typeof n === "string") return n.trim().length > 2 ? n.trim() : null;
+    if (Array.isArray(n)) { for (const c of n) { const r = _firstText(c, d + 1); if (r) return r; } return null; }
+    if (n.props) return _firstText(n.props.children, d + 1);
+    return null; };
+  const _slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 28);
+  const idSeenRef = useRef({});
+  const _cardId = (vd, children, seq) => {
+    if (vd && vd.id) return vd.id;
+    const t = _firstText(children, 0);
+    let id = t ? _slug(t) : ("card-" + seq);
+    const seen = idSeenRef.current;
+    if (seen[id] != null && seen[id] !== seq) id = id + "-" + seq;   // two cards, one heading
+    seen[id] = seq;
+    return id;
+  };
+  const cardShell = (children, extra = {}, id = null) => {
+    const arrangeable = id && ARRANGE_TABS.includes(tab);
+    const arming = arrangeTab === tab;
+    const lifted = dragId === id;
+    return (<div
+      ref={arrangeable ? ((el) => { if (el) cardElsRef.current[id] = el; }) : undefined}
+      onPointerDown={arrangeable ? ((e) => {
+        clearTimeout(holdRef.current);
+        const y0 = e.clientY;
+        holdRef.current = setTimeout(() => {
+          setArrangeTab(tab); setDragId(id); setDragDy(0);
+          dragFromRef.current = y0;
+          try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch {}
+          if (navigator.vibrate) navigator.vibrate(18);
+        }, 380);
+      }) : undefined}
+      onPointerMove={arrangeable ? ((e) => {
+        if (dragId !== id) { clearTimeout(holdRef.current); return; }
+        e.preventDefault();
+        setDragDy(e.clientY - dragFromRef.current);
+        dragTo(e.clientY);
+      }) : undefined}
+      onPointerUp={arrangeable ? (() => { clearTimeout(holdRef.current); if (dragId === id) endDrag(); }) : undefined}
+      onPointerCancel={arrangeable ? (() => { clearTimeout(holdRef.current); if (dragId === id) endDrag(); }) : undefined}
+      style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface,
+        border: `1px solid ${lifted ? C.go : C.hair}`, borderRadius: _cmp ? 15 : 18, padding: _cmp ? 12 : 16,
+        boxShadow: lifted ? `0 18px 40px rgba(0,0,0,.55), 0 0 0 1px ${C.go}55` : (C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none"),
+        transform: lifted ? `translateY(${dragDy}px) scale(1.03)` : (arming ? "scale(0.99)" : "none"),
+        transition: lifted ? "none" : "transform .16s ease, box-shadow .16s ease",
+        zIndex: lifted ? 40 : undefined, position: lifted ? "relative" : undefined,
+        touchAction: arming ? "none" : undefined,
+        ...extra }}>{children}</div>);
+  };
   const card = (children, extra = {}, vd = null) => {
-    if (!_cmp || !vd || !vd.id) return cardShell(children, extra);
+    const _seq0 = seqRef.current++;
+    const _id0 = _cardId(vd, children, _seq0);
+    if (ARRANGE_TABS.includes(tab)) {
+      if (!rowsRef.current[tab]) rowsRef.current[tab] = [];
+      if (!rowsRef.current[tab].includes(_id0)) rowsRef.current[tab].push(_id0);
+    }
+    const _ord0 = (() => { const at = orderList().indexOf(_id0); return at >= 0 ? at : 100 + _seq0; })();
+    const _shellExtra = { order: _ord0, ...extra };
+    if (!_cmp || !vd || !vd.id) return cardShell(children, _shellExtra, _id0);
     const dot = vd.tone === "none"
       ? <span style={{ width: 6.5, height: 6.5, borderRadius: 7, border: `1.5px solid ${C.faint}`, flexShrink: 0, boxSizing: "border-box" }} />
       : <span style={{ width: 6.5, height: 6.5, borderRadius: 7, background: vd.tone || C.go, flexShrink: 0 }} />;
     sheetKidsRef.current[vd.id] = children;
-    if (!rowsRef.current[tab]) rowsRef.current[tab] = [];
-    if (!rowsRef.current[tab].includes(vd.id)) rowsRef.current[tab].push(vd.id);
-    const _seq = seqRef.current++;
-    const _ord = (() => { const l = ((prefs.cardOrder || {})[tab]) || []; const at = l.indexOf(vd.id); return at >= 0 ? at : 100 + _seq; })();
     const _arr = arrangeTab === tab;
     return cardShell(
-      <div
-        onClick={() => { if (_arr) return; setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when, sheetWhen: vd.sheetWhen }); }}
-        onTouchStart={() => { clearTimeout(holdRef.current); holdRef.current = setTimeout(() => { setArrangeTab(tab); if (navigator.vibrate) navigator.vibrate(18); }, 500); }}
-        onTouchEnd={() => clearTimeout(holdRef.current)}
-        onTouchMove={() => clearTimeout(holdRef.current)}
-        onContextMenu={(e) => { e.preventDefault(); setArrangeTab(tab); }}
-        style={{ cursor: "pointer" }}>
+      <div onClick={() => { if (_arr) return; setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when, sheetWhen: vd.sheetWhen }); }} style={{ cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
           {dot}
           <span style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
@@ -3040,16 +3113,9 @@ export default function App() {
             {vd.unit && <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
             {vd.sub && <div style={{ fontFamily: DATA, fontSize: 11.5, color: vd.subTone || C.faint, marginTop: 4, letterSpacing: 0.3, lineHeight: 1.35 }}>{vd.sub}</div>}
           </div>
-          {_arr ? (
-            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-              {[["↑", -1], ["↓", 1]].map(([g, d]) => (
-                <button key={d} onClick={(e) => { e.stopPropagation(); moveCard(vd.id, d); }}
-                  style={{ width: 38, height: 38, borderRadius: 999, border: `1px solid ${C.go}66`, background: C.go + "1A",
-                    color: C.go, fontSize: 17, lineHeight: 1, cursor: "pointer" }}>{g}</button>))}
-            </div>
-          ) : (vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>)}
+          {vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>}
         </div>
-      </div>, { order: _ord, ...extra, ...(_arr ? { borderColor: C.go + "88", transform: "scale(0.985)" } : null) });
+      </div>, _shellExtra, _id0);
   };
   const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 10 : 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
@@ -5295,8 +5361,7 @@ export default function App() {
             sheet above them meant a card opened from a sheet launched its modal invisibly behind it. */}
         {arrangeTab && (
           <div style={{ position: "fixed", left: 0, right: 0, bottom: "calc(74px + env(safe-area-inset-bottom, 0px))", zIndex: 55, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-            <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 12, background: C.surfaceAlt, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "9px 10px 9px 16px", boxShadow: "0 8px 22px rgba(0,0,0,.45)" }}>
-              <span style={{ fontFamily: DATA, fontSize: 11, letterSpacing: 0.9, textTransform: "uppercase", color: C.muted }}>Arranging · use the arrows</span>
+            <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 12, background: C.surfaceAlt, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "9px 10px", boxShadow: "0 8px 22px rgba(0,0,0,.45)" }}>
               <button onClick={() => setArrangeTab(null)} style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Done</button>
             </div>
           </div>)}
