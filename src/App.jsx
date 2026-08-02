@@ -5843,10 +5843,10 @@ export function siteRotation(doseLog, perSite) {
   const daysSince = (z) => { const u = (doseLog || []).filter((d) => d.site === z); if (!u.length) return 9999; return Math.floor((Date.now() - new Date(u.map((d) => d.date).sort().slice(-1)[0] + "T12:00:00")) / 86400000); };
   const avail = SITE_NAMES.filter((z) => used[z] < perSite);
   const suggested = avail.length ? avail.reduce((a, b) => (daysSince(b) > daysSince(a) ? b : a)) : null;
-  return { used, cycleLogged, suggested, daysSince };
+  return { used, cycleLogged, suggested, daysSince, cyc, sited };
 }
 
-function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite }) {
+export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite }) {
   const F = sex === "female";
   const g = Math.max(0, Math.min(1, ((bmi || 30) - 22) / 18));
   const lp = (a, b) => a + (b - a) * g;
@@ -5881,7 +5881,7 @@ function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite
       "C " + P(ax1 - armW * 0.5, ay1 - 22) + " " + P(ax0 - armW * 0.6, ay0 + 8) + " " + P(ax0 - armW * 0.4, ay0), "Z"].join(" ");
   };
   // rotation cycle math: pure derivation from sited doses
-  const { used, cycleLogged, suggested } = siteRotation(doseLog, perSite);
+  const { used, cycleLogged, suggested, daysSince, cyc, sited } = siteRotation(doseLog, perSite);
   const belly = waist * 0.5 + 1.5 * g;
   const pos = {
     // v0.9.41: ANATOMICAL sides. This is a front view, so YOUR left renders on the VIEWER'S right —

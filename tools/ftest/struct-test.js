@@ -517,7 +517,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/spark: \(<div[^>]*>\s*<SiteAvatar/.test(sr.replace(/\n\s*/g, ' ')),'the collapsed site spark renders the real SiteAvatar');
   ok(/pointerEvents: "none"/.test(sr),'the collapsed avatar is inert');
   ok((AA.match(/function siteRotation/g) || []).length === 1,'one rotation board exists');
-  ok(/const \{ used, cycleLogged, suggested \} = siteRotation\(/.test(AA),'the avatar consumes it too');
+  // v0.9.116: the destructure grew when the extraction was found to have stranded cyc and sited —
+  // pin that the avatar consumes the shared board, not the exact field list.
+  ok(/const \{ [^}]*suggested[^}]*\} = siteRotation\(/.test(AA),'the avatar consumes it too');
+  ok(/const \{ [^}]*\bcyc\b[^}]*\} = siteRotation\(/.test(AA),'the avatar receives the cycle length it draws with');
   // the calendar row must handle due-today and overdue, not just a countdown
   const cr = AA.slice(AA.indexOf('id: "cal"') - 900, AA.indexOf('id: "cal"') + 700);
   ok(/dueToday/.test(cr) && /overdue/.test(cr),'the calendar row has due-today and overdue states');
