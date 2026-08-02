@@ -671,5 +671,27 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(w <= 307,'the longest medication chip fits the card on a 375pt phone');
 }
 
+
+// v0.9.127: one card width per tab, and a collapsed row shows a trend when one exists.
+{
+  const AG=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const tab=AG.slice(AG.indexOf('{tab === "body" && <div>'), AG.indexOf('{renderBody()}'));
+  ok(/padding: "0 18px"/.test(tab),'the engine cards share renderBody\'s horizontal padding');
+  ok(/<\/div>\{renderBody\(\)\}/.test(AG),'that wrapper closes before renderBody');
+  // rows with a real series carry a sparkline; rows still collecting must NOT invent one
+  for (const id of ['fc','ah','wt','wk','comp','pho']) {
+    const seg=AG.slice(AG.indexOf('id: "'+id+'"'), AG.indexOf('id: "'+id+'"') + 1600);
+    ok(/spark:/.test(seg), id+' shows its trend in the collapsed row');
+  }
+  for (const id of ['at','dr']) {
+    const seg=AG.slice(AG.indexOf('id: "'+id+'"'), AG.indexOf('id: "'+id+'"') + 900);
+    ok(!/spark:/.test(seg), id+' draws no sparkline while it is still collecting');
+  }
+  // and the two engines must read the fields their own functions return
+  ok(/ar && ar\.pts != null/.test(AG),'adaptive targets reads adaptiveRead.pts');
+  ok(/dr && dr\.sym != null/.test(AG),'dose response reads doseResponseRead.sym');
+  ok(!/ar\.have|dr\.symDays|dr\.mealDays/.test(AG),'no invented engine field names remain');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

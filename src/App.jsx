@@ -3853,7 +3853,8 @@ export default function App() {
             sub: [_lost != null ? `${_lost >= 0 ? "−" : "+"}${Math.abs(_lost).toFixed(1)} ${wtU}` : null,
                   leanShown != null ? `${leanShown.toFixed(0)} lb lean held` : null,
                   _toGo != null && _toGo > 0 ? `${_toGo.toFixed(1)} to goal` : null].filter(Boolean).join(" · "),
-            subTone: C.go }; })())}</div>);
+            subTone: C.go,
+            spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.go) }; })())}</div>);
       })()}
       <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />, {}, (() => {
         const _wa = weekAdherence(mealLog, targets.protein);
@@ -3861,7 +3862,8 @@ export default function App() {
         return { id: "wk", tone: _adh == null ? "none" : (_adh >= 80 ? C.go : _adh >= 60 ? C.caution : C.avoid),
           color: C.go, title: "This week", when: `${_wa.loggedDays}/7 logged`,
           value: _adh != null ? String(_adh) : "—", unit: _adh != null ? "% protein adherence" : "not enough logged",
-          sub: `${_wa.loggedDays} of 7 days with food logged`, subTone: C.faint }; })())}</div>
+          sub: `${_wa.loggedDays} of 7 days with food logged`, subTone: C.faint,
+          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), C.go) }; })())}</div>
 
 
 
@@ -3934,6 +3936,7 @@ export default function App() {
         when: bfMeasured ? "Measured" : "Estimated",
         value: bfShown != null ? bfShown.toFixed(1) : "—", unit: "% body fat",
         sub: `${leanShown != null ? `${leanShown.toFixed(0)} lb lean` : "lean unknown"}${bmi ? ` · ${bmi.toFixed(1)} BMI` : ""}`,
+        spark: _spark(((healthSync && healthSync.days) || []).filter((d) => d.bodyFatPct != null).slice(-10).map((d) => d.bodyFatPct), C.blue),
       })}</div>
 
       <div style={{ marginBottom: 14 }}>{card(
@@ -3972,7 +3975,11 @@ export default function App() {
           return { id: "pho", tone: _n ? C.go : "none", color: C.muted, title: "Progress photos",
             when: _n ? "Tap to see" : "Add one",
             value: String(_n), unit: _n === 1 ? "photo" : "photos",
-            sub: _n ? "never uploaded · feeds the Forecaster" : "front and back help the Forecaster" }; })())}
+            sub: _n ? "never uploaded · feeds the Forecaster" : "front and back help the Forecaster",
+            spark: _n ? (<svg width="92" height="32" viewBox="0 0 92 32">
+              {[0, 1, 2].map((i) => (<rect key={i} x={4 + i * 30} y="2" width="26" height="28" rx="3"
+                fill={i < Math.min(2, _n) ? C.surfaceAlt : "none"} stroke={i < Math.min(2, _n) ? "none" : C.hair} strokeDasharray={i < Math.min(2, _n) ? undefined : "2 2"} />))}
+            </svg>) : null }; })())}
 
     </div>
   );
@@ -5019,7 +5026,10 @@ export default function App() {
         <div style={{ padding: "18px 18px 0" }}>
           <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Body</div>
           <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
-        </div>{(() => {
+        </div>
+        {/* v0.9.127: the engine cards used to render at full bleed while renderBody inset by 18px,
+            so the tab had two card widths. One wrapper, one width. */}
+        <div style={{ padding: "0 18px" }}>{(() => {
             const hd0 = healthSync && healthSync.days ? healthSync.days : [];
             const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null);
             const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
@@ -5057,6 +5067,7 @@ export default function App() {
               id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
               sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
+              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.go),
             } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
               value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {
@@ -5109,7 +5120,8 @@ export default function App() {
                 when: hd.length ? `${hd.length} days synced` : "Not connected",
                 value: avgSteps ? avgSteps.toLocaleString() : "—", unit: "avg steps/day",
                 sub: [lastW ? `${fmtWt(lastW.weightLbs, 1)} ${wtU} last synced` : null,
-                      `${strengthWk}× strength this week`, _label].filter(Boolean).join(" · ") }; })());
+                      `${strengthWk}× strength this week`, _label].filter(Boolean).join(" · "),
+                spark: _spark(wk.map((d) => +d.steps || 0), C.blue) }; })());
           })()}{(() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const strengthWk = hd.slice(-7).reduce((n, d) => n + (d.strength || 0), 0);
@@ -5138,8 +5150,8 @@ export default function App() {
               )}
             </div>, { marginBottom: 12 }, { id: "at", tone: applied ? C.go : "none", color: C.go, title: "Adaptive targets",
               when: applied ? "Applied" : "Watching",
-              value: ar && ar.have != null ? `${ar.have}/${ar.need || 4}` : "—",
-              unit: "weigh-ins banked", sub: applied ? "targets follow your measured trend" : "wakes with a verdict on your real loss rate" });
+              value: ar && ar.pts != null ? String(ar.pts) : "—",
+              unit: ar && ar.pts === 1 ? "weigh-in banked" : "weigh-ins banked", sub: ar && ar.spanDays != null ? `across ${ar.spanDays} days · ${applied ? "targets follow your trend" : "needs ~2 weeks to read"}` : "log weigh-ins to start it" });
           })()}{(() => {
             const dr = doseResponseRead(mealLog, glp);
             return card(<div>
@@ -5159,9 +5171,9 @@ export default function App() {
               )}
             </div>, { marginBottom: 12 }, { id: "dr", tone: dr && dr.status === "ok" ? C.go : "none", color: C.caution, title: "Dose response",
               when: dr && dr.status === "ok" ? "Learned" : "Learning",
-              value: dr && dr.symDays != null ? `${dr.symDays}/5` : "—",
-              unit: "symptom days", sub: dr && dr.mealDays != null ? `${dr.mealDays}/10 meal days · needs both to read` : "log symptoms and meals to teach it" });
-          })()}{renderBody()}</div>}
+              value: dr && dr.sym != null ? `${dr.sym}/5` : "—",
+              unit: "symptom days", sub: dr && dr.days != null ? `${dr.days}/10 meal days · needs both to read` : "log symptoms and meals to teach it" });
+          })()}</div>{renderBody()}</div>}
           {tab === "train" && renderTrain()}
           {tab === "glp" && renderGlp()}
           {tab === "plan" && renderPlan()}
