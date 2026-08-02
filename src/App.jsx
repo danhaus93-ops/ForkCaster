@@ -3422,7 +3422,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 10 }}>
             {[["Steps", stepsShown ? stepsShown.toLocaleString() : null, syn > 0, syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"],
               ["Exercise", exMin ? exMin + " min" : null, synExMin > 0, synExMin > 0 ? "synced" : "logged cardio"],
-              ["Active kcal", activeKcal ? String(activeKcal) : null, synKcal > 0, synKcal > 0 ? "synced \u00b7 burned today" : "burned today"]].map(([l, v, measured, sub]) => (
+              ["Active kcal", activeKcal ? String(activeKcal) : null, synKcal > 0, synKcal > 0 ? "synced · burned today" : "burned today"]].map(([l, v, measured, sub]) => (
               <div key={l} style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: DATA, fontSize: 11, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
                 <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
@@ -3785,7 +3785,7 @@ export default function App() {
         const PC = { ok: C.go, flag: C.caution, wait: C.faint };
         return (<div style={{ marginBottom: 14 }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            {sectionTitle("Path to your forecast", C.muted)}
+            {sectionTitle("Weight", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: allOk ? C.go : C.caution, border: `1px solid ${(allOk ? C.go : C.caution)}55`, background: (allOk ? C.go : C.caution) + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>{allOk ? "ON TRACK" : "CHECK SIGNALS"}</span>
           </div>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
@@ -3972,7 +3972,7 @@ export default function App() {
           {photos.length > 0 && <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 12, background: C.violet + "22", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 14, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>✨ Body Forecaster →</button>}
         </>, {}, (() => { const _n = (photos || []).length;
           return { id: "pho", tone: _n ? C.go : "none", color: C.muted, title: "Progress photos",
-            when: _n ? "On your node" : "None yet",
+            when: _n ? "Tap to see" : "Add one",
             value: String(_n), unit: _n === 1 ? "photo" : "photos",
             sub: _n ? "never uploaded · feeds the Forecaster" : "front and back help the Forecaster" }; })())}
 
@@ -4261,8 +4261,8 @@ export default function App() {
             const pct = need ? Math.min(1, held / need) : 0;
             return { id: "cp", tone: cp.status === "nodose" ? "none" : (cp.veto && cp.veto.length ? C.caution : C.go),
               color: C.gold, title: "Dose checkpoint", when: cp.cur != null ? `${cp.cur} mg` : (_cur != null ? `${_cur} mg` : "no dose logged"),
-              value: cp.status === "nodose" ? "\u2014" : String(held), unit: cp.status === "nodose" ? "log a dose to start" : `of ${need} days`,
-              sub: cp.veto && cp.veto.length ? `tolerability flags: ${cp.veto.length}` : (held < need ? `locked \u00b7 ${Math.max(0, need - held)} d to go` : "ready to evaluate"),
+              value: cp.status === "nodose" ? "—" : String(held), unit: cp.status === "nodose" ? "log a dose to start" : `of ${need} days`,
+              sub: cp.veto && cp.veto.length ? `tolerability flags: ${cp.veto.length}` : (held < need ? `locked · ${Math.max(0, need - held)} d to go` : "ready to evaluate"),
               subTone: cp.veto && cp.veto.length ? C.caution : C.faint,
               spark: (<svg width="92" height="32" viewBox="0 0 92 32">
                 <rect x="0" y="12" width="92" height="8" rx="4" fill={C.surfaceAlt} />
@@ -4409,10 +4409,10 @@ export default function App() {
         return { id: "site", tone: _rot.suggested ? C.violet : "none", color: C.violet, title: "Injection site",
           when: _rot.suggested ? "Next" : "Board full",
           sheetWhen: _rot.suggested ? `Next: ${_rot.suggested}` : "Board full",
-          value: _rot.suggested || "\u2014", unit: "",
+          value: _rot.suggested || "—", unit: "",
           sub: _rot.suggested
-            ? `${SITE_NAMES.length} sites \u00b7 ${_rested} rested${_last ? ` \u00b7 last was ${String(_last).toLowerCase()}` : ""}`
-            : "every site used this cycle \u2014 it resets on the next dose",
+            ? `${SITE_NAMES.length} sites · ${_rested} rested${_last ? ` · last was ${String(_last).toLowerCase()}` : ""}`
+            : "every site used this cycle — it resets on the next dose",
           // the SAME avatar the open card draws, shrunk and made inert — never a second drawing
           spark: (<div style={{ width: 46, flexShrink: 0, pointerEvents: "none" }}>
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
@@ -4606,7 +4606,7 @@ export default function App() {
             when: sl.status === "ready" ? "Last night" : "Collecting",
             value: sl.current ? hm(sl.current) : (st ? hm(dp + rm + lt) : `${sl.have}/${sl.need}`),
             unit: sl.current || st ? "asleep" : "nights banked",
-            sub: sl.status === "ready" ? `${sl.delta >= 0 ? "+" : ""}${sl.delta} min vs your ${hm(sl.baseline)}` : `learning baseline \u00b7 ${sl.have}/${sl.need} nights`,
+            sub: sl.status === "ready" ? `${sl.delta >= 0 ? "+" : ""}${sl.delta} min vs your ${hm(sl.baseline)}` : `learning baseline · ${sl.have}/${sl.need} nights`,
             subTone: sl.flagged ? C.avoid : C.faint,
             spark: tt ? (<svg width="92" height="32" viewBox="0 0 92 32">
               {[[dp, "#4C3FD4", 1], [rm, "#67E8F9", 0.9], [lt, "#3B84BC", 0.9], [wk, C.avoid, 0.6]].reduce((acc, [v, c, o]) => {
@@ -4725,7 +4725,7 @@ export default function App() {
             color: C.caution, title: "Side-effect journal", when: "Tap to log",   // the one card whose whole purpose is that you add to it
             sheetWhen: last ? (hrs != null && hrs < 48 ? `${hrs} h ago` : `last ${last.date}`) : "nothing logged yet",
             value: String(se.length), unit: se.length === 1 ? "logged" : "logged",
-            sub: se.length ? `${wk} this week \u00b7 worst ${["none", "mild", "moderate", "severe"][worst]}` : "no symptoms recorded",
+            sub: se.length ? `${wk} this week · worst ${["none", "mild", "moderate", "severe"][worst]}` : "no symptoms recorded",
             subTone: worst >= 3 ? C.avoid : worst === 2 ? C.caution : C.faint,
             spark: se.length ? (<svg width="92" height="32" viewBox="0 0 92 32">
               {se.slice(-7).map((x, i) => { const h = 6 + (rank[String(x.severity || "").toLowerCase()] || 1) * 7;
@@ -5049,7 +5049,12 @@ export default function App() {
                 </div>
                 <div style={{ fontSize: 12.5, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>The picture is a visualization, not a promise — lighting and genetics are not macros. These four levers are the part you control.</div>
               </div>)}
-            </div>, { marginBottom: 12 });
+            </div>, { marginBottom: 12 }, ct && ct.status === "ok" ? {
+              id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
+              value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
+              sub: `${Math.round(ct.leanToProtect)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
+            } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
+              value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const last = hd[hd.length - 1];
@@ -5059,7 +5064,7 @@ export default function App() {
             const strengthWk = wk.reduce((n, d) => n + (d.strength || 0), 0);
             const lastW = [...hd].reverse().find((d) => d.weightLbs);
             return card(<div>
-              {sectionTitle("Apple Health · feeds the learning engines")}
+              {sectionTitle("Health data")}
               {hd.length === 0 ? (
                 <div style={{ fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
                   Steps and weight can flow from your iPhone to your own node using nothing but Apple's built-in <b style={{ color: C.ink }}>Shortcuts</b> app — no third-party apps, no cloud:
@@ -5093,7 +5098,14 @@ export default function App() {
                   </div>
                 </div>
               )}
-            </div>, { marginBottom: 12 });
+            </div>, { marginBottom: 12 }, (() => {
+              const _src = [...hd].reverse().find((d) => d.source);
+              const _label = _src ? ({ "apple-health": "Apple Health", "google-health": "Google Health" }[_src.source] || _src.source) : null;
+              return { id: "ah", tone: hd.length ? C.go : "none", color: C.blue, title: "Health data",
+                when: hd.length ? `${hd.length} days synced` : "Not connected",
+                value: avgSteps ? avgSteps.toLocaleString() : "—", unit: "avg steps/day",
+                sub: [lastW ? `${fmtWt(lastW.weightLbs, 1)} ${wtU} last synced` : null,
+                      `${strengthWk}× strength this week`, _label].filter(Boolean).join(" · ") }; })());
           })()}{(() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const strengthWk = hd.slice(-7).reduce((n, d) => n + (d.strength || 0), 0);
@@ -5120,7 +5132,10 @@ export default function App() {
                   <div style={{ fontSize: 12.5, color: C.faint, marginTop: 7 }}>{ar.pts} weigh-ins over {ar.spanDays} days · a suggestion, not a prescription — your prescriber owns your targets</div>
                 </div>
               )}
-            </div>, { marginBottom: 12 });
+            </div>, { marginBottom: 12 }, { id: "at", tone: applied ? C.go : "none", color: C.go, title: "Adaptive targets",
+              when: applied ? "Applied" : "Watching",
+              value: ar && ar.have != null ? `${ar.have}/${ar.need || 4}` : "—",
+              unit: "weigh-ins banked", sub: applied ? "targets follow your measured trend" : "wakes with a verdict on your real loss rate" });
           })()}{(() => {
             const dr = doseResponseRead(mealLog, glp);
             return card(<div>
@@ -5138,7 +5153,10 @@ export default function App() {
                   <div style={{ fontSize: 12.5, color: C.faint, marginTop: 7 }}>Correlation from your own {dr.days} logged days — a pattern, not proof. Worth showing your prescriber.</div>
                 </div>
               )}
-            </div>, { marginBottom: 12 });
+            </div>, { marginBottom: 12 }, { id: "dr", tone: dr && dr.status === "ok" ? C.go : "none", color: C.caution, title: "Dose response",
+              when: dr && dr.status === "ok" ? "Learned" : "Learning",
+              value: dr && dr.symDays != null ? `${dr.symDays}/5` : "—",
+              unit: "symptom days", sub: dr && dr.mealDays != null ? `${dr.mealDays}/10 meal days · needs both to read` : "log symptoms and meals to teach it" });
           })()}{renderBody()}</div>}
           {tab === "train" && renderTrain()}
           {tab === "glp" && renderGlp()}

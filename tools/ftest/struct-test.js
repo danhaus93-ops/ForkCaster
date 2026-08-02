@@ -528,7 +528,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(new Set((AA.match(/id: "(?:med|rhr|sleep|cp|tit|se|site|cal)"/g) || [])).size === 8,'exactly eight GLP-1 cards carry a verdict');
   // v0.9.122: Body joins in — composition and photos. The forms, the report action and the
   // Forecaster's two renders stay whole; a card whose content IS an image cannot summarise itself.
-  ok(new Set((AA.match(/id: "(?:comp|pho|wt|wk)"/g) || [])).size === 4,'the four Body cards that earn a verdict have one');
+  ok(new Set((AA.match(/id: "(?:comp|pho|wt|wk|fc|ah|at|dr)"/g) || [])).size === 8,'the eight Body cards that earn a verdict have one');
+  // v0.9.125: the health card names its real source when the sync recorded one. It is titled
+  // Health data because the chain is not always Apple — his runs Fitbit through Google into Apple.
+  ok(/sectionTitle\("Health data"\)/.test(AA),'the health card is not branded to one platform');
+  ok(!/Apple Health · feeds/.test(AA),'the hardcoded Apple Health title is gone');
+  ok(/"apple-health": "Apple Health", "google-health": "Google Health"/.test(AA),'the row names whichever platform actually synced');
+  ok(!/sectionTitle\("Path to your forecast", C\.muted\)/.test(AA),'the weight card no longer shares the forecast card\'s name');
   // v0.9.123: adherence is computed once. WeeklyCard caps each day at its goal before averaging —
   // a 300g day cannot pay for a 60g one — and the collapsed row must show that same number.
   ok((AA.match(/function weekAdherence/g) || []).length === 1,'one adherence computation exists');

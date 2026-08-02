@@ -30,6 +30,15 @@ for (const t of ["now", "today", "plan", "body", "train", "glp1", "coach"]) {
   catch (e) { console.log("COMPACT_THREW " + t + ": " + e.message); cmpFail++; }
 }
 if (cmpFail) process.exitCode = 1; else console.log("COMPACT_RENDER_OK");
+// v0.9.125: a card that DECLARES a verdict must actually collapse in compact. Body's weight card
+// declared one and still rendered its full prose, so the declaration alone proves nothing.
+globalThis.__FC_TEST_TAB = "body";
+{
+  const h = renderToString(React.createElement(App));
+  const leaked = ["fat to lose", "lean to protect", "protein floor"].filter((t) => h.includes(t));
+  if (leaked.length) { console.log("COLLAPSE_LEAK body weight card still renders: " + leaked.join(", ")); process.exitCode = 1; }
+  else console.log("COLLAPSE_OK body");
+}
 // v0.9.111: render the med chart DIRECTLY. Mounting it through a tab depends on onMed, the tab's
 // early returns and the density mode; three ReferenceErrors inside it reached his phone while every
 // tab pass reported green. This mounts the component itself, so nothing can gate it out.
@@ -90,7 +99,7 @@ try {
   if (!/t <= _M\.now \? _M\.level\(t\)/.test(sp)) { console.log('MED_SPARK_SHAPE: logged history must use level()'); shapeOK = false; }
   if (shapeOK) console.log('MED_SPARK_OK');
   if (denomOK && shapeOK) console.log('MED_DENOMINATOR_OK');
-  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK && shapeOK && /SITE_AVATAR_OK/.test(out) ? 0 : 1);
+  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK && shapeOK && /SITE_AVATAR_OK/.test(out) && /COLLAPSE_OK/.test(out) ? 0 : 1);
 } catch (e) {
   console.log('RENDER SMOKE FAILED:\n' + (e.stdout||'').toString() + (e.stderr||'').toString().slice(0,900));
   process.exit(1);
