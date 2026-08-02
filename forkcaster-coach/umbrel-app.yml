@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.142"
+version: "0.9.143"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Switching medication now keeps each drug's dose separate. Trying another drug and
-  coming back returns you to the dose you were actually on, and a drug you have
-  never taken starts at its lowest step instead of inheriting a number from a
-  different molecule.
+  New Lab panel card on Body: enter results from any lab, see each marker against its
+  range and against your own baseline, and see which markers have never been drawn.
+  The side-effect journal adds vomiting, abdominal pain, skin tingling and
+  palpitations.
 dependencies: []
 path: ""
 defaultUsername: ""

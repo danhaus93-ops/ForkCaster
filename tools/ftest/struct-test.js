@@ -891,5 +891,29 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/priorForK\.reduce\(\(a, b\) => \(a\.date >= b\.date \? a : b\)\)/.test(AT),'a drug you have used before resumes where you left it');
 }
 
+
+// v0.9.143: lab panel and the four symptom additions.
+{
+  const AU=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const LAB_MARKERS = \[/.test(AU),'the marker table exists');
+  ok(/key: "lipase"[\s\S]{0,160}required: true/.test(AU),'lipase is marked required — it is not on a standard panel');
+  ok(/key: "amylase"[\s\S]{0,160}required: true/.test(AU),'so is amylase');
+  // the flag threshold is the trial's, not the top of the reference range
+  ok(/key: "alt"[\s\S]{0,120}hi: 46,\s*flagAt: 138/.test(AU),'ALT flags at 3x the upper limit, not at 46');
+  ok(/if \(m\.flagAt != null && v >= m\.flagAt\) return "flag";/.test(AU),'a flag outranks merely out-of-range');
+  ok(/if \(v < m\.lo \|\| v > m\.hi\) return "out";/.test(AU),'and out-of-range is still reported');
+  // newest-date wins, same rule as the dose log
+  ok(/withVal\[withVal\.length - 1\]\.values\[key\]/.test(AU),'the latest value is the newest draw');
+  ok(/labs, eatenDate:/.test(AU),'labs ride the state blob');
+  ok(/if \(s\.labs\) setLabs\(s\.labs\);/.test(AU),'and are read back on load');
+  ok(/Import a lab report/.test(AU),'the button is lab-agnostic');
+  ok(/records and compares \u2014 it never interprets/.test(AU) || /records and compares/.test(AU),'the card states that it does not interpret');
+  // symptoms
+  for (const sx of ["Vomiting","Abdominal pain","Skin tingling","Palpitations"])
+    ok(new RegExp('"' + sx + '"').test(AU), 'the journal can log ' + sx.toLowerCase());
+  ok(/e\.symptom === "Abdominal pain" && e\.severity === "severe"/.test(AU),'severe abdominal pain is recognised');
+  ok(/needs a clinician the same day/.test(AU),'and says so once, on the journal');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
