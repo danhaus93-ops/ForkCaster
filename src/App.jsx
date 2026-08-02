@@ -5709,27 +5709,49 @@ export function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
         {[100, 75, 50, 25].map((g) => { const gy = y((g / 100) * ssPeak); return <g key={g}>
           <line x1="0" x2={W} y1={gy} y2={gy} stroke={g === 100 ? C.go : (C.hair || "#26302c")} strokeWidth={g === 100 ? 1.2 : 0.75} strokeDasharray={g === 100 ? "5 4" : "1 3"} opacity={g === 100 ? 0.85 : 1} />
           <text x={W - 2} y={gy - 3} textAnchor="end" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={g === 100 ? C.go : C.faint}>{g + "%"}</text>
-          {g === 100 && <text x="2" y={gy - 3} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" letterSpacing="1" fill={C.go}>STEADY STATE</text>}
         </g>; })}
         {past && <polygon points={`${past} ${past.trim().split(" ").slice(-1)[0].split(",")[0]},${H - PADB} ${past.trim().split(" ")[0].split(",")[0]},${H - PADB}`} fill="url(#medfill)" />}
         <polyline points={past} fill="none" stroke={C.violet} strokeWidth="2.4" strokeLinejoin="round" />
         <polyline points={fut} fill="none" stroke={C.violet} strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />
         {ghost && <polyline points={ghost} fill="none" stroke={C.violet} strokeWidth="1.6" strokeDasharray="3 5" opacity="0.22" />}
         {steadyIdx >= 0 && <text x={xi(steadyIdx, 0.3)} y={y(ssPeak) + 10} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" letterSpacing="1" fill={C.go} opacity="0.85">STEADY ≈ D{steadyIdx + 1}</text>}
-        {absorbing && <g><circle cx={xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac))} cy={y(cyc[nowIdx].pkL)} r="2.6" fill="none" stroke={C.go} strokeWidth="1.4" />
-          <text x={Math.min(xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac)) + 5, W - 60)} y={pkLabY} fontFamily="ui-monospace,monospace" fontSize="7.5" fontWeight="700" fill={C.go}>peaks ~{Math.round((cyc[nowIdx].pkL / Math.max(refPeak, 1e-9)) * 100)}%</text></g>}
+        {absorbing && <g><circle cx={xi(nowIdx, Math.min(0.9, cyc[nowIdx].pkFrac))} cy={y(cyc[nowIdx].pkL)} r="2.6" fill="none" stroke={C.go} strokeWidth="1.4" /></g>}
         <line x1={nowX} y1="4" x2={nowX} y2={H - PADB} stroke={C.go} strokeWidth="1.4" strokeDasharray="2 3" />
         {fullSeq.map((d, i) => (
           <text key={i} x={xi(i, 0.5)} y={H - 3} textAnchor="middle" fontFamily="ui-monospace,monospace" fontSize="7.5" fill={i <= nowIdx ? C.muted : C.faint} opacity={i >= nLedger ? 0.4 : 1}>D{i + 1}</text>
         ))}
         <circle cx={nowX} cy={nowY} r="7" fill={C.violet} opacity="0.22" />
         <circle cx={nowX} cy={nowY} r="3.4" fill={C.violet} />
-        <text x={Math.min(nowX + 6, W - 74)} y={nowLabY} fontFamily="ui-monospace,monospace" fontSize="8" fontWeight="700" letterSpacing="1" fill={C.ink}>NOW · {vsPeak}%</text>
         {nextPct != null && nextDoseIdx > 0 && <g>
           <circle cx={xi(nextDoseIdx, 0.02)} cy={y(cyc[nextDoseIdx].trough)} r="3" fill="none" stroke={C.violet} strokeWidth="1.5" />
-          <text x={Math.min(xi(nextDoseIdx, 0.02) + 5, W - 70)} y={Math.min(H - PADB - 6, Math.max(y(cyc[nextDoseIdx].trough) + 11, nowLabY + 13))} fontFamily="ui-monospace,monospace" fontSize="7.5" fill={C.violet}>~{nextVsPeak}% at next dose</text>
         </g>}
       </svg>
+      </div>
+      {/* v0.9.120: the numbers live here, not in the plot. A label placed at the peak's own height
+          collides with the steady-state line by definition once the peak approaches it — which is
+          exactly what climbing toward steady state means. Out here they cannot collide with anything. */}
+      <div style={{ display: "flex", gap: 9, marginTop: 11 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: DATA, fontSize: 9.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Now</div>
+          <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, marginTop: 3, color: C.violet }}>{vsPeak}%</div>
+        </div>
+        {absorbing && cyc[nowIdx] && <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: DATA, fontSize: 9.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Peaks</div>
+          <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, marginTop: 3, color: C.ink }}>~{Math.round((cyc[nowIdx].pkL / Math.max(refPeak, 1e-9)) * 100)}%</div>
+        </div>}
+        {nextVsPeak != null && <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: DATA, fontSize: 9.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Next dose</div>
+          <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, marginTop: 3, color: C.ink }}>~{nextVsPeak}%</div>
+        </div>}
+        {steadyIdx >= 0 && <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: DATA, fontSize: 9.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Steady</div>
+          <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, marginTop: 3, color: C.go }}>D{steadyIdx + 1}</div>
+        </div>}
+      </div>
+      <div style={{ display: "flex", gap: 13, flexWrap: "wrap", marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
+        {[["Logged", C.violet, false], ["Planned", C.violet, true], ["Steady state", C.go, true]].map(([l, col, dash]) => (
+          <span key={l} style={{ fontFamily: DATA, fontSize: 9.5, letterSpacing: 0.7, textTransform: "uppercase", color: C.muted, display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke={col} strokeWidth="2" strokeDasharray={dash ? "3 2" : undefined} opacity={dash ? 0.6 : 1} /></svg>{l}</span>))}
       </div>
       {scrolls && <div style={{ fontFamily: DATA, fontSize: 9.5, letterSpacing: 1, color: C.faint, marginTop: 4, textAlign: "right" }}>← SCROLL TO REVIEW EVERY DOSE</div>}
       <div style={{ fontSize: 11, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses — solid is logged, dashed is planned. Each dose lands on the remains of the last, so the troughs climb; that climb is why the same dose feels stronger in week 4 than week 1. Steady state is the highest of your peak levels this dose and schedule will produce. Informational only — not medical advice.</div>

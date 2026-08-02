@@ -321,7 +321,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(app.includes('level(now) / ssPeak'), 'now-percent anchors to converged steady-state peak (the mock design)');
   ok(app.includes('cadence * 40'), 'steady-state peak comes from a far-horizon run of the same model, not the visible window');
   ok(app.includes('Steady state is the highest of your peak levels'), 'caption defines steady state in plain words');
-  ok(app.includes('% at next dose'), 'next-dose marker names the projected trough');
+  // v0.9.120: the projected trough is still named — the label moved OUT of the plot into the cell
+  // row, because text placed at a value's own height collides with the steady-state line as the
+  // peak approaches it. The invariant is that the number is shown, not where it is drawn.
+  ok(/>Next dose</.test(app) && /\{nextVsPeak\}%/.test(app), 'the projected trough is named in the cell row');
+  ok(!/% at next dose/.test(app), 'no value label is drawn inside the plot');
+  ok(!/>peaks ~\{/.test(app) && !/NOW · \{vsPeak\}%/.test(app), 'the peak and now labels left the plot too');
   ok(app.split('rhrCardFor(_r)').length===3, 'RHR card renders in exactly one of two slots: top when flagged, below the med curve when quiet');
 }
 // v0.9.39: the X must be a perfect inverse of Add — EVERY meal-entry writer stores EVERY macro
