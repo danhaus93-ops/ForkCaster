@@ -4374,8 +4374,8 @@ export default function App() {
             ? `${SITE_NAMES.length} sites \u00b7 ${_rested} rested${_last ? ` \u00b7 last was ${String(_last).toLowerCase()}` : ""}`
             : "every site used this cycle \u2014 it resets on the next dose",
           // the SAME avatar the open card draws, shrunk and made inert — never a second drawing
-          spark: (<div style={{ width: 46, pointerEvents: "none", opacity: 0.95 }}>
-            <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
+          spark: (<div style={{ width: 46, flexShrink: 0, pointerEvents: "none" }}>
+            <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
       <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />, {}, (() => {
         const _log = (glp.doseLog || []).filter((d) => +d.mg > 0);
@@ -5846,7 +5846,7 @@ export function siteRotation(doseLog, perSite) {
   return { used, cycleLogged, suggested, daysSince, cyc, sited };
 }
 
-export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite }) {
+export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPendingSite, mini }) {
   const F = sex === "female";
   const g = Math.max(0, Math.min(1, ((bmi || 30) - 22) / 18));
   const lp = (a, b) => a + (b - a) * g;
@@ -5892,6 +5892,48 @@ export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPend
     "Abdomen L": [belly * 0.8, NAVY + 5], "Abdomen R": [-belly * 0.8, NAVY + 5],
     "Thigh L": [thW + 2.5, 128], "Thigh R": [-(thW + 2.5), 128],
   };
+  // v0.9.117: mini renders the FIGURE only — the same svg, the same site geometry, the same
+  // rotation board — without the headings, the NEXT chip and the paragraph. Embedding the whole
+  // component in a 46px row dragged all of that prose in with it.
+  if (mini) return (
+      <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: mini ? 46 : 240, margin: "0 auto" }}>
+        <g fontWeight="700" fontSize="9">
+          <text x="26" y="14" fill={C.muted} textAnchor="middle">R</text>
+          <text x="94" y="14" fill={C.muted} textAnchor="middle">L</text>
+          <text x="26" y="21" fill={C.faint} fontSize="4.6" fontWeight="500" textAnchor="middle">your right</text>
+          <text x="94" y="21" fill={C.faint} fontSize="4.6" fontWeight="500" textAnchor="middle">your left</text>
+        </g>
+        <defs>
+          <linearGradient id="siteFadeG" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient>
+          <mask id="siteFadeM"><rect x="0" y="0" width="120" height="160" fill="url(#siteFadeG)" /></mask>
+        </defs>
+        {[1, -1].map((s) => (
+          <rect key={"t" + s} x={CX + s * (thW + 2.5) - thW} y={TT} width={thW * 2} height={TE - TT} rx={thW} fill={fillB} stroke={edge} strokeWidth={sw} mask="url(#siteFadeM)" />
+        ))}
+        <path d={torso} fill={fillB} stroke={edge} strokeWidth={sw} strokeLinejoin="round" />
+        {F && <path d={`M ${L(3, 58)} C ${L(9, 62)} ${L(sh - 3, 62)} ${L(sh - 1.5, 57)} M ${R(3, 58)} C ${R(9, 62)} ${R(sh - 3, 62)} ${R(sh - 1.5, 57)}`} stroke={edge} strokeWidth="1.1" fill="none" opacity="0.7" />}
+        <path d={arm(1)} fill={fillB} stroke={edge} strokeWidth={sw} strokeLinejoin="round" />
+        <path d={arm(-1)} fill={fillB} stroke={edge} strokeWidth={sw} strokeLinejoin="round" />
+        <path d={`M ${L(4.5, 32)} C ${L(4.5, 36)} ${L(5, 38)} ${L(5.5, 40)} L ${R(5.5, 40)} C ${R(5, 38)} ${R(4.5, 36)} ${R(4.5, 32)} Z`} fill={fillB} stroke={edge} strokeWidth={sw} />
+        <circle cx="60" cy="21" r="11" fill={fillB} stroke={edge} strokeWidth={sw} />
+        <circle cx="60" cy={NAVY} r="1.3" fill={edge} opacity="0.7" />
+        {SITE_NAMES.map((z) => {
+          const [dx, y] = pos[z]; const x = 60 + dx;
+          const full = used[z] >= perSite, sel = pendingSite === z, sug = suggested === z && !pendingSite;
+          const col = sel ? C.violet : full ? "#4A5560" : sug ? C.go : C.muted;
+          return (
+            <g key={z} onClick={() => { if (!full) setPendingSite(sel ? null : z); }} style={{ cursor: full ? "default" : "pointer" }}>
+              {sug && <circle cx={x} cy={y} r="9.5" fill="none" stroke={C.go} strokeWidth="1.6" opacity="0.55" />}
+              <circle cx={x} cy={y} r="8.5" fill="transparent" />
+              <circle cx={x} cy={y} r="5.6" fill={sel || full ? col : "none"} stroke={col} strokeWidth="2.2" />
+              {Array.from({ length: Math.min(perSite, 4) }).map((_, i) => (
+                <circle key={i} cx={x - (Math.min(perSite, 4) - 1) * 3 + i * 6} cy={y + 11} r="1.7" fill={i < used[z] ? C.violet : "none"} stroke={C.violet} strokeWidth="0.9" opacity="0.9" />
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+  );
   return (
     <div>
       <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase",  fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>

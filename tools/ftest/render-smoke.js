@@ -56,6 +56,11 @@ try {
   const sited = [{ date: "2026-07-26", mg: 0.25, site: "Abdomen L" }, { date: "2026-07-31", mg: 0.25, site: "Abdomen R" }];
   for (const [label, log, per] of [["empty", [], 1], ["sited", sited, 1], ["multi", sited, 3]]) {
     renderToString(React.createElement(SiteAvatar, { C, sex: "male", bmi: 31, doseLog: log, perSite: per, pendingSite: null, setPendingSite: () => {} }));
+    // mini must draw the figure and NOTHING else — no headings, no chip, no paragraph
+    const m = renderToString(React.createElement(SiteAvatar, { C, sex: "male", bmi: 31, doseLog: log, perSite: per, pendingSite: null, setPendingSite: () => {}, mini: true }));
+    if (!/<svg/.test(m)) { console.log("SITE_MINI: no figure drawn (" + label + ")"); process.exitCode = 1; }
+    if (/Injection site|NEXT:|Cycle |front view/.test(m)) { console.log("SITE_MINI: mini leaked card prose (" + label + ")"); process.exitCode = 1; }
+    if (m.length > 9000) { console.log("SITE_MINI: mini too heavy for a row (" + label + ", " + m.length + ")"); process.exitCode = 1; }
     const r = siteRotation(log, per);
     if (r.used === undefined || r.suggested === undefined) { console.log("SITE_ROTATION_MISSING: " + label); process.exitCode = 1; }
   }

@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.116"
+version: "0.9.117"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Fixes the crash on the GLP-1 tab. Sharing the injection-site rotation between the
-  collapsed row and the body figure left the figure without three values it needed.
-  The rig now draws that figure on its own, in three different states, so this class
-  of mistake fails here instead of on your phone.
+  Fixes the injection site row, which was pulling the whole card — headings, the
+  next-site chip and the explanation — into a space meant for a thumbnail. The row
+  now shows the body figure alone, drawn by the same code as the full card, with the
+  next site marked.
 dependencies: []
 path: ""
 defaultUsername: ""
