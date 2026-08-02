@@ -600,18 +600,21 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const AD=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const MONO=0.60, INTER=0.52;
   const need=(t,size,ls,pad,mono)=>t.length*size*(mono?MONO:INTER)+t.length*ls+pad;
-  const rows=[["dose-sync pills",7,315,"Today",9.5,0.2,4,0,true],
-              ["calendar day numbers",7,307,"31",10,1.0,5,0,true],
-              ["tab bar labels",7,375,"Today",9,0,0,6,false],
-              ["readiness 4-slot",4,307,"POST-DOSE",8.5,0.9,9,0,true]];
+  // v0.9.121: sizes tracked the second bump. The measurement is the pin, not the numbers.
+  const rows=[["dose-sync pills",7,315,"Today",10.5,0.2,4,0,true],
+              ["calendar day numbers",7,307,"31",11,1.0,5,0,true],
+              ["tab bar labels",7,375,"Today",11,0,0,6,false],
+              ["readiness 4-slot",4,307,"POST-DOSE",10.5,0.9,9,0,true],
+              ["med level cells",4,307,"NEXT DOSE",10.5,1.0,9,0,true],
+              ["sleep stage labels",4,307,"LIGHT",10.5,0.6,3,0,true]];
   for (const [nm,n,cw,t,size,ls,gap,pad,mono] of rows) {
     const avail=(cw-gap*(n-1))/n;
     ok(need(t,size,ls,pad,mono)<=avail, nm+" fits on one line at the current type size");
   }
   // the smallest readable size in the app — nothing may go below it
   const sizes=(AD.match(/fontSize: ([0-9.]+)/g)||[]).map(x=>parseFloat(x.split(': ')[1]));
-  ok(Math.min(...sizes)>=9.5,'the smallest type in the app is 9.5px');
-  ok(sizes.filter(v=>v<9.5).length===0,'nothing renders below 9.5px anywhere in the app');
+  ok(Math.min(...sizes)>=10.5,'the smallest type in the app is 10.5px');
+  ok(sizes.filter(v=>v<10.5).length===0,'nothing renders below 10.5px anywhere in the app');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
