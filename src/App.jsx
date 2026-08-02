@@ -1626,7 +1626,7 @@ export default function App() {
       const before = el ? el.getBoundingClientRect().top : 0;
       d.order = rows;
       // the card jumped to a new slot; rebase so it stays under the finger instead of snapping
-      if (el) { const after = el.getBoundingClientRect().top; d.startY += (after - before); }
+      if (el) { const after = el.getBoundingClientRect().top; d.startY += (after - before); d.dy = 0; el.style.transform = "translateY(0px) scale(1.03)"; }
       if (navigator.vibrate) navigator.vibrate(8);
     }
   };
@@ -1636,8 +1636,13 @@ export default function App() {
     e.preventDefault();                       // non-passive: this is what stops the page scrolling
     const y = (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY);
     d.dy = y - d.startY;
+    const before = d.order;
     dragTo(y);
-    rerender();
+    const el = cardElsRef.current[d.id];
+    // follow the finger by writing the transform straight to the node — a React render per frame
+    // re-ran every engine on the tab and made the card flicker and ghost
+    if (el) el.style.transform = `translateY(${d.dy}px) scale(1.03)`;
+    if (d.order !== before) rerender();       // only a genuine reorder needs React
   };
   const onDocEnd = () => {
     const d = dragRef.current;
@@ -1645,6 +1650,8 @@ export default function App() {
     document.removeEventListener("touchend", onDocEnd);
     document.removeEventListener("touchcancel", onDocEnd);
     if (d.order) setPrefs({ ...prefs, cardOrder: { ...(prefs.cardOrder || {}), [tab]: d.order } });
+    const el0 = cardElsRef.current[d.id];
+    if (el0) el0.style.transform = "";
     dragRef.current = { id: null, startY: 0, dy: 0, order: null };
     setArrangeTab(null);
     rerender();
@@ -3894,7 +3901,7 @@ export default function App() {
     );
   };
   const renderBody = () => (
-    <div style={{ padding: "0 18px 12px", display: "flex", flexDirection: "column" }}>
+    <div style={{ display: "contents" }}>
 
       {(() => { // v0.9.63: Path to your forecast — the EXISTING goalContract engine wearing the mock's
         // design, with the weight graph + logged entries folded in (his markup: one weight card, not two)
@@ -4254,7 +4261,7 @@ export default function App() {
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               {rungs.map((r) => { const on = curMg != null && +r === +curMg; const done = curMg != null && +r < +curMg; return (
-                <div key={r} style={{ flex: 1 }}>
+                <div key={r} onClick={() => setGlp({ ...glp, dose: +r, lastDoseChangeWk: 0 })} style={{ flex: 1, cursor: "pointer" }}>
                   <div style={{ height: 6, borderRadius: 4, background: on || done ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
                   <div style={{ fontFamily: DATA, fontSize: 13.5, marginTop: 6, fontWeight: on ? 700 : 500, color: on ? C.violet : C.faint }}>{r} <span style={{ fontSize: 10.5, color: C.faint }}>mg</span></div>
                   {on && <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, marginTop: 2 }}>YOU ARE HERE</div>}
@@ -4518,15 +4525,7 @@ export default function App() {
           )}
         </>)}</div>
 
-      {!medObj.investigational && (
-        <div style={{ display: "contents" }}>{card(
-          <>
-            {sectionTitle("Titration ladder")}
-            <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<button key={s} onClick={() => setGlp({ ...glp, dose: s, lastDoseChangeWk: 0 })} style={{ flex: 1, textAlign: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontFamily: DATA, fontSize: 13, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint }}>{s} <span style={{ fontSize: 10.5, color: C.faint }}>mg</span></div></button>); })}</div>
-            <div style={{ fontSize: 13.5, color: C.muted, marginTop: 10, lineHeight: 1.4 }}>{medObj.note}</div>
-            <div style={{ fontSize: 12.5, color: C.faint, marginTop: 6 }}>Tap a step to record the dose your prescriber directed — confirm every change with them.</div>
-          </>)}</div>
-      )}
+      
 
       <div style={{ display: "contents" }}>{card(
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -5159,16 +5158,16 @@ export default function App() {
         <div style={{ flex: 1, overflowY: "auto", paddingBottom: "calc(88px + env(safe-area-inset-bottom, 0px))" }}>
           {tab === "now" && renderNow()}
           {tab === "today" && renderToday()}
-          {tab === "body" && <div>
+          {tab === "body" && <div style={{ padding: "0 18px 12px", display: "flex", flexDirection: "column" }}>
         {/* v0.9.126: the heading leads the tab. It used to live inside renderBody, which runs AFTER
             the engine cards, so four cards appeared above the word Body. */}
-        <div style={{ padding: "18px 18px 0" }}>
+        <div style={{ padding: "18px 0 0", order: -1 }}>
           <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Body</div>
           <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
         </div>
         {/* v0.9.127: the engine cards used to render at full bleed while renderBody inset by 18px,
             so the tab had two card widths. One wrapper, one width. */}
-        <div style={{ padding: "0 18px", display: "flex", flexDirection: "column" }}>{(() => {
+        <div style={{ display: "contents" }}>{(() => {
             const hd0 = healthSync && healthSync.days ? healthSync.days : [];
             const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null);
             const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);

@@ -676,8 +676,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 {
   const AG=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const tab=AG.slice(AG.indexOf('{tab === "body" && <div>'), AG.indexOf('{renderBody()}'));
-  ok(/padding: "0 18px"/.test(tab),'the engine cards share renderBody\'s horizontal padding');
-  ok(/<\/div>\{renderBody\(\)\}/.test(AG),'that wrapper closes before renderBody');
+  // v0.9.136: one flex column for the whole tab. Two containers meant order could only sort within
+  // each, so the engine cards and the rest of Body could never swap places.
+  ok(/\{tab === "body" && <div style=\{\{ padding: "0 18px 12px", display: "flex", flexDirection: "column" \}\}>/.test(AG),'the Body tab is a single flex column');
+  ok(/const renderBody = \(\) => \(\s*<div style=\{\{ display: "contents" \}\}>/.test(AG),'renderBody joins that column rather than making its own');
+  ok(/order: -1/.test(AG),'the heading stays above every card');
   // rows with a real series carry a sparkline; rows still collecting must NOT invent one
   for (const id of ['fc','ah','wt','wk','comp','pho']) {
     const seg=AG.slice(AG.indexOf('id: "'+id+'"'), AG.indexOf('id: "'+id+'"') + 1600);
@@ -747,7 +750,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/const ARRANGE_TABS = \["today", "body", "glp"\]/.test(AN),'Today, Body and GLP-1 are arrangeable');
   // order only takes effect inside a flex column — Today was not one, so every drag there did nothing
   ok(/const renderToday[\s\S]{0,4000}?return \(\s*<div style=\{\{[^}]*flexDirection: "column"/.test(AN),'Today renders its cards in a flex column');
-  ok(AN.includes('const renderBody = () => (\n    <div style={{ padding: "0 18px 12px", display: "flex", flexDirection: "column" }}>'),'Body does too');
+  ok(/\{tab === "body" && <div style=\{\{ padding: "0 18px 12px", display: "flex", flexDirection: "column" \}\}>/.test(AN),'Body does too, as one column for the whole tab');
   ok(AN.includes('const renderGlp = () => (\n    <div style={{ padding: "18px 18px 12px", display: "flex", flexDirection: "column" }}>'),'and GLP-1');
   // a card inside a wrapper is not a flex child, so it cannot move
   ok(!/<div style=\{\{ marginBottom: \d+ \}\}>\s*\{?\s*card\(/.test(AN),'no card is trapped inside a spacing wrapper');
@@ -792,6 +795,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const r1 = ["counters","log-a-meal"].map(f2), r2 = ["counters","log-a-meal"].map(f2);
   ok(r1.join() !== r2.join(),'without a reset the ids provably drift — this is the bug');
   ok(withReset().join() === withReset().join(),'with a reset they are identical every render');
+}
+
+
+// v0.9.136: one column, one ladder, and a drag that does not repaint the app per frame.
+{
+  const AP=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/\{tab === "body" && <div style=\{\{ padding: "0 18px 12px", display: "flex", flexDirection: "column" \}\}>/.test(AP),'Body is one flex column');
+  ok(!/<div style=\{\{ padding: "0 18px", display: "flex", flexDirection: "column" \}\}>/.test(AP),'the engine block no longer makes a second column');
+  ok(/order: -1/.test(AP),'the heading sits above every card whatever the saved order says');
+  // the flicker: a React render per touchmove re-ran every engine on the tab
+  ok(/el\.style\.transform = `translateY\(\$\{d\.dy\}px\) scale\(1\.03\)`/.test(AP),'the drag writes the transform to the node directly');
+  ok(/if \(d\.order !== before\) rerender\(\);/.test(AP),'React only re-renders when the order actually changes');
+  ok(/if \(el0\) el0\.style\.transform = "";/.test(AP),'and the node is handed back to React on drop');
+  // the two ladders were the same rungs twice
+  ok(!/sectionTitle\("Titration ladder"\)/.test(AP),'the duplicate titration ladder card is gone');
+  ok(/onClick=\{\(\) => setGlp\(\{ \.\.\.glp, dose: \+r, lastDoseChangeWk: 0 \}\)\}/.test(AP),'the protocol rungs took over recording the dose');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
