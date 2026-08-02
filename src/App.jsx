@@ -3006,9 +3006,9 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontFamily: DATA, fontSize: 27, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1, color: C.ink }}>{vd.value}</span>
+            <span style={{ fontFamily: DATA, fontSize: 29, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1, color: C.ink }}>{vd.value}</span>
             {vd.unit && <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
-            {vd.sub && <div style={{ fontFamily: DATA, fontSize: 10.5, color: vd.subTone || C.faint, marginTop: 4, letterSpacing: 0.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.sub}</div>}
+            {vd.sub && <div style={{ fontFamily: DATA, fontSize: 11.5, color: vd.subTone || C.faint, marginTop: 4, letterSpacing: 0.3, lineHeight: 1.35 }}>{vd.sub}</div>}
           </div>
           {vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>}
         </div>
@@ -3863,7 +3863,7 @@ export default function App() {
           color: C.go, title: "This week", when: `${_wa.loggedDays}/7 logged`,
           value: _adh != null ? String(_adh) : "—", unit: _adh != null ? "% protein adherence" : "not enough logged",
           sub: `${_wa.loggedDays} of 7 days with food logged`, subTone: C.faint,
-          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), _adh == null ? C.faint : _adh >= 80 ? C.go : C.caution) }; })())}</div>
+          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), C.caution) }; })())}</div>
 
 
 
@@ -3976,9 +3976,7 @@ export default function App() {
             when: _n ? "Tap to see" : "Add one",
             value: String(_n), unit: _n === 1 ? "photo" : "photos",
             sub: _n ? "never uploaded · feeds the Forecaster" : "front and back help the Forecaster",
-            spark: _n ? (<svg width="92" height="32" viewBox="0 0 92 32">
-              {Array.from({ length: Math.min(3, _n) }, (_, i) => (<rect key={i} x={92 - (Math.min(3, _n) - i) * 30} y="2" width="26" height="28" rx="3" fill={C.surfaceAlt} />))}
-            </svg>) : null }; })())}
+            spark: null }; })())}
 
     </div>
   );
@@ -5066,7 +5064,7 @@ export default function App() {
               id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
               sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
-              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.violet),
+              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.gold),
             } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
               value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {

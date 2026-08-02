@@ -712,10 +712,32 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(new Set(cols).size===4,'no two of them share a colour: '+cols.join(' '));
   // the photos thumbnail strip shows only photos that exist
   const ph=AH.slice(AH.indexOf('id: "pho"'), AH.indexOf('id: "pho"') + 1400);
-  ok(/Array\.from\(\{ length: Math\.min\(3, _n\) \}/.test(ph),'only real photos are drawn');
-  ok(!/strokeDasharray=\{i < Math\.min/.test(ph),'no empty placeholder slots remain');
+  // v0.9.129: the thumbnail strip is gone entirely — he did not want photo squares in the row at
+  // all, not merely the empty ones. The rule is now that the row draws no photo chrome.
+  ok(/spark: null/.test(ph),'the photos row draws no thumbnail strip');
+  ok(!/<rect/.test(ph),'no photo squares of any kind remain in that row');
   // and the tab has no seam between the engine block and the rest
   ok(/padding: "0 18px 12px"/.test(AH),'renderBody adds no extra gap under the engine cards');
+}
+
+
+// v0.9.129: sparkline palette and the collapsed sub line.
+{
+  const AI=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const colOf=(id)=>{ const i=AI.indexOf('id: "'+id+'"'); const m=/_spark\([^,]+, ("?[#\w.]+"?)/.exec(AI.slice(i, i+1900)); return m?m[1]:null; };
+  const body=['fc','ah','wt','wk','comp'].map(colOf).filter(Boolean);
+  ok(body.length===5,'all five Body sparklines declare a colour');
+  ok(new Set(body).size===5,'no two Body sparklines share a colour: '+body.join(' '));
+  // violet is medication only — it must not appear on a Body sparkline
+  ok(!body.some((c)=>/violet/.test(c)),'violet stays reserved for medication');
+  ok(/id: "med"[\s\S]{0,900}?C\.violet/.test(AI),'the med level row is still violet');
+  // the collapsed sub must wrap rather than clip: 44 characters cannot share a line with a sparkline
+  const sub=/\{vd\.sub && <div style=\{\{[^}]*\}\}/.exec(AI);
+  ok(sub && !/textOverflow: "ellipsis"/.test(sub[0]),'the collapsed sub wraps instead of truncating');
+  ok(sub && /lineHeight: 1\.35/.test(sub[0]),'and has room for the second line');
+  // no thumbnail strip on the photos row
+  const ph=AI.slice(AI.indexOf('id: "pho"'), AI.indexOf('id: "pho"') + 1200);
+  ok(/spark: null/.test(ph),'the photos row draws no thumbnail strip');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
