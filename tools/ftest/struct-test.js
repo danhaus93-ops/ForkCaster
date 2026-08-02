@@ -739,5 +739,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/spark: null/.test(ph),'the photos row draws no thumbnail strip');
 }
 
+
+// v0.9.131: hold-to-arrange.
+{
+  const AL=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const \[arrangeTab, setArrangeTab\]/.test(AL),'arrange mode has state');
+  ok(/cardOrder: \{ \.\.\.\(prefs\.cardOrder \|\| \{\}\), \[tab\]: rows \}/.test(AL),'order is saved per tab into prefs');
+  ok(/prefs,/.test(AL.slice(AL.indexOf('const stateBlob'), AL.indexOf('const stateBlob')+400)),'prefs ride the state blob, so the order persists');
+  ok(/return at >= 0 \? at : 100 \+ _seq;/.test(AL),'a card with no saved position keeps its source order');
+  ok(/setTimeout\(\(\) => \{ setArrangeTab\(tab\)/.test(AL),'a long press enters arrange');
+  ok(/onClick=\{\(\) => \{ if \(_arr\) return;/.test(AL),'tapping a row while arranging does not open it');
+  ok(/order: _ord/.test(AL),'each card carries its position');
+  // order only works if the container is a flex column
+  for (const [name, probe] of [['GLP-1','const renderGlp = () => (\n    <div style={{ padding: "18px 18px 12px", display: "flex", flexDirection: "column" }}>'],
+                               ['Body','const renderBody = () => (\n    <div style={{ padding: "0 18px 12px", display: "flex", flexDirection: "column" }}>']])
+    ok(AL.includes(probe.replace(/\\n/g, '\n')), name+' renders its cards in a flex column so order applies');
+  ok((AL.match(/<div style=\{\{ display: "contents" \}\}>/g) || []).length >= 10,'the old wrappers are transparent, so the cards are the flex items');
+  ok(/setArrangeTab\(null\)/.test(AL),'Done leaves arrange mode');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -1584,6 +1584,25 @@ export default function App() {
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
   const [sheetCard, setSheetCard] = useState(null);
+  // v0.9.131: hold-to-arrange. Order lives in prefs.cardOrder[tab] as a list of card ids; anything
+  // absent keeps its source position, so a new card appears where the developer put it rather than
+  // at the end of somebody's saved list.
+  const [arrangeTab, setArrangeTab] = useState(null);
+  const seqRef = useRef(0);
+  const holdRef = useRef(null);
+  const orderOf = (id) => {
+    const list = ((prefs.cardOrder || {})[tab]) || [];
+    const at = list.indexOf(id);
+    return at >= 0 ? at : 100 + seqRef.current;
+  };
+  const moveCard = (id, dir) => {
+    const rows = (rowsRef.current[tab] || []).slice().sort((a, b) => orderOf(a) - orderOf(b));
+    const i = rows.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= rows.length) return;
+    rows.splice(j, 0, rows.splice(i, 1)[0]);
+    setPrefs({ ...prefs, cardOrder: { ...(prefs.cardOrder || {}), [tab]: rows } });
+  };
+  const rowsRef = useRef({});
   // v0.9.119: card children are re-registered every render and the sheet reads them from here.
   // Storing the children in state froze them: tapping a site called setPendingSite, the app
   // re-rendered, and the sheet kept showing the copy captured at open time.
@@ -2996,8 +3015,19 @@ export default function App() {
       ? <span style={{ width: 6.5, height: 6.5, borderRadius: 7, border: `1.5px solid ${C.faint}`, flexShrink: 0, boxSizing: "border-box" }} />
       : <span style={{ width: 6.5, height: 6.5, borderRadius: 7, background: vd.tone || C.go, flexShrink: 0 }} />;
     sheetKidsRef.current[vd.id] = children;
+    if (!rowsRef.current[tab]) rowsRef.current[tab] = [];
+    if (!rowsRef.current[tab].includes(vd.id)) rowsRef.current[tab].push(vd.id);
+    const _seq = seqRef.current++;
+    const _ord = (() => { const l = ((prefs.cardOrder || {})[tab]) || []; const at = l.indexOf(vd.id); return at >= 0 ? at : 100 + _seq; })();
+    const _arr = arrangeTab === tab;
     return cardShell(
-      <div onClick={() => setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when, sheetWhen: vd.sheetWhen })} style={{ cursor: "pointer" }}>
+      <div
+        onClick={() => { if (_arr) return; setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when, sheetWhen: vd.sheetWhen }); }}
+        onTouchStart={() => { clearTimeout(holdRef.current); holdRef.current = setTimeout(() => { setArrangeTab(tab); if (navigator.vibrate) navigator.vibrate(18); }, 500); }}
+        onTouchEnd={() => clearTimeout(holdRef.current)}
+        onTouchMove={() => clearTimeout(holdRef.current)}
+        onContextMenu={(e) => { e.preventDefault(); setArrangeTab(tab); }}
+        style={{ cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
           {dot}
           <span style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
@@ -3010,9 +3040,16 @@ export default function App() {
             {vd.unit && <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
             {vd.sub && <div style={{ fontFamily: DATA, fontSize: 11.5, color: vd.subTone || C.faint, marginTop: 4, letterSpacing: 0.3, lineHeight: 1.35 }}>{vd.sub}</div>}
           </div>
-          {vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>}
+          {_arr ? (
+            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+              {[["↑", -1], ["↓", 1]].map(([g, d]) => (
+                <button key={d} onClick={(e) => { e.stopPropagation(); moveCard(vd.id, d); }}
+                  style={{ width: 38, height: 38, borderRadius: 999, border: `1px solid ${C.go}66`, background: C.go + "1A",
+                    color: C.go, fontSize: 17, lineHeight: 1, cursor: "pointer" }}>{g}</button>))}
+            </div>
+          ) : (vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>)}
         </div>
-      </div>, extra);
+      </div>, { order: _ord, ...extra, ...(_arr ? { borderColor: C.go + "88", transform: "scale(0.985)" } : null) });
   };
   const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 10 : 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
@@ -3752,7 +3789,7 @@ export default function App() {
     );
   };
   const renderBody = () => (
-    <div style={{ padding: "0 18px 12px" }}>
+    <div style={{ padding: "0 18px 12px", display: "flex", flexDirection: "column" }}>
 
       {(() => { // v0.9.63: Path to your forecast — the EXISTING goalContract engine wearing the mock's
         // design, with the weight graph + logged entries folded in (his markup: one weight card, not two)
@@ -3781,7 +3818,7 @@ export default function App() {
         ];
         const allOk = rows.every((r3) => r3.st === "ok");
         const PC = { ok: C.go, flag: C.caution, wait: C.faint };
-        return (<div style={{ marginBottom: 14 }}>{card(<>
+        return (<div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             {sectionTitle("Weight", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: allOk ? C.go : C.caution, border: `1px solid ${(allOk ? C.go : C.caution)}55`, background: (allOk ? C.go : C.caution) + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>{allOk ? "ON TRACK" : "CHECK SIGNALS"}</span>
@@ -3856,7 +3893,7 @@ export default function App() {
             subTone: C.go,
             spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), "#3BDF93") }; })())}</div>);
       })()}
-      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />, {}, (() => {
+      <div style={{ display: "contents" }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />, {}, (() => {
         const _wa = weekAdherence(mealLog, targets.protein);
         const _adh = _wa.adherence;
         return { id: "wk", tone: _adh == null ? "none" : (_adh >= 80 ? C.go : _adh >= 60 ? C.caution : C.avoid),
@@ -3867,7 +3904,7 @@ export default function App() {
 
 
 
-      <div style={{ marginBottom: 14 }}>{card(<>
+      <div style={{ display: "contents" }}>{card(<>
         {(() => { const ds0 = ((healthSync && healthSync.days) || []).filter((d0) => d0.bodyFatPct != null || d0.muscleMassLbs != null || d0.visceralFat != null);
           const sc0 = ds0.length ? ds0[ds0.length - 1] : null;
           const nM = sc0 ? ["bodyFatPct", "leanMassLbs", "muscleMassLbs", "visceralFat", "bodyWaterLbs", "subcutaneousFatPct"].filter((k0) => sc0[k0] != null).length : 0;
@@ -3990,7 +4027,7 @@ export default function App() {
     // v0.9.100: the edge states the verdict, so it cannot be hardcoded. A card still learning has
     // no verdict to state — a red stripe over "collecting 2/7" reads as an alarm about nothing.
     const _edge = _rr.status !== "ready" ? C.hair : _rr.flagged ? RED : C.go;
-    return <div style={{ marginBottom: 14 }}>{card(<div>
+    return <div style={{ display: "contents" }}>{card(<div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {sectionTitle("Resting heart rate", RED)}
             {_rr.status === "collecting" ? <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>COLLECTING {_rr.have}/{_rr.need}</span>
@@ -4028,7 +4065,7 @@ export default function App() {
       subTone: _rr.flagged ? RED : C.faint,
       spark: _rr.status === "ready" ? _spark((_rr.series || []).slice(-10).map((r) => r.rhr), RED, [_rr.baseline - 4, _rr.baseline + 4]) : null })}</div>; };
   const renderGlp = () => (
-    <div style={{ padding: "18px 18px 12px" }}>
+    <div style={{ padding: "18px 18px 12px", display: "flex", flexDirection: "column" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>GLP-1</div>
       <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Medication · titration · tolerability</div>
       {/* v0.9.81: the stages belong with the medication, not the scale. Ramp-up, active loss and the
@@ -4150,7 +4187,7 @@ export default function App() {
               </div>)}
           </div>, { borderLeft: `2.5px solid ${C.violet}` })}</div>
 
-          <div style={{ marginBottom: 14 }}>{card(<div>
+          <div style={{ display: "contents" }}>{card(<div>
             {sectionTitle("Dose checkpoint", C.muted)}
 
             {noDose ? (<div>
@@ -4400,7 +4437,7 @@ export default function App() {
           ))}
         </div>
       </>)}</div>}
-      {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>
+      {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       </>, {}, (() => {
         const _ps = Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)));
@@ -4419,7 +4456,7 @@ export default function App() {
           spark: (<div style={{ width: 46, flexShrink: 0, pointerEvents: "none" }}>
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
-      <div style={{ marginBottom: 14 }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />, {}, (() => {
+      <div style={{ display: "contents" }}>{card(<DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1) }; }); }} />, {}, (() => {
         const _log = (glp.doseLog || []).filter((d) => +d.mg > 0);
         const _lastD = _log.length ? _log[_log.length - 1].date : null;
         const _due = dueISO, _today = todayISO();
@@ -4443,7 +4480,7 @@ export default function App() {
                 return <rect key={k} x={x} y="15" width="6" height="4" rx="1.5" fill={C.hair} />; })}
               <text x="58" y="31" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="6.5" fill={C.faint}>next 14 days</text>
             </svg>); })() }; })())}</div>
-      {onMed && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, (() => {
+      {onMed && (glp.doseLog || []).length > 0 && <div style={{ display: "contents" }}>{card(<MedLevelChart C={C} doseLog={glp.doseLog} med={glp.med} dueISO={dueISO} intervalDays={medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7)} />, {}, (() => {
         // reads the SAME model the chart draws — no approximation, no second formula
         const _M = medLevelModel({ doseLog: glp.doseLog, med: glp.med, dueISO, intervalDays: medObj && medObj.cadence === "daily" ? 1 : (prefs.injIntervalDays || 7) });
         if (!_M) return { id: "med", tone: "none", color: C.violet, title: "Estimated med level", when: "no doses",
@@ -4567,7 +4604,7 @@ export default function App() {
         })();
         const showWeek = weekReady && sleepView === "week";
         const _sEdge = sl.status !== "ready" ? C.hair : sl.flagged ? C.avoid : C.go;
-        return <div style={{ marginBottom: 14 }}>{card(<div>
+        return <div style={{ display: "contents" }}>{card(<div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {sectionTitle(weekReady ? (showWeek ? "Sleep · 7 nights" : "Sleep · last night") : "Sleep", CY)}
             {weekReady && (
@@ -4620,7 +4657,7 @@ export default function App() {
 
       {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
       {(() => { const t = titrationRead(glp.doseLog, glp.med); if (!t) return null; return (
-        <div style={{ marginBottom: 14 }}>{card(
+        <div style={{ display: "contents" }}>{card(
           <>
             {sectionTitle("Titration tracker", C.go)}
             {t.investigational && <div style={{ background: C.caution + "22", border: `1.5px solid ${C.caution}`, borderRadius: 10, padding: "8px 11px", marginBottom: 10, fontSize: 14, color: C.caution, fontWeight: 700 }}>RETATRUTIDE IS INVESTIGATIONAL — this ladder is the TRIUMPH trial escalation, not an approved schedule. The stepping decision is yours and your prescriber's.</div>}
@@ -5026,7 +5063,7 @@ export default function App() {
         </div>
         {/* v0.9.127: the engine cards used to render at full bleed while renderBody inset by 18px,
             so the tab had two card widths. One wrapper, one width. */}
-        <div style={{ padding: "0 18px" }}>{(() => {
+        <div style={{ padding: "0 18px", display: "flex", flexDirection: "column" }}>{(() => {
             const hd0 = healthSync && healthSync.days ? healthSync.days : [];
             const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null);
             const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
@@ -5256,6 +5293,13 @@ export default function App() {
         {/* v0.9.124: the sheet sits at 50, not 70. It is a PAGE — it must cover the sticky header at
             45 and nothing else. Every modal (log, settings, Body Forecaster, info) is 60 or above, so a
             sheet above them meant a card opened from a sheet launched its modal invisibly behind it. */}
+        {arrangeTab && (
+          <div style={{ position: "fixed", left: 0, right: 0, bottom: "calc(74px + env(safe-area-inset-bottom, 0px))", zIndex: 55, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+            <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 12, background: C.surfaceAlt, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "9px 10px 9px 16px", boxShadow: "0 8px 22px rgba(0,0,0,.45)" }}>
+              <span style={{ fontFamily: DATA, fontSize: 11, letterSpacing: 0.9, textTransform: "uppercase", color: C.muted }}>Arranging · use the arrows</span>
+              <button onClick={() => setArrangeTab(null)} style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Done</button>
+            </div>
+          </div>)}
         {sheetCard && (
           <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 50, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>
