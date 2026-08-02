@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.121"
+version: "0.9.122"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Text is bigger again — the smallest label in the app is now 10.5px, up from 7.5
-  two releases ago. The NEXT in the corner of an opened injection card spells out
-  which site is next, so it stops looking like a button you can press. The
-  side-effect card says Tap to log instead of showing a raw date.
+  Body fat, lean and BMI have moved into the scale card, which is now called
+  Composition — the same three numbers were being shown twice on that tab. Each one
+  says where it came from, and they still appear when you have no scan, from the tape
+  estimate. In compact, Composition and your photos collapse to a single row.
 dependencies: []
 path: ""
 defaultUsername: ""

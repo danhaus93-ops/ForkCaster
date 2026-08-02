@@ -3850,20 +3850,30 @@ export default function App() {
       <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />)}</div>
 
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-        {card(<>{stat("BMI", bmi ? bmi.toFixed(1) : "—", "")}<div style={{ fontSize: 13, color: C.faint, marginTop: 2 }}>{bmiBand(bmi)}</div></>, { flex: 1 })}
-        {card(<>{stat("Body fat", bfShown ? bfShown.toFixed(1) : "—", "%")}<div style={{ fontSize: 13, color: C.faint, marginTop: 2 }}>{bfSource}</div></>, { flex: 1 })}
-        {card(<>{stat("Lean", leanShown ? leanShown.toFixed(0) : "—", " lb")}<div style={{ fontSize: 13, color: C.faint, marginTop: 2 }}>{leanShown ? (bfMeasured ? "measured" : "fat-free mass") : "needs body fat"}</div></>, { flex: 1 })}
-      </div>
 
       <div style={{ marginBottom: 14 }}>{card(<>
         {(() => { const ds0 = ((healthSync && healthSync.days) || []).filter((d0) => d0.bodyFatPct != null || d0.muscleMassLbs != null || d0.visceralFat != null);
           const sc0 = ds0.length ? ds0[ds0.length - 1] : null;
           const nM = sc0 ? ["bodyFatPct", "leanMassLbs", "muscleMassLbs", "visceralFat", "bodyWaterLbs", "subcutaneousFatPct"].filter((k0) => sc0[k0] != null).length : 0;
           return (<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            {sectionTitle("Scale report")}
+            {sectionTitle("Composition")}
             {nM > 0 && <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>{nM} METRICS</span>}
           </div>); })()}
+        {/* v0.9.122: BMI, body fat and lean moved here from the three tiles above. They must render
+            whether or not a scan exists — bmi comes from height and weight, and body fat falls back to
+            the tape estimate — so each number carries its own source. Merging without the fallback
+            would have blanked the tab for anyone without a smart scale. */}
+        <div style={{ display: "flex", gap: 9, marginTop: 4, marginBottom: 12 }}>
+          {[["Body fat", bfShown != null ? bfShown.toFixed(1) : "—", "%", bfShown != null ? bfSource : "no data", bfMeasured],
+            ["Lean", leanShown != null ? leanShown.toFixed(0) : "—", " lb", leanShown != null ? (bfMeasured ? "measured" : "fat-free mass") : "needs body fat", bfMeasured],
+            ["BMI", bmi ? bmi.toFixed(1) : "—", "", bmi ? bmiBand(bmi) : "needs height", true]].map(([l, v, u, src, meas]) => (
+            <div key={l} style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
+              <div style={{ fontFamily: DATA, fontSize: 22, fontWeight: 700, color: C.ink, marginTop: 2 }}>{v}<span style={{ fontSize: 12, color: C.faint }}>{u}</span></div>
+              <div style={{ fontSize: 12, color: C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 5, height: 5, borderRadius: 5, flexShrink: 0, background: meas ? C.go : "transparent", border: meas ? "none" : `1.2px solid ${C.faint}`, boxSizing: "border-box" }} />{src}</div>
+            </div>))}
+        </div>
         <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.45, marginBottom: 9 }}>A body-composition report carries more than Apple Health can store — visceral fat, body water and per-limb figures have no HealthKit fields. Snap or upload the report and the numbers come across.</div>
         <input ref={scanRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanBodyReport(e.target.files[0]); e.target.value = ""; }} />
         {(() => { const ds = ((healthSync && healthSync.days) || []).filter((d5) => d5.bodyFatPct != null || d5.muscleMassLbs != null || d5.visceralFat != null);
@@ -3905,7 +3915,12 @@ export default function App() {
             </div>
           );
         })()}
-      </>)}</div>
+      </>, {}, {
+        id: "comp", tone: bfMeasured ? C.go : "none", color: C.blue, title: "Composition",
+        when: bfMeasured ? "Measured" : "Estimated",
+        value: bfShown != null ? bfShown.toFixed(1) : "—", unit: "% body fat",
+        sub: `${leanShown != null ? `${leanShown.toFixed(0)} lb lean` : "lean unknown"}${bmi ? ` · ${bmi.toFixed(1)} BMI` : ""}`,
+      })}</div>
 
       <div style={{ marginBottom: 14 }}>{card(
         <>
@@ -3939,7 +3954,11 @@ export default function App() {
           {photoPanes("front", "Front", compareA, setCompareA, compareB, setCompareB, activeSide, setActiveSide, fileRef)}
           {photoPanes("back", "Back", compareABack, setCompareABack, compareBBack, setCompareBBack, activeSideBack, setActiveSideBack, fileRefBack)}
           {photos.length > 0 && <button onClick={() => { const f = photosOf("front"), b = photosOf("back"); setSimSel(f.length ? f[f.length - 1].i : 0); setSimSelBack(b.length ? b[b.length - 1].i : -1); setSimOpen(true); }} style={{ width: "100%", marginTop: 12, background: C.violet + "22", color: C.violet, border: `1.5px solid ${C.violet}`, borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 14, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>✨ Body Forecaster →</button>}
-        </>)}
+        </>, {}, (() => { const _n = (photos || []).length;
+          return { id: "pho", tone: _n ? C.go : "none", color: C.muted, title: "Progress photos",
+            when: _n ? "On your node" : "None yet",
+            value: String(_n), unit: _n === 1 ? "photo" : "photos",
+            sub: _n ? "never uploaded · feeds the Forecaster" : "front and back help the Forecaster" }; })())}
 
     </div>
   );

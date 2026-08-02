@@ -90,8 +90,14 @@ ok(/padding: "20px 20px calc\(24px \+ env\(safe-area-inset-bottom, 0px\)\)"/.tes
   ok(/if \(!heightIn \|\| !neck \|\| !waist\) return 0;/.test(SRC),'calcBodyFat returns 0 when any measurement is missing');
   // every tile falls back to an em dash rather than a number
   ok(/bmi \? bmi\.toFixed\(1\) : "—"/.test(SRC),'BMI tile shows — when height is unknown');
-  ok(/bfShown \? bfShown\.toFixed\(1\) : "—"/.test(SRC),'body fat tile shows — when nothing is known');
-  ok(/leanShown \? leanShown\.toFixed\(0\) : "—"/.test(SRC),'lean tile shows — when nothing is known');
+  // v0.9.122: the three tiles merged into the Composition card. The invariant is unchanged — an
+  // unknown renders an em dash, never a zero — but the guard reads != null now rather than truthy,
+  // which also stops a real 0.0% being swallowed as "unknown".
+  ok(/bfShown != null \? bfShown\.toFixed\(1\) : "—"/.test(SRC),'body fat shows — when nothing is known');
+  ok(/leanShown != null \? leanShown\.toFixed\(0\) : "—"/.test(SRC),'lean shows — when nothing is known');
+  ok(/bfMeasured \? "measured" : "fat-free mass"/.test(SRC),'the estimate fallback survived the merge');
+  ok(/sectionTitle\("Composition"\)/.test(SRC),'the merged card exists');
+  ok(!/stat\("BMI"/.test(SRC),'the separate BMI tile is gone');
   // a measured reading must outrank the tape-measure estimate, and be labelled as such
   ok(/const bfShown = bfMeasured \|\| bodyFat/.test(SRC),'measured body fat outranks the Navy estimate');
   ok(/bfMeasured \? "measured"/.test(SRC),'the tile says "measured" when it is');
@@ -520,6 +526,14 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // v0.9.106: six GLP-1 cards now carry a verdict — three readings, three states.
   // distinct ids, not occurrences — a card may declare a verdict twice (empty state and normal).
   ok(new Set((AA.match(/id: "(?:med|rhr|sleep|cp|tit|se|site|cal)"/g) || [])).size === 8,'exactly eight GLP-1 cards carry a verdict');
+  // v0.9.122: Body joins in — composition and photos. The forms, the report action and the
+  // Forecaster's two renders stay whole; a card whose content IS an image cannot summarise itself.
+  ok(new Set((AA.match(/id: "(?:comp|pho)"/g) || [])).size === 2,'the two Body cards that earn a verdict have one');
+  ok(!/id: "(?:stats|forecaster|prescriber)"/.test(AA),'the measurement form, the Forecaster and the report stay whole');
+  // the collapsed composition row must say WHICH source, or it implies precision it may not have
+  const cp3 = AA.slice(AA.indexOf('id: "comp"'), AA.indexOf('id: "comp"') + 600);
+  ok(/bfMeasured \? "Measured" : "Estimated"/.test(cp3),'the composition row states measured or estimated');
+  ok(/tone: bfMeasured \? C\.go : "none"/.test(cp3),'an estimate shows a hollow dot, not a solid one');
   // the collapsed site map must BE the avatar, not a second drawing of it
   const sr = AA.slice(AA.indexOf('id: "site"') - 1200, AA.indexOf('id: "site"') + 900);
   ok(/spark: \(<div[^>]*>\s*<SiteAvatar/.test(sr.replace(/\n\s*/g, ' ')),'the collapsed site spark renders the real SiteAvatar');
