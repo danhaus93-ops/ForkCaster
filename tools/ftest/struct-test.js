@@ -843,5 +843,29 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/onClick=\{logInjection\}/.test(calRow),'the calendar copy exists only behind the daily-pill gate');
 }
 
+
+// v0.9.140: EVERY card on an arrangeable tab must be a direct flex item. Two Today cards were not —
+// one lived in a clickable margin wrapper my transparency pass skipped because it carried a handler,
+// one in a bare div — so drags computed positions the layout then ignored, differently per card.
+{
+  const AR=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const tabs=[['Today','const renderToday = () => {'],['Body','{tab === "body" && <div style={{'],['GLP-1','const renderGlp = () => (']];
+  for (const [name, probe] of tabs) {
+    const i=AR.indexOf(probe);
+    const end=AR.indexOf('\n  const render', i + 20);
+    const blk=AR.slice(i, end > i ? end : i + 60000);
+    let bad=0;
+    const re=/\bcard\(/g; let mm;
+    while ((mm = re.exec(blk))) {
+      const pre = blk.slice(Math.max(0, mm.index - 70), mm.index).replace(/\s+/g, ' ');
+      // a card can also be the return of an IIFE whose invocation is the direct child — the
+      // wrapper check then applies to the IIFE, which the "return card(" form denotes
+      const isReturn = /return\s*$/.test(pre);
+      if (!isReturn && !/display: "contents" \}\}>\{\s*$/.test(pre)) bad++;
+    }
+    ok(bad === 0, name + ': every card is a direct flex item (' + bad + ' wrapped)');
+  }
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

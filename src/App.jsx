@@ -3523,7 +3523,7 @@ export default function App() {
 
         {/* THE LADDER. Every number in this app came from one of these five, and they are not equally
             exact. Naming the tier is how the app stays honest about its own inputs. */}
-        <div style={{ marginBottom: 10 }} onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }}>{card(<>
+        <div style={{ display: "contents" }}>{card(<div onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ cursor: "pointer" }}><>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             {sectionTitle("Log a meal", C.muted)}
             <span style={{ display: "flex", gap: 6, marginTop: -8 }}>
@@ -3536,7 +3536,7 @@ export default function App() {
               <span style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 8px", color: tone, border: `1px solid ${tone}55`, whiteSpace: "nowrap", textTransform: "uppercase" }}>{tier}</span>
             </div>))}
           <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>Trends beat single meals. Snap labels when you can.</div>
-        </>)}</div>
+        </></div>)}</div>
 
         {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -3570,7 +3570,7 @@ export default function App() {
           <div style={{ fontSize: 13.5, color: C.muted, marginTop: 10, lineHeight: 1.5 }}>{wk7[0] && wk7[0].dose ? "Shot day — lighter, low-fat and carb-forward keeps it down." : wk7[0] && wk7[0].after ? "Day after the shot — targets ease; eat slowly and lead with protein." : doseDay ? `Next shot lands on ${doseDayLong}. Targets ease that day and the one after.` : "Set your injection day on the GLP-1 tab and the week syncs to it."}</div>
         </>)}</div>
 
-        <div>{card(<>
+        <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             {sectionTitle("Activity", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: syn > 0 ? C.go : C.faint, border: `1px solid ${syn > 0 ? C.go + "55" : C.hair}`, background: syn > 0 ? C.go + "1A" : "transparent" }}>{syn > 0 ? (prefs.stepSource || "SYNCED") : "NOT SYNCED"}</span>
@@ -4861,7 +4861,7 @@ export default function App() {
           </>)}</div>
       )}
 
-      {card(
+      <div style={{ display: "contents" }}>{card(
         <>
           {sectionTitle("Side-effect journal")}
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -4895,7 +4895,7 @@ export default function App() {
             spark: se.length ? (<svg width="92" height="32" viewBox="0 0 92 32">
               {se.slice(-7).map((x, i) => { const h = 6 + (rank[String(x.severity || "").toLowerCase()] || 1) * 7;
                 return <rect key={i} x={4 + i * 13} y={28 - h} width="9" height={h} rx="2" fill={C.caution} opacity="0.8" />; })}
-            </svg>) : null }; })())}
+            </svg>) : null }; })())}</div>
     </div>
   );
 
