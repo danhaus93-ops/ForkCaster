@@ -740,23 +740,28 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 
 
-// v0.9.132: hold-to-drag, every card, three tabs.
+// v0.9.133: the drag faults. Each of these was a silent no-op or an iOS default fighting the
+// gesture, and each is now a measurement rather than an assumption.
 {
-  const AM=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  ok(/const ARRANGE_TABS = \["today", "body", "glp"\]/.test(AM),'Today, Body and GLP-1 are arrangeable');
-  ok(/const \[dragId, setDragId\]/.test(AM) && /const \[liveOrder, setLiveOrder\]/.test(AM),'a card can be in the air with a live order beneath it');
-  ok(/onPointerDown=\{arrangeable/.test(AM),'the whole card starts the hold, not just a collapsed row');
-  ok(/setTimeout\(\(\) => \{\s*setArrangeTab\(tab\); setDragId\(id\)/.test(AM.replace(/\n\s*/g,' ')),'holding lifts the card straight into a drag');
-  ok(/transform: lifted \? `translateY\(\$\{dragDy\}px\) scale\(1\.03\)`/.test(AM),'the held card pops out and follows the finger');
-  ok(/r\.top \+ r\.height \/ 2/.test(AM),'the drop slot is decided by real card midpoints');
-  ok(/const endDrag = \(\) => \{[\s\S]{0,200}setPrefs/.test(AM),'dropping commits the order to prefs');
-  ok(!/moveCard\(/.test(AM),'the arrows are gone');
-  ok(!/use the arrows/.test(AM),'the caption is gone');
-  ok(/const _cardId = \(vd, children, seq\)/.test(AM),'every card has an id, not just the collapsible ones');
-  ok(/_firstText\(children, 0\)/.test(AM),'ids come from the card\'s own heading, so they survive a card appearing or vanishing');
-  ok(/return at >= 0 \? at : 100 \+ _seq0;/.test(AM),'a card with no saved position keeps its source order');
-  ok((AM.match(/display: "flex", flexDirection: "column"/g) || []).length >= 4,'all three tabs render their cards in a flex column');
-  ok(/prefs,/.test(AM.slice(AM.indexOf('const stateBlob'), AM.indexOf('const stateBlob')+400)),'the order rides the state blob');
+  const AN=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const ARRANGE_TABS = \["today", "body", "glp"\]/.test(AN),'Today, Body and GLP-1 are arrangeable');
+  // order only takes effect inside a flex column — Today was not one, so every drag there did nothing
+  ok(/const renderToday[\s\S]{0,4000}?return \(\s*<div style=\{\{[^}]*flexDirection: "column"/.test(AN),'Today renders its cards in a flex column');
+  ok(AN.includes('const renderBody = () => (\n    <div style={{ padding: "0 18px 12px", display: "flex", flexDirection: "column" }}>'),'Body does too');
+  ok(AN.includes('const renderGlp = () => (\n    <div style={{ padding: "18px 18px 12px", display: "flex", flexDirection: "column" }}>'),'and GLP-1');
+  // a card inside a wrapper is not a flex child, so it cannot move
+  ok(!/<div style=\{\{ marginBottom: \d+ \}\}>\s*\{?\s*card\(/.test(AN),'no card is trapped inside a spacing wrapper');
+  ok((AN.match(/<div style=\{\{ display: "contents" \}\}>/g) || []).length >= 25,'those wrappers are transparent instead');
+  // making them transparent removed the spacing they used to provide
+  ok(/marginBottom: _cmp \? 9 : 14/.test(AN),'the card supplies its own spacing now the wrapper cannot');
+  // iOS raises a selection callout on a long press unless told not to
+  ok(/WebkitTouchCallout: arrangeable/.test(AN),'holding a card does not raise the selection callout');
+  ok(/WebkitUserSelect: arrangeable/.test(AN),'and selects no text');
+  ok(/lifted \? "none" : "pan-y"/.test(AN),'the page still scrolls until a card is actually lifted');
+  ok(/setLiveOrder\(null\); setArrangeTab\(null\);/.test(AN),'dropping ends the session — there is no Done step');
+  ok(!/>Done<\/button>/.test(AN),'and no bar at the bottom');
+  ok(/transform: lifted \? `translateY\(\$\{dragDy\}px\) scale\(1\.03\)`/.test(AN),'the held card lifts and follows the finger');
+  ok(/r\.top \+ r\.height \/ 2/.test(AN),'the drop slot comes from real card midpoints');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

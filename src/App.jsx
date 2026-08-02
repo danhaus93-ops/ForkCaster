@@ -1625,7 +1625,7 @@ export default function App() {
   };
   const endDrag = () => {
     if (liveOrder) setPrefs({ ...prefs, cardOrder: { ...(prefs.cardOrder || {}), [tab]: liveOrder } });
-    setDragId(null); setDragDy(0); setLiveOrder(null);
+    setDragId(null); setDragDy(0); setLiveOrder(null); setArrangeTab(null);
   };
   const rowsRef = useRef({});
   // v0.9.119: card children are re-registered every render and the sheet reads them from here.
@@ -3075,13 +3075,16 @@ export default function App() {
       }) : undefined}
       onPointerUp={arrangeable ? (() => { clearTimeout(holdRef.current); if (dragId === id) endDrag(); }) : undefined}
       onPointerCancel={arrangeable ? (() => { clearTimeout(holdRef.current); if (dragId === id) endDrag(); }) : undefined}
-      style={{ background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface,
+      style={{ marginBottom: _cmp ? 9 : 14,
+        background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface,
         border: `1px solid ${lifted ? C.go : C.hair}`, borderRadius: _cmp ? 15 : 18, padding: _cmp ? 12 : 16,
         boxShadow: lifted ? `0 18px 40px rgba(0,0,0,.55), 0 0 0 1px ${C.go}55` : (C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none"),
         transform: lifted ? `translateY(${dragDy}px) scale(1.03)` : (arming ? "scale(0.99)" : "none"),
         transition: lifted ? "none" : "transform .16s ease, box-shadow .16s ease",
         zIndex: lifted ? 40 : undefined, position: lifted ? "relative" : undefined,
-        touchAction: arming ? "none" : undefined,
+        touchAction: arrangeable ? (lifted ? "none" : "pan-y") : undefined,
+        WebkitUserSelect: arrangeable ? "none" : undefined, userSelect: arrangeable ? "none" : undefined,
+        WebkitTouchCallout: arrangeable ? "none" : undefined,
         ...extra }}>{children}</div>);
   };
   const card = (children, extra = {}, vd = null) => {
@@ -3431,12 +3434,12 @@ export default function App() {
       ["Water", fmtVol(eaten.waterOz) + " " + volU, targets.waterOz ? "of " + fmtVol(targets.waterOz) : "", ""],
     ];
     return (
-      <div style={{ padding: "18px 18px 12px" }}>
+      <div style={{ padding: "18px 18px 12px" , display: "flex", flexDirection: "column"}}>
         <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Today</div>
         <div style={{ fontSize: 15, color: C.muted, marginBottom: 14 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{(() => { const k = todayISO(), plain = dayKeyAt(Date.now(), { rolloverHour: prefs.rolloverHour }); return k !== plain ? <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 800, color: C.violet, border: `1px solid ${C.violet}55`, borderRadius: 20, padding: "3px 9px" }}>NIGHT DAY · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short" })}</span> : null; })()}</div>
         {/* PROTEIN LEADS. The contract names it the one lever that decides whether the weight
             coming off is fat or muscle, so it gets the hero and everything else compresses. */}
-        <div style={{ marginBottom: 10 }}>{card(<>
+        <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             {sectionTitle("Protein · your lead lever", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: pTone, border: `1px solid ${pTone}55`, background: pTone + "1A" }}>{pPct}% OF FLOOR</span>
@@ -3452,7 +3455,7 @@ export default function App() {
           <div style={{ fontSize: 13.5, color: C.muted, marginTop: 9, lineHeight: 1.5 }}>{pGap > 0 ? `${pGap}g short. A shake or a palm of chicken closes most of it.` : "Floor met. This is the day that protects the muscle."}</div>
         </>, { borderLeft: `2.5px solid ${pTone}` })}</div>
 
-        <div style={{ marginBottom: 10 }}>{card(<>
+        <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
             {sectionTitle("Counters", C.muted)}
             <span onClick={() => openQuick("calories", "Calories", "")} style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.go, cursor: "pointer", marginTop: -8 }}>Set / add</span>
@@ -3485,7 +3488,7 @@ export default function App() {
           <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>Trends beat single meals. Snap labels when you can.</div>
         </>)}</div>
 
-        {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ marginBottom: 10 }}>{card(<>
+        {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             {sectionTitle("Logged today", C.muted)}
             <span onClick={() => openQuick("calories", "Calories", "")} style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.go, cursor: "pointer", marginTop: -8 }}>+ Quick add</span>
@@ -3502,7 +3505,7 @@ export default function App() {
 
         {/* THE SHOT DRIVES THE WEEK. Dose days and the day after get eased targets, so the week
             has to show where the shot falls — otherwise an eased day reads as a missed day. */}
-        <div style={{ marginBottom: 10 }}>{card(<>
+        <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             {sectionTitle("Your week · dose sync", C.muted)}
             {!doseDay && <span style={{ fontFamily: DATA, fontSize: 11, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.faint, border: `1px solid ${C.hair}`, whiteSpace: "nowrap" }}>NO SHOT DAY SET</span>}
@@ -3670,7 +3673,7 @@ export default function App() {
           {(() => { const rd = readinessRead((healthSync && healthSync.days) || [], glp.doseLog, workoutLog, rhrRead((healthSync && healthSync.days) || [], glp.doseLog), sleepRead((healthSync && healthSync.days) || [], glp.doseLog), todayISO());
             if (rd.status !== "ok") return null;
             const BC = { STRONG: C.go, MODERATE: C.caution, GENTLE: C.blue }[rd.band];
-            return (<div style={{ marginBottom: 10 }}>{card(<>
+            return (<div style={{ display: "contents" }}>{card(<>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 {sectionTitle("Readiness", C.muted)}
                 <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: BC, border: `1px solid ${BC}55`, background: BC + "1A" }}>{rd.band}</span>
@@ -3703,7 +3706,7 @@ export default function App() {
               </div>
               <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.5, borderTop: `1px solid ${C.hair}`, paddingTop: 9 }}>{rd.note}</div>
             </>, { borderLeft: `2.5px solid ${BC}` })}</div>); })()}
-          {fuel && <div style={{ marginBottom: 10 }}>{card(<>
+          {fuel && <div style={{ display: "contents" }}>{card(<>
             {sectionTitle("Fuel guard", C.caution)}
             <div style={{ fontSize: 14.5, color: C.caution, fontWeight: 700, lineHeight: 1.5 }}>{fuel}</div>
           </>, { borderLeft: `2.5px solid ${C.caution}` })}</div>}
@@ -3717,7 +3720,7 @@ export default function App() {
             const down = foci.includes("leg") || foci.includes("lower")
               ? ["Couch stretch 45s", "Hamstring fold 45s", "Child's pose 45s"]
               : ["Doorway pec 45s", "Lat hang 30s", "Child's pose 45s"];
-            const row = (title, list) => (<div style={{ marginBottom: 10 }}>{card(<>
+            const row = (title, list) => (<div style={{ display: "contents" }}>{card(<>
               {sectionTitle(title, C.muted)}
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                 {list.map((m) => (<span key={m} style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 0.8, color: C.ink2, border: `1px solid ${C.hair}`, background: "rgba(255,255,255,0.03)", borderRadius: 999, padding: "7px 13px" }}>{m}</span>))}
@@ -4042,7 +4045,7 @@ export default function App() {
         spark: _spark(((healthSync && healthSync.days) || []).filter((d) => d.bodyFatPct != null).slice(-10).map((d) => d.bodyFatPct), "#3D7FD6"),
       })}</div>
 
-      <div style={{ marginBottom: 14 }}>{card(
+      <div style={{ display: "contents" }}>{card(
         <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {sectionTitle("Body stats")}
@@ -4053,7 +4056,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Waist (${isMetric ? "cm" : "in"})`, fmtLen(body.waist), (v) => setBody({ ...body, waist: parseLen(v) }))}{body.sex === "female" ? numField(`Hip (${isMetric ? "cm" : "in"})`, fmtLen(body.hip), (v) => setBody({ ...body, hip: parseLen(v) })) : numField(`Goal weight (${wtU})`, +fmtWt(goalWeight, 0), (v) => setGoalWeight(parseWt(v)))}</div>
         </>)}</div>
 
-      <div style={{ marginBottom: 14 }}>{card(<>
+      <div style={{ display: "contents" }}>{card(<>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {sectionTitle("Prescriber report")}
           <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>8 SECTIONS</span>
@@ -4136,7 +4139,7 @@ export default function App() {
       <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Medication · titration · tolerability</div>
       {/* v0.9.81: the stages belong with the medication, not the scale. Ramp-up, active loss and the
           off-ramp are things the DRUG does to you over months — the Body tab measures, this narrates. */}
-      <div style={{ marginBottom: 14 }}>{card(
+      <div style={{ display: "contents" }}>{card(
         <>
           {sectionTitle("Your journey · stages", C.violet)}
           <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
@@ -4205,7 +4208,7 @@ export default function App() {
           ask: "Your measured markers are in. How is appetite between meals?",
         }[cp.status];
         return (<>
-          <div style={{ marginBottom: 14 }}>{card(<div>
+          <div style={{ display: "contents" }}>{card(<div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {sectionTitle(protoEdit ? "Your protocol · editor" : "Your protocol", C.muted)}
@@ -4373,7 +4376,7 @@ export default function App() {
                 <rect x="0" y="12" width="92" height="8" rx="4" fill={C.surfaceAlt} />
                 <rect x="0" y="12" width={Math.max(3, 92 * pct)} height="8" rx="4" fill={held >= need ? C.go : C.caution} /></svg>) }; })())}</div>
 
-          <div style={{ marginBottom: 14 }}>{card(<div>
+          <div style={{ display: "contents" }}>{card(<div>
             {(() => { // v0.9.70: the fat-ceiling engine finally gets its card
               const fr = doseResponseRead(mealLog, glp);
               const A9 = fr.status === "ok";
@@ -4441,7 +4444,7 @@ export default function App() {
       })()}
 
 
-      <div style={{ marginBottom: 14 }}>{card(
+      <div style={{ display: "contents" }}>{card(
         <>
           {(() => {
             const curForm = medObj && medObj.cadence === "daily" ? "oral" : "inj";
@@ -4480,7 +4483,7 @@ export default function App() {
         </>)}</div>
 
       {!medObj.investigational && (
-        <div style={{ marginBottom: 14 }}>{card(
+        <div style={{ display: "contents" }}>{card(
           <>
             {sectionTitle("Titration ladder")}
             <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<button key={s} onClick={() => setGlp({ ...glp, dose: s, lastDoseChangeWk: 0 })} style={{ flex: 1, textAlign: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontFamily: DATA, fontSize: 13, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint }}>{s} <span style={{ fontSize: 10.5, color: C.faint }}>mg</span></div></button>); })}</div>
@@ -4489,12 +4492,12 @@ export default function App() {
           </>)}</div>
       )}
 
-      <div style={{ marginBottom: 14 }}>{card(
+      <div style={{ display: "contents" }}>{card(
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div><div style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted }}>{medObj && medObj.cadence === "daily" ? "Next dose" : "Next injection"}</div><div style={{ fontFamily: DATA, fontSize: 28, fontWeight: 700, color: C.ink }}>{daysToInjection <= 0 ? "Today" : `${daysToInjection} day${daysToInjection > 1 ? "s" : ""}`}</div><div style={{ fontSize: 14, color: C.faint }}>{nextInjection.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}</div><div style={{ fontSize: 13, color: C.faint, marginTop: 3 }}>{glp.lastInjection ? `Last dose: ${fmtDate(glp.lastInjection)}${glp.dose ? ` · ${glp.dose} mg` : ""} · week ${glp.weeksOn}` : (medObj && medObj.cadence === "daily" ? "No dose logged yet — tap Log dose after your pill" : "No dose logged yet — tap Log dose after your injection")}</div></div>
           <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.bg, border: "none", borderRadius: 999, padding: "12px 20px", fontFamily: DATA, fontWeight: 800, fontSize: 14, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 16px ${(doseLogged ? C.go : C.violet)}44` }}>{doseLogged ? "Logged ✓" : "Log dose"}</button>
         </div>, { borderLeft: `2.5px solid ${C.violet}` })}</div>
-      {(!medObj || medObj.cadence !== "daily") && <div style={{ marginBottom: 14 }}>{card(<>
+      {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
         <div style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase", color: C.muted, marginBottom: 8 }}>Dose day{(prefs.injIntervalDays || 7) !== 7 ? <span style={{ textTransform: "none", color: C.faint }}> — applies to weekly schedules (yours is every {prefs.injIntervalDays} days)</span> : null}</div>
         <div style={{ display: "flex", gap: 6 }}>
           {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
@@ -4721,7 +4724,7 @@ export default function App() {
       })()}
 
 
-      {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ marginBottom: 14 }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
+      {(glp.sideEffects || []).length >= 3 && (glp.doseLog || []).length > 0 && <div style={{ display: "contents" }}>{card(<SymptomPatterns C={C} sideEffects={glp.sideEffects} doseLog={glp.doseLog} />)}</div>}
       {(() => { const t = titrationRead(glp.doseLog, glp.med); if (!t) return null; return (
         <div style={{ display: "contents" }}>{card(
           <>
@@ -4756,7 +4759,7 @@ export default function App() {
                 {Array.from({ length: Math.min(6, holdWk) }, (_, i) => (
                   <circle key={i} cx={8 + i * 16} cy="16" r="5.5" fill={i < runN ? C.go : "none"} stroke={C.go} strokeWidth="1.4" opacity={i < runN ? 1 : 0.4} />))}
               </svg>) }; })())}</div>); })()}
-      <div style={{ marginBottom: 14 }}>{card(
+      <div style={{ display: "contents" }}>{card(
         <>
           {sectionTitle("On-med nudges", C.violet)}
           {[
@@ -4768,7 +4771,7 @@ export default function App() {
           ))}
         </>)}</div>
 
-      <div style={{ marginBottom: 14 }}>{card(
+      <div style={{ display: "contents" }}>{card(
         <>
           {sectionTitle("Projection")}
           <div style={{ display: "flex", gap: 14, alignItems: "baseline" }}>
@@ -4779,7 +4782,7 @@ export default function App() {
         </>)}</div>
 
       {fatCorrelation && (
-        <div style={{ marginBottom: 14 }}>{card(
+        <div style={{ display: "contents" }}>{card(
           <>
             {sectionTitle("Symptom ↔ food pattern", C.violet)}
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -5359,12 +5362,6 @@ export default function App() {
         {/* v0.9.124: the sheet sits at 50, not 70. It is a PAGE — it must cover the sticky header at
             45 and nothing else. Every modal (log, settings, Body Forecaster, info) is 60 or above, so a
             sheet above them meant a card opened from a sheet launched its modal invisibly behind it. */}
-        {arrangeTab && (
-          <div style={{ position: "fixed", left: 0, right: 0, bottom: "calc(74px + env(safe-area-inset-bottom, 0px))", zIndex: 55, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-            <div style={{ pointerEvents: "auto", display: "flex", alignItems: "center", gap: 12, background: C.surfaceAlt, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "9px 10px", boxShadow: "0 8px 22px rgba(0,0,0,.45)" }}>
-              <button onClick={() => setArrangeTab(null)} style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>Done</button>
-            </div>
-          </div>)}
         {sheetCard && (
           <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 50, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>

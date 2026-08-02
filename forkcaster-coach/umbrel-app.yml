@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.132"
+version: "0.9.133"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Press and hold any card on Today, Body or GLP-1 and it lifts off the page. Drag it
-  where you want and let go. Every card moves, not just the collapsed ones, and the
-  order is kept per tab on your node.
+  Dragging works on all three tabs now, for every card. Holding no longer pops up the
+  copy and look-up bar, the cards have their spacing back, and letting go of a card
+  finishes the job — there is no bar at the bottom any more.
 dependencies: []
 path: ""
 defaultUsername: ""
