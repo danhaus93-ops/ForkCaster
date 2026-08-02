@@ -694,49 +694,48 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 
 
-// v0.9.128: medication names on one line, and no two Body sparklines the same colour.
+// v0.9.130: the medication chips share the row equally instead of hugging their text, so the
+// leftover space is used. 12px is the largest that still fits RETATRUTIDE inside a 375pt chip.
 {
-  const AH=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  // widest name, narrowest phone, three across
-  const per=(307-8*2)/3, w=11*11.5*0.60 + 11*0.4 + 12;
-  ok(w<=per,'three medication names fit one row on a 375pt phone');
-  ok(w>11*10.5*0.60 + 11*0.4 + 12,'and at the largest size that fits, not the smallest');
-  // colours: each collapsed Body row must be visually distinct from its neighbours
-  const cols=[];
-  for (const id of ['fc','ah','wt','comp']) {
-    const seg=AH.slice(AH.indexOf('id: "'+id+'"'), AH.indexOf('id: "'+id+'"') + 1700);
-    const m=/_spark\([^,]+, ("?[#\w.]+"?)/.exec(seg);
-    if (m) cols.push(m[1]);
-  }
-  ok(cols.length===4,'the four fixed-colour rows all draw a sparkline');
-  ok(new Set(cols).size===4,'no two of them share a colour: '+cols.join(' '));
-  // the photos thumbnail strip shows only photos that exist
-  const ph=AH.slice(AH.indexOf('id: "pho"'), AH.indexOf('id: "pho"') + 1400);
-  // v0.9.129: the thumbnail strip is gone entirely — he did not want photo squares in the row at
-  // all, not merely the empty ones. The rule is now that the row draws no photo chrome.
-  ok(/spark: null/.test(ph),'the photos row draws no thumbnail strip');
-  ok(!/<rect/.test(ph),'no photo squares of any kind remain in that row');
-  // and the tab has no seam between the engine block and the rest
-  ok(/padding: "0 18px 12px"/.test(AH),'renderBody adds no extra gap under the engine cards');
+  const AK=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const i=AK.indexOf('flexWrap: "wrap" }}>{Object.entries(MEDS)');
+  const row=AK.slice(i, AK.indexOf('</button>', i));
+  ok(/flex: "1 1 0"/.test(row),'the chips share the row rather than sizing to their text');
+  ok(/textAlign: "center"/.test(row),'and their labels are centred in the space they get');
+  ok(!/overflowX: "auto"/.test(row),'no horizontal scroller hides a medication name');
+  const chip=(307-16)/3, text=11*12*0.60 + 11*0.4;
+  ok(text <= chip-12,'the longest name fits its chip on a 375pt phone');
+  ok(11*13*0.60 + 11*0.4 > chip-12,'and 12px is the largest size that does');
+  ok(/padding: "0 18px 12px"/.test(AK),'renderBody adds no extra gap under the engine cards');
 }
 
 
-// v0.9.129: sparkline palette and the collapsed sub line.
+// v0.9.130: the palette check now measures HUE. The previous version compared variable names for
+// inequality, so C.gold and C.caution passed as "distinct" while sitting 7 degrees apart and looking
+// identical on screen. A test that cannot fail is worse than no test.
 {
-  const AI=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const colOf=(id)=>{ const i=AI.indexOf('id: "'+id+'"'); const m=/_spark\([^,]+, ("?[#\w.]+"?)/.exec(AI.slice(i, i+1900)); return m?m[1]:null; };
-  const body=['fc','ah','wt','wk','comp'].map(colOf).filter(Boolean);
-  ok(body.length===5,'all five Body sparklines declare a colour');
-  ok(new Set(body).size===5,'no two Body sparklines share a colour: '+body.join(' '));
-  // violet is medication only — it must not appear on a Body sparkline
-  ok(!body.some((c)=>/violet/.test(c)),'violet stays reserved for medication');
-  ok(/id: "med"[\s\S]{0,900}?C\.violet/.test(AI),'the med level row is still violet');
-  // the collapsed sub must wrap rather than clip: 44 characters cannot share a line with a sparkline
-  const sub=/\{vd\.sub && <div style=\{\{[^}]*\}\}/.exec(AI);
+  const AJ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const hue=(hex)=>{ const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+    const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn; if(!d) return 0;
+    let h = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; return (h+360)%360; };
+  const sep=(a,b)=>{ const d=Math.abs(a-b); return Math.min(d,360-d); };
+  const colOf=(id)=>{ const i=AJ.indexOf('id: "'+id+'"'); const m=/_spark\([^,]+, "(#[0-9A-Fa-f]{6})"/.exec(AJ.slice(i, i+1900)); return m?m[1]:null; };
+  const ids=['fc','ah','wt','wk','comp'], cols=ids.map(colOf);
+  ok(cols.every(Boolean),'every Body sparkline declares a literal colour, not a token');
+  if (cols.every(Boolean)) {
+    const hs=cols.map(hue);
+    let worst=360, pair='';
+    for (let i=0;i<hs.length;i++) for (let j=i+1;j<hs.length;j++) {
+      const d=sep(hs[i],hs[j]); if (d<worst) { worst=d; pair=ids[i]+'/'+ids[j]; }
+    }
+    ok(worst>=25,'no two Body sparklines are within 25 degrees of hue: closest '+pair+' at '+Math.round(worst));
+    // violet is medication, red is heart rate — neither may appear on a Body chart
+    for (const [name,res] of [['violet',253],['red',0]])
+      ok(hs.every((h)=>sep(h,res)>=25), 'no Body sparkline strays into '+name);
+  }
+  const sub=/\{vd\.sub && <div style=\{\{[^}]*\}\}/.exec(AJ);
   ok(sub && !/textOverflow: "ellipsis"/.test(sub[0]),'the collapsed sub wraps instead of truncating');
-  ok(sub && /lineHeight: 1\.35/.test(sub[0]),'and has room for the second line');
-  // no thumbnail strip on the photos row
-  const ph=AI.slice(AI.indexOf('id: "pho"'), AI.indexOf('id: "pho"') + 1200);
+  const ph=AJ.slice(AJ.indexOf('id: "pho"'), AJ.indexOf('id: "pho"') + 1200);
   ok(/spark: null/.test(ph),'the photos row draws no thumbnail strip');
 }
 

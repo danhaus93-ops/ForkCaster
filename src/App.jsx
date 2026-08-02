@@ -3854,7 +3854,7 @@ export default function App() {
                   leanShown != null ? `${leanShown.toFixed(0)} lb lean held` : null,
                   _toGo != null && _toGo > 0 ? `${_toGo.toFixed(1)} to goal` : null].filter(Boolean).join(" · "),
             subTone: C.go,
-            spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.go) }; })())}</div>);
+            spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), "#3BDF93") }; })())}</div>);
       })()}
       <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />, {}, (() => {
         const _wa = weekAdherence(mealLog, targets.protein);
@@ -3863,7 +3863,7 @@ export default function App() {
           color: C.go, title: "This week", when: `${_wa.loggedDays}/7 logged`,
           value: _adh != null ? String(_adh) : "—", unit: _adh != null ? "% protein adherence" : "not enough logged",
           sub: `${_wa.loggedDays} of 7 days with food logged`, subTone: C.faint,
-          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), C.caution) }; })())}</div>
+          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), "#F0B455") }; })())}</div>
 
 
 
@@ -3936,7 +3936,7 @@ export default function App() {
         when: bfMeasured ? "Measured" : "Estimated",
         value: bfShown != null ? bfShown.toFixed(1) : "—", unit: "% body fat",
         sub: `${leanShown != null ? `${leanShown.toFixed(0)} lb lean` : "lean unknown"}${bmi ? ` · ${bmi.toFixed(1)} BMI` : ""}`,
-        spark: _spark(((healthSync && healthSync.days) || []).filter((d) => d.bodyFatPct != null).slice(-10).map((d) => d.bodyFatPct), C.blue),
+        spark: _spark(((healthSync && healthSync.days) || []).filter((d) => d.bodyFatPct != null).slice(-10).map((d) => d.bodyFatPct), "#3D7FD6"),
       })}</div>
 
       <div style={{ marginBottom: 14 }}>{card(
@@ -4351,7 +4351,7 @@ export default function App() {
               <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", padding: "8px 6px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "1 1 0", minWidth: 0, padding: "8px 6px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
             </>);
           })()}
           {medObj.investigational ? (
@@ -5064,7 +5064,7 @@ export default function App() {
               id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
               sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
-              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.gold),
+              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), "#C7E04A"),
             } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
               value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {
