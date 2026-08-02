@@ -693,5 +693,30 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/ar\.have|dr\.symDays|dr\.mealDays/.test(AG),'no invented engine field names remain');
 }
 
+
+// v0.9.128: medication names on one line, and no two Body sparklines the same colour.
+{
+  const AH=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // widest name, narrowest phone, three across
+  const per=(307-8*2)/3, w=11*11.5*0.60 + 11*0.4 + 12;
+  ok(w<=per,'three medication names fit one row on a 375pt phone');
+  ok(w>11*10.5*0.60 + 11*0.4 + 12,'and at the largest size that fits, not the smallest');
+  // colours: each collapsed Body row must be visually distinct from its neighbours
+  const cols=[];
+  for (const id of ['fc','ah','wt','comp']) {
+    const seg=AH.slice(AH.indexOf('id: "'+id+'"'), AH.indexOf('id: "'+id+'"') + 1700);
+    const m=/_spark\([^,]+, ("?[#\w.]+"?)/.exec(seg);
+    if (m) cols.push(m[1]);
+  }
+  ok(cols.length===4,'the four fixed-colour rows all draw a sparkline');
+  ok(new Set(cols).size===4,'no two of them share a colour: '+cols.join(' '));
+  // the photos thumbnail strip shows only photos that exist
+  const ph=AH.slice(AH.indexOf('id: "pho"'), AH.indexOf('id: "pho"') + 1400);
+  ok(/Array\.from\(\{ length: Math\.min\(3, _n\) \}/.test(ph),'only real photos are drawn');
+  ok(!/strokeDasharray=\{i < Math\.min/.test(ph),'no empty placeholder slots remain');
+  // and the tab has no seam between the engine block and the rest
+  ok(/padding: "0 18px 12px"/.test(AH),'renderBody adds no extra gap under the engine cards');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

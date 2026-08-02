@@ -3752,7 +3752,7 @@ export default function App() {
     );
   };
   const renderBody = () => (
-    <div style={{ padding: "18px 18px 12px" }}>
+    <div style={{ padding: "0 18px 12px" }}>
 
       {(() => { // v0.9.63: Path to your forecast — the EXISTING goalContract engine wearing the mock's
         // design, with the weight graph + logged entries folded in (his markup: one weight card, not two)
@@ -3863,7 +3863,7 @@ export default function App() {
           color: C.go, title: "This week", when: `${_wa.loggedDays}/7 logged`,
           value: _adh != null ? String(_adh) : "—", unit: _adh != null ? "% protein adherence" : "not enough logged",
           sub: `${_wa.loggedDays} of 7 days with food logged`, subTone: C.faint,
-          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), C.go) }; })())}</div>
+          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), _adh == null ? C.faint : _adh >= 80 ? C.go : C.caution) }; })())}</div>
 
 
 
@@ -3977,8 +3977,7 @@ export default function App() {
             value: String(_n), unit: _n === 1 ? "photo" : "photos",
             sub: _n ? "never uploaded · feeds the Forecaster" : "front and back help the Forecaster",
             spark: _n ? (<svg width="92" height="32" viewBox="0 0 92 32">
-              {[0, 1, 2].map((i) => (<rect key={i} x={4 + i * 30} y="2" width="26" height="28" rx="3"
-                fill={i < Math.min(2, _n) ? C.surfaceAlt : "none"} stroke={i < Math.min(2, _n) ? "none" : C.hair} strokeDasharray={i < Math.min(2, _n) ? undefined : "2 2"} />))}
+              {Array.from({ length: Math.min(3, _n) }, (_, i) => (<rect key={i} x={92 - (Math.min(3, _n) - i) * 30} y="2" width="26" height="28" rx="3" fill={C.surfaceAlt} />))}
             </svg>) : null }; })())}
 
     </div>
@@ -4354,7 +4353,7 @@ export default function App() {
               <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", padding: "8px 10px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12.5, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "0 0 auto", padding: "8px 6px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
             </>);
           })()}
           {medObj.investigational ? (
@@ -5067,7 +5066,7 @@ export default function App() {
               id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
               sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
-              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.go),
+              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), C.violet),
             } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
               value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {
@@ -5121,7 +5120,7 @@ export default function App() {
                 value: avgSteps ? avgSteps.toLocaleString() : "—", unit: "avg steps/day",
                 sub: [lastW ? `${fmtWt(lastW.weightLbs, 1)} ${wtU} last synced` : null,
                       `${strengthWk}× strength this week`, _label].filter(Boolean).join(" · "),
-                spark: _spark(wk.map((d) => +d.steps || 0), C.blue) }; })());
+                spark: _spark(wk.map((d) => +d.steps || 0), "#67E8F9") }; })());
           })()}{(() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const strengthWk = hd.slice(-7).reduce((n, d) => n + (d.strength || 0), 0);
