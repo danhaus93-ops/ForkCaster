@@ -507,8 +507,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.105: the collapsed row and its sheet
 {
   const AA=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  ok(/setSheetCard\(\{ \.\.\.vd, children \}\)/.test(AA),'tapping a row opens the sheet with the card\'s OWN children');
-  ok(/\{sheetCard\.children\}/.test(AA),'the sheet renders those children — detail cannot drift from the summary');
+  // v0.9.119: children moved from state into a ref re-registered every render. Holding them in
+  // state froze the card at open time, so interactive cards — the injection map — went dead.
+  ok(/sheetKidsRef\.current\[vd\.id\] = children;/.test(AA),'every render re-registers the card\'s live children');
+  ok(/\{sheetKidsRef\.current\[sheetCard\.id\]\}/.test(AA),'the sheet renders the live children, not a captured copy');
+  ok(!/setSheetCard\(\{ \.\.\.vd, children \}\)/.test(AA),'children are never stored in state again');
   // v0.9.106: six GLP-1 cards now carry a verdict — three readings, three states.
   // distinct ids, not occurrences — a card may declare a verdict twice (empty state and normal).
   ok(new Set((AA.match(/id: "(?:med|rhr|sleep|cp|tit|se|site|cal)"/g) || [])).size === 8,'exactly eight GLP-1 cards carry a verdict');

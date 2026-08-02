@@ -1584,6 +1584,10 @@ export default function App() {
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
   const [sheetCard, setSheetCard] = useState(null);
+  // v0.9.119: card children are re-registered every render and the sheet reads them from here.
+  // Storing the children in state froze them: tapping a site called setPendingSite, the app
+  // re-rendered, and the sheet kept showing the copy captured at open time.
+  const sheetKidsRef = useRef({});
   const eatenDayRef = useRef(null);
   // v0.9.94: the instant the counters last changed. eatenDate alone could not be trusted because the
   // save stamped it with "now" on every write, so an autosave after midnight welded yesterday's
@@ -2991,8 +2995,9 @@ export default function App() {
     const dot = vd.tone === "none"
       ? <span style={{ width: 6.5, height: 6.5, borderRadius: 7, border: `1.5px solid ${C.faint}`, flexShrink: 0, boxSizing: "border-box" }} />
       : <span style={{ width: 6.5, height: 6.5, borderRadius: 7, background: vd.tone || C.go, flexShrink: 0 }} />;
+    sheetKidsRef.current[vd.id] = children;
     return cardShell(
-      <div onClick={() => setSheetCard({ ...vd, children })} style={{ cursor: "pointer" }}>
+      <div onClick={() => setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when })} style={{ cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
           {dot}
           <span style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
@@ -3367,8 +3372,7 @@ export default function App() {
             {sectionTitle("Log a meal", C.muted)}
             <span style={{ display: "flex", gap: 6, marginTop: -8 }}>
               <span style={{ fontFamily: DATA, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.caution, border: `1px solid ${C.caution}55`, background: C.caution + "1A" }}>ACCURACY LADDER</span>
-              <span style={{ fontFamily: DATA, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>TAP TO LOG</span>
-            </span>
+              </span>
           </div>
           {[["Barcode scan", "Most exact", C.go], ["Nutrition label photo", "Exact", C.go], ["Search USDA / Open Food Facts", "Good", C.muted], ["Photo estimate — snap your plate", "Estimate", C.caution], ["Describe it — AI estimate", "Least exact", C.caution]].map(([l, tier, tone], i) => (
             <div key={l} onClick={(ev) => { if (i === 1) { ev.stopPropagation(); labelRef.current && labelRef.current.click(); return; } setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none", cursor: "pointer" }}>
@@ -3398,7 +3402,7 @@ export default function App() {
         <div style={{ marginBottom: 10 }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             {sectionTitle("Your week · dose sync", C.muted)}
-            <span style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: doseDay ? C.go : C.faint, border: `1px solid ${doseDay ? C.go + "55" : C.hair}`, background: doseDay ? C.go + "1A" : "transparent", whiteSpace: "nowrap" }}>{doseDay ? `✓ SYNCED · SHOT ${doseDay}` : "NO SHOT DAY SET"}</span>
+            {!doseDay && <span style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.faint, border: `1px solid ${C.hair}`, whiteSpace: "nowrap" }}>NO SHOT DAY SET</span>}
           </div>
           <div style={{ display: "flex", gap: 5 }}>
             {wk7.map((d, i) => (
@@ -3434,7 +3438,7 @@ export default function App() {
             </div>); })()}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: `1px solid ${C.hair}`, gap: 8 }}>
             <div style={{ fontSize: 12, color: C.faint, lineHeight: 1.5, minWidth: 0 }}>Wearables · Apple Health · Garmin · Whoop · Fitbit</div>
-            <span style={{ fontFamily: DATA, fontSize: 10, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 8px", color: C.go, border: `1px solid ${C.go}55`, whiteSpace: "nowrap", textTransform: "uppercase" }}>Auto-syncing</span>
+            
           </div>
         </>)}</div>
       </div>
@@ -4073,7 +4077,7 @@ export default function App() {
               {rungs.map((r) => { const on = curMg != null && +r === +curMg; const done = curMg != null && +r < +curMg; return (
                 <div key={r} style={{ flex: 1 }}>
                   <div style={{ height: 6, borderRadius: 4, background: on || done ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
-                  <div style={{ fontFamily: DATA, fontSize: 12.5, marginTop: 6, fontWeight: on ? 700 : 500, color: on ? C.violet : C.faint }}>{r}</div>
+                  <div style={{ fontFamily: DATA, fontSize: 12.5, marginTop: 6, fontWeight: on ? 700 : 500, color: on ? C.violet : C.faint }}>{r} <span style={{ fontSize: 9.5, color: C.faint }}>mg</span></div>
                   {on && <div style={{ fontFamily: DATA, fontSize: 9.5, letterSpacing: 1, color: C.faint, marginTop: 2 }}>YOU ARE HERE</div>}
                 </div>); })}
             </div>
@@ -4339,7 +4343,7 @@ export default function App() {
         <div style={{ marginBottom: 14 }}>{card(
           <>
             {sectionTitle("Titration ladder")}
-            <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<button key={s} onClick={() => setGlp({ ...glp, dose: s, lastDoseChangeWk: 0 })} style={{ flex: 1, textAlign: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontFamily: DATA, fontSize: 12, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint }}>{s}</div></button>); })}</div>
+            <div style={{ display: "flex", gap: 6 }}>{medObj.steps.map((s) => { const done = s < glp.dose, cur = s === glp.dose; return (<button key={s} onClick={() => setGlp({ ...glp, dose: s, lastDoseChangeWk: 0 })} style={{ flex: 1, textAlign: "center", background: "none", border: "none", cursor: "pointer", padding: 0 }}><div style={{ height: 6, borderRadius: 3, background: done || cur ? C.violet : C.hair, opacity: done ? 0.5 : 1 }} /><div style={{ fontFamily: DATA, fontSize: 12, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint }}>{s} <span style={{ fontSize: 9.5, color: C.faint }}>mg</span></div></button>); })}</div>
             <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10, lineHeight: 1.4 }}>{medObj.note}</div>
             <div style={{ fontSize: 11.5, color: C.faint, marginTop: 6 }}>Tap a step to record the dose your prescriber directed — confirm every change with them.</div>
           </>)}</div>
@@ -5177,7 +5181,7 @@ export default function App() {
 
         {/* Bottom nav */}
         <div style={{ position: "fixed", bottom: 0, width: "100%", maxWidth: 430, background: C.dark ? "rgba(24,32,41,0.94)" : "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.hair}`, display: "flex", padding: "8px 6px calc(10px + env(safe-area-inset-bottom, 0px))" }}>
-          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0" }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 11.5, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
+          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => { if (t.id !== tab) { setQuick(null); setQuickVal(""); } setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0" }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 11.5, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
         </div>
 
         {/* Scan / log food sheet */}
@@ -5189,7 +5193,7 @@ export default function App() {
               {sheetCard.when && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 9.5, color: C.faint, letterSpacing: 0.6, textTransform: "uppercase" }}>{sheetCard.when}</span>}
             </div>
             {/* the SAME children the open card renders — one source, so the detail cannot drift */}
-            <div style={{ padding: "14px 16px calc(40px + env(safe-area-inset-bottom, 0px))" }}>{sheetCard.children}</div>
+            <div style={{ padding: "14px 16px calc(40px + env(safe-area-inset-bottom, 0px))" }}>{sheetKidsRef.current[sheetCard.id]}</div>
           </div>)}
         {logOpen && (
           <div onClick={() => setLogOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>

@@ -16,7 +16,9 @@ const MANIFEST = [
  "Approaching goal",
  "Ask about this menu… (swaps, carbs, drinks)",
  "Ask your coach…",
- "Auto-syncing",
+ // v0.9.119 RETIRED: the Auto-syncing pill. Each Activity cell already reads "synced" beneath its
+ // number and the source line names the wearables — three statements of one fact in a single card.
+ // The syncing did not go anywhere; only its third announcement did.
  "NOT SYNCED",
  "Back to current plan",
  "Backup (JSON)",
