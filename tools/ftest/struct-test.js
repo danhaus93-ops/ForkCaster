@@ -528,7 +528,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(new Set((AA.match(/id: "(?:med|rhr|sleep|cp|tit|se|site|cal)"/g) || [])).size === 8,'exactly eight GLP-1 cards carry a verdict');
   // v0.9.122: Body joins in — composition and photos. The forms, the report action and the
   // Forecaster's two renders stay whole; a card whose content IS an image cannot summarise itself.
-  ok(new Set((AA.match(/id: "(?:comp|pho)"/g) || [])).size === 2,'the two Body cards that earn a verdict have one');
+  ok(new Set((AA.match(/id: "(?:comp|pho|wt|wk)"/g) || [])).size === 4,'the four Body cards that earn a verdict have one');
+  // v0.9.123: adherence is computed once. WeeklyCard caps each day at its goal before averaging —
+  // a 300g day cannot pay for a 60g one — and the collapsed row must show that same number.
+  ok((AA.match(/function weekAdherence/g) || []).length === 1,'one adherence computation exists');
+  ok((AA.match(/= weekAdherence\(mealLog, /g) || []).length === 2,'the card and the row both call it');
+  ok(/Math\.min\(1, p \/ Math\.max\(1, proteinGoal\)\)/.test(AA),'each day is still capped at its goal');
   ok(!/id: "(?:stats|forecaster|prescriber)"/.test(AA),'the measurement form, the Forecaster and the report stay whole');
   // the collapsed composition row must say WHICH source, or it implies precision it may not have
   const cp3 = AA.slice(AA.indexOf('id: "comp"'), AA.indexOf('id: "comp"') + 600);
@@ -582,7 +587,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const AB=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const sh=AB.slice(AB.indexOf('{sheetCard && ('), AB.indexOf('{sheetCard && (') + 1400);
   ok(/env\(safe-area-inset-top/.test(sh),'the detail sheet header clears the notch');
-  ok(/env\(safe-area-inset-bottom/.test(sh),'the detail sheet body clears the home indicator');
+  ok(/env\(safe-area-inset-bottom/.test(AB.slice(AB.indexOf('{sheetCard && ('), AB.indexOf('{sheetCard && (') + 2000)),'the detail sheet body clears the home indicator');
   ok((AB.match(/padding: "20px 20px calc\(28px \+ env\(safe-area-inset-bottom/g) || []).length === 2,'both bottom sheets clear the home indicator');
 }
 
@@ -629,6 +634,21 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const sizes=(AD.match(/fontSize: ([0-9.]+)/g)||[]).map(x=>parseFloat(x.split(': ')[1]));
   ok(Math.min(...sizes)>=10.5,'the smallest type in the app is 10.5px');
   ok(sizes.filter(v=>v<10.5).length===0,'nothing renders below 10.5px anywhere in the app');
+}
+
+
+// v0.9.124: stacking. The detail sheet is a page and every modal must be able to open ON TOP of it.
+{
+  const AE=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const sheetZ=/zIndex: (\d+), overflowY: "auto", WebkitOverflowScrolling/.exec(AE);
+  ok(!!sheetZ,'the detail sheet declares a z-index');
+  const z=sheetZ?+sheetZ[1]:0;
+  ok(z>45,'the sheet covers the sticky header');
+  for (const m of ['logOpen','simOpen','settingsOpen']) {
+    const i=AE.indexOf('{'+m+' && (');
+    const mz=/zIndex: (\d+)/.exec(AE.slice(i, i+420));
+    ok(mz && +mz[1]>z, m+' opens above the sheet, not behind it');
+  }
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

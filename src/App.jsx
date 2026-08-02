@@ -3845,9 +3845,25 @@ export default function App() {
             <input type="number" value={newWeight} placeholder={`Log today's weight (${wtU})`} onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DATA, fontSize: 17, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 10, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
             <button onClick={logWeight} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 20px", fontFamily: DATA, fontWeight: 800, fontSize: 14, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Log</button>
           </div>
-        </>)}</div>);
+        </>, {}, (() => {
+          const _start = weightSeries[0] ? weightSeries[0].lbs : null;
+          const _lost = _start != null ? _start - cur : null;
+          const _toGo = goalWeight ? cur - goalWeight : null;
+          return { id: "wt", tone: C.go, color: C.go, title: "Path to your forecast",
+            when: new Date(weightSeries[weightSeries.length - 1].date + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" }),
+            value: fmtWt(cur, 1), unit: wtU,
+            sub: [_lost != null ? `${_lost >= 0 ? "−" : "+"}${Math.abs(_lost).toFixed(1)} ${wtU}` : null,
+                  leanShown != null ? `${leanShown.toFixed(0)} lb lean held` : null,
+                  _toGo != null && _toGo > 0 ? `${_toGo.toFixed(1)} to goal` : null].filter(Boolean).join(" · "),
+            subTone: C.go }; })())}</div>);
       })()}
-      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />)}</div>
+      <div style={{ marginBottom: 14 }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />, {}, (() => {
+        const _wa = weekAdherence(mealLog, targets.protein);
+        const _adh = _wa.adherence;
+        return { id: "wk", tone: _adh == null ? "none" : (_adh >= 80 ? C.go : _adh >= 60 ? C.caution : C.avoid),
+          color: C.go, title: "This week", when: `${_wa.loggedDays}/7 logged`,
+          value: _adh != null ? String(_adh) : "—", unit: _adh != null ? "% protein adherence" : "not enough logged",
+          sub: `${_wa.loggedDays} of 7 days with food logged`, subTone: C.faint }; })())}</div>
 
 
 
@@ -5206,8 +5222,11 @@ export default function App() {
         </div>
 
         {/* Scan / log food sheet */}
+        {/* v0.9.124: the sheet sits at 50, not 70. It is a PAGE — it must cover the sticky header at
+            45 and nothing else. Every modal (log, settings, Body Forecaster, info) is 60 or above, so a
+            sheet above them meant a card opened from a sheet launched its modal invisibly behind it. */}
         {sheetCard && (
-          <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 70, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+          <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 50, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>
               <button onClick={() => setSheetCard(null)} style={{ width: 30, height: 30, borderRadius: 999, background: C.surfaceAlt, border: "none", color: C.ink2, fontSize: 19, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}>{"‹"}</button>
               <span style={{ fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase", color: sheetCard.color || C.ink }}>{sheetCard.title}</span>
@@ -5809,13 +5828,21 @@ function SymptomPatterns({ C, sideEffects, doseLog }) {
   );
 }
 /* Deterministic 7-day report card */
-function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, fmtW, unit, goalLbs, onShareMilestone }) {
-  const msHit = (() => { const ws = (weightLog || []).map((w) => +w.lbs).filter(Boolean); if (ws.length < 2) return null; const l = ws[0] - ws[ws.length - 1]; const t = [5, 10, 15, 20, 25, 30, 40, 50].filter((x) => l >= x); return t.length ? t[t.length - 1] : null; })();
+// v0.9.123: one adherence figure. WeeklyCard capped each day at its goal before averaging, which is
+// the right way to do it — a 300g day cannot pay for a 60g one. The collapsed row must show that same
+// number, so the computation lives here and both call it.
+function weekAdherence(mealLog, proteinGoal) {
   const days = [];
   for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
   const byDay = {}; (mealLog || []).forEach((m) => { if (days.includes(m.date)) { byDay[m.date] = (byDay[m.date] || 0) + (m.protein || 0); } });
   const loggedDays = Object.keys(byDay).length;
   const adherence = loggedDays ? Math.round((Object.values(byDay).reduce((s, p) => s + Math.min(1, p / Math.max(1, proteinGoal)), 0) / loggedDays) * 100) : null;
+  return { days, byDay, loggedDays, adherence };
+}
+
+function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, fmtW, unit, goalLbs, onShareMilestone }) {
+  const msHit = (() => { const ws = (weightLog || []).map((w) => +w.lbs).filter(Boolean); if (ws.length < 2) return null; const l = ws[0] - ws[ws.length - 1]; const t = [5, 10, 15, 20, 25, 30, 40, 50].filter((x) => l >= x); return t.length ? t[t.length - 1] : null; })();
+  const { days, byDay, loggedDays, adherence } = weekAdherence(mealLog, proteinGoal);
   const wIn = (weightLog || []).filter((w) => w.date >= days[0]);
   const wDelta = wIn.length >= 2 ? wIn[wIn.length - 1].lbs - wIn[0].lbs : null;
   const doses = (doseLog || []).filter((d) => d.date >= days[0]).length;
