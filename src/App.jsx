@@ -1627,6 +1627,13 @@ export default function App() {
   /* v0.9.160: toast. Replaces the OS alert dialog, which stopped the app dead in an OS-chrome box with a system
      font — the least premium element available on the web, in an app that otherwise looks like an
      instrument. Errors stay up longer than confirmations because they are read, not glanced at. */
+  /* v0.9.162: confirm, in the app's own language. window.confirm is the last OS chrome in the app
+     and it is worse than an alert: it appears on a DESTRUCTIVE action, which is exactly when the
+     interface should look most deliberate. Promise-based so a call site changes by one keyword. */
+  const [askState, setAskState] = useState(null);
+  const askConfirm = (msg, danger = false) =>
+    new Promise((resolve) => setAskState({ msg: String(msg), danger, resolve }));
+  const askAnswer = (yes) => { if (askState) { askState.resolve(yes); setAskState(null); } };
   const [toastMsg, setToastMsg] = useState(null);
   const toastRef = useRef(null);
   const toast = (msg, tone = "info") => {
@@ -2553,7 +2560,7 @@ export default function App() {
   }
   async function deletePhoto(idx) {
     const p = photos[idx]; if (!p) return;
-    if (!window.confirm("Delete this progress photo?")) return;
+    if (!(await askConfirm("Delete this progress photo?", true))) return;
     try { const f = (p.url || "").split("/").pop(); if (f && p.url.startsWith("/api/photo/")) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {}
     setPhotos((all) => {
       const next = all.filter((_, i) => i !== idx);
@@ -2602,7 +2609,7 @@ export default function App() {
   }
   async function deleteSim(idx) {
     const p = simShots[idx]; if (!p) return;
-    if (!window.confirm("Delete this forecast?")) return;
+    if (!(await askConfirm("Delete this forecast?", true))) return;
     try { const f = (p.url || "").split("/").pop(); if (f) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {}
     setSimShots((all) => all.filter((_, i) => i !== idx));
   }
@@ -2797,7 +2804,7 @@ export default function App() {
     try {
       const text = await file.text(); const parsed = JSON.parse(text);
       if (!parsed || parsed.saved !== true) throw new Error("not a ForkCaster backup");
-      if (!window.confirm("Replace ALL current data with this backup?")) return;
+      if (!(await askConfirm("Replace ALL current data with this backup?", true))) return;
       hydrated.current = false;
       await fetch("/api/state?force=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: text });
       window.location.reload();
@@ -4389,10 +4396,10 @@ export default function App() {
                       onClick={() => { if (labHoldFired.current) { labHoldFired.current = false; return; }
                         setLabs((labs || []).map((x) => ({ ...x, baseline: x.id === d.id }))); }}
                       onTouchStart={() => { clearTimeout(labHoldRef.current); labHoldFired.current = false;
-                        labHoldRef.current = setTimeout(() => {
+                        labHoldRef.current = setTimeout(async () => {
                           labHoldFired.current = true;
                           if (navigator.vibrate) navigator.vibrate(18);
-                          if (window.confirm(`Delete the draw from ${fmtDate(d.date)}? Its results are removed.`))
+                          if (await askConfirm(`Delete the draw from ${fmtDate(d.date)}? Its results are removed.`, true))
                             setLabs((labs || []).filter((x) => x.id !== d.id));
                         }, 550); }}
                       onTouchEnd={() => clearTimeout(labHoldRef.current)}
@@ -4965,7 +4972,7 @@ export default function App() {
           spark: (<div style={{ width: 46, flexShrink: 0, pointerEvents: "none" }}>
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
-      <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={(di) => { if (window.confirm(`Remove the dose logged on ${di}?`)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
+      <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={async (di) => { if (await askConfirm(`Remove the dose logged on ${di}?`, true)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
       {medObj && medObj.cadence === "daily" && (() => { const _wk = glp.weeksOn; return (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 11 }}>
           <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
@@ -5310,7 +5317,7 @@ export default function App() {
 
   const renderCoach = () => (
     <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
-      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={() => { if (window.confirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", fontFamily: BODY }}>Clear</button></div></div>
+      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={async () => { if (await askConfirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 14, cursor: "pointer", fontFamily: BODY }}>Clear</button></div></div>
       {(() => { const hd = (healthSync && healthSync.days) || [];
         const cells = [["Doses", ((glp && glp.doseLog) || []).length], ["Meals", (mealLog || []).length],
           ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
@@ -5680,7 +5687,7 @@ export default function App() {
                   <button onClick={async () => { try { await fetch(`/api/health/sync?token=${healthSync.token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: todayISO(), strength: 1 }) }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ ...healthSync, days: sm.days || [] }); } catch {} }} style={{ marginTop: 9, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 10, padding: "10px 0", fontFamily: BODY, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>🏋️ Log a strength session today</button>
                   <div style={{ fontSize: 13, color: C.faint, marginTop: 7 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines</div>
                   <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
-                    <button onClick={async () => { if (!window.confirm("Clear all synced Apple Health data on your node? Steps, weight, workouts and body composition from the phone will be wiped. Your sync setup keeps working — the next sync refills it.")) return;
+                    <button onClick={async () => { if (!(await askConfirm("Clear all synced Apple Health data on your node? Steps, weight, workouts and body composition from the phone will be wiped. Your sync setup keeps working — the next sync refills it.", true))) return;
                       try { await fetch("/api/health/data", { method: "DELETE" }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync((x) => ({ ...(x || {}), days: sm.days || [] })); } catch {} }}
                       style={{ background: "none", border: "none", color: C.caution, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Clear synced data</button>
                     <button onClick={() => setPrefs({ ...prefs, hideHealthCard: true })} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 13.5, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Hide this card</button>
@@ -5833,6 +5840,29 @@ export default function App() {
         {/* v0.9.124: the sheet sits at 50, not 70. It is a PAGE — it must cover the sticky header at
             45 and nothing else. Every modal (log, settings, Body Forecaster, info) is 60 or above, so a
             sheet above them meant a card opened from a sheet launched its modal invisibly behind it. */}
+        {askState && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 72, background: "rgba(0,0,0,.62)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}
+            onClick={() => askAnswer(false)}>
+            <div onClick={(e) => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 340, background: C.surfaceAlt,
+                border: `1px solid ${askState.danger ? C.avoid + "66" : C.hair}`, borderRadius: 20,
+                padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,.6)",
+                animation: "fcToastIn .18s cubic-bezier(.2,.7,.3,1)" }}>
+              <div style={{ fontSize: 15, lineHeight: 1.45, color: C.ink, marginBottom: 16 }}>{askState.msg}</div>
+              <div style={{ display: "flex", gap: 9 }}>
+                <button onClick={() => askAnswer(false)}
+                  style={{ flex: 1, minHeight: 44, borderRadius: 999, border: `1px solid ${C.hair}`,
+                    background: "transparent", color: C.muted, fontFamily: DATA, fontSize: 12.5,
+                    fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Cancel</button>
+                <button onClick={() => askAnswer(true)}
+                  style={{ flex: 1, minHeight: 44, borderRadius: 999, border: "none",
+                    background: askState.danger ? C.avoid : C.go, color: C.bg, fontFamily: DATA,
+                    fontSize: 12.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase",
+                    cursor: "pointer" }}>{askState.danger ? "Delete" : "Confirm"}</button>
+              </div>
+            </div>
+          </div>)}
         {toastMsg && (
           <div onClick={() => setToastMsg(null)}
             style={{ position: "fixed", left: 12, right: 12, bottom: "calc(78px + env(safe-area-inset-bottom, 0px))",
@@ -6194,7 +6224,7 @@ export default function App() {
                         <div style={{ fontSize: 14, color: C.ink, fontWeight: 700 }}>{b.when.replace("T", " ")}{b.reason === "shrink" ? <span style={{ color: C.caution }}> · save shrank</span> : ""}</div>
                         <div style={{ fontSize: 12.5, color: C.muted }}>{b.counts.meals} meals · {b.counts.weights} weigh-ins · {b.counts.workouts} workouts · {b.counts.doses} doses</div>
                       </div>
-                      <button onClick={async () => { if (!window.confirm(`Restore this snapshot? Everything logged since then is replaced. A copy of your current data is kept first.`)) return;
+                      <button onClick={async () => { if (!(await askConfirm(`Restore this snapshot? Everything logged since then is replaced. A copy of your current data is kept first.`, true))) return;
                         try { await fetch("/api/state/restore", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ file: b.file }) }); window.location.reload(); } catch {} }}
                         style={{ background: C.surface, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "7px 11px", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer", whiteSpace: "nowrap" }}>Restore</button>
                     </div>))}
@@ -6214,7 +6244,7 @@ export default function App() {
                   }} style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Sweep orphaned images</button>
                   <div style={{ fontSize: 12.5, color: C.faint, marginTop: 6 }}>Deletes only images the app no longer references — photos, comparisons and forecasts in use are kept.</div>
                 </div>
-                <button onClick={async () => { if (window.confirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.")) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: DATA, fontSize: 13.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Reset all data — start fresh</button>
+                <button onClick={async () => { if ((await askConfirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.", true))) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 11, padding: "12px 0", fontFamily: DATA, fontSize: 13.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
               <div style={{ textAlign: "center", fontSize: 13, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
             </div>

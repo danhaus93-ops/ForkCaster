@@ -1250,5 +1250,29 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/Draw for \$\{fmtDate\(labDraft\.date\)\} saved/.test(BL),'and saving a draw does too');
 }
 
+
+// v0.9.162: Release B part two — no OS chrome left anywhere.
+{
+  const BM=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const code=BM.replace(/\/\*[\s\S]*?\*\//g, '');          // ignore the comments that name it
+  ok(!/window\.confirm\(/.test(code),'no window.confirm remains in the app');
+  ok(!/(^|[^.\w])alert\(/m.test(code.replace(/toast\(/g,'')),'and no alert either');
+  ok(/const askConfirm = \(msg, danger = false\)/.test(BM),'there is an in-app confirm');
+  ok(/new Promise\(\(resolve\) => setAskState/.test(BM),'promise-based, so a call site changes by one keyword');
+  ok(/onClick=\{\(\) => askAnswer\(false\)\}/.test(BM),'tapping the backdrop cancels');
+  ok(/onClick=\{\(e\) => e\.stopPropagation\(\)\}/.test(BM),'but tapping the dialog does not');
+  ok(/askState\.danger \? C\.avoid : C\.go/.test(BM),'a destructive confirm is red, an ordinary one is not');
+  ok(/askState\.danger \? "Delete" : "Confirm"/.test(BM),'and says which it is');
+  ok(/zIndex: 72/.test(BM),'it sits above every sheet and modal');
+  ok(/minHeight: 44/.test(BM),'its buttons meet the touch floor');
+  // every await must be inside an async function or the dialog resolves to a Promise and the
+  // guard clause passes silently — the exact way this refactor breaks quietly
+  const awaits=(BM.match(/await askConfirm/g) || []).length;
+  ok(awaits === 9, 'all nine confirms were converted (' + awaits + ')');
+  ok(/async function deletePhoto/.test(BM) && /async function deleteSim/.test(BM),'the photo and forecast handlers are async');
+  ok(/onRemove=\{async \(di\)/.test(BM),'the dose remover is async');
+  ok(/setTimeout\(async \(\) => \{/.test(BM),'and the lab hold callback is too');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
