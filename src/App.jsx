@@ -1624,7 +1624,7 @@ export default function App() {
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
   const [sheetCard, setSheetCard] = useState(null);
-  /* v0.9.160: toast. Replaces toast(, "info"), which stops the app dead in an OS-chrome box with a system
+  /* v0.9.160: toast. Replaces the OS alert dialog, which stopped the app dead in an OS-chrome box with a system
      font — the least premium element available on the web, in an app that otherwise looks like an
      instrument. Errors stay up longer than confirmations because they are read, not glanced at. */
   const [toastMsg, setToastMsg] = useState(null);
