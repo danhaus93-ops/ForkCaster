@@ -572,33 +572,40 @@ const PHOTOS = {"chipotle": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/
    ignored. `required` marks what a triple agonist adds over a GLP-1: the glucagon arm puts load
    on the liver and the pancreas, and pancreatic enzymes are not on a standard metabolic panel. */
 const LAB_MARKERS = [
-  { key: "lipase",   name: "Lipase",             group: "Pancreatic", unit: "U/L",    lo: 0,    hi: 60,   flagAt: 180,  required: true,
-    why: "Phase 2 saw asymptomatic rises and one acute pancreatitis event. Not on a standard panel." },
-  { key: "amylase",  name: "Amylase",            group: "Pancreatic", unit: "U/L",    lo: 25,   hi: 125,  flagAt: 375,  required: true,
+  // Lipid panel — printed first on his report, in this order
+  { key: "chol",     name: "Cholesterol, total",  group: "Lipid panel", unit: "mg/dL", lo: 0,    hi: 200 },
+  { key: "hdl",      name: "HDL cholesterol",     group: "Lipid panel", unit: "mg/dL", lo: 40,   hi: 200 },
+  { key: "trig",     name: "Triglycerides",       group: "Lipid panel", unit: "mg/dL", lo: 0,    hi: 150 },
+  { key: "ldl",      name: "LDL cholesterol",     group: "Lipid panel", unit: "mg/dL", lo: 0,    hi: 100 },
+  // Comprehensive metabolic panel — glucose, kidney, then liver, as the lab prints it
+  { key: "glucose",  name: "Glucose",             group: "Comprehensive metabolic panel", unit: "mg/dL", lo: 65, hi: 99 },
+  { key: "creat",    name: "Creatinine",          group: "Comprehensive metabolic panel", unit: "mg/dL", lo: 0.60, hi: 1.29 },
+  { key: "egfr",     name: "eGFR",                group: "Comprehensive metabolic panel", unit: "mL/min", lo: 60, hi: 200 },
+  { key: "alb",      name: "Albumin",             group: "Comprehensive metabolic panel", unit: "g/dL", lo: 3.6, hi: 5.1 },
+  { key: "ast",      name: "AST",                 group: "Comprehensive metabolic panel", unit: "U/L", lo: 10, hi: 40, flagAt: 120 },
+  { key: "alt",      name: "ALT",                 group: "Comprehensive metabolic panel", unit: "U/L", lo: 9,  hi: 46, flagAt: 138 },
+  // Its own line item on the report
+  { key: "a1c",      name: "Hemoglobin A1c",      group: "Hemoglobin A1c", unit: "%", lo: 0, hi: 5.7 },
+  // Pancreatic enzymes — ordered separately, and the reason they are here
+  { key: "amylase",  name: "Amylase",             group: "Pancreatic enzymes", unit: "U/L", lo: 25, hi: 125, flagAt: 375, required: true,
     why: "Ordered alongside lipase; rises sooner, less specific." },
-  { key: "alt",      name: "ALT",                group: "Liver",      unit: "U/L",    lo: 9,    hi: 46,   flagAt: 138 },
-  { key: "ast",      name: "AST",                group: "Liver",      unit: "U/L",    lo: 10,   hi: 40,   flagAt: 120 },
-  { key: "alb",      name: "Albumin",            group: "Liver",      unit: "g/dL",   lo: 3.6,  hi: 5.1 },
-  { key: "trig",     name: "Triglycerides",      group: "Cardiometabolic", unit: "mg/dL", lo: 0, hi: 150 },
-  { key: "hdl",      name: "HDL",                group: "Cardiometabolic", unit: "mg/dL", lo: 40, hi: 200 },
-  { key: "ldl",      name: "LDL",                group: "Cardiometabolic", unit: "mg/dL", lo: 0,  hi: 100 },
-  { key: "glucose",  name: "Fasting glucose",    group: "Glycemic",   unit: "mg/dL",  lo: 65,   hi: 99 },
-  { key: "a1c",      name: "HbA1c",              group: "Glycemic",   unit: "%",      lo: 0,    hi: 5.7 },
-  { key: "tt",       name: "Testosterone, total", group: "Hormones",  unit: "ng/dL",  lo: 250,  hi: 1100 },
-  { key: "ft",       name: "Testosterone, free",  group: "Hormones",  unit: "pg/mL",  lo: 35,   hi: 155 },
-  { key: "shbg",     name: "SHBG",                group: "Hormones",  unit: "nmol/L", lo: 10,   hi: 80 },
-  { key: "e2",       name: "Estradiol",           group: "Hormones",  unit: "pg/mL",  lo: 10,   hi: 40,
-    why: "In men this needs the SENSITIVE (LC/MS) assay — the standard immunoassay is unreliable at male concentrations." },
-  { key: "hct",      name: "Hematocrit",          group: "Blood count", unit: "%",     lo: 38.5, hi: 50.0, flagAt: 54,
+  { key: "lipase",   name: "Lipase",              group: "Pancreatic enzymes", unit: "U/L", lo: 0, hi: 60, flagAt: 180, required: true,
+    why: "Phase 2 saw asymptomatic rises and one acute pancreatitis event. Not on a standard panel." },
+  // CBC, in the order the differential prints
+  { key: "wbc",      name: "White blood cells",   group: "CBC", unit: "K/uL", lo: 3.8, hi: 10.8 },
+  { key: "rbc",      name: "Red blood cells",     group: "CBC", unit: "M/uL", lo: 4.20, hi: 5.80 },
+  { key: "hgb",      name: "Hemoglobin",          group: "CBC", unit: "g/dL", lo: 13.2, hi: 17.1 },
+  { key: "hct",      name: "Hematocrit",          group: "CBC", unit: "%", lo: 38.5, hi: 50.0, flagAt: 54,
     why: "The marker that limits testosterone therapy — red cell mass rises on it, and 54% is the usual line for a dose change or a donation." },
-  { key: "hgb",      name: "Hemoglobin",          group: "Blood count", unit: "g/dL",  lo: 13.2, hi: 17.1 },
-  { key: "rbc",      name: "Red blood cells",     group: "Blood count", unit: "M/uL",  lo: 4.20, hi: 5.80 },
-  { key: "wbc",      name: "White blood cells",   group: "Blood count", unit: "K/uL",  lo: 3.8,  hi: 10.8 },
-  { key: "plt",      name: "Platelets",           group: "Blood count", unit: "K/uL",  lo: 140,  hi: 400 },
-  { key: "egfr",     name: "eGFR",               group: "Renal",      unit: "mL/min", lo: 60,   hi: 200 },
-  { key: "creat",    name: "Creatinine",         group: "Renal",      unit: "mg/dL",  lo: 0.60, hi: 1.29 },
+  { key: "plt",      name: "Platelets",           group: "CBC", unit: "K/uL", lo: 140, hi: 400 },
+  // Hormones last, as specialty assays print
+  { key: "tt",       name: "Testosterone, total", group: "Hormones", unit: "ng/dL", lo: 250, hi: 1100 },
+  { key: "ft",       name: "Testosterone, free",  group: "Hormones", unit: "pg/mL", lo: 35, hi: 155 },
+  { key: "shbg",     name: "SHBG",                group: "Hormones", unit: "nmol/L", lo: 10, hi: 80 },
+  { key: "e2",       name: "Estradiol",           group: "Hormones", unit: "pg/mL", lo: 10, hi: 40,
+    why: "In men this needs the SENSITIVE (LC/MS) assay — the standard immunoassay is unreliable at male concentrations." },
 ];
-const LAB_GROUPS = ["Pancreatic", "Liver", "Cardiometabolic", "Glycemic", "Hormones", "Blood count", "Renal"];
+const LAB_GROUPS = ["Lipid panel", "Comprehensive metabolic panel", "Hemoglobin A1c", "Pancreatic enzymes", "CBC", "Hormones"];
 
 const MEDS = {
   tirzepatide: { label: "Tirzepatide", brand: "Zepbound / Mounjaro", cadence: "weekly", investigational: false,
@@ -4293,56 +4300,65 @@ export default function App() {
             if (!rows.length) return null;
             return (
               <div key={g}>
-                <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.3,
-                  textTransform: "uppercase", color: C.faint, margin: "14px 0 6px" }}>{g}</div>
-                {rows.map((m, ri) => {
+                {/* v0.9.154: panel header, the way a report names the panel it printed */}
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "15px 0 4px",
+                  paddingBottom: 5, borderBottom: `1px solid ${C.hair}` }}>
+                  <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.3,
+                    textTransform: "uppercase", color: C.muted, flex: 1 }}>{g}</span>
+                  <span style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.8,
+                    textTransform: "uppercase", color: C.faint }}>Result</span>
+                  <span style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.8,
+                    textTransform: "uppercase", color: C.faint, width: 76, textAlign: "right" }}>Reference</span>
+                </div>
+                {rows.map((m) => {
                   const cur = labLatest(m.key), base = labFirst(m.key);
                   const st = labState(m, cur ? cur.v : null);
                   const tone = st === "flag" ? C.avoid : st === "out" ? C.caution : st === "in" ? C.go : C.faint;
                   const moved = cur && base && cur.date !== base.date ? +(cur.v - base.v).toFixed(2) : null;
+                  // H / L, the convention every lab report uses for an out-of-range result
+                  const hl = !cur ? "" : cur.v > m.hi ? "H" : cur.v < m.lo ? "L" : "";
                   return (
-                    <div key={m.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
-                      borderTop: ri === 0 ? "none" : `1px solid ${C.hair}`, opacity: cur ? 1 : 0.62 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5, color: C.ink }}>{m.name}</div>
-                        <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
-                          {m.lo}–{m.hi} {m.unit}{m.flagAt != null ? ` · flag at ${m.flagAt}` : ""}</div>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, color: tone,
-                          fontVariantNumeric: "tabular-nums" }}>{cur ? cur.v : "—"}</div>
-                        <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
-                          {cur ? (moved != null ? `${moved > 0 ? "+" : ""}${moved} from baseline` : "baseline") : "never drawn"}</div>
-                      </div>
+                    <div key={m.key} style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "7px 0",
+                      opacity: cur ? 1 : 0.55 }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: C.ink }}>{m.name}</span>
+                      <span style={{ fontFamily: DATA, fontSize: 14.5, fontWeight: 700, color: tone,
+                        fontVariantNumeric: "tabular-nums", textAlign: "right", minWidth: 46 }}>{cur ? cur.v : "—"}</span>
+                      <span style={{ fontFamily: DATA, fontSize: 11, fontWeight: 800, color: tone,
+                        width: 10, textAlign: "center" }}>{hl}</span>
+                      <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, width: 76,
+                        textAlign: "right", whiteSpace: "nowrap" }}>{m.lo}–{m.hi}</span>
                     </div>); })}
+                {/* the panel's own footnotes, the way a report annotates beneath its results */}
+                {rows.some((m) => m.why && !labLatest(m.key)) && (
+                  <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, lineHeight: 1.5, marginTop: 5 }}>
+                    {rows.filter((m) => m.why && !labLatest(m.key)).map((m) => (
+                      <div key={m.key} style={{ marginTop: 3 }}>{m.name}: not drawn — {m.why}</div>))}
+                  </div>)}
                 {g === "Hormones" && !bioT && bioTNeeds.length > 0 && bioTNeeds.length < 3 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
-                    borderTop: `1px solid ${C.hair}`, opacity: 0.62 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, color: C.ink, display: "flex", alignItems: "center", gap: 7 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: 999, border: `1.5px solid ${C.faint}`,
-                          flexShrink: 0 }} />Testosterone, bioavailable</div>
-                      <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
-                        needs {bioTNeeds.join(" and ")} — then it calculates</div>
-                    </div>
-                    <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, color: C.faint }}>—</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "7px 0", opacity: 0.55 }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: C.ink }}>
+                      Testosterone, bioavailable
+                      <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint }}> · calc</span></span>
+                    <span style={{ fontFamily: DATA, fontSize: 14.5, fontWeight: 700, color: C.faint,
+                      textAlign: "right", minWidth: 46 }}>—</span>
+                    <span style={{ width: 10 }} />
+                    <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, width: 76,
+                      textAlign: "right", whiteSpace: "nowrap" }}>needs {bioTNeeds.join(", ")}</span>
                   </div>)}
                 {g === "Hormones" && bioT && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
-                    borderTop: `1px solid ${C.hair}` }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, color: C.ink, display: "flex", alignItems: "center", gap: 7 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: 999, border: `1.5px solid ${C.faint}`,
-                          flexShrink: 0 }} />Testosterone, bioavailable</div>
-                      <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
-                        calculated from total, SHBG and albumin — not drawn</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, color: C.muted,
-                        fontVariantNumeric: "tabular-nums" }}>{bioT.bio}</div>
-                      <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
-                        ng/dL · {bioT.pct}% of total</div>
-                    </div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "7px 0" }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: C.ink }}>
+                      Testosterone, bioavailable
+                      <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint }}> · calc</span></span>
+                    <span style={{ fontFamily: DATA, fontSize: 14.5, fontWeight: 700, color: C.muted,
+                      fontVariantNumeric: "tabular-nums", textAlign: "right", minWidth: 46 }}>{bioT.bio}</span>
+                    <span style={{ width: 10 }} />
+                    <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, width: 76,
+                      textAlign: "right", whiteSpace: "nowrap" }}>{bioT.pct}% of total</span>
+                  </div>)}
+                {g === "Hormones" && (
+                  <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, lineHeight: 1.5, marginTop: 5 }}>
+                    Bioavailable is calculated from total testosterone, SHBG and albumin — not drawn.
                   </div>)}
               </div>); })}
 

@@ -1032,8 +1032,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(Math.abs(r.free - 43) < 6, 'the equation reproduces his measured free T of 43 pg/mL (got ' + r.free.toFixed(1) + ')');
   ok(r.bio > 0.25*250 && r.bio < 0.75*250, 'bioavailable lands in the physiological 25-75% of total');
   // it must never be presented as measured
-  ok(/calculated from total, SHBG and albumin/.test(AZ),'the row states it is calculated, not drawn');
-  ok(/border: `1\.5px solid \$\{C\.faint\}`/.test(AZ),'and carries the hollow provenance glyph');
+  // v0.9.154: the provenance moved from a per-row caption to the panel footnote when the card was
+  // rebuilt in report layout. Same promise, stated once per panel instead of on every row.
+  ok(/Bioavailable is calculated from total testosterone, SHBG and albumin \u2014 not drawn\./.test(AZ)
+     || /Bioavailable is calculated from total testosterone, SHBG and albumin — not drawn\./.test(AZ),
+     'the panel states bioavailable is calculated, not drawn');
+  ok(/\u00b7 calc<\/span>/.test(AZ) || /· calc<\/span>/.test(AZ),'and each derived row is marked calc');
 }
 
 
@@ -1065,10 +1069,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const BB=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/const bioTNeeds = /.test(BB),'the missing inputs are enumerated');
   ok(/\[\["tt", "total testosterone"\], \["shbg", "SHBG"\], \["alb", "albumin"\]\]/.test(BB),'named in words he would recognise on a report');
-  ok(/needs \{bioTNeeds\.join\(" and "\)\}/.test(BB),'and printed in the row');
+  ok(/needs \{bioTNeeds\.join\(", "\)\}/.test(BB),'and printed in the reference column');
   // it must not appear on an empty card — a pending row for a section he has no data in is noise
   ok(/bioTNeeds\.length > 0 && bioTNeeds\.length < 3/.test(BB),'the pending row is hidden when nothing hormone-related is on file');
-  ok(/opacity: 0\.62/.test(BB),'and is visually subordinate to real values');
+  ok(/opacity: 0\.55/.test(BB),'and is visually subordinate to real values');
 }
 
 
@@ -1123,6 +1127,29 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the two ways an extractor gets a CBC wrong
   ok(/Do NOT map HEMOGLOBIN A1c to hgb/.test(BG),'A1c cannot be misread as hemoglobin');
   ok(/Do NOT map MCV, MCH, MCHC or RDW to any key/.test(BG),'and the red-cell indices are not forced into a slot');
+}
+
+
+// v0.9.154: the card is ordered and laid out like a lab report.
+{
+  const BH=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const LAB_GROUPS = \["Lipid panel", "Comprehensive metabolic panel", "Hemoglobin A1c", "Pancreatic enzymes", "CBC", "Hormones"\]/.test(BH),
+     'panels are named and ordered the way his report prints them');
+  // markers must sit in the same sequence within the table as the groups list, or the card renders
+  // panels in one order while the table implies another
+  const blk=/const LAB_MARKERS = \[([\s\S]*?)\n\];/.exec(BH)[1];
+  const seq=[...blk.matchAll(/group: "([^"]+)"/g)].map((m)=>m[1]);
+  const firstAt={}; seq.forEach((g,i)=>{ if(firstAt[g]==null) firstAt[g]=i; });
+  const groups=/const LAB_GROUPS = \[([^\]]*)\]/.exec(BH)[1].match(/"([^"]+)"/g).map((x)=>x.replace(/"/g,''));
+  let ordered=true;
+  for (let i=1;i<groups.length;i++) if (firstAt[groups[i]] < firstAt[groups[i-1]]) ordered=false;
+  ok(ordered, 'the marker table is written in the same order the panels render');
+  // report conventions
+  ok(/const hl = !cur \? "" : cur\.v > m\.hi \? "H" : cur\.v < m\.lo \? "L" : "";/.test(BH),'out-of-range results carry H or L');
+  ok(/>Result<\/span>/.test(BH) && />Reference<\/span>/.test(BH),'each panel has Result and Reference column headers');
+  ok(/\{m\.lo\}\u2013\{m\.hi\}/.test(BH) || /\{m\.lo\}–\{m\.hi\}/.test(BH),'the reference range is its own right-aligned column');
+  ok(/not drawn \u2014 \{m\.why\}/.test(BH) || /not drawn — \{m\.why\}/.test(BH),'undrawn markers are footnoted beneath their panel');
+  ok(/key: "chol"/.test(BH),'total cholesterol is tracked so the lipid panel is complete');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
