@@ -16,6 +16,18 @@ sudo docker start registry 2>/dev/null || sudo docker run -d --restart=always --
 sudo docker build -t "$IMG" .
 sudo docker push "$IMG"
 
+# v0.9.157: geometry check. Runs against the CURRENTLY RUNNING container — the version you are on
+# now, not the image just built — so it reports what is live before you tap Update. Advisory: it
+# prints findings and never blocks the release, because a tap-target report should not stop a fix
+# from reaching the phone. Add --shots to write screenshots into the app's data dir.
+CID=$(sudo docker ps --filter "name=forkcaster" --format "{{.Names}}" | head -1)
+if [ -n "$CID" ]; then
+  echo ""
+  echo "── visual audit (live container: $CID) ─────────────────────────"
+  sudo docker exec "$CID" node tools/ftest/visual-audit.js 2>&1 | tail -40 || true
+  echo "───────────────────────────────────────────────────────────────"
+fi
+
 echo ""
 TAGS=$(curl -s http://127.0.0.1:5000/v2/forkcaster/tags/list)
 # EXACT tag match. A bare `grep "v$VER"` is a SUBSTRING test: it reports v0.8.1 as present

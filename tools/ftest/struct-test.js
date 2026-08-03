@@ -1170,5 +1170,34 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/Tap to compare against that draw; hold to delete it/.test(BI),'and the card says both gestures');
 }
 
+
+// v0.9.157: the visual audit. It cannot run here — no browser in this sandbox — so what is pinned
+// is that it stays correct and stays harmless.
+{
+  const fs3=require('fs');
+  const VA=fs3.readFileSync(__FCROOT + '/tools/ftest/visual-audit.js','utf8');
+  const APPJ=fs3.readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/puppeteer-core/.test(VA),'it uses the puppeteer already pinned in the image');
+  ok(/PUPPETEER_EXECUTABLE_PATH \|\| "\/usr\/bin\/chromium-browser"/.test(VA),'and the chromium the Dockerfile installs');
+  ok(/VISUAL_AUDIT_SKIPPED/.test(VA),'it skips cleanly where no browser exists rather than failing the run');
+  // it must never edit his data to run a test
+  ok(!/localStorage\.setItem/.test(VA),'it does not write preferences');
+  ok(!/method: "POST"/.test(VA),'and posts nothing to the app');
+  ok(/Density is READ, never written/.test(VA),'density is observed, not set');
+  // the tab labels it clicks must be the app's actual labels — the glp1 lesson
+  const labels=[...APPJ.slice(APPJ.indexOf('const TABS = ['), APPJ.indexOf('const TABS = [')+700)
+    .matchAll(/label: "([^"]+)"/g)].map((m)=>m[1].toLowerCase());
+  const ids=/const TABS = \[([^\]]*)\]/.exec(VA)[1].match(/"([^"]+)"/g).map((x)=>x.replace(/"/g,''));
+  const clicked=ids.map((t)=>t.replace('glp','glp-1'));
+  ok(clicked.every((c)=>labels.includes(c)),'every tab it clicks exists in the app (' + clicked.filter((c)=>!labels.includes(c)).join(',') + ')');
+  ok(labels.every((l)=>clicked.includes(l)),'and it covers every tab the app has');
+  // the floors it enforces must match the ones the app ships
+  ok(/const TOUCH_MIN = 44;/.test(VA) && /const TOUCH_MIN_COMPACT = 38;/.test(VA),'its floors match the shipped ones');
+  ok(/minHeight: _cmp \? 38 : 44/.test(APPJ),'which the app actually declares');
+  const RS=fs3.readFileSync(__FCROOT + '/release.sh','utf8');
+  ok(/visual-audit\.js/.test(RS),'the release script runs it');
+  ok(/\|\| true/.test(RS),'advisory — a geometry finding never blocks a fix from shipping');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
