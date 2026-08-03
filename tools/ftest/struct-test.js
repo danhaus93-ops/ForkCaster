@@ -1036,5 +1036,28 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/border: `1\.5px solid \$\{C\.faint\}`/.test(AZ),'and carries the hollow provenance glyph');
 }
 
+
+// v0.9.149: the parser's key list must match the card's markers. Albumin was added to the card and
+// not to the parser, so every imported report silently dropped it — and bioavailable testosterone,
+// which needs albumin, could never compute. Derived on both sides now instead of hand-listed.
+{
+  const BA=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const BS=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  const block=/const LAB_MARKERS = \[([\s\S]*?)\n\];/.exec(BA);
+  ok(!!block, 'the marker table is findable');
+  const cardKeys=[...block[1].matchAll(/key: "(\w+)"/g)].map((m)=>m[1]);
+  const pk=/const LAB_KEYS = \[([^\]]*)\]/.exec(BS);
+  const parseKeys=[...pk[1].matchAll(/"(\w+)"/g)].map((m)=>m[1]);
+  const rm=/const LABM = \[([\s\S]*?)\];/.exec(BS);
+  const reportKeys=[...rm[1].matchAll(/\["(\w+)"/g)].map((m)=>m[1]);
+  ok(cardKeys.length >= 12, 'the card tracks its markers (' + cardKeys.length + ')');
+  const missingP=cardKeys.filter((k)=>!parseKeys.includes(k));
+  const missingR=cardKeys.filter((k)=>!reportKeys.includes(k));
+  ok(missingP.length === 0, 'every card marker is accepted by the parser (missing: ' + missingP.join(',') + ')');
+  ok(missingR.length === 0, 'every card marker appears in the prescriber report (missing: ' + missingR.join(',') + ')');
+  ok(/ALBUMIN->alb/.test(BS),'albumin is mapped explicitly');
+  ok(/Do NOT map GLOBULIN or TOTAL PROTEIN to alb/.test(BS),'and globulin cannot be mistaken for it');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

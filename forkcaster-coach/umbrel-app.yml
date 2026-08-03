@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.148"
+version: "0.9.149"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Bioavailable testosterone is now worked out for you from total testosterone, SHBG
-  and albumin, so you do not need to pay for a separate test to see it. It is shown
-  with a hollow marker and says plainly that it was calculated rather than drawn.
+  Fixes importing a lab report dropping your albumin. It was being read off the page
+  and then discarded before it reached you, which also meant bioavailable
+  testosterone could never be worked out. Re-import your report and it will pick it
+  up.
 dependencies: []
 path: ""
 defaultUsername: ""
