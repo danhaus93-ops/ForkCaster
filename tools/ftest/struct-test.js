@@ -1230,5 +1230,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
      'both counter rows carry the fix, not just the one that was measured');
 }
 
+
+// v0.9.160: Release B — the app answers when it is touched.
+{
+  const BL=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // pressed states, applied once at the root rather than at 114 call sites
+  ok(/button:active,\[role="button"\]:active\{transform:scale\(\.97\)/.test(BL),'every button reacts to a press');
+  ok(/button:disabled\{filter:none;transform:none;\}/.test(BL),'a disabled button does not pretend to');
+  ok(/prefers-reduced-motion:reduce/.test(BL),'and motion is dropped for anyone who asks for that');
+  ok(!/\[data-card-id\]:active/.test(BL),'cards are excluded — a lifted card owns its own transform mid-drag');
+  // no OS dialogs left for messages
+  ok(!/(^|[^.\w])alert\(/m.test(BL.replace(/toast\(/g, '')),'no alert() remains anywhere');
+  ok(/const toast = \(msg, tone = "info"\)/.test(BL),'there is a toast primitive');
+  ok(/tone === "bad" \? 5200 : 2800/.test(BL),'errors stay up longer than confirmations');
+  ok(/animation: "fcToastIn/.test(BL),'it animates in rather than appearing');
+  ok(/zIndex: 58/.test(BL),'above the tab bar, below every modal');
+  // and the confirmations are visual, because vibrate does nothing on his phone
+  ok(/toast\(pendingSite \? `Dose logged/.test(BL),'logging a dose confirms what was recorded');
+  ok(/Draw for \$\{fmtDate\(labDraft\.date\)\} saved/.test(BL),'and saving a draw does too');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

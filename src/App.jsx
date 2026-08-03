@@ -1624,6 +1624,17 @@ export default function App() {
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
   const [sheetCard, setSheetCard] = useState(null);
+  /* v0.9.160: toast. Replaces toast(, "info"), which stops the app dead in an OS-chrome box with a system
+     font — the least premium element available on the web, in an app that otherwise looks like an
+     instrument. Errors stay up longer than confirmations because they are read, not glanced at. */
+  const [toastMsg, setToastMsg] = useState(null);
+  const toastRef = useRef(null);
+  const toast = (msg, tone = "info") => {
+    if (!msg) return;
+    clearTimeout(toastRef.current);
+    setToastMsg({ msg: String(msg), tone, at: Date.now() });
+    toastRef.current = setTimeout(() => setToastMsg(null), tone === "bad" ? 5200 : 2800);
+  };
   // v0.9.131: hold-to-arrange. Order lives in prefs.cardOrder[tab] as a list of card ids; anything
   // absent keeps its source position, so a new card appears where the developer put it rather than
   // at the end of somebody's saved list.
@@ -1739,12 +1750,12 @@ export default function App() {
       const r = await fetch("/api/labs/parse", { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
       const j = await r.json();
-      if (j.error) { alert(j.error); return; }
-      if (!j.found) { alert("No lab values were found in that file. You can still enter them by hand."); return; }
+      if (j.error) { toast(j.error, "bad"); return; }
+      if (!j.found) { toast("No lab values were found in that file. You can still enter them by hand.", "info"); return; }
       // parsed values are a DRAFT — nothing is saved until he has checked them against the report
       setLabDraft({ date: j.date || todayISO(), values: Object.fromEntries(Object.entries(j.values).map(([k, v]) => [k, String(v)])) });
       setLabParsed(Object.keys(j.values));
-    } catch (e) { alert("Import failed: " + (e && e.message ? e.message : e)); }
+    } catch (e) { toast("Import failed: " + (e && e.message ? e.message : e), "bad"); }
     finally { setLabBusy(false); }
   }
   const [glp, setGlp] = useState(__T && __T.glp ? __T.glp : {
@@ -2224,7 +2235,7 @@ export default function App() {
     if (!v) return;
     const c = parseCoords(v);
     if (c) setGeo({ status: "ok", lat: c.lat, lng: c.lng, manual: true });
-    else window.alert("Couldn't read that. Try the form: 38.62701, -90.19940");
+    else toast("Couldn't read that. Try the form: 38.62701, -90.19940", "bad");
   }
   function detectLocation(fromTap) {
     if (typeof navigator === "undefined" || !navigator.geolocation) { setGeo({ status: "unavailable" }); return; }
@@ -2235,9 +2246,9 @@ export default function App() {
       (err) => {
         if (fromTap) {
           const denied = err && err.code === 1;
-          window.alert(denied
+          toast(denied
             ? "iOS refused the location request without prompting — this app is marked Denied.\n\nFix: iPhone Settings → Apps → ForkCaster → Location → While Using + Precise.\n\nIf ForkCaster isn't listed there: Settings → Privacy & Security → Location Services → Safari Websites → While Using."
-            : `Location failed: ${(err && err.message) || "unknown"}. Tap again to retry.`);
+            : `Location failed: ${(err && err.message) || "unknown"}. Tap again to retry.`, "bad");
         }
         setGeo((g) => (g.status === "ok" ? g : { status: "denied", code: err && err.code, msg: (err && err.message || "").slice(0, 80) }));
       },
@@ -2530,7 +2541,7 @@ export default function App() {
           return all;
         });
       } catch (e) {
-        alert("Couldn't save that photo to your node — it was NOT kept. (" + (e && e.message ? e.message : e) + ")");
+        toast("Couldn't save that photo to your node — it was NOT kept. (" + (e && e.message ? e.message : e) + ")", "bad");
       }
     }
   }
@@ -2558,7 +2569,7 @@ export default function App() {
     const srcF = photos[simSel], srcB = simSelBack >= 0 ? photos[simSelBack] : null;
     if (!srcF || simBusy) return;
     const stored = (p) => p && p.url && p.url.startsWith("/api/photo/");
-    if (!stored(srcF) || (srcB && !stored(srcB))) { alert("That photo isn't stored on your node yet — re-add it first."); return; }
+    if (!stored(srcF) || (srcB && !stored(srcB))) { toast("That photo isn't stored on your node yet — re-add it first.", "info"); return; }
     setSimBusy(true);
     const render = async (src) => {
       const r = await fetch("/api/goalsim", { method: "POST", headers: { "Content-Type": "application/json" },
@@ -2585,7 +2596,7 @@ export default function App() {
     } catch (e) {
       // roll back anything that DID render, so a failed pair leaves nothing behind
       for (const j of made) { try { const f = (j.url || "").split("/").pop(); if (f) await fetch(`/api/photo/${f}`, { method: "DELETE" }); } catch {} }
-      alert("Goal forecast failed: " + (e && e.message ? e.message : e));
+      toast("Goal forecast failed: " + (e && e.message ? e.message : e), "bad");
     }
     setSimBusy(false);
   }
@@ -2632,7 +2643,7 @@ export default function App() {
       const file = new File([blob], "forkcaster-goal.jpg", { type: "image/jpeg" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Goal preview" }); return; }
       const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "forkcaster-goal.jpg"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
-    } catch (e) { alert("Share failed: " + (e && e.message ? e.message : e)); }
+    } catch (e) { toast("Share failed: " + (e && e.message ? e.message : e), "bad"); }
   }
   async function shareComparison(ai = compareA, bi = compareB) {
     const pa = photos[ai], pb = photos[bi];
@@ -2662,7 +2673,7 @@ export default function App() {
       const file = new File([blob], "forkcaster-progress.jpg", { type: "image/jpeg" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Progress" }); return; }
       const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "forkcaster-progress.jpg"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 4000);
-    } catch (e) { alert("Share failed: " + (e && e.message ? e.message : e)); }
+    } catch (e) { toast("Share failed: " + (e && e.message ? e.message : e), "bad"); }
   }
   function addSideEffect() { setGlp((g) => ({ ...g, sideEffects: [...g.sideEffects, { id: uid(), date: todayISO(), at: new Date().toISOString(), symptom: seSymptom, severity: seSeverity }] })); }
   const [doseLogged, setDoseLogged] = useState(false);
@@ -2695,7 +2706,9 @@ export default function App() {
       const log = (g.doseLog || []).filter((d) => d.date !== today);
       return { ...g, lastInjection: today, weeksOn: g.weeksOn + 1, doseLog: [...log, { date: today, at: new Date().toISOString(), mg: g.dose || 0, site: pendingSite || undefined, med: g.med }] };
     });
-    setDoseLogged(true); setPendingSite(null); setTimeout(() => setDoseLogged(false), 2500);
+    setDoseLogged(true);
+    toast(pendingSite ? `Dose logged \u00b7 ${pendingSite}` : "Dose logged", "good");
+    setPendingSite(null); setTimeout(() => setDoseLogged(false), 2500);
   }
 
   function b64ToU8(b64) {
@@ -2714,13 +2727,13 @@ export default function App() {
         setPushOn(false);
       } else {
         const perm = await Notification.requestPermission();
-        if (perm !== "granted") { alert("Notifications are blocked. On iPhone, ForkCaster must be added to the Home Screen, then allow notifications."); setPushBusy(false); return; }
+        if (perm !== "granted") { toast("Notifications are blocked. On iPhone, ForkCaster must be added to the Home Screen, then allow notifications.", "info"); setPushBusy(false); return; }
         const { key: pub } = await (await fetch("/api/push/pubkey")).json();
         const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(pub) });
         await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: sub }) });
         setPushOn(true);
       }
-    } catch (e) { alert("Push setup failed: " + (e && e.message ? e.message : e)); }
+    } catch (e) { toast("Push setup failed: " + (e && e.message ? e.message : e), "bad"); }
     setPushBusy(false);
   }
   async function exportPDF() {
@@ -2773,7 +2786,7 @@ export default function App() {
       if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "ForkCaster report" }); return; }
       const url = URL.createObjectURL(blob); const a = document.createElement("a");
       a.href = url; a.download = "ForkCaster-report.pdf"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 4000);
-    } catch (e) { alert("PDF export failed: " + e.message); }
+    } catch (e) { toast("PDF export failed: " + e.message, "bad"); }
   }
   function exportJSON() {
     const blob = new Blob([stateBlob], { type: "application/json" });
@@ -2788,7 +2801,7 @@ export default function App() {
       hydrated.current = false;
       await fetch("/api/state?force=1", { method: "POST", headers: { "Content-Type": "application/json" }, body: text });
       window.location.reload();
-    } catch (e) { alert("Restore failed: " + e.message); }
+    } catch (e) { toast("Restore failed: " + e.message, "bad"); }
   }
   async function logByDescription() {
     const q = nlText.trim(); if (!q || nlBusy) return;
@@ -2808,9 +2821,9 @@ export default function App() {
     } catch (e) {
       const msg = String((e && e.message) || e);
       // network/timeout/proxy failures are NOT wording problems — say which one happened; keep their text
-      alert(/abort|timeout|fetch|network|load failed|failed to/i.test(msg)
+      toast(/abort|timeout|fetch|network|load failed|failed to/i.test(msg)
         ? "Couldn't reach the AI — the node or API may be busy. Your text is kept — try again in a moment."
-        : `Couldn't parse the reply — try rewording. (${msg.slice(0, 90)})`);
+        : `Couldn't parse the reply — try rewording. (${msg.slice(0, 90)})`, "bad");
     }
     setNlBusy(false);
   }
@@ -2831,7 +2844,7 @@ export default function App() {
       const cleaned = sanitizePicks(composed, allergies);
       cleaned._menuSource = "photo"; cleaned._menuText = items.map((i) => `${i.item} (${i.section}) ~${i.cal} cal ${i.protein}g`).join("\n");
       setResult(cleaned); setLoggedPicks([]); setMenuA(null);
-    } catch (e) { alert("Menu photo scan failed: " + (e && e.message ? e.message : e)); }
+    } catch (e) { toast("Menu photo scan failed: " + (e && e.message ? e.message : e), "bad"); }
     setMenuPhotoBusy(false);
   }
   async function askMenu() {
@@ -4422,6 +4435,7 @@ export default function App() {
                       baseline: prior ? prior.baseline : undefined };
                     setLabs(prior ? (labs || []).map((x) => (x.date === labDraft.date ? merged : x))
                                   : [...(labs || []), merged]);
+                    toast(prior ? `Draw for ${fmtDate(labDraft.date)} updated` : `Draw for ${fmtDate(labDraft.date)} saved`, "good");
                   })(); setLabDraft(null); setLabParsed(null); }}
                   style={{ flex: 1, background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: 13,
                     fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>Save draw</button>
@@ -5554,7 +5568,12 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", justifyContent: "center", fontFamily: BODY }}>
-      <style>{FONTS}{`*{-webkit-tap-highlight-color:transparent;box-sizing:border-box;} input:focus,select:focus{border-color:${C.go}!important;} ::-webkit-scrollbar{display:none;}`}</style>
+      <style>{FONTS}{`*{-webkit-tap-highlight-color:transparent;box-sizing:border-box;} input:focus,select:focus{border-color:${C.go}!important;} ::-webkit-scrollbar{display:none;}
+          button,[role="button"]{transition:transform .12s cubic-bezier(.2,.7,.3,1),filter .12s ease;}
+          button:active,[role="button"]:active{transform:scale(.97);filter:brightness(1.14);}
+          button:disabled{filter:none;transform:none;}
+          @media (prefers-reduced-motion:reduce){button,[role="button"]{transition:none;}}
+          @keyframes fcToastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div style={{ width: "100%", maxWidth: 430, background: C.bg, minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
 
         {/* Header */}
@@ -5814,6 +5833,18 @@ export default function App() {
         {/* v0.9.124: the sheet sits at 50, not 70. It is a PAGE — it must cover the sticky header at
             45 and nothing else. Every modal (log, settings, Body Forecaster, info) is 60 or above, so a
             sheet above them meant a card opened from a sheet launched its modal invisibly behind it. */}
+        {toastMsg && (
+          <div onClick={() => setToastMsg(null)}
+            style={{ position: "fixed", left: 12, right: 12, bottom: "calc(78px + env(safe-area-inset-bottom, 0px))",
+              zIndex: 58, display: "flex", justifyContent: "center", pointerEvents: "auto" }}>
+            <div style={{ maxWidth: 406, width: "100%", display: "flex", alignItems: "flex-start", gap: 10,
+              background: C.surfaceAlt, border: `1px solid ${toastMsg.tone === "bad" ? C.avoid + "66" : toastMsg.tone === "good" ? C.go + "66" : C.hair}`,
+              borderLeft: `3px solid ${toastMsg.tone === "bad" ? C.avoid : toastMsg.tone === "good" ? C.go : C.muted}`,
+              borderRadius: 14, padding: "12px 14px", boxShadow: "0 10px 28px rgba(0,0,0,.5)",
+              animation: "fcToastIn .22s cubic-bezier(.2,.7,.3,1)" }}>
+              <span style={{ flex: 1, fontSize: 13.5, lineHeight: 1.4, color: C.ink }}>{toastMsg.msg}</span>
+            </div>
+          </div>)}
         {sheetCard && (
           <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 50, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
             <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>
@@ -6178,8 +6209,8 @@ export default function App() {
                       const keep = (stateBlob.match(/\/api\/photo\/[A-Za-z0-9._-]+/g) || []);
                       const r = await fetch("/api/photos/prune", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keep }) }).then((x) => x.json());
                       const u = await fetch("/api/photos/usage").then((x) => x.json()); setPhotoUsage(u);
-                      alert(r.deleted ? `Removed ${r.deleted} unreferenced image${r.deleted === 1 ? "" : "s"} (${Math.round((r.freed || 0) / 1024)} KB freed).` : "Nothing to sweep — every image on the node is still in use.");
-                    } catch { alert("Sweep failed."); }
+                      toast(r.deleted ? `Removed ${r.deleted} unreferenced image${r.deleted === 1 ? "" : "s"} (${Math.round((r.freed || 0) / 1024)} KB freed).` : "Nothing to sweep — every image on the node is still in use.", "info");
+                    } catch { toast("Sweep failed.", "bad"); }
                   }} style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 9, padding: "8px 12px", fontFamily: DATA, fontSize: 12, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Sweep orphaned images</button>
                   <div style={{ fontSize: 12.5, color: C.faint, marginTop: 6 }}>Deletes only images the app no longer references — photos, comparisons and forecasts in use are kept.</div>
                 </div>
