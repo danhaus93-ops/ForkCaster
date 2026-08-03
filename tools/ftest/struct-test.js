@@ -1274,5 +1274,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/setTimeout\(async \(\) => \{/.test(BM),'and the lab hold callback is too');
 }
 
+
+// v0.9.163: Release C — the decorative line goes, and prose says its point once.
+{
+  const BN=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(!/Medication \u00b7 titration \u00b7 tolerability/.test(BN) && !/Medication · titration · tolerability/.test(BN),
+     'the GLP-1 strapline is gone — it restated the tab name above it');
+  ok(!/Composition, trend &amp; progress/.test(BN),'and the Body one');
+  // Today's is the DATE, which is information rather than decoration
+  ok(/weekday: "long", month: "long", day: "numeric"/.test(BN),"Today keeps its date line");
+  // the condensed blocks, by their surviving wording
+  ok(/Built for maintenance and coming off the drug/.test(BN),'the journey card states its point once');
+  ok(/have no HealthKit fields\. Snap the report/.test(BN),'the scan card too');
+  ok(/Health Auto Export can post to the same URL/.test(BN),'and the sync note');
+  ok(!/Most apps quit at/.test(BN),'no card argues with other apps');
+  ok(!/carries more than Apple Health can store/.test(BN),'and none explains its own explanation');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

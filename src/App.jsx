@@ -4192,7 +4192,7 @@ export default function App() {
                 <span style={{ width: 5, height: 5, borderRadius: 5, flexShrink: 0, background: meas ? C.go : "transparent", border: meas ? "none" : `1.2px solid ${C.faint}`, boxSizing: "border-box" }} />{src}</div>
             </div>))}
         </div>
-        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.45, marginBottom: 9 }}>A body-composition report carries more than Apple Health can store — visceral fat, body water and per-limb figures have no HealthKit fields. Snap or upload the report and the numbers come across.</div>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.45, marginBottom: 9 }}>Visceral fat, body water and per-limb figures have no HealthKit fields. Snap the report and they come across.</div>
         <input ref={scanRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanBodyReport(e.target.files[0]); e.target.value = ""; }} />
         {(() => { const ds = ((healthSync && healthSync.days) || []).filter((d5) => d5.bodyFatPct != null || d5.muscleMassLbs != null || d5.visceralFat != null);
           const sc = ds.length ? ds[ds.length - 1] : null;
@@ -4558,7 +4558,6 @@ export default function App() {
   const renderGlp = () => (
     <div style={{ padding: "18px 18px 12px", display: "flex", flexDirection: "column" }}>
       <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>GLP-1</div>
-      <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Medication · titration · tolerability</div>
       {/* v0.9.81: the stages belong with the medication, not the scale. Ramp-up, active loss and the
           off-ramp are things the DRUG does to you over months — the Body tab measures, this narrates. */}
       <div style={{ display: "contents" }}>{card(
@@ -4579,7 +4578,7 @@ export default function App() {
             <div style={{ fontSize: 15.5, fontWeight: 700, color: C.violet }}>{PHASES[phaseIdx].label}</div>
             <div style={{ fontSize: 14.5, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
           </div>
-          <div style={{ fontSize: 12.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Most apps quit at "goal reached." The regain problem lives in maintenance &amp; coming off the drug — this is built to carry you through it.</div>
+          <div style={{ fontSize: 12.5, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Built for maintenance and coming off the drug, not just for reaching goal.</div>
         </>)}</div>
       {daysToInjection <= 0 && !doseLogged && (
         <div style={{ display: "flex", alignItems: "center", gap: 9, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
@@ -5606,7 +5605,6 @@ export default function App() {
             the engine cards, so four cards appeared above the word Body. */}
         <div style={{ padding: "18px 0 0", order: -1 }}>
           <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Body</div>
-          <div style={{ fontSize: 15, color: C.muted, marginBottom: 16 }}>Composition, trend &amp; progress</div>
         </div>
         {/* v0.9.127: the engine cards used to render at full bleed while renderBody inset by 18px,
             so the tab had two card widths. One wrapper, one width. */}
@@ -5663,14 +5661,14 @@ export default function App() {
               {sectionTitle("Health data")}
               {hd.length === 0 ? (
                 <div style={{ fontSize: 14.5, color: C.muted, lineHeight: 1.55 }}>
-                  Steps and weight can flow from your iPhone to your own node using nothing but Apple's built-in <b style={{ color: C.ink }}>Shortcuts</b> app — no third-party apps, no cloud:
+                  Steps and weight flow from your iPhone using Apple's <b style={{ color: C.ink }}>Shortcuts</b> app — no third-party apps, no cloud:
                   <div style={{ marginTop: 7 }}>1. Shortcuts → + → add <b style={{ color: C.ink }}>Find Health Samples</b> (Type: Steps · Date is Today), then <b style={{ color: C.ink }}>Calculate Statistics → Sum</b>.</div>
                   <div>2. Add a second <b style={{ color: C.ink }}>Find Health Samples</b> (Type: Weight · Latest · Limit 1).</div>
                   <div>3. Add <b style={{ color: C.ink }}>Format Date</b> (Current Date → custom <span style={{ color: C.ink }}>yyyy-MM-dd</span>).</div>
                   <div>4. Add <b style={{ color: C.ink }}>Get Contents of URL</b> → Method POST → Request Body JSON with fields <span style={{ color: C.ink }}>date</span> (formatted date), <span style={{ color: C.ink }}>steps</span> (statistics), <span style={{ color: C.ink }}>weightLbs</span> (sample magnitude) → URL:</div>
                   <div style={{ background: C.surfaceAlt, borderRadius: 8, padding: "8px 10px", margin: "6px 0", fontSize: 13, wordBreak: "break-all", color: C.ink }}>{`${window.location.origin}/api/health/sync?token=${healthSync ? healthSync.token : "…"}`}</div>
                   <div>5. Automation → Time of Day → daily → Run Immediately → your shortcut.</div>
-                  <div style={{ marginTop: 6, color: C.faint, fontSize: 13.5 }}>Prefer an app? The Health Auto Export app posting to the same URL also works. Manual weigh-ins here stay authoritative either way.</div>
+                  <div style={{ marginTop: 6, color: C.faint, fontSize: 13.5 }}>Health Auto Export can post to the same URL. Manual weigh-ins stay authoritative.</div>
                 </div>
               ) : (
                 <div>
