@@ -176,12 +176,26 @@ async function auditPage(page, label, compact) {
   const byKind = {};
   for (const p of problems) (byKind[p.kind] = byKind[p.kind] || []).push(p.msg);
   console.log("\n=== FINDINGS ===");
-  for (const k of ["CLIP", "OVERFLOW", "TOUCH", "TRUNCATED"]) {
+  for (const k of ["CLIP", "OVERFLOW", "TRUNCATED"]) {
     const list = byKind[k] || [];
     console.log(`  ${k}: ${list.length}`);
-    for (const m of list.slice(0, 12)) console.log("    " + m);
-    if (list.length > 12) console.log(`    …and ${list.length - 12} more`);
+    for (const m of list) console.log("    " + m);
   }
+  /* Touch findings are counted BY TAB. Listing 168 lines told him nothing except that the tool
+     was noisy; knowing that 96 of them are the Now tab's place list says where an afternoon of
+     work would actually go. */
+  const touch = byKind.TOUCH || [];
+  console.log(`  TOUCH: ${touch.length} controls under the floor`);
+  const perTab = {};
+  for (const m of touch) {
+    const tab = (m.split(":")[0] || "").split("/").pop();
+    (perTab[tab] = perTab[tab] || []).push(m);
+  }
+  for (const [tab, list] of Object.entries(perTab).sort((a, b) => b[1].length - a[1].length)) {
+    const shortest = list.map((m) => +(/is (\d+)x/.exec(m) || [0, 99])[1]).sort((a, b) => a - b)[0];
+    console.log(`    ${tab.padEnd(8)} ${String(list.length).padStart(3)}  smallest ${shortest}px`);
+  }
+  if (touch.length) console.log("    (advisory — run with --shots to see them)");
   if (SHOT_DIR) console.log(`\n  screenshots written to ${SHOT_DIR}`);
 
   /* What FAILS versus what is merely reported. A hard clip means text is unreadable and an

@@ -3638,7 +3638,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             {counters.map(([l, v, sub, fld]) => (<div key={l} onClick={() => fld && openQuick(fld, l, "")} style={{ flex: 1, minWidth: 0, cursor: fld ? "pointer" : "default" }}>
-              <div style={{ fontFamily: DATA, fontSize: 11, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
+              <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.4, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
               <div style={{ fontFamily: DATA, fontSize: 16.5, fontWeight: 700, color: C.ink, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>{v}</div>
               <div style={{ fontFamily: DATA, fontSize: 11, color: C.faint, marginTop: 1 }}>{sub}</div>
             </div>))}
@@ -3706,7 +3706,7 @@ export default function App() {
               ["Exercise", exMin ? exMin + " min" : null, synExMin > 0, synExMin > 0 ? "synced" : "logged cardio"],
               ["Active kcal", activeKcal ? String(activeKcal) : null, synKcal > 0, synKcal > 0 ? "synced · burned today" : "burned today"]].map(([l, v, measured, sub]) => (
               <div key={l} style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: DATA, fontSize: 11, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
+                <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.4, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
                 <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
                   {v && measured ? <span style={{ width: 5, height: 5, borderRadius: 5, background: C.go, flexShrink: 0 }} /> : null}
                   {v || <><span style={{ width: 7, height: 1.5, background: C.faint, flexShrink: 0 }} />—</>}
@@ -4811,7 +4811,7 @@ export default function App() {
               const TONE_C = { go: C.go, caution: C.caution, avoid: C.avoid, none: C.faint };
               const cell = (lbl, v, kind, raw) => (
                 <div style={{ flex: 1, minWidth: 58 }}>
-                  <div style={{ fontFamily: DATA, fontSize: 11, letterSpacing: 1, color: C.muted, textTransform: "uppercase" }}>{lbl}</div>
+                  <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.4, color: C.muted, textTransform: "uppercase", whiteSpace: "nowrap" }}>{lbl}</div>
                   <div style={{ fontSize: 14.5, fontWeight: 700, color: TONE_C[rungCellTone(kind, raw)], fontVariantNumeric: "tabular-nums" }}>{v == null ? "—" : v}</div>
                 </div>);
               return (<div>

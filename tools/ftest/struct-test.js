@@ -453,7 +453,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(SRC.includes('const TONE_C = { go: C.go, caution: C.caution, avoid: C.avoid, none: C.faint }'), 'tones map onto the theme palette, so every theme stays legible');
   ok(/rungCellTone\(kind, raw\)/.test(SRC), 'colour is computed from the RAW number, never the formatted string');
   // v0.9.69: labels moved to the chassis mono treatment; the INVARIANT stays: muted, never faint.
-  ok(SRC.includes('letterSpacing: 1, color: C.muted, textTransform: "uppercase" }}>{lbl}'), 'column labels use muted, not faint — readable at small size');
+  ok(/color: C\.muted, textTransform: "uppercase"[^>]*\}\}>\{lbl\}/.test(SRC), 'column labels use muted, not faint — readable at small size');
 }
 // --- v0.9.47: symptom + dose instants — the phase-map's raw material starts accruing NOW ---
 {
@@ -1215,6 +1215,19 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/if \(r\.height >= floor\) continue;/.test(VB),'touch is judged on height, which is what a thumb misses');
   ok(/kind === "CLIP" \|\| p\.kind === "OVERFLOW"/.test(VB),'only real layout defects fail the run');
   ok(/VISUAL_AUDIT_OK with /.test(VB),'advisories are reported without blocking a release');
+}
+
+
+// v0.9.159: labels the visual audit measured as clipped. Budget checked at the narrowest device.
+{
+  const BK=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const MONO=0.60, cell375=(307-4*8)/5;
+  const fits=(t,fs,tr)=>t.length*fs*MONO + t.length*tr <= cell375;
+  ok(fits("CALORIES",10.5,0.4),'CALORIES fits its counter cell at 375pt');
+  ok(fits("LIFTS/WK",10.5,0.4),'LIFTS/WK fits its cell at 375pt');
+  ok(!fits("CALORIES",11,1.1),'and the previous size genuinely did not — this is why it clipped');
+  ok((BK.match(/letterSpacing: 0\.4, color: C\.faint, textTransform: "uppercase", whiteSpace: "nowrap" \}\}>\{l\}/g) || []).length === 2,
+     'both counter rows carry the fix, not just the one that was measured');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
