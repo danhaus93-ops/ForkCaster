@@ -1071,5 +1071,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/opacity: 0\.62/.test(BB),'and is visually subordinate to real values');
 }
 
+
+// v0.9.151: the baseline is a choice, and estradiol joins the hormone group.
+{
+  const BC=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const BSV=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  ok(/const labBaselineId = \(labDraws\.find\(\(d\) => d\.baseline\) \|\| labDraws\[0\]/.test(BC),'a marked draw becomes the reference, earliest is only the fallback');
+  ok(/const marked = withVal\.find\(\(d\) => d\.id === labBaselineId\);/.test(BC),'per-marker deltas measure from that draw');
+  ok(/labBaselineDate = \(labDraws\.find\(\(d\) => d\.id === labBaselineId\)/.test(BC),'and the stated baseline date agrees with it');
+  ok(/setLabs\(\(labs \|\| \[\]\)\.map\(\(x\) => \(\{ \.\.\.x, baseline: x\.id === d\.id \}\)\)\)/.test(BC),'choosing one clears the others — exactly one baseline');
+  ok(/labDraws\.length > 1 &&/.test(BC),'the selector only appears once there is something to choose between');
+  ok(/an older panel stays on file as history either way/.test(BC),'and says the old draw is not deleted');
+  // estradiol
+  ok(/key: "e2"/.test(BC),'estradiol is tracked');
+  ok(/needs the SENSITIVE \(LC\/MS\) assay/.test(BC),'flagged as needing the sensitive assay in men');
+  ok(/"e2"\]/.test(BSV) || /,"e2"/.test(BSV),'the parser accepts it');
+  ok(/ESTRADIOL \(including ULTRASENSITIVE or LC\/MS\)->e2/.test(BSV),'and maps the ultrasensitive naming');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -587,6 +587,8 @@ const LAB_MARKERS = [
   { key: "tt",       name: "Testosterone, total", group: "Hormones",  unit: "ng/dL",  lo: 250,  hi: 1100 },
   { key: "ft",       name: "Testosterone, free",  group: "Hormones",  unit: "pg/mL",  lo: 35,   hi: 155 },
   { key: "shbg",     name: "SHBG",                group: "Hormones",  unit: "nmol/L", lo: 10,   hi: 80 },
+  { key: "e2",       name: "Estradiol",           group: "Hormones",  unit: "pg/mL",  lo: 10,   hi: 40,
+    why: "In men this needs the SENSITIVE (LC/MS) assay — the standard immunoassay is unreliable at male concentrations." },
   { key: "egfr",     name: "eGFR",               group: "Renal",      unit: "mL/min", lo: 60,   hi: 200 },
   { key: "creat",    name: "Creatinine",         group: "Renal",      unit: "mg/dL",  lo: 0.60, hi: 1.29 },
 ];
@@ -2078,9 +2080,16 @@ export default function App() {
     const withVal = labDraws.filter((d) => d.values && d.values[key] != null && d.values[key] !== "");
     return withVal.length ? { v: +withVal[withVal.length - 1].values[key], date: withVal[withVal.length - 1].date } : null;
   };
+  // v0.9.151: the reference draw is whichever he MARKS, falling back to the earliest. Deltas are
+  // only meaningful against a draw taken under the same conditions — his October panel predates
+  // semaglutide entirely, so it is history, not a starting point.
+  const labBaselineId = (labDraws.find((d) => d.baseline) || labDraws[0] || {}).id || null;
   const labFirst = (key) => {
     const withVal = labDraws.filter((d) => d.values && d.values[key] != null && d.values[key] !== "");
-    return withVal.length ? { v: +withVal[0].values[key], date: withVal[0].date } : null;
+    if (!withVal.length) return null;
+    const marked = withVal.find((d) => d.id === labBaselineId);
+    const ref = marked || withVal[0];
+    return { v: +ref.values[key], date: ref.date };
   };
   const labState = (m, v) => {
     if (v == null) return "none";
@@ -2114,7 +2123,7 @@ export default function App() {
     };
   })();
   const labMissing = LAB_MARKERS.filter((m) => m.required && !labLatest(m.key));
-  const labBaselineDate = labDraws.length ? labDraws[0].date : null;
+  const labBaselineDate = (labDraws.find((d) => d.id === labBaselineId) || labDraws[0] || {}).date || null;
   const labAgeDays = labDraws.length
     ? Math.round((Date.now() - new Date(labDraws[labDraws.length - 1].date + "T12:00:00").getTime()) / 86400000)
     : null;
@@ -4329,6 +4338,25 @@ export default function App() {
                   </div>)}
               </div>); })}
 
+          {labDraws.length > 1 && (
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.hair}` }}>
+              <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.3,
+                textTransform: "uppercase", color: C.faint, marginBottom: 7 }}>Compare against</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {labDraws.map((d) => {
+                  const on = d.id === labBaselineId;
+                  return (
+                    <button key={d.id} onClick={() => setLabs((labs || []).map((x) => ({ ...x, baseline: x.id === d.id })))}
+                      style={{ minHeight: 44, borderRadius: 999, padding: "8px 14px",
+                        border: `1.5px solid ${on ? C.go : C.hair}`, background: on ? C.go + "22" : "transparent",
+                        color: on ? C.go : C.muted, fontFamily: DATA, fontSize: 11.5, fontWeight: 700,
+                        cursor: "pointer" }}>{fmtDate(d.date)}</button>); })}
+              </div>
+              <div style={{ fontSize: 12.5, color: C.faint, marginTop: 7, lineHeight: 1.45 }}>
+                Every change is measured from this draw. Pick the one taken under the conditions you
+                want to compare against — an older panel stays on file as history either way.
+              </div>
+            </div>)}
           {labDraft ? (
             <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.hair}` }}>
               {labParsed && (
