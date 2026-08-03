@@ -2106,6 +2106,21 @@ export default function App() {
     if (!L.length) return null;
     return L.reduce((a, b) => (a.date >= b.date ? a : b)); })();
   const lastDoseDate = lastDoseEntry ? lastDoseEntry.date : null;
+  /* v0.9.164: weeks on therapy DERIVES from the log — the last stored copy in the family that
+     produced the dose, last-injection and med-scope bugs. glp.weeksOn counted DOSES, incrementing
+     on every log and decrementing on every removal regardless of which week the dose belonged to,
+     so backfilling an earlier dose or deleting a same-day duplicate moved it away from the truth
+     and it never came back. Measured from the first dose of the CURRENT medication, because week 3
+     of semaglutide is not week 3 of anything else. */
+  const weeksOnMed = (() => {
+    const all = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+    const mine = all.filter((d) => d.med === glp.med);
+    const L = mine.length ? mine : all.filter((d) => !d.med);
+    if (!L.length) return Math.max(1, +glp.weeksOn || 1);
+    const first = L.reduce((a, b) => (a.date <= b.date ? a : b)).date;
+    const days = Math.floor((Date.now() - new Date(first + "T12:00:00").getTime()) / 86400000);
+    return Math.max(1, Math.floor(days / 7) + 1);
+  })();
   // v0.9.143: lab readers. Every value carries its draw date, so "latest" is newest-date wins for
   // the same reason the dose log is — an older result entered late must not become the current one.
   const labDraws = (labs || []).filter((d) => d && d.date).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -2347,7 +2362,7 @@ export default function App() {
   async function orderForMe(r, opts = {}) {
     setSelected(r.id); setLoading(true); setResult(null); setError(null); setLoggedPicks([]); setMenuQ(""); setMenuA(null);
     const medLine = onMed
-      ? ` They use ${medObj.label} (week ${glp.weeksOn}${escalating ? ", DOSE-INCREASE WEEK" : ""}). Appetite suppressed — smaller volume, protein density first.` +
+      ? ` They use ${medObj.label} (week ${weeksOnMed}${escalating ? ", DOSE-INCREASE WEEK" : ""}). Appetite suppressed — smaller volume, protein density first.` +
         (nauseaRisk !== "low" ? ` Nausea risk is ${nauseaRisk.toUpperCase()} right now: AVOID fried/greasy/very heavy/high-fat dishes, favor gentle, lean, protein-dense options.` : "")
       : "";
     const restrictLine = restrictions.length
@@ -2437,7 +2452,7 @@ export default function App() {
       weight_lbs: curWeight, goal_lbs: goalWeight, weekly_loss_lbs: +recentRate.toFixed(2),
       body_fat_pct: bfShown ? +bfShown.toFixed(1) : null, body_fat_source: bfMeasured ? "measured" : (bodyFat ? "tape-measure estimate" : null),
       lean_mass_lbs: leanShown ? +leanShown.toFixed(1) : null,
-      medication: medObj ? `${medObj.label} ${glp.dose}${medObj.unit} weekly, week ${glp.weeksOn}` : "none", allergies, diets };
+      medication: medObj ? `${medObj.label} ${glp.dose}${medObj.unit} weekly, week ${weeksOnMed}` : "none", allergies, diets };
     const sys = "You are ForkCaster, a concise, encouraging nutrition and GLP-1 coach. Use the user's live stats. " + (restrictions.length ? `HARD SAFETY RULE: user has ${restrictions.join("; ")} — never suggest foods containing these. ` : "") +
       "NEVER recommend any food containing the user's listed allergies; respect their diet. " +
       "Give specific, actionable answers in 2-4 sentences. Never encourage extreme restriction or unsafe rapid loss; " +
@@ -4893,7 +4908,7 @@ export default function App() {
                 {donut(glp.dose || 0, Math.max(glp.dose || 1, 12), C.violet, `${glp.dose || 0}`, medObj.unit, C)}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{medObj.label}</div>
-                  <div style={{ fontSize: 13.5, color: C.muted }}>{medObj.brand} · {medObj.cadence} · week {glp.weeksOn}</div>
+                  <div style={{ fontSize: 13.5, color: C.muted }}>{medObj.brand} · {medObj.cadence} · week {weeksOnMed}</div>
                   <div style={{ marginTop: 8 }}>{numField("Your dose (mg)", glp.dose, (v) => setGlp({ ...glp, dose: +v }))}</div>
                 </div>
               </div>
@@ -4904,7 +4919,7 @@ export default function App() {
           ) : (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {donut(glp.dose, medObj.steps[medObj.steps.length - 1], C.violet, `${glp.dose}`, medObj.unit, C)}
-              <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 13.5, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontFamily: DATA, fontSize: 13.5, color: C.muted, marginTop: 6 }}>Week {glp.weeksOn} · current dose {(() => { const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+              <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 13.5, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontFamily: DATA, fontSize: 13.5, color: C.muted, marginTop: 6 }}>Week {weeksOnMed} · current dose {(() => { const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
                       return L.length ? +L[L.length - 1].mg : glp.dose; })()} {medObj.unit}</div></div>
             </div>
           )}
@@ -4949,7 +4964,7 @@ export default function App() {
       {(() => (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
           <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
-            {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${glp.weeksOn}` : "No dose logged yet"}
+            {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${weeksOnMed}` : "No dose logged yet"}
           </div>
           <button onClick={logInjection} style={{ background: doseLogged ? C.go : C.violet, color: C.bg, border: "none", borderRadius: 999, padding: "11px 18px", fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", flexShrink: 0 }}>
             {doseLogged ? "✓ Logged" : pendingSite ? `Log · ${pendingSite}` : "Log dose"}</button>
@@ -4972,7 +4987,7 @@ export default function App() {
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
       <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={async (di) => { if (await askConfirm(`Remove the dose logged on ${di}?`, true)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
-      {medObj && medObj.cadence === "daily" && (() => { const _wk = glp.weeksOn; return (
+      {medObj && medObj.cadence === "daily" && (() => { const _wk = weeksOnMed; return (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 11 }}>
           <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
             {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${_wk}` : "No dose logged yet"}

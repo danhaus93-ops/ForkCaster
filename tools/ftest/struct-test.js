@@ -1291,5 +1291,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/carries more than Apple Health can store/.test(BN),'and none explains its own explanation');
 }
 
+
+// v0.9.164: weeks on therapy derives — the last stored copy of the family that caused three bugs.
+{
+  const BO=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const weeksOnMed = /.test(BO),'weeks on therapy is derived');
+  ok(/mine = all\.filter\(\(d\) => d\.med === glp\.med\)/.test(BO),'and scoped to the current medication');
+  ok(/L\.reduce\(\(a, b\) => \(a\.date <= b\.date \? a : b\)\)\.date/.test(BO),'measured from the EARLIEST dose, not the count of them');
+  ok(!/week \$\{glp\.weeksOn\}/.test(BO) && !/week \{glp\.weeksOn\}/.test(BO),'no display reads the stored counter');
+  ok(!/Week \{glp\.weeksOn\}/.test(BO),'nor the capitalised one');
+  ok(/return Math\.max\(1, \+glp\.weeksOn \|\| 1\);/.test(BO),'the stored value survives only as a fallback when nothing is logged');
+  // the arithmetic, run here against the cases the counter got wrong
+  const wk=(firstISO, todayMs)=>{ const d=Math.floor((todayMs - new Date(firstISO+"T12:00:00").getTime())/86400000);
+    return Math.max(1, Math.floor(d/7)+1); };
+  const t=new Date("2026-08-03T12:00:00").getTime();
+  ok(wk("2026-07-17", t) === 3, 'three weekly doses from Jul 17 reads week 3');
+  ok(wk("2026-06-26", t) === 6, 'backfilling to Jun 26 reads week 6, not week 7');
+  ok(wk("2026-08-03", t) === 1, 'a dose today reads week 1');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
