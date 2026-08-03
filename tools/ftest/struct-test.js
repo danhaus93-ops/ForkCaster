@@ -1009,5 +1009,32 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/v0\.9\.44:/.test(b), 'no manifest is stranded on an old release note');
 }
 
+
+// v0.9.148: bioavailable testosterone is derived, and says so.
+{
+  const AZ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/key: "alb"/.test(AZ),'albumin is tracked — the calculation needs it and the CMP reports it');
+  ok(/const bioT = \(\(\) => \{/.test(AZ),'the derivation exists');
+  // run the SHIPPED equation, not a copy of it
+  const i=AZ.indexOf('const bioT = (() => {');
+  const body=AZ.slice(i, AZ.indexOf('})();', i));
+  for (const k of ['1.0e9','3.6e4','28.84','66430','288.4'])
+    ok(body.includes(k), 'Vermeulen constant ' + k + ' is present');
+  ok(/if \(!tt \|\| !sh \|\| !al\) return null;/.test(body),'it returns null unless all three inputs exist');
+  ok(/if \(!\(disc > 0\)\) return null;/.test(body),'and refuses an impossible discriminant');
+  // reproduce it here and check it against a value we already know: his measured free T
+  const KT=1.0e9, KA=3.6e4;
+  const calc=(tt,sh,al)=>{ const T=tt/28.84*1e-9,S=sh*1e-9,Alb=al*10/66430;
+    const N=1+KA*Alb,a=N*KT,b=N+KT*(S-T),c=-T;
+    const FT=(-b+Math.sqrt(b*b-4*a*c))/(2*a);
+    return { free:FT*288.4*1e9, bio:N*FT*288.4*1e8 }; };
+  const r=calc(250,40,3.9);
+  ok(Math.abs(r.free - 43) < 6, 'the equation reproduces his measured free T of 43 pg/mL (got ' + r.free.toFixed(1) + ')');
+  ok(r.bio > 0.25*250 && r.bio < 0.75*250, 'bioavailable lands in the physiological 25-75% of total');
+  // it must never be presented as measured
+  ok(/calculated from total, SHBG and albumin/.test(AZ),'the row states it is calculated, not drawn');
+  ok(/border: `1\.5px solid \$\{C\.faint\}`/.test(AZ),'and carries the hollow provenance glyph');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

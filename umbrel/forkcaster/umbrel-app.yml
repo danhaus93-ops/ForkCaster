@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.147"
+version: "0.9.148"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The lab card now tracks testosterone, free testosterone and SHBG alongside the
-  other markers, so the panel you are drawing lands in one place. Importing a report
-  picks them up, and they appear in the prescriber PDF.
+  Bioavailable testosterone is now worked out for you from total testosterone, SHBG
+  and albumin, so you do not need to pay for a separate test to see it. It is shown
+  with a hollow marker and says plainly that it was calculated rather than drawn.
 dependencies: []
 path: ""
 defaultUsername: ""

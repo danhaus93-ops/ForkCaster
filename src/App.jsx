@@ -578,6 +578,7 @@ const LAB_MARKERS = [
     why: "Ordered alongside lipase; rises sooner, less specific." },
   { key: "alt",      name: "ALT",                group: "Liver",      unit: "U/L",    lo: 9,    hi: 46,   flagAt: 138 },
   { key: "ast",      name: "AST",                group: "Liver",      unit: "U/L",    lo: 10,   hi: 40,   flagAt: 120 },
+  { key: "alb",      name: "Albumin",            group: "Liver",      unit: "g/dL",   lo: 3.6,  hi: 5.1 },
   { key: "trig",     name: "Triglycerides",      group: "Cardiometabolic", unit: "mg/dL", lo: 0, hi: 150 },
   { key: "hdl",      name: "HDL",                group: "Cardiometabolic", unit: "mg/dL", lo: 40, hi: 200 },
   { key: "ldl",      name: "LDL",                group: "Cardiometabolic", unit: "mg/dL", lo: 0,  hi: 100 },
@@ -2087,6 +2088,27 @@ export default function App() {
     if (v < m.lo || v > m.hi) return "out";
     return "in";
   };
+  /* v0.9.148: bioavailable testosterone is CALCULATED (Vermeulen), not measured — free testosterone
+     by dialysis plus SHBG plus the CMP's albumin is everything the equation needs, so the cheaper
+     panel gives up nothing. It is marked as derived wherever it appears: this app does not present
+     a computed number as though someone drew it. */
+  const bioT = (() => {
+    const tt = labLatest("tt"), sh = labLatest("shbg"), al = labLatest("alb");
+    if (!tt || !sh || !al) return null;
+    const KT = 1.0e9, KA = 3.6e4;
+    const T = tt.v / 28.84 * 1e-9, S = sh.v * 1e-9, Alb = al.v * 10 / 66430;
+    const N = 1 + KA * Alb, a = N * KT, b = N + KT * (S - T), c = -T;
+    const disc = b * b - 4 * a * c;
+    if (!(disc > 0)) return null;
+    const FT = (-b + Math.sqrt(disc)) / (2 * a);
+    if (!(FT > 0)) return null;
+    return {
+      free: +(FT * 288.4 * 1e9).toFixed(1),          // pg/mL
+      bio: +(N * FT * 288.4 * 1e8).toFixed(0),       // ng/dL
+      pct: Math.round((N * FT * 288.4 * 1e8) / tt.v * 100),
+      date: [tt.date, sh.date, al.date].sort().slice(-1)[0],
+    };
+  })();
   const labMissing = LAB_MARKERS.filter((m) => m.required && !labLatest(m.key));
   const labBaselineDate = labDraws.length ? labDraws[0].date : null;
   const labAgeDays = labDraws.length
@@ -4272,6 +4294,23 @@ export default function App() {
                           {cur ? (moved != null ? `${moved > 0 ? "+" : ""}${moved} from baseline` : "baseline") : "never drawn"}</div>
                       </div>
                     </div>); })}
+                {g === "Hormones" && bioT && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
+                    borderTop: `1px solid ${C.hair}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, color: C.ink, display: "flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: 999, border: `1.5px solid ${C.faint}`,
+                          flexShrink: 0 }} />Testosterone, bioavailable</div>
+                      <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
+                        calculated from total, SHBG and albumin — not drawn</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, color: C.muted,
+                        fontVariantNumeric: "tabular-nums" }}>{bioT.bio}</div>
+                      <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
+                        ng/dL · {bioT.pct}% of total</div>
+                    </div>
+                  </div>)}
               </div>); })}
 
           {labDraft ? (
