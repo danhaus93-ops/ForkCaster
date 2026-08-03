@@ -1770,6 +1770,19 @@ app.post("/api/report/pdf", async (req, res) => {
     const tgt = st.targets || {};
     const esc = (x) => String(x == null ? "" : x).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
     const fmtD = (d) => { try { return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); } catch { return d; } };
+    const LABM = [["lipase","Lipase","U/L",0,60,180],["amylase","Amylase","U/L",25,125,375],["alt","ALT","U/L",9,46,138],["ast","AST","U/L",10,40,120],["trig","Triglycerides","mg/dL",0,150,null],["hdl","HDL","mg/dL",40,200,null],["ldl","LDL","mg/dL",0,100,null],["glucose","Fasting glucose","mg/dL",65,99,null],["a1c","HbA1c","%",0,5.7,null],["egfr","eGFR","mL/min",60,200,null],["creat","Creatinine","mg/dL",0.60,1.29,null]];
+    const labDraws = (st.labs || []).filter((d) => d && d.date).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+    /* One row per marker: the earliest value on record, the most recent, and the change between
+       them. A clinician reading this needs the trajectory, not a snapshot — and needs to see which
+       markers have never been drawn, which is why absent ones are listed rather than omitted. */
+    const labRows = LABM.map(([k, name, unit, lo, hi, flag]) => {
+      const withV = labDraws.filter((d) => d.values && d.values[k] != null && d.values[k] !== "");
+      if (!withV.length) return `<tr><td>${esc(name)}</td><td colspan=3 style="color:#888">not drawn</td><td>${lo}\u2013${hi} ${esc(unit)}</td></tr>`;
+      const first = +withV[0].values[k], last = +withV[withV.length - 1].values[k];
+      const delta = withV.length > 1 ? (last - first >= 0 ? "+" : "") + (+(last - first).toFixed(2)) : "\u2014";
+      const out = flag != null && last >= flag ? " style=\"font-weight:700\"" : (last < lo || last > hi) ? " style=\"font-weight:600\"" : "";
+      return `<tr><td>${esc(name)}</td><td${out}>${last} ${esc(unit)}</td><td>${fmtD(withV[withV.length - 1].date)}</td><td>${delta}</td><td>${lo}\u2013${hi}${flag != null ? ` (flag \u2265${flag})` : ""}</td></tr>`;
+    }).join("");
     const doses = (glp.doseLog || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
     const doseRows = doses.map((d) => `<tr><td>${fmtD(d.date)}</td><td>${esc(d.mg)} mg</td><td>${esc(d.site || "\u2014")}</td></tr>`).join("");
     const wRows = wl.slice(-20).reverse().map((w) => `<tr><td>${fmtD(w.date)}</td><td>${(+w.lbs).toFixed(1)} lb</td></tr>`).join("");
@@ -1863,6 +1876,8 @@ app.post("/api/report/pdf", async (req, res) => {
       </table>
       <div style="color:#8a97a4;font-size:9.5px;margin-top:4px">Correlations computed on the patient's own server from self-reported logs \u2014 patterns for discussion, not diagnoses.</div>
       <h2>Dose history &amp; injection sites</h2><table><tr><th>Date</th><th>Dose</th><th>Site</th></tr>${doseRows || "<tr><td colspan=3>None logged</td></tr>"}</table>
+      <h2>Laboratory markers</h2><table><tr><th>Marker</th><th>Latest</th><th>Drawn</th><th>Change</th><th>Reference</th></tr>${labRows}</table>
+      <p class="note">Flag thresholds are the published trial's, not the laboratory's reference limit. Values entered by the patient from their own report.</p>
       <h2>Weight log</h2><table><tr><th>Date</th><th>Weight</th></tr>${wRows || "<tr><td colspan=2>None logged</td></tr>"}</table>
       <h2>Side effects</h2><table><tr><th>Date</th><th>Symptom</th><th>Severity</th><th>Post-dose</th></tr>${seRows || "<tr><td colspan=4>None logged</td></tr>"}</table>
       <h2>Daily nutrition (last 14 logged days)</h2><table><tr><th>Date</th><th>Protein (vs goal)</th><th>Calories</th><th>Carbs</th><th>Fat</th></tr>${mealRows || "<tr><td colspan=5>None logged</td></tr>"}</table>

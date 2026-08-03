@@ -934,5 +934,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/Check every number against your report before saving/.test(AV),'the draft says to check the numbers against the source');
 }
 
+
+// v0.9.145: the report says what is in it, and the labs are in it.
+{
+  const AW=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const SW=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  ok(/<h2>Laboratory markers<\/h2>/.test(SW),'the PDF has a laboratory section');
+  ok(/not drawn/.test(SW),'a marker never drawn is listed as such rather than omitted');
+  ok(/const first = \+withV\[0\]\.values\[k\], last = \+withV\[withV\.length - 1\]\.values\[k\];/.test(SW),'each row carries first, latest and the change between');
+  ok(/Flag thresholds are the published trial/.test(SW),'the PDF states whose thresholds these are');
+  // the card
+  ok(/9 SECTIONS/.test(AW),'the card counts nine sections');
+  ok(/laboratory markers,\s*\n?\s*training and intake/.test(AW.replace(/\s+/g,' ')) || /laboratory markers/.test(AW),'the blurb mentions the labs');
+  ok(/\["Laboratory markers", labDraws\.length/.test(AW),'the card lists every section with what it holds');
+  ok(/id: "rep"/.test(AW),'the report card collapses like the rest');
+  ok(/labs section is empty/.test(AW),'and says so when there is nothing in it');
+  // the count in the card and the sections in the PDF must not drift apart
+  const secs=(SW.match(/<h2>[^<]{3,60}<\/h2>/g) || []).length;
+  ok(secs === 9, 'the PDF really has nine sections, matching the card (' + secs + ')');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

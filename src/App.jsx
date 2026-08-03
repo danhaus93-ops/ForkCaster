@@ -4180,11 +4180,49 @@ export default function App() {
       <div style={{ display: "contents" }}>{card(<>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {sectionTitle("Prescriber report")}
-          <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>8 SECTIONS</span>
+          <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>9 SECTIONS</span>
         </div>
-        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.45, marginBottom: 10 }}>Everything this app has measured about you, printed for a clinic visit: your per-dose response, your protocol and checkpoint, tolerability surveillance, training and intake. It reports; it never recommends a dose.</div>
-        <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 14, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Generate PDF</button>
-      </>)}</div>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.45, marginBottom: 10 }}>
+          Everything this app has measured about you, printed for a clinic visit: your per-dose
+          response, your protocol and checkpoint, tolerability surveillance, laboratory markers,
+          training and intake. It reports; it never recommends a dose.
+        </div>
+
+        {/* v0.9.145: the card shows what is actually in the report. "8 sections" told him a count
+            and nothing else — he could not know the labs had been added, or what a section holds,
+            without generating a PDF and reading it. */}
+        <div style={{ border: `1px solid ${C.hair}`, borderRadius: 13, overflow: "hidden", marginBottom: 11 }}>
+          {[
+            ["Measured response at each dose", `${(glp.doseLog || []).length} dose${(glp.doseLog || []).length === 1 ? "" : "s"} logged`],
+            ["Patient-authored protocol & checkpoint", medObj ? `${medObj.label} \u00b7 every ${injInterval} d` : "\u2014"],
+            ["Tolerability surveillance", `${(glp.sideEffects || []).length} entr${(glp.sideEffects || []).length === 1 ? "y" : "ies"}`],
+            ["What the app has learned", "on-device analysis"],
+            ["Dose history & injection sites", lastDoseDate ? `through ${fmtDate(lastDoseDate)}` : "none yet"],
+            ["Laboratory markers", labDraws.length
+              ? `${LAB_MARKERS.filter((m) => labLatest(m.key)).length} of ${LAB_MARKERS.length}${labMissing.length ? ` \u00b7 ${labMissing.length} never drawn` : ""}`
+              : "none on file"],
+            ["Weight log", `${(weightLog || []).length} weigh-in${(weightLog || []).length === 1 ? "" : "s"}`],
+            ["Side effects", `${(glp.sideEffects || []).length} logged`],
+            ["Daily nutrition", "last 14 logged days"],
+          ].map(([label, meta], ri) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+              borderTop: ri === 0 ? "none" : `1px solid ${C.hair}`, background: ri % 2 ? "transparent" : C.surfaceAlt + "5C" }}>
+              <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, width: 16, flexShrink: 0 }}>{ri + 1}</span>
+              <span style={{ flex: 1, fontSize: 13, color: C.ink, minWidth: 0 }}>{label}</span>
+              <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, textAlign: "right", flexShrink: 0 }}>{meta}</span>
+            </div>))}
+        </div>
+
+        <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "12px", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Generate PDF</button>
+      </>, {}, {
+        id: "rep", tone: C.muted, color: C.muted, title: "Prescriber report",
+        when: "9 sections",
+        value: String(9), unit: "sections",
+        sub: labDraws.length
+          ? `includes ${LAB_MARKERS.filter((m) => labLatest(m.key)).length} lab markers \u00b7 ${(glp.doseLog || []).length} doses \u00b7 ${(weightLog || []).length} weigh-ins`
+          : "labs section is empty \u2014 import a report to fill it",
+        spark: null,
+      })}</div>
 
       <div style={{ display: "contents" }}>{card(
         <>
