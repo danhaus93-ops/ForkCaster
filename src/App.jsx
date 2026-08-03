@@ -1726,6 +1726,8 @@ export default function App() {
   const [labBusy, setLabBusy] = useState(false);
   const [labParsed, setLabParsed] = useState(null);   // keys the parser filled, for the confirm state
   const labFileRef = useRef(null);
+  const labHoldRef = useRef(null);
+  const labHoldFired = useRef(false);
   async function parseLabFile(file) {
     if (!file) return;
     setLabBusy(true);
@@ -4370,14 +4372,26 @@ export default function App() {
                 {labDraws.map((d) => {
                   const on = d.id === labBaselineId;
                   return (
-                    <button key={d.id} onClick={() => setLabs((labs || []).map((x) => ({ ...x, baseline: x.id === d.id })))}
+                    <button key={d.id}
+                      onClick={() => { if (labHoldFired.current) { labHoldFired.current = false; return; }
+                        setLabs((labs || []).map((x) => ({ ...x, baseline: x.id === d.id }))); }}
+                      onTouchStart={() => { clearTimeout(labHoldRef.current); labHoldFired.current = false;
+                        labHoldRef.current = setTimeout(() => {
+                          labHoldFired.current = true;
+                          if (navigator.vibrate) navigator.vibrate(18);
+                          if (window.confirm(`Delete the draw from ${fmtDate(d.date)}? Its results are removed.`))
+                            setLabs((labs || []).filter((x) => x.id !== d.id));
+                        }, 550); }}
+                      onTouchEnd={() => clearTimeout(labHoldRef.current)}
+                      onTouchMove={() => clearTimeout(labHoldRef.current)}
                       style={{ minHeight: 44, borderRadius: 999, padding: "8px 14px",
                         border: `1.5px solid ${on ? C.go : C.hair}`, background: on ? C.go + "22" : "transparent",
                         color: on ? C.go : C.muted, fontFamily: DATA, fontSize: 11.5, fontWeight: 700,
                         cursor: "pointer" }}>{fmtDate(d.date)}</button>); })}
               </div>
               <div style={{ fontSize: 12.5, color: C.faint, marginTop: 7, lineHeight: 1.45 }}>
-                Every change is measured from this draw. Pick the one taken under the conditions you
+                Tap to compare against that draw; hold to delete it. Every change is measured from the
+                one you pick — choose the draw taken under the conditions you
                 want to compare against — an older panel stays on file as history either way.
               </div>
             </div>)}
@@ -4401,7 +4415,14 @@ export default function App() {
                   </div>))}
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={() => { setLabs([...(labs || []), { id: uid(), date: labDraft.date, values: labDraft.values }]); setLabDraft(null); setLabParsed(null); }}
+                <button onClick={() => { (() => {
+                    const prior = (labs || []).find((x) => x.date === labDraft.date);
+                    const merged = { id: prior ? prior.id : uid(), date: labDraft.date,
+                      values: { ...(prior ? prior.values : {}), ...labDraft.values },
+                      baseline: prior ? prior.baseline : undefined };
+                    setLabs(prior ? (labs || []).map((x) => (x.date === labDraft.date ? merged : x))
+                                  : [...(labs || []), merged]);
+                  })(); setLabDraft(null); setLabParsed(null); }}
                   style={{ flex: 1, background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: 13,
                     fontFamily: DATA, fontSize: 12.5, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>Save draw</button>
                 <button onClick={() => setLabDraft(null)}

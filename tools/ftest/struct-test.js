@@ -1152,5 +1152,21 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/key: "chol"/.test(BH),'total cholesterol is tracked so the lipid panel is complete');
 }
 
+
+// v0.9.155: one draw per date, and a draw can be removed.
+{
+  const BI=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const prior = \(labs \|\| \[\]\)\.find\(\(x\) => x\.date === labDraft\.date\);/.test(BI),'saving looks for an existing draw on that date');
+  ok(/values: \{ \.\.\.\(prior \? prior\.values : \{\}\), \.\.\.labDraft\.values \}/.test(BI),'a re-import MERGES into it rather than duplicating or wiping');
+  ok(/baseline: prior \? prior\.baseline : undefined/.test(BI),'and the baseline flag survives a re-import');
+  ok(/id: prior \? prior\.id : uid\(\)/.test(BI),'the draw keeps its identity, so the baseline selection still points at it');
+  // hold to delete
+  ok(/labHoldRef\.current = setTimeout\(/.test(BI),'holding a date starts a delete');
+  ok(/if \(labHoldFired\.current\) \{ labHoldFired\.current = false; return; \}/.test(BI),'and the tap that follows a hold does not also change the baseline');
+  ok(/setLabs\(\(labs \|\| \[\]\)\.filter\(\(x\) => x\.id !== d\.id\)\)/.test(BI),'the draw is removed');
+  ok(/Delete the draw from \$\{fmtDate\(d\.date\)\}\?/.test(BI),'after confirming, naming the date');
+  ok(/Tap to compare against that draw; hold to delete it/.test(BI),'and the card says both gestures');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
