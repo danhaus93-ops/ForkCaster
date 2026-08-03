@@ -48,11 +48,27 @@ async function auditPage(page, label, compact) {
     out.scrollH = document.documentElement.scrollHeight;
     out.cards = document.querySelectorAll("[data-card-id]").length;
 
+    /* v0.9.158: report the OUTERMOST interactive element only. A button containing a div
+       containing a span counted three times, which is how one small chip became three findings. */
+    const interactive = [...document.querySelectorAll('button, [role="button"], a, select, input')];
+    const isNested = (el) => interactive.some((o) => o !== el && o.contains(el));
+    /* Anything inside a horizontal scroller is deliberately off-screen — a carousel is not a
+       layout fault, and treating it as one buried the real findings under place chips. */
+    const inScroller = (el) => {
+      for (let n = el.parentElement; n; n = n.parentElement) {
+        const ox = getComputedStyle(n).overflowX;
+        if (ox === "auto" || ox === "scroll") return true;
+      }
+      return false;
+    };
+
     const seen = new Set();
-    for (const el of document.querySelectorAll('button, [role="button"], a, select, input')) {
+    for (const el of interactive) {
+      if (isNested(el)) continue;
       const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) continue;              // not rendered
-      if (r.height >= floor && r.width >= floor) continue;
+      if (r.width === 0 || r.height === 0) continue;
+      // height is what a thumb misses; a full-width row 30px tall is the real failure mode
+      if (r.height >= floor) continue;
       const label = (el.textContent || "").trim().slice(0, 28) || el.tagName.toLowerCase();
       const key = label + "|" + Math.round(r.height);
       if (seen.has(key)) continue;
@@ -60,29 +76,25 @@ async function auditPage(page, label, compact) {
       out.small.push({ label, h: Math.round(r.height), w: Math.round(r.width) });
     }
 
-    /* Clipping: an element whose text is wider or taller than the box drawing it. This is the
-       class of fault a string scan can never see — "TOD" instead of "Today". */
     for (const el of document.querySelectorAll("span, div")) {
-      if (el.children.length) continue;                            // leaf text only
+      if (el.children.length) continue;
       const t = (el.textContent || "").trim();
       if (t.length < 2) continue;
-      const cs = getComputedStyle(el);
-      if (cs.overflow === "visible" && cs.textOverflow !== "ellipsis") continue;
       if (el.scrollWidth > el.clientWidth + 1) {
-        out.clipped.push({ text: t.slice(0, 34), by: el.scrollWidth - el.clientWidth });
+        const ell = getComputedStyle(el).textOverflow === "ellipsis";
+        out.clipped.push({ text: t.slice(0, 34), by: el.scrollWidth - el.clientWidth, ell });
       }
     }
 
-    /* Anything sticking out past the viewport horizontally — the cause of a stray sideways scroll. */
     const vw = document.documentElement.clientWidth;
-    for (const el of document.querySelectorAll("*")) {
+    for (const el of document.querySelectorAll("div, span, img, button")) {
       const r = el.getBoundingClientRect();
       if (r.width === 0) continue;
-      if (r.right > vw + 1 || r.left < -1) {
-        const t = (el.textContent || "").trim().slice(0, 26) || el.tagName.toLowerCase();
-        out.overflow.push({ text: t, right: Math.round(r.right), vw });
-        if (out.overflow.length > 6) break;
-      }
+      if (r.right <= vw + 1 && r.left >= -1) continue;
+      if (inScroller(el)) continue;                    // a carousel is meant to run off-screen
+      const t = (el.textContent || "").trim().slice(0, 26) || el.tagName.toLowerCase();
+      out.overflow.push({ text: t, right: Math.round(r.right), vw });
+      if (out.overflow.length > 6) break;
     }
     return out;
   }, { TOUCH_MIN, TOUCH_MIN_COMPACT, compact });
@@ -138,7 +150,8 @@ async function auditPage(page, label, compact) {
           for (const s of res.small)
             note("TOUCH", `${label}: "${s.label}" is ${s.h}x${s.w}px, under the ${compact ? TOUCH_MIN_COMPACT : TOUCH_MIN}px floor`);
           for (const c of res.clipped)
-            note("CLIP", `${label}: "${c.text}" is clipped by ${c.by}px`);
+            note(c.ell ? "TRUNCATED" : "CLIP",
+              `${label}: "${c.text}" ${c.ell ? "truncates" : "is hard-clipped"} by ${c.by}px`);
           for (const o of res.overflow)
             note("OVERFLOW", `${label}: "${o.text}" extends to ${o.right}px past a ${o.vw}px viewport`);
 
@@ -163,7 +176,7 @@ async function auditPage(page, label, compact) {
   const byKind = {};
   for (const p of problems) (byKind[p.kind] = byKind[p.kind] || []).push(p.msg);
   console.log("\n=== FINDINGS ===");
-  for (const k of ["TOUCH", "CLIP", "OVERFLOW"]) {
+  for (const k of ["CLIP", "OVERFLOW", "TOUCH", "TRUNCATED"]) {
     const list = byKind[k] || [];
     console.log(`  ${k}: ${list.length}`);
     for (const m of list.slice(0, 12)) console.log("    " + m);
@@ -171,6 +184,13 @@ async function auditPage(page, label, compact) {
   }
   if (SHOT_DIR) console.log(`\n  screenshots written to ${SHOT_DIR}`);
 
-  if (problems.length) { console.log("\nVISUAL_AUDIT_FAILED " + problems.length + " findings"); process.exit(1); }
+  /* What FAILS versus what is merely reported. A hard clip means text is unreadable and an
+     overflow means the layout is broken — those are defects. Touch findings are a floor to work
+     toward, and truncations are his own rule to judge case by case; both are printed, neither
+     stops a release. A check that fails on everything gets ignored, which is the state this tool
+     exists to fix. */
+  const hard = problems.filter((p) => p.kind === "CLIP" || p.kind === "OVERFLOW").length;
+  if (hard) { console.log("\nVISUAL_AUDIT_FAILED " + hard + " layout defects (" + (problems.length - hard) + " advisories)"); process.exit(1); }
+  if (problems.length) { console.log("\nVISUAL_AUDIT_OK with " + problems.length + " advisories"); process.exit(0); }
   console.log("\nVISUAL_AUDIT_OK");
 })().catch((e) => { console.log("VISUAL_AUDIT_ERROR " + (e && e.message ? e.message : e)); process.exit(1); });

@@ -3671,7 +3671,7 @@ export default function App() {
           </div>
           {mealLog.filter((m) => m.date === todayISO()).map((m) => (
             <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
-              <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 15.5, fontWeight: 600, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</div>
+              <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 15.5, fontWeight: 600, color: C.ink, lineHeight: 1.3, wordBreak: "break-word" }}>{m.name}</div>
                 <div style={{ fontFamily: DATA, fontSize: 12.5, color: C.faint, marginTop: 2 }}>{[m.at ? new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null, `${m.protein} P`, m.src ? String(m.src).toLowerCase().replace(/ \(.*\)$/, "") : null].filter(Boolean).join(" · ")}</div></div>
               <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}><span style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink2 }}>{m.calories}</span>
               <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 17, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button></div>
@@ -5875,7 +5875,7 @@ export default function App() {
                     <div key={i} onClick={() => { setScan({ status: "found", food: f }); setFoodResults(null); setFoodQuery(""); }}
                       style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.hair}`, marginBottom: 6, cursor: "pointer", background: C.surfaceAlt }}>
                       <div style={{ minWidth: 0, paddingRight: 10 }}>
-                        <div style={{ fontSize: 15.5, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.name}</div>
+                        <div style={{ fontSize: 15.5, fontWeight: 700, color: C.ink, lineHeight: 1.3, wordBreak: "break-word" }}>{f.name}</div>
                         <div style={{ fontSize: 13, color: C.faint }}>{f.brand || f.source} · per {f.basis}</div>
                       </div>
                       <div style={{ textAlign: "right", flexShrink: 0 }}>

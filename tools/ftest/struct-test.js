@@ -1199,5 +1199,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/\|\| true/.test(RS),'advisory — a geometry finding never blocks a fix from shipping');
 }
 
+
+// v0.9.158: the audit's first real catch, and the tool tightened so its findings mean something.
+{
+  const fs4=require('fs');
+  const BJ=fs4.readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const VB=fs4.readFileSync(__FCROOT + '/tools/ftest/visual-audit.js','utf8');
+  // a logged meal name is never truncated — the audit measured it losing 77px at 375pt
+  ok(!/whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" \}\}>\{m\.name\}/.test(BJ),'a logged meal name is not truncated');
+  ok(!/whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" \}\}>\{f\.name\}/.test(BJ),'nor a food search result');
+  ok(/lineHeight: 1\.3, wordBreak: "break-word" \}\}>\{m\.name\}/.test(BJ),'it wraps instead');
+  // the tool must not drown its own findings
+  ok(/const isNested = /.test(VB),'the audit reports the outermost control, not every nested layer');
+  ok(/const inScroller = /.test(VB),'and does not call a carousel a layout fault');
+  ok(/if \(r\.height >= floor\) continue;/.test(VB),'touch is judged on height, which is what a thumb misses');
+  ok(/kind === "CLIP" \|\| p\.kind === "OVERFLOW"/.test(VB),'only real layout defects fail the run');
+  ok(/VISUAL_AUDIT_OK with /.test(VB),'advisories are reported without blocking a release');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
