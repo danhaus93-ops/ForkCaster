@@ -20,23 +20,23 @@ const DATA = "ui-monospace,'SF Mono','JetBrains Mono',Menlo,monospace"; // v0.9.
 
 const THEMES = {
   forest: { name: "Forest",
-    bg: "#E9EEE4", surface: "#FFFFFF", surfaceAlt: "#F5F8F1", ink: "#152019", ink2: "#26352C", muted: "#5E6B62", faint: "#8A968C",
+    bg: "#E9EEE4", surface: "#FFFFFF", surfaceAlt: "#F5F8F1", ink: "#152019", ink2: "#26352C", muted: "#5E6B62", faint: "#6B786D",
     go: "#128A4B", goSoft: "#DDF0E4", gold: "#B8860B", silver: "#7C8891", bronze: "#B06A34",
     caution: "#D08A22", cautionSoft: "#F7ECD8", avoid: "#C24631", avoidSoft: "#F6E1DC", hair: "#D3DBCC", blue: "#2E6F8E", violet: "#6A5AA6" },
   midnight: { name: "Midnight", dark: true,
-    bg: "#0A0E13", surface: "#141C25", surfaceAlt: "#1B2530", ink: "#F2F6F4", ink2: "#C9D3CD", muted: "#8595A2", faint: "#5B6874",
+    bg: "#0A0E13", surface: "#141C25", surfaceAlt: "#1B2530", ink: "#F2F6F4", ink2: "#C9D3CD", muted: "#8595A2", faint: "#778795",
     go: "#3BDF93", goSoft: "#0F2E22", gold: "#E3B24C", silver: "#9AA7B0", bronze: "#C98A55",
     caution: "#F0B455", cautionSoft: "#2C2413", avoid: "#F0705A", avoidSoft: "#2E1A16", hair: "#232E3A", blue: "#7CC7F0", violet: "#AE9BF6" },
   ocean: { name: "Ocean",
-    bg: "#E7EEF2", surface: "#FFFFFF", surfaceAlt: "#EEF4F8", ink: "#10202B", ink2: "#22333F", muted: "#566873", faint: "#8497A2",
+    bg: "#E7EEF2", surface: "#FFFFFF", surfaceAlt: "#EEF4F8", ink: "#10202B", ink2: "#22333F", muted: "#566873", faint: "#627682",
     go: "#0E8F9B", goSoft: "#D5EEF0", gold: "#C69A3C", silver: "#7C8891", bronze: "#B06A34",
     caution: "#D68A2A", cautionSoft: "#F6ECD9", avoid: "#C9504A", avoidSoft: "#F6E0DE", hair: "#CFDBE2", blue: "#2E6F8E", violet: "#5E6AB0" },
   ember: { name: "Ember",
-    bg: "#F6EFE9", surface: "#FFFFFF", surfaceAlt: "#FBEDE3", ink: "#241813", ink2: "#3B2A22", muted: "#7A6355", faint: "#A98F7E",
+    bg: "#F6EFE9", surface: "#FFFFFF", surfaceAlt: "#FBEDE3", ink: "#241813", ink2: "#3B2A22", muted: "#7A6355", faint: "#896E5B",
     go: "#C4632F", goSoft: "#F6E2D4", gold: "#B8860B", silver: "#8A8078", bronze: "#A9682F",
     caution: "#CE8A2A", cautionSoft: "#F7ECD6", avoid: "#B23B2F", avoidSoft: "#F4DDD7", hair: "#E4D6C9", blue: "#3E7C8E", violet: "#7A5AA6" },
   mono: { name: "Mono",
-    bg: "#F0F1EF", surface: "#FFFFFF", surfaceAlt: "#F5F6F4", ink: "#1A1B18", ink2: "#33352F", muted: "#63665E", faint: "#96988F",
+    bg: "#F0F1EF", surface: "#FFFFFF", surfaceAlt: "#F5F6F4", ink: "#1A1B18", ink2: "#33352F", muted: "#63665E", faint: "#72746B",
     go: "#1F6E3A", goSoft: "#E1EBE2", gold: "#8A7A3A", silver: "#808881", bronze: "#977A54",
     caution: "#9A7A2E", cautionSoft: "#EEEAD9", avoid: "#8E3B33", avoidSoft: "#EEDEDB", hair: "#DBDCD7", blue: "#40606E", violet: "#5A566E" },
 };
@@ -4731,7 +4731,7 @@ export default function App() {
               <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "1 1 0", minWidth: 0, padding: "8px 6px", borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "1 1 0", minWidth: 0, padding: "8px 6px", minHeight: 44, borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
             </>);
           })()}
           {medObj.investigational ? (
@@ -4774,7 +4774,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 6 }}>
                 {[5, 6, 7, 10, 14].map((d) => (
                   <button key={d} onClick={() => setPrefs({ ...prefs, medIntervalDays: { ...(prefs.medIntervalDays || {}), [glp.med]: d } })}
-                    style={{ flex: 1, height: 34, borderRadius: 999, border: `1.5px solid ${cur === d ? C.violet : C.hair}`,
+                    style={{ flex: 1, minHeight: 44, borderRadius: 999, border: `1.5px solid ${cur === d ? C.violet : C.hair}`,
                       background: cur === d ? C.violet + "2E" : "transparent", color: cur === d ? C.violet : C.muted,
                       fontFamily: DATA, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{d}d</button>))}
               </div>
@@ -4787,7 +4787,7 @@ export default function App() {
         <div style={{ display: "flex", gap: 6 }}>
           {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
             <button key={k} onClick={() => setGlp({ ...glp, injectionDay: k })}
-              style={{ flex: 1, height: 38, borderRadius: 999, border: `1.5px solid ${glp.injectionDay === k ? C.violet : C.hair}`, background: glp.injectionDay === k ? C.violet + "2E" : "transparent", color: glp.injectionDay === k ? C.violet : C.muted, fontFamily: DATA, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
+              style={{ flex: 1, minHeight: 44, borderRadius: 999, border: `1.5px solid ${glp.injectionDay === k ? C.violet : C.hair}`, background: glp.injectionDay === k ? C.violet + "2E" : "transparent", color: glp.injectionDay === k ? C.violet : C.muted, fontFamily: DATA, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
           ))}
         </div>
       </>)}</div>}
@@ -5674,7 +5674,7 @@ export default function App() {
 
         {/* Bottom nav */}
         <div style={{ position: "fixed", bottom: 0, width: "100%", maxWidth: 430, background: C.dark ? "rgba(24,32,41,0.94)" : "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.hair}`, display: "flex", padding: "8px 6px calc(10px + env(safe-area-inset-bottom, 0px))" }}>
-          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => { if (t.id !== tab) { setQuick(null); setQuickVal(""); } setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 0" }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 12.5, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
+          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => { if (t.id !== tab) { setQuick(null); setQuickVal(""); } setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: "6px 0", minHeight: 48 }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 12.5, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
         </div>
 
         {/* Scan / log food sheet */}

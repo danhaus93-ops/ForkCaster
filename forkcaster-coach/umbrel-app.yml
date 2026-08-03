@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.145"
+version: "0.9.146"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The prescriber report now includes your laboratory markers, with the latest value,
-  when it was drawn, the change from your first, and which markers have never been
-  drawn. The card lists all nine sections and what each one currently holds, so you
-  can see what is in the report without generating it.
+  The dimmest text in the app — sub-lines, captions, reference ranges — is now
+  readable: it was a third below the accessibility contrast floor in every theme and
+  has been lifted in all five, keeping each theme's tint. The tab bar and the small
+  pill buttons also grew proper touch areas without changing how anything looks.
 dependencies: []
 path: ""
 defaultUsername: ""

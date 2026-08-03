@@ -954,5 +954,29 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(secs === 9, 'the PDF really has nine sections, matching the card (' + secs + ')');
 }
 
+
+// v0.9.146: legibility and touch. The contrast is COMPUTED, not pinned to a hex — any future theme
+// or tweak that drops faint below 4.5:1 on its own surface fails here, in any theme.
+{
+  const AX=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const lum=(h)=>{const c=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255)
+    .map(v=>v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4));
+    return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2];};
+  const ratio=(a,b)=>{const p=[lum(a),lum(b)].sort((m,n)=>n-m);return (p[0]+0.05)/(p[1]+0.05);};
+  const i=AX.indexOf('const THEMES'); const blk=AX.slice(i, i+4200);
+  const themes=[...blk.matchAll(/(\w+):\s*\{[^}]*?surface:\s*"(#[0-9A-Fa-f]{6})"[^}]*?muted:\s*"(#[0-9A-Fa-f]{6})"[^}]*?faint:\s*"(#[0-9A-Fa-f]{6})"/g)];
+  ok(themes.length >= 5, 'all themes found for the contrast check (' + themes.length + ')');
+  for (const [,name,surf,muted,faint] of themes) {
+    const rf=ratio(faint,surf), rm=ratio(muted,surf);
+    ok(rf >= 4.5, name + ': faint meets WCAG AA on its surface (' + rf.toFixed(2) + ':1)');
+    ok(rm > rf, name + ': faint stays dimmer than muted, so the hierarchy holds');
+  }
+  // touch floors
+  ok(/padding: "6px 0", minHeight: 48/.test(AX),'the tab bar guarantees its hit height');
+  ok((AX.match(/minHeight: 44/g) || []).length >= 3,'the small pill controls carry a 44pt floor');
+  ok(!/flex: 1, height: 38, borderRadius: 999/.test(AX),'no dose pill declares a fixed sub-44 height');
+  ok(!/flex: 1, height: 34, borderRadius: 999/.test(AX),'nor an interval pill');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
