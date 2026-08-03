@@ -978,5 +978,36 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/flex: 1, height: 34, borderRadius: 999/.test(AX),'nor an interval pill');
 }
 
+
+// v0.9.147: hormone markers, for the panel he is drawing this week.
+{
+  const AY=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const SY=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  for (const k of ['tt','ft','shbg']) {
+    ok(new RegExp('key: "' + k + '"').test(AY), 'the card tracks ' + k);
+    ok(new RegExp('"' + k + '"').test(SY), 'the parser accepts ' + k);
+  }
+  ok(/const LAB_GROUPS = \["Pancreatic", "Liver", "Cardiometabolic", "Glycemic", "Hormones", "Renal"\]/.test(AY),'Hormones is a group, ordered before Renal');
+  // the ranges are the ones on HIS report, so a value reads against the same scale as his baseline
+  ok(/key: "tt"[\s\S]{0,120}lo: 250,\s*hi: 1100/.test(AY),'total testosterone uses the adult-male range from his own report');
+  ok(/key: "ft"[\s\S]{0,120}lo: 35,\s*hi: 155/.test(AY),'free testosterone likewise');
+  // the specific way an extractor gets this wrong
+  ok(/Do NOT map bioavailable testosterone to ft/.test(SY),'the parser is told bioavailable is not free testosterone');
+  ok(/\["tt","Testosterone, total"/.test(SY),'the prescriber report carries the hormone rows');
+}
+
+
+// v0.9.147: both app manifests carry the same release notes. The anchored swap targeted one file,
+// so umbrel/forkcaster sat on v0.9.44's notes through a hundred releases while its version bumped.
+{
+  const fs2=require('fs');
+  const a=fs2.readFileSync(__FCROOT + '/forkcaster-coach/umbrel-app.yml','utf8');
+  const b=fs2.readFileSync(__FCROOT + '/umbrel/forkcaster/umbrel-app.yml','utf8');
+  const notes=(t)=>{ const m=/releaseNotes: >-\n((?:  .+\n)+)/.exec(t); return m?m[1].trim():null; };
+  ok(notes(a) && notes(b), 'both manifests declare release notes');
+  ok(notes(a) === notes(b), 'and they say the same thing');
+  ok(!/v0\.9\.44:/.test(b), 'no manifest is stranded on an old release note');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

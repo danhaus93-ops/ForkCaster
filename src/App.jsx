@@ -583,10 +583,13 @@ const LAB_MARKERS = [
   { key: "ldl",      name: "LDL",                group: "Cardiometabolic", unit: "mg/dL", lo: 0,  hi: 100 },
   { key: "glucose",  name: "Fasting glucose",    group: "Glycemic",   unit: "mg/dL",  lo: 65,   hi: 99 },
   { key: "a1c",      name: "HbA1c",              group: "Glycemic",   unit: "%",      lo: 0,    hi: 5.7 },
+  { key: "tt",       name: "Testosterone, total", group: "Hormones",  unit: "ng/dL",  lo: 250,  hi: 1100 },
+  { key: "ft",       name: "Testosterone, free",  group: "Hormones",  unit: "pg/mL",  lo: 35,   hi: 155 },
+  { key: "shbg",     name: "SHBG",                group: "Hormones",  unit: "nmol/L", lo: 10,   hi: 80 },
   { key: "egfr",     name: "eGFR",               group: "Renal",      unit: "mL/min", lo: 60,   hi: 200 },
   { key: "creat",    name: "Creatinine",         group: "Renal",      unit: "mg/dL",  lo: 0.60, hi: 1.29 },
 ];
-const LAB_GROUPS = ["Pancreatic", "Liver", "Cardiometabolic", "Glycemic", "Renal"];
+const LAB_GROUPS = ["Pancreatic", "Liver", "Cardiometabolic", "Glycemic", "Hormones", "Renal"];
 
 const MEDS = {
   tirzepatide: { label: "Tirzepatide", brand: "Zepbound / Mounjaro", cadence: "weekly", investigational: false,

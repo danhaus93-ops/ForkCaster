@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.146"
+version: "0.9.147"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,15 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  v0.9.44: your own dose protocol, plus sleep. Set your own rungs and
-  hold length instead of following a trial chart. After the hold
-  completes, one button evaluates whether your escalation criteria are
-  met — reading your weight trend, protein, training, symptoms, heart
-  rate and sleep from your own logs, and asking you only about appetite.
-  It never sets a dose. Tolerability flags always show on their own, and
-  a stall notice appears if loss goes flat while you're still short of
-  your goal. Sleep now syncs from Health Auto Export and is judged
-  against your own baseline, counted per day on your own clock.
+  The lab card now tracks testosterone, free testosterone and SHBG alongside the
+  other markers, so the panel you are drawing lands in one place. Importing a report
+  picks them up, and they appear in the prescriber PDF.
 dependencies: []
 path: ""
 defaultUsername: ""
