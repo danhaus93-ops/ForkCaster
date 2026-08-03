@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.164"
+version: "0.9.165"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The week number now comes from your dose log rather than a counter. It was counting
-  doses instead of weeks, so correcting a date or deleting a duplicate could leave it
-  permanently wrong. It also resets properly when you switch medication.
+  Text sizes are tidier. The app was using fifteen slightly different sizes for what
+  is really five jobs, so nothing quite lined up. Nothing moved by more than a pixel
+  and the big numbers are untouched.
 dependencies: []
 path: ""
 defaultUsername: ""

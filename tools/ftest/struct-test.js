@@ -1310,5 +1310,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(wk("2026-08-03", t) === 1, 'a dose today reads week 1');
 }
 
+
+// v0.9.165: Release D, first family — one scale for body-range type.
+{
+  const BP=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const sizes=[...BP.matchAll(/fontSize: (\d+(?:\.\d+)?)/g)].map((m)=>+m[1]);
+  const small=[...new Set(sizes.filter((v)=>v<=18))].sort((a,b)=>a-b);
+  const SCALE=[10.5,11.5,13,15,17];
+  ok(small.length === SCALE.length, 'the body range uses ' + SCALE.length + ' sizes (found ' + small.length + ': ' + small.join(',') + ')');
+  ok(small.every((v)=>SCALE.includes(v)), 'and every one of them is on the scale');
+  ok(Math.min(...small) >= 10.5, 'the 10.5px floor still holds');
+  // display and hero sizes are deliberate and were left alone — forcing 56px onto a scale is not
+  // a tidy-up, it is a redesign nobody asked for
+  ok(sizes.some((v)=>v>=34), 'the hero sizes are untouched');
+  // the budgets measured this week must still hold at the narrowest device
+  const MONO=0.60;
+  ok(11*11.5*MONO + 11*0.4 <= (307-16)/3 - 12, 'RETATRUTIDE still fits its chip');
+  ok(8*10.5*MONO + 8*0.4 <= (307-4*8)/5, 'CALORIES still fits its cell');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
