@@ -1059,5 +1059,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/Do NOT map GLOBULIN or TOTAL PROTEIN to alb/.test(BS),'and globulin cannot be mistaken for it');
 }
 
+
+// v0.9.150: a derived value that cannot compute says why, instead of vanishing.
+{
+  const BB=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const bioTNeeds = /.test(BB),'the missing inputs are enumerated');
+  ok(/\[\["tt", "total testosterone"\], \["shbg", "SHBG"\], \["alb", "albumin"\]\]/.test(BB),'named in words he would recognise on a report');
+  ok(/needs \{bioTNeeds\.join\(" and "\)\}/.test(BB),'and printed in the row');
+  // it must not appear on an empty card — a pending row for a section he has no data in is noise
+  ok(/bioTNeeds\.length > 0 && bioTNeeds\.length < 3/.test(BB),'the pending row is hidden when nothing hormone-related is on file');
+  ok(/opacity: 0\.62/.test(BB),'and is visually subordinate to real values');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

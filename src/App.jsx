@@ -2092,6 +2092,10 @@ export default function App() {
      by dialysis plus SHBG plus the CMP's albumin is everything the equation needs, so the cheaper
      panel gives up nothing. It is marked as derived wherever it appears: this app does not present
      a computed number as though someone drew it. */
+  const bioTNeeds = (() => {
+    const want = [["tt", "total testosterone"], ["shbg", "SHBG"], ["alb", "albumin"]];
+    return want.filter(([k]) => !labLatest(k)).map(([, n]) => n);
+  })();
   const bioT = (() => {
     const tt = labLatest("tt"), sh = labLatest("shbg"), al = labLatest("alb");
     if (!tt || !sh || !al) return null;
@@ -4294,6 +4298,18 @@ export default function App() {
                           {cur ? (moved != null ? `${moved > 0 ? "+" : ""}${moved} from baseline` : "baseline") : "never drawn"}</div>
                       </div>
                     </div>); })}
+                {g === "Hormones" && !bioT && bioTNeeds.length > 0 && bioTNeeds.length < 3 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
+                    borderTop: `1px solid ${C.hair}`, opacity: 0.62 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, color: C.ink, display: "flex", alignItems: "center", gap: 7 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: 999, border: `1.5px solid ${C.faint}`,
+                          flexShrink: 0 }} />Testosterone, bioavailable</div>
+                      <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 2 }}>
+                        needs {bioTNeeds.join(" and ")} — then it calculates</div>
+                    </div>
+                    <div style={{ fontFamily: DATA, fontSize: 16, fontWeight: 700, color: C.faint }}>—</div>
+                  </div>)}
                 {g === "Hormones" && bioT && (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0",
                     borderTop: `1px solid ${C.hair}` }}>
