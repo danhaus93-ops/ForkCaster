@@ -589,10 +589,16 @@ const LAB_MARKERS = [
   { key: "shbg",     name: "SHBG",                group: "Hormones",  unit: "nmol/L", lo: 10,   hi: 80 },
   { key: "e2",       name: "Estradiol",           group: "Hormones",  unit: "pg/mL",  lo: 10,   hi: 40,
     why: "In men this needs the SENSITIVE (LC/MS) assay — the standard immunoassay is unreliable at male concentrations." },
+  { key: "hct",      name: "Hematocrit",          group: "Blood count", unit: "%",     lo: 38.5, hi: 50.0, flagAt: 54,
+    why: "The marker that limits testosterone therapy — red cell mass rises on it, and 54% is the usual line for a dose change or a donation." },
+  { key: "hgb",      name: "Hemoglobin",          group: "Blood count", unit: "g/dL",  lo: 13.2, hi: 17.1 },
+  { key: "rbc",      name: "Red blood cells",     group: "Blood count", unit: "M/uL",  lo: 4.20, hi: 5.80 },
+  { key: "wbc",      name: "White blood cells",   group: "Blood count", unit: "K/uL",  lo: 3.8,  hi: 10.8 },
+  { key: "plt",      name: "Platelets",           group: "Blood count", unit: "K/uL",  lo: 140,  hi: 400 },
   { key: "egfr",     name: "eGFR",               group: "Renal",      unit: "mL/min", lo: 60,   hi: 200 },
   { key: "creat",    name: "Creatinine",         group: "Renal",      unit: "mg/dL",  lo: 0.60, hi: 1.29 },
 ];
-const LAB_GROUPS = ["Pancreatic", "Liver", "Cardiometabolic", "Glycemic", "Hormones", "Renal"];
+const LAB_GROUPS = ["Pancreatic", "Liver", "Cardiometabolic", "Glycemic", "Hormones", "Blood count", "Renal"];
 
 const MEDS = {
   tirzepatide: { label: "Tirzepatide", brand: "Zepbound / Mounjaro", cadence: "weekly", investigational: false,

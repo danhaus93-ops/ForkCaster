@@ -436,7 +436,7 @@ app.post("/api/keys", (req, res) => {
    writes anything: the client shows every value for confirmation against the
    source document before it is saved. A misread lab value is worse than no lab
    value, so the human stays in the loop by construction. */
-const LAB_KEYS = ["lipase","amylase","alt","ast","alb","trig","hdl","ldl","glucose","a1c","egfr","creat","tt","ft","shbg","e2"];
+const LAB_KEYS = ["lipase","amylase","alt","ast","alb","trig","hdl","ldl","glucose","a1c","egfr","creat","tt","ft","shbg","e2","hct","hgb","rbc","wbc","plt"];
 app.post("/api/labs/parse", async (req, res) => {
   const ANTHROPIC_KEY = key("ANTHROPIC_API_KEY");
   if (!ANTHROPIC_KEY) return res.json({ error: "No Anthropic key configured on this node." });
@@ -451,7 +451,7 @@ app.post("/api/labs/parse", async (req, res) => {
       "Map: ALT/SGPT->alt, AST/SGOT->ast, TRIGLYCERIDES->trig, HDL CHOLESTEROL->hdl, LDL->ldl, " +
       "GLUCOSE->glucose, HEMOGLOBIN A1c->a1c, EGFR->egfr, CREATININE->creat, LIPASE->lipase, AMYLASE->amylase, " +
       "TESTOSTERONE TOTAL (any method: MS, LC/MS, immunoassay)->tt, TESTOSTERONE FREE (dialysis or immunoassay)->ft, " +
-      "SEX HORMONE BINDING GLOBULIN or SHBG->shbg, ALBUMIN->alb, ESTRADIOL (including ULTRASENSITIVE or LC/MS)->e2. Do NOT map bioavailable testosterone to ft — " +
+      "SEX HORMONE BINDING GLOBULIN or SHBG->shbg, ALBUMIN->alb, ESTRADIOL (including ULTRASENSITIVE or LC/MS)->e2, HEMATOCRIT->hct, HEMOGLOBIN->hgb, RED BLOOD CELL COUNT->rbc, WHITE BLOOD CELL COUNT->wbc, PLATELET COUNT->plt. Do NOT map MCV, MCH, MCHC or RDW to any key. Do NOT map HEMOGLOBIN A1c to hgb — that is a1c. Do NOT map bioavailable testosterone to ft — " +
       "they are different measures. Do NOT map GLOBULIN or TOTAL PROTEIN to alb — only the line labelled ALBUMIN. " +
       "date is the COLLECTED date, not reported. Omit any key you do not find — never guess a value, " +
       "never carry a reference range in as a result. If a value is unreadable, omit it.";
@@ -1809,7 +1809,7 @@ app.post("/api/report/pdf", async (req, res) => {
     const tgt = st.targets || {};
     const esc = (x) => String(x == null ? "" : x).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
     const fmtD = (d) => { try { return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); } catch { return d; } };
-    const LABM = [["tt","Testosterone, total","ng/dL",250,1100,null],["alb","Albumin","g/dL",3.6,5.1,null],["ft","Testosterone, free","pg/mL",35,155,null],["shbg","SHBG","nmol/L",10,80,null],["e2","Estradiol","pg/mL",10,40,null],["lipase","Lipase","U/L",0,60,180],["amylase","Amylase","U/L",25,125,375],["alt","ALT","U/L",9,46,138],["ast","AST","U/L",10,40,120],["trig","Triglycerides","mg/dL",0,150,null],["hdl","HDL","mg/dL",40,200,null],["ldl","LDL","mg/dL",0,100,null],["glucose","Fasting glucose","mg/dL",65,99,null],["a1c","HbA1c","%",0,5.7,null],["egfr","eGFR","mL/min",60,200,null],["creat","Creatinine","mg/dL",0.60,1.29,null]];
+    const LABM = [["tt","Testosterone, total","ng/dL",250,1100,null],["alb","Albumin","g/dL",3.6,5.1,null],["ft","Testosterone, free","pg/mL",35,155,null],["shbg","SHBG","nmol/L",10,80,null],["e2","Estradiol","pg/mL",10,40,null],["hct","Hematocrit","%",38.5,50.0,54],["hgb","Hemoglobin","g/dL",13.2,17.1,null],["rbc","Red blood cells","M/uL",4.20,5.80,null],["wbc","White blood cells","K/uL",3.8,10.8,null],["plt","Platelets","K/uL",140,400,null],["lipase","Lipase","U/L",0,60,180],["amylase","Amylase","U/L",25,125,375],["alt","ALT","U/L",9,46,138],["ast","AST","U/L",10,40,120],["trig","Triglycerides","mg/dL",0,150,null],["hdl","HDL","mg/dL",40,200,null],["ldl","LDL","mg/dL",0,100,null],["glucose","Fasting glucose","mg/dL",65,99,null],["a1c","HbA1c","%",0,5.7,null],["egfr","eGFR","mL/min",60,200,null],["creat","Creatinine","mg/dL",0.60,1.29,null]];
     const labDraws = (st.labs || []).filter((d) => d && d.date).slice().sort((a, b) => (a.date < b.date ? -1 : 1));
     /* One row per marker: the earliest value on record, the most recent, and the change between
        them. A clinician reading this needs the trajectory, not a snapshot — and needs to see which

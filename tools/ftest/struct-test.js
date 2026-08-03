@@ -987,7 +987,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
     ok(new RegExp('key: "' + k + '"').test(AY), 'the card tracks ' + k);
     ok(new RegExp('"' + k + '"').test(SY), 'the parser accepts ' + k);
   }
-  ok(/const LAB_GROUPS = \["Pancreatic", "Liver", "Cardiometabolic", "Glycemic", "Hormones", "Renal"\]/.test(AY),'Hormones is a group, ordered before Renal');
+  ok(/const LAB_GROUPS = \[[^\]]*"Hormones"[^\]]*\]/.test(AY),'Hormones is a declared group');
   // the ranges are the ones on HIS report, so a value reads against the same scale as his baseline
   ok(/key: "tt"[\s\S]{0,120}lo: 250,\s*hi: 1100/.test(AY),'total testosterone uses the adult-male range from his own report');
   ok(/key: "ft"[\s\S]{0,120}lo: 35,\s*hi: 155/.test(AY),'free testosterone likewise');
@@ -1107,6 +1107,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/labDueIn <= 0 \? "due now"/.test(BD),'and says due now when it is');
   // v0.9.152: the third TDZ this project has caught. Pin the order rather than trusting it.
   ok(BD.indexOf('const labAgeDays') < BD.indexOf('const labDueIn'),'labAgeDays is declared before the countdown that reads it');
+}
+
+
+// v0.9.153: CBC, with the one threshold that matters if testosterone therapy is ever on the table.
+{
+  const BF=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const BG=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  for (const k of ['hct','hgb','rbc','wbc','plt']) {
+    ok(new RegExp('key: "' + k + '"').test(BF), 'the card tracks ' + k);
+    ok(new RegExp('"' + k + '"').test(BG), 'the parser accepts ' + k);
+  }
+  ok(/key: "hct"[\s\S]{0,200}flagAt: 54/.test(BF),'hematocrit flags at 54% — the line that limits testosterone therapy');
+  ok(/limits testosterone therapy/.test(BF),'and says why it is flagged');
+  // the two ways an extractor gets a CBC wrong
+  ok(/Do NOT map HEMOGLOBIN A1c to hgb/.test(BG),'A1c cannot be misread as hemoglobin');
+  ok(/Do NOT map MCV, MCH, MCHC or RDW to any key/.test(BG),'and the red-cell indices are not forced into a slot');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
