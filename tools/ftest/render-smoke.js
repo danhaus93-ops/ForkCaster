@@ -30,6 +30,31 @@ for (const t of ["now", "today", "plan", "body", "train", "glp", "coach"]) {
   catch (e) { console.log("COMPACT_THREW " + t + ": " + e.message); cmpFail++; }
 }
 if (cmpFail) process.exitCode = 1; else console.log("COMPACT_RENDER_OK");
+// v0.9.156: compact must actually BE compact. prefs was never seeded from the test state, so every
+// "compact" pass above rendered the comfortable layout and reported OK — the same shape as the
+// fixture that said tab "glp1" when the app's tab was "glp". Render both densities and compare.
+{
+  const dense = {};
+  for (const cmp of [false, true]) {
+    globalThis.__FC_TEST_STATE = { ...(globalThis.__FC_TEST_STATE || {}), prefs: { compact: cmp } };
+    globalThis.__FC_TEST_TAB = "glp";
+    const h = renderToString(React.createElement(App));
+    dense[cmp ? "compact" : "comfort"] = {
+      els: (h.match(/<div|<span|<button/g) || []).length,
+      tall: (h.match(/min-height:4[48]px/g) || []).length,
+    };
+  }
+  let bad = 0;
+  if (!(dense.compact.els < dense.comfort.els)) {
+    console.log("DENSITY_FAIL compact renders as many elements as comfortable — compact is not applying");
+    bad++;
+  }
+  if (!(dense.compact.tall < dense.comfort.tall)) {
+    console.log("DENSITY_FAIL compact controls are as tall as comfortable — the density choice does nothing");
+    bad++;
+  }
+  if (bad) process.exitCode = 1; else console.log("DENSITY_OK compact " + dense.compact.els + " els vs comfort " + dense.comfort.els);
+}
 // v0.9.135: this proves card ids EXIST and are stable between two server renders. It cannot prove
 // the churn bug is fixed — renderToString builds a fresh component each call, so its refs reset on
 // their own and the drift never appears. The reset itself is pinned statically in struct-test, and
@@ -119,7 +144,7 @@ try {
   if (!/t <= _M\.now \? _M\.level\(t\)/.test(sp)) { console.log('MED_SPARK_SHAPE: logged history must use level()'); shapeOK = false; }
   if (shapeOK) console.log('MED_SPARK_OK');
   if (denomOK && shapeOK) console.log('MED_DENOMINATOR_OK');
-  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK && shapeOK && /SITE_AVATAR_OK/.test(out) && /COLLAPSE_OK/.test(out) && /RENDER_STABLE_OK/.test(out) ? 0 : 1);
+  process.exit(/RENDER_OK/.test(out) && /DEEP_RENDER_OK/.test(out) && /COMPACT_RENDER_OK/.test(out) && /MED_CHART_OK/.test(out) && denomOK && shapeOK && /SITE_AVATAR_OK/.test(out) && /COLLAPSE_OK/.test(out) && /RENDER_STABLE_OK/.test(out) && /DENSITY_OK/.test(out) ? 0 : 1);
 } catch (e) {
   console.log('RENDER SMOKE FAILED:\n' + (e.stdout||'').toString() + (e.stderr||'').toString().slice(0,900));
   process.exit(1);

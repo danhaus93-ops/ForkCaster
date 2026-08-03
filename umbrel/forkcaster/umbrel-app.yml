@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.155"
+version: "0.9.156"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Importing the same report twice no longer creates a second entry for that date — it
-  fills in anything missing instead. You can also hold a date under "Compare against"
-  to delete that draw.
+  Fixes compact mode losing its density. A change two releases back made every button
+  and the tab bar the same height in compact as in comfortable, so compact stopped
+  saving you any space. Compact is tight again; comfortable is unchanged.
 dependencies: []
 path: ""
 defaultUsername: ""

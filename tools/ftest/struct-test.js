@@ -972,8 +972,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
     ok(rm > rf, name + ': faint stays dimmer than muted, so the hierarchy holds');
   }
   // touch floors
-  ok(/padding: "6px 0", minHeight: 48/.test(AX),'the tab bar guarantees its hit height');
-  ok((AX.match(/minHeight: 44/g) || []).length >= 3,'the small pill controls carry a 44pt floor');
+  // v0.9.156: the floor is density-aware. One floor for both made compact exactly as tall as
+  // comfortable, which defeats the only thing compact is for.
+  ok(/minHeight: _cmp \? 44 : 48/.test(AX),'the tab bar guarantees a hit height in both densities');
+  ok((AX.match(/minHeight: _cmp \? 38 : 44/g) || []).length >= 3,'the pill controls carry a floor that respects the density choice');
   ok(!/flex: 1, height: 38, borderRadius: 999/.test(AX),'no dose pill declares a fixed sub-44 height');
   ok(!/flex: 1, height: 34, borderRadius: 999/.test(AX),'nor an interval pill');
 }

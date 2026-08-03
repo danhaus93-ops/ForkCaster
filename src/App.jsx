@@ -1544,7 +1544,7 @@ export default function App() {
   const [tab, setTab] = useState((typeof globalThis !== "undefined" && globalThis.__FC_TEST_TAB) || "now");
 
   const [targets, setTargets] = useState(MODES.cut.targets);
-  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const [prefs, setPrefs] = useState(__T && __T.prefs ? { ...DEFAULT_PREFS, ...__T.prefs } : DEFAULT_PREFS);
   useEffect(() => { setDayPrefs(prefs); }, [prefs]);
   const isMetric = prefs.units === "metric";
   const wtU = isMetric ? "kg" : "lbs";
@@ -4384,7 +4384,7 @@ export default function App() {
                         }, 550); }}
                       onTouchEnd={() => clearTimeout(labHoldRef.current)}
                       onTouchMove={() => clearTimeout(labHoldRef.current)}
-                      style={{ minHeight: 44, borderRadius: 999, padding: "8px 14px",
+                      style={{ minHeight: _cmp ? 38 : 44, borderRadius: 999, padding: "8px 14px",
                         border: `1.5px solid ${on ? C.go : C.hair}`, background: on ? C.go + "22" : "transparent",
                         color: on ? C.go : C.muted, fontFamily: DATA, fontSize: 11.5, fontWeight: 700,
                         cursor: "pointer" }}>{fmtDate(d.date)}</button>); })}
@@ -4864,7 +4864,7 @@ export default function App() {
               <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "1 1 0", minWidth: 0, padding: "8px 6px", minHeight: 44, borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "1 1 0", minWidth: 0, padding: "8px 6px", minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
             </>);
           })()}
           {medObj.investigational ? (
@@ -4907,7 +4907,7 @@ export default function App() {
               <div style={{ display: "flex", gap: 6 }}>
                 {[5, 6, 7, 10, 14].map((d) => (
                   <button key={d} onClick={() => setPrefs({ ...prefs, medIntervalDays: { ...(prefs.medIntervalDays || {}), [glp.med]: d } })}
-                    style={{ flex: 1, minHeight: 44, borderRadius: 999, border: `1.5px solid ${cur === d ? C.violet : C.hair}`,
+                    style={{ flex: 1, minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1.5px solid ${cur === d ? C.violet : C.hair}`,
                       background: cur === d ? C.violet + "2E" : "transparent", color: cur === d ? C.violet : C.muted,
                       fontFamily: DATA, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{d}d</button>))}
               </div>
@@ -4920,7 +4920,7 @@ export default function App() {
         <div style={{ display: "flex", gap: 6 }}>
           {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
             <button key={k} onClick={() => setGlp({ ...glp, injectionDay: k })}
-              style={{ flex: 1, minHeight: 44, borderRadius: 999, border: `1.5px solid ${glp.injectionDay === k ? C.violet : C.hair}`, background: glp.injectionDay === k ? C.violet + "2E" : "transparent", color: glp.injectionDay === k ? C.violet : C.muted, fontFamily: DATA, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
+              style={{ flex: 1, minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1.5px solid ${glp.injectionDay === k ? C.violet : C.hair}`, background: glp.injectionDay === k ? C.violet + "2E" : "transparent", color: glp.injectionDay === k ? C.violet : C.muted, fontFamily: DATA, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
           ))}
         </div>
       </>)}</div>}
@@ -5807,7 +5807,7 @@ export default function App() {
 
         {/* Bottom nav */}
         <div style={{ position: "fixed", bottom: 0, width: "100%", maxWidth: 430, background: C.dark ? "rgba(24,32,41,0.94)" : "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.hair}`, display: "flex", padding: "8px 6px calc(10px + env(safe-area-inset-bottom, 0px))" }}>
-          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => { if (t.id !== tab) { setQuick(null); setQuickVal(""); } setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: "6px 0", minHeight: 48 }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 12.5, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
+          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => { if (t.id !== tab) { setQuick(null); setQuickVal(""); } setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: _cmp ? "3px 0" : "6px 0", minHeight: _cmp ? 44 : 48 }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 12.5, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
         </div>
 
         {/* Scan / log food sheet */}
