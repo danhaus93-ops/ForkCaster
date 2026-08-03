@@ -1089,5 +1089,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/ESTRADIOL \(including ULTRASENSITIVE or LC\/MS\)->e2/.test(BSV),'and maps the ultrasensitive naming');
 }
 
+
+// v0.9.152: lab-due reminder, on the notification path that already works.
+{
+  const BD=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const BE=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  ok(/async function labDueTick\(\)/.test(BE),'the reminder exists');
+  ok(/setInterval\(labDueTick, 10 \* 60 \* 1000\);/.test(BE),'on the same ten-minute tick as the dose reminder');
+  ok(/parseInt\(prefs\.reminderHour\) \|\| 9/.test(BE),'and the same hour preference — one clock, not two');
+  ok(/const LAB_INTERVAL_DAYS = 90;/.test(BE),'the default interval is 90 days');
+  ok(/if \(!draws\.length\) return;/.test(BE),'nothing is due before a first draw exists');
+  ok(/if \(_labNoticeOn === last\) return;/.test(BE),'it notifies once per draw, not once per day');
+  ok(/if \(days < every - 7\) return;/.test(BE),'with a week of notice rather than a week late');
+  ok(/if \(prefs\.labReminder === false\) return;/.test(BE),'and can be switched off');
+  // the same state is visible in the card without waiting for a notification
+  ok(/const labDueIn = labAgeDays == null \? null : labEvery - labAgeDays;/.test(BD),'the card computes the same countdown');
+  ok(/labDueIn <= 0 \? "due now"/.test(BD),'and says due now when it is');
+  // v0.9.152: the third TDZ this project has caught. Pin the order rather than trusting it.
+  ok(BD.indexOf('const labAgeDays') < BD.indexOf('const labDueIn'),'labAgeDays is declared before the countdown that reads it');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

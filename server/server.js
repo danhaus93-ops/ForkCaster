@@ -1762,6 +1762,42 @@ async function doseReminderTick() {
     st.lastSent = todayISO; savePushStore(st);
   } catch (e) { if (e && e.statusCode === 410) { const st = pushStore(); delete st.sub; savePushStore(st); } }
 }
+/* v0.9.152: lab-due reminder. Rides the same ten-minute tick and the same hour preference as the
+   dose reminder, so there is one notification clock in the app rather than two.
+   The interval is anchored to HbA1c: it averages roughly three months of red-cell life, so a
+   redraw sooner than that cannot show a change no matter how much has happened. Everything else
+   in the panel is comfortable at that spacing too, which is why one interval covers the set. */
+const LAB_INTERVAL_DAYS = 90;
+let _labNoticeOn = null;                 // the draw date we last notified about — never twice
+async function labDueTick() {
+  try {
+    const st = pushStore();
+    if (!st.sub) return;
+    const state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    const prefs = state.prefs || {};
+    if (prefs.labReminder === false) return;
+    const draws = (state.labs || []).filter((d) => d && d.date).sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (!draws.length) return;                       // nothing to be due from yet
+    const hour = Math.max(0, Math.min(23, parseInt(prefs.reminderHour) || 9));
+    const now = new Date();
+    if (now.getHours() !== hour) return;
+    const last = draws[draws.length - 1].date;
+    const days = Math.round((Date.now() - new Date(last + "T12:00:00").getTime()) / 86400000);
+    const every = Math.max(30, parseInt(prefs.labIntervalDays) || LAB_INTERVAL_DAYS);
+    if (days < every - 7) return;                    // a week of notice, not a week late
+    if (_labNoticeOn === last) return;               // one notice per draw, not one per day
+    _labNoticeOn = last;
+    const wp = webpushLib(); if (!wp) return;
+    const due = days >= every;
+    await wp.sendNotification(st.sub, JSON.stringify({
+      title: "\uD83E\uDDEA Labs",
+      body: due
+        ? `It has been ${days} days since your last draw \u2014 time to book the next one.`
+        : `Your next draw is due in about ${every - days} days.`,
+    })).catch(() => {});
+  } catch {}
+}
+setInterval(labDueTick, 10 * 60 * 1000);
 setInterval(doseReminderTick, 10 * 60 * 1000);
 
 /* ── PDF report: rendered by the bundled Chromium ── */

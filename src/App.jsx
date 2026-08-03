@@ -2127,6 +2127,8 @@ export default function App() {
   const labAgeDays = labDraws.length
     ? Math.round((Date.now() - new Date(labDraws[labDraws.length - 1].date + "T12:00:00").getTime()) / 86400000)
     : null;
+  const labEvery = Math.max(30, +prefs.labIntervalDays || 90);
+  const labDueIn = labAgeDays == null ? null : labEvery - labAgeDays;
   const nextInjection = (() => {
     if (injInterval !== 7) {
       return lastDoseDate
@@ -4413,7 +4415,9 @@ export default function App() {
           const tone = flagged.length ? C.avoid : (labMissing.length || (labAgeDays != null && labAgeDays > 180)) ? C.caution : outs.length ? C.caution : C.go;
           return {
             id: "labs", tone, color: tone, title: "Lab panel",
-            when: labMissing.length ? `${labMissing.length} to draw` : labAgeDays != null ? `${labAgeDays}d old` : "none on file",
+            when: labMissing.length ? `${labMissing.length} to draw`
+              : labDueIn == null ? "none on file"
+              : labDueIn <= 0 ? "due now" : `due in ${labDueIn}d`,
             value: String(drawn), unit: drawn === 1 ? "marker on file" : "markers on file",
             sub: !labDraws.length ? "no results yet · import one to start a baseline"
               : `${labBaselineDate ? "baseline " + fmtDate(labBaselineDate) : ""}${labMissing.length ? " · " + labMissing.map((m) => m.name.toLowerCase()).join(" and ") + " never drawn" : ""}`,
