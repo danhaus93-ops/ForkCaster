@@ -20,11 +20,21 @@ sudo docker push "$IMG"
 # now, not the image just built — so it reports what is live before you tap Update. Advisory: it
 # prints findings and never blocks the release, because a tap-target report should not stop a fix
 # from reaching the phone. Add --shots to write screenshots into the app's data dir.
-CID=$(sudo docker ps --filter "name=forkcaster" --format "{{.Names}}" | head -1)
+CID=$(sudo docker ps --filter "name=forkcaster" --format "{{.Names}}" | grep -E '_web(_[0-9]+)?$' | head -1)
+if [ -z "$CID" ]; then
+  # fall back to whichever forkcaster container actually carries the audit
+  for c in $(sudo docker ps --filter "name=forkcaster" --format "{{.Names}}"); do
+    if sudo docker exec "$c" test -f tools/ftest/visual-audit.js 2>/dev/null; then CID="$c"; break; fi
+  done
+fi
 if [ -n "$CID" ]; then
   echo ""
   echo "── visual audit (live container: $CID) ─────────────────────────"
-  sudo docker exec "$CID" node tools/ftest/visual-audit.js 2>&1 | tail -40 || true
+  if sudo docker exec "$CID" test -f tools/ftest/visual-audit.js 2>/dev/null; then
+    sudo docker exec "$CID" node tools/ftest/visual-audit.js 2>&1 | tail -40 || true
+  else
+    echo "  (no audit in $CID — it ships from v0.9.157, update once and it appears)"
+  fi
   echo "───────────────────────────────────────────────────────────────"
 fi
 

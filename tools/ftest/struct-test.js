@@ -1196,6 +1196,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/minHeight: _cmp \? 38 : 44/.test(APPJ),'which the app actually declares');
   const RS=fs3.readFileSync(__FCROOT + '/release.sh','utf8');
   ok(/visual-audit\.js/.test(RS),'the release script runs it');
+  // v0.9.174: name=forkcaster also matches app_proxy, and head -1 took whichever docker listed
+  // first — it picked the proxy, which carries no app code, and the audit died on a missing module.
+  ok(/grep -E '_web\(_\[0-9\]\+\)\?\$'/.test(RS),'and targets the web container, not the proxy');
+  ok(/test -f tools\/ftest\/visual-audit\.js/.test(RS),'checking the file exists before running it');
+  ok(/no audit in \$CID/.test(RS),'and saying so plainly rather than printing a stack trace');
   ok(/\|\| true/.test(RS),'advisory — a geometry finding never blocks a fix from shipping');
 }
 
