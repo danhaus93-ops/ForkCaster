@@ -1580,5 +1580,27 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/\{sectionTitle\("[^"]+"\)\}\s*\{sectionTitle\(/.test(CC),'no section heading is immediately followed by another');
 }
 
+
+// v0.9.183: settings collapses to eight rows. The test that matters is that NOTHING was lost.
+{
+  const CD=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const i=CD.indexOf('{settingsOpen && (');
+  let d2=0, k2=CD.indexOf('(', i);
+  while (k2 < CD.length) { if (CD[k2]==='(') d2++; else if (CD[k2]===')') { d2--; if (!d2) break; } k2++; }
+  const sheet=CD.slice(i, k2);
+  ok(/const settingsGroup = \(key, title, summary, body\)/.test(CD),'the group primitive exists');
+  ok((sheet.match(/settingsGroup\(/g) || []).length === 8,'all eight sections are collapsible');
+  ok(/openSetting === key/.test(CD) && /setOpenSetting\(on \? null : key\)/.test(CD),'one open at a time');
+  // every collapsed row must say something about its current state, or the sheet is just shorter
+  ok(!/settingsGroup\("[^"]+", "[^"]+", "", /.test(CD),'no group collapses to a bare title with no value');
+  ok(/THEMES\[theme\] \? THEMES\[theme\]\.name/.test(CD),'Theme shows which theme');
+  ok(/prefs\.doseReminder === false \? "off" : "on"/.test(CD),'Reminders shows what is on');
+  // the controls themselves: counted, because a wrap that drops one is the failure mode here
+  const n=(re)=>(sheet.match(re) || []).length;
+  ok(n(/<button/g) === 18, 'all 18 buttons survive (' + n(/<button/g) + ')');
+  ok(n(/<input/g) === 10, 'all 10 inputs survive (' + n(/<input/g) + ')');
+  ok(n(/onClick=/g) === 20, 'all 20 handlers survive (' + n(/onClick=/g) + ')');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

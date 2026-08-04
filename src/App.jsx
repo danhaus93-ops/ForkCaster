@@ -1625,6 +1625,28 @@ export default function App() {
   /* v0.9.162: confirm, in the app's own language. window.confirm is the last OS chrome in the app
      and it is worse than an alert: it appears on a DESTRUCTIVE action, which is exactly when the
      interface should look most deliberate. Promise-based so a call site changes by one keyword. */
+  /* v0.9.183: settings ran to about nine screens. Each section collapses to one row carrying its
+     CURRENT VALUE — the sheet reads as a summary of how the app is configured and opens only what
+     he came for. Nothing removed; every control is one tap in. One open at a time. */
+  const [openSetting, setOpenSetting] = useState(null);
+  const settingsGroup = (key, title, summary, body) => {
+    const on = openSetting === key;
+    return (
+      <div key={key} style={{ borderTop: `1px solid ${C.hair}` }}>
+        <button onClick={() => setOpenSetting(on ? null : key)}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "none",
+            border: "none", padding: "14px 2px", cursor: "pointer", textAlign: "left" }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontFamily: DATA, fontSize: 11.5, fontWeight: 700,
+              letterSpacing: 1.1, textTransform: "uppercase", color: C.muted }}>{title}</span>
+            {summary ? <span style={{ display: "block", fontSize: 13, color: C.faint, marginTop: 2 }}>{summary}</span> : null}
+          </span>
+          <span style={{ fontFamily: DATA, fontSize: 15, color: C.faint, flexShrink: 0,
+            transform: on ? "rotate(90deg)" : "none", transition: "transform .16s ease" }}>›</span>
+        </button>
+        {on ? <div style={{ paddingBottom: 16 }}>{body}</div> : null}
+      </div>);
+  };
   const [askState, setAskState] = useState(null);
   const askConfirm = (msg, danger = false) =>
     new Promise((resolve) => setAskState({ msg: String(msg), danger, resolve }));
@@ -6086,7 +6108,7 @@ export default function App() {
                 <button onClick={() => setSettingsOpen(false)} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 999, color: C.muted, fontSize: 17, cursor: "pointer" }}>✕</button>
               </div>
 
-              {sectionTitle("Theme")}
+              {settingsGroup("theme", "Theme", THEMES[theme] ? THEMES[theme].name : theme, <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 24 }}>
                 {Object.entries(THEMES).map(([k, t]) => {
                   const on = theme === k;
@@ -6101,9 +6123,8 @@ export default function App() {
                     </button>
                   );
                 })}
-              </div>
-
-              {sectionTitle("Goal mode")}
+              </div></>)}
+              {settingsGroup("goalmode", "Goal mode", (MODES.find((m) => m.id === mode) || {}).name || mode, <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
                 {Object.entries(MODES).map(([k, m]) => {
                   const on = mode === k;
@@ -6114,9 +6135,8 @@ export default function App() {
                     </button>
                   );
                 })}
-              </div>
-
-              {sectionTitle("Allergies")}
+              </div></>)}
+              {settingsGroup("allergies", "Allergies", (allergies.length ? allergies.length + " excluded" : "none"), <>
               <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 8, lineHeight: 1.4 }}>Tap to flag. ForkCaster will never suggest a food that contains these.</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                 {ALLERGENS.map((a) => {
@@ -6137,9 +6157,8 @@ export default function App() {
                 <input value={customAllergy} onChange={(e) => setCustomAllergy(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} placeholder="Add another allergy (e.g. mustard, avocado)"
                   style={{ flex: 1, fontFamily: BODY, fontSize: 15, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "10px 12px", outline: "none" }} />
                 <button onClick={() => { if (customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} style={{ background: "transparent", color: C.avoid, border: `1px solid ${C.avoid}66`, borderRadius: 999, padding: "0 15px", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Add</button>
-              </div>
-
-              {sectionTitle("Diet")}
+              </div></>)}
+              {settingsGroup("diet", "Diet", (diets.length ? diets.join(", ") : "no restriction"), <>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                 {DIETS.map((d) => {
                   const on = diets.includes(d);
@@ -6148,10 +6167,8 @@ export default function App() {
                   );
                 })}
               </div>
-              <div style={{ fontSize: 13, color: C.faint, marginTop: 12, lineHeight: 1.4 }}>Switching goal mode resets today's targets to that preset. Allergy filtering applies to every meal suggestion and the coach.</div>
-
-              <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
-                {sectionTitle("Preferences")}
+              <div style={{ fontSize: 13, color: C.faint, marginTop: 12, lineHeight: 1.4 }}>Switching goal mode resets today's targets to that preset. Allergy filtering applies to every meal suggestion and the coach.</div></>)}
+              {settingsGroup("preferences", "Preferences", `${prefs.compact ? "compact" : "comfortable"} · ${prefs.units === "metric" ? "metric" : "imperial"}`, <>
                 {(() => {
                   const row = (label, control) => (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${C.hair}` }}>
@@ -6204,11 +6221,10 @@ export default function App() {
                       <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
                     </div>
                   );
-                })()}
-              </div>
+                })()}</>)}
+              
 
-              <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
-                {sectionTitle("API keys")}
+              {settingsGroup("apikeys", "API keys", (aiKeyState && aiKeyState.anthropic ? "AI key set" : "no AI key"), <>
                 <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 8, lineHeight: 1.45 }}>
                   Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b> · FatSecret: <b style={{ color: keyStatus && keyStatus.fatsecret ? C.go : C.avoid }}>{keyStatus ? (keyStatus.fatsecret ? "set" : "not set") : "…"}</b> · USDA: <b style={{ color: keyStatus && keyStatus.usda ? C.go : C.muted }}>{keyStatus ? (keyStatus.usda ? "set" : "DEMO_KEY") : "…"}</b>
                 </div>
@@ -6224,14 +6240,13 @@ export default function App() {
                   <button onClick={saveKeys} disabled={!Object.values(keyIn).some((v) => String(v || "").trim())} style={{ flex: 1, background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer", opacity: !Object.values(keyIn).some((v) => String(v || "").trim()) ? 0.5 : 1 }}>Save keys</button>
                   <button onClick={testAiKey} style={{ flex: 1, background: "none", color: C.ink, border: `1.5px solid ${C.hair}`, borderRadius: 8, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Test AI key</button>
                 </div>
-                {keyMsg && <div style={{ fontSize: 13, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}
-              </div>
+                {keyMsg && <div style={{ fontSize: 13, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}</>)}
+              
 
-              <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
-                {sectionTitle("Reminders")}
+              {settingsGroup("reminders", "Reminders", `dose ${prefs.doseReminder === false ? "off" : "on"} · weigh-in ${prefs.weighReminder === false ? "off" : "on"} · protein ${prefs.proteinReminder === false ? "off" : "on"}`, <>
                 <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", marginBottom: 4, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
-                <div style={{ fontSize: 13, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>Fires at your reminder hour on dose day with the suggested site. iPhone: add ForkCaster to the Home Screen first (Share → Add to Home Screen).</div>
-                {sectionTitle("Export & backup")}
+                <div style={{ fontSize: 13, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>Fires at your reminder hour on dose day with the suggested site. iPhone: add ForkCaster to the Home Screen first (Share → Add to Home Screen).</div></>)}
+              {settingsGroup("exportbackup", "Export & backup", "backup, restore, reset", <>
                 <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", marginBottom: 8 }}>Export PDF report — for your prescriber</button>
                 <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                   <button onClick={exportJSON} style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Backup (JSON)</button>
@@ -6269,8 +6284,8 @@ export default function App() {
                   }} style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "8px 12px", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Sweep orphaned images</button>
                   <div style={{ fontSize: 13, color: C.faint, marginTop: 4 }}>Deletes only images the app no longer references — photos, comparisons and forecasts in use are kept.</div>
                 </div>
-                <button onClick={async () => { if ((await askConfirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.", true))) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Reset all data — start fresh</button>
-              </div>
+                <button onClick={async () => { if ((await askConfirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.", true))) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Reset all data — start fresh</button></>)}
+              
               <div style={{ textAlign: "center", fontSize: 13, color: C.faint, marginTop: 16 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
             </div>
           </div>
