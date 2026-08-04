@@ -1346,5 +1346,19 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/drawn: Math\.round\(r\.height\)/.test(VC),'and still reports what is actually drawn');
 }
 
+
+// v0.9.167: Release D, second family — nineteen radii become five.
+{
+  const BR=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const radii=[...new Set([...BR.matchAll(/borderRadius: (\d+)/g)].map((m)=>+m[1]))].sort((a,b)=>a-b);
+  const SCALE=[4,8,12,18,999];
+  ok(radii.every((v)=>SCALE.includes(v)), 'every literal radius is on the scale (' + radii.join(',') + ')');
+  ok(radii.length <= 5, 'and there are at most five of them');
+  ok(radii.includes(4), 'the small rung survives — a 3px bar snapped to 8 would clamp to half its height and read as a lozenge');
+  ok(radii.includes(999), 'pills are still pills');
+  // the chassis is the one pinned design decision and is deliberately off the scale
+  ok(/borderRadius: _cmp \? 15 : 18/.test(BR),'the card chassis keeps its own radius, 18 comfortable and 15 compact');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
