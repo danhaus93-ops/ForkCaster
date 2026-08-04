@@ -1337,6 +1337,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const VC=fs5.readFileSync(__FCROOT + '/tools/ftest/visual-audit.js','utf8');
   ok(/button::after\{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;\}/.test(BQ),
      'buttons carry 8px of vertical hit slop');
+  // v0.9.169: icon buttons were EXCLUDED by a :has(> svg) rule, which was exactly backwards — the
+  // audit measured them still at 25px, unhelped. An icon has no text to reflow, so it is the
+  // easiest thing in the app to expand and the hardest to hit without it.
+  ok(!/button:has\(> svg\)/.test(BQ),'icon buttons are not excluded from the hit slop');
+  ok(/\[role="button"\]::after,a\[href\]::after/.test(BQ),'tappable rows and links get it too');
   ok(/button\{position:relative;\}/.test(BQ),'anchored so the pseudo-element lands on the button');
   ok(/left:0;right:0/.test(BQ),'vertical only — horizontal expansion would make neighbouring chips overlap');
   // a 25px row was the commonest finding; with slop it clears the compact floor

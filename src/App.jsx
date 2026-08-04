@@ -5595,7 +5595,9 @@ export default function App() {
           button:disabled{filter:none;transform:none;}
           button{position:relative;}
           button::after{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;}
-          button:has(> svg):after,button.fc-nohit::after{display:none;}
+          [role="button"],a[href]{position:relative;}
+          [role="button"]::after,a[href]::after{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;}
+          .fc-nohit::after{display:none;}
           @media (prefers-reduced-motion:reduce){button,[role="button"]{transition:none;}}
           @keyframes fcToastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div style={{ width: "100%", maxWidth: 430, background: C.bg, minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
