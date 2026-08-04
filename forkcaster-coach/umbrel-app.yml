@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.184"
+version: "0.9.185"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Fixes a crash on opening the app introduced by the previous release. The new
-  Settings summary line for Goal mode read the wrong kind of value and threw, which
-  brought the whole app down.
+  Fixes the second crash on opening. The Settings summary for API keys referred to
+  something that does not exist in the app. Both crashes came from the same release
+  and both are now caught before they can ship.
 dependencies: []
 path: ""
 defaultUsername: ""

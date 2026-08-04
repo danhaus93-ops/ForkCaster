@@ -1603,33 +1603,52 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 
 
-// v0.9.184: the settings summaries are EXECUTED, not eyeballed. One of them called MODES.find and
-// MODES is an object keyed by id — the app crashed on open, because the settings sheet renders
-// inside the tree and a throw there takes the whole app down. Every deep-render pass had settings
-// closed, so nothing caught it.
+// v0.9.185: the summaries are executed AND every identifier they use must exist in the app.
+// The .184 guard ran them against a scope I wrote by hand — so when a summary referenced
+// aiKeyState, a variable that does not exist anywhere in the source, the harness helpfully
+// supplied one and the check passed on a build that crashed on launch. A test that provides the
+// thing it is meant to verify is not a test.
 {
   const CE=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(!/MODES\.find\(/.test(CE),'nothing treats MODES as an array — it is keyed by id');
-  ok(/\(MODES\[mode\] \|\| \{\}\)\.label/.test(CE),'and the goal-mode summary reads label, the field that exists');
+  ok(/\(MODES\[mode\] \|\| \{\}\)\.label/.test(CE),'the goal-mode summary reads label, the field that exists');
   const exprs=[...CE.matchAll(/settingsGroup\("[^"]+", "[^"]+", (.+?), <>/g)].map((m)=>m[1]);
   ok(exprs.length === 8, 'all eight summaries were found (' + exprs.length + ')');
-  // run each against the real shapes of the values it reads
+
+  // STEP 1 — every bare identifier must be declared somewhere in the app
+  const RESERVED=new Set(['true','false','null','undefined','Math','String','Number','Object','Array','JSON','parseInt','parseFloat','length','name','label','id','map','find','filter','join','slice','toFixed','includes','push','round','max','min']);
+  // strip literals first — a word inside "no restriction" is prose, not an identifier. Template
+  // literals keep their ${...} parts, which DO hold identifiers.
+  const codeOnly=(e)=>e
+    .replace(/`([^`]*)`/g, (m2, inner) => (inner.match(/\$\{[^}]*\}/g) || []).join(' '))
+    .replace(/"[^"]*"/g, ' ').replace(/'[^']*'/g, ' ');
+  let missing=[];
+  for (const e of exprs.map(codeOnly)) {
+    for (const id of new Set((e.match(/\b[A-Za-z_$][A-Za-z0-9_$]*\b/g) || []))) {
+      if (RESERVED.has(id)) continue;
+      if (/\.\s*$/.test(e.slice(0, e.indexOf(id)))) continue;          // a property, not a variable
+      const declared = new RegExp('(const|let|var)\\s+(\\[[^\\]]*\\b' + id + '\\b[^\\]]*\\]|' + id + '\\b)').test(CE)
+        || new RegExp('function\\s+' + id + '\\b').test(CE);
+      if (!declared) missing.push(id);
+    }
+  }
+  ok(missing.length === 0, 'every identifier in a summary exists in the app (' + [...new Set(missing)].join(',') + ')');
+
+  // STEP 2 — and they still have to evaluate to a string
   const scope = {
-    THEMES: { midnight: { name: "Midnight" }, forest: { name: "Forest" } },
-    MODES: { glp1: { label: "GLP-1" } },
+    THEMES: { midnight: { name: "Midnight" } }, MODES: { glp1: { label: "GLP-1" } },
     theme: "midnight", mode: "glp1", allergies: ["peanut"], diets: [], labs: [{}],
-    prefs: { compact: true, units: "imperial", reminderHour: 9 },
-    aiKeyState: { anthropic: true },
+    prefs: { compact: true, units: "imperial", reminderHour: 9 }, keyStatus: null,
   };
   const names=Object.keys(scope), vals=names.map((n)=>scope[n]);
   let bad=0, why='';
   for (const e of exprs) {
     try {
-      const v = new Function(...names, 'return (' + e + ');')(...vals);
-      if (v == null || typeof v === "object") { bad++; why = e.slice(0, 40); }
-    } catch (err) { bad++; why = e.slice(0, 40) + ' → ' + err.message; }
+      const v=new Function(...names, 'return (' + e + ');')(...vals);
+      if (v == null || typeof v === "object") { bad++; why=e.slice(0,40); }
+    } catch (err) { bad++; why=e.slice(0,40)+' → '+err.message; }
   }
-  ok(bad === 0, 'every settings summary evaluates to a string (' + why + ')');
+  ok(bad === 0, 'every summary evaluates to a string, including with keyStatus null (' + why + ')');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
