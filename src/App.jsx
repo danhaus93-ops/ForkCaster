@@ -4186,7 +4186,6 @@ export default function App() {
             when: new Date(weightSeries[weightSeries.length - 1].date + "T12:00:00").toLocaleDateString([], { month: "short", day: "numeric" }),
             value: fmtWt(cur, 1), unit: wtU,
             sub: [_lost != null ? `${_lost >= 0 ? "−" : "+"}${Math.abs(_lost).toFixed(1)} ${wtU}` : null,
-                  leanShown != null ? `${leanShown.toFixed(0)} lb lean held` : null,
                   _toGo != null && _toGo > 0 ? `${_toGo.toFixed(1)} to goal` : null].filter(Boolean).join(" · "),
             subTone: C.go,
             spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), CHART.wt) }; })())}</div>);
@@ -4326,9 +4325,7 @@ export default function App() {
         id: "rep", tone: C.muted, color: C.muted, title: "Prescriber report",
         when: "9 sections",
         value: String(9), unit: "sections",
-        sub: labDraws.length
-          ? `includes ${LAB_MARKERS.filter((m) => labLatest(m.key)).length} lab markers \u00b7 ${(glp.doseLog || []).length} doses \u00b7 ${(weightLog || []).length} weigh-ins`
-          : "labs section is empty \u2014 import a report to fill it",
+        sub: `${(glp.doseLog || []).length} doses \u00b7 ${(weightLog || []).length} weigh-ins \u00b7 printed for a clinic visit`,
         spark: null,
       })}</div>
 
@@ -5740,11 +5737,38 @@ export default function App() {
                       `${strengthWk}× strength this week`, _label].filter(Boolean).join(" · "),
                 spark: _spark(wk.map((d) => +d.steps || 0), CHART.ah) }; })());
           })()}{(() => {
+          /* v0.9.186: when NEITHER engine can read yet, they collapse to one row. Two cards whose
+             only content is "not ready" cost two of eleven rows to say the same thing twice. The
+             moment either becomes readable they render separately again — at that point each has a
+             number of its own, and merging would hide it. */
+          const _ar = adaptiveRead(weightLog, mealLog, targets, prefs);
+          const _dr = doseResponseRead(mealLog, glp);
+          const _arReady = !!(_ar && _ar.pts != null && _ar.spanDays >= 14);
+          const _drReady = !!(_dr && _dr.status === "ok");
+          if (_arReady || _drReady) return null;
+          const banked = (_ar && _ar.pts) || 0;
+          return card(<div>
+            {sectionTitle("Still learning · two engines")}
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginTop: 8 }}>
+              Adaptive targets needs about two weeks of weigh-ins before it can move a target.
+              Dose response needs both symptom days and meal days before it can read a rung.
+              Neither will show a number until it has one.
+            </div>
+          </div>, {}, {
+            id: "learn", tone: "none", color: C.faint, title: "Still learning",
+            when: "2 engines", value: String(banked), unit: `of 14 weigh-ins`,
+            sub: `${(_dr && _dr.days) || 0} of 10 meal days · ${(_dr && _dr.sym) || 0} of 5 symptom days`,
+            spark: null,
+          });
+        })()}
+        {(() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const strengthWk = hd.slice(-7).reduce((n, d) => n + (d.strength || 0), 0);
             const ar = adaptiveRead(weightLog, hd, glp, strengthWk);
             const applied = prefs.adaptiveAppliedOn === todayISO();
             const col = ar.flag === "lean-mass" ? C.avoid : ar.flag === "on-track" ? C.go : C.caution;
+            /* v0.9.186: silent until readable — the "Still learning" row speaks for it before that */
+            if (!(ar && ar.pts != null && ar.spanDays >= 14)) return null;
             return card(<div>
               {sectionTitle("Adaptive targets · learned from your trend")}
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
@@ -5771,6 +5795,7 @@ export default function App() {
               unit: ar && ar.pts === 1 ? "weigh-in banked" : "weigh-ins banked", sub: ar && ar.spanDays != null ? `across ${ar.spanDays} days · ${applied ? "targets follow your trend" : "needs ~2 weeks to read"}` : "log weigh-ins to start it" });
           })()}{(() => {
             const dr = doseResponseRead(mealLog, glp);
+            if (!(dr && dr.status === "ok")) return null;
             return card(<div>
               {sectionTitle("Dose response · your body's own data")}
               {dr.status === "collecting" ? (

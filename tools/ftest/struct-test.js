@@ -957,7 +957,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/laboratory markers,\s*\n?\s*training and intake/.test(AW.replace(/\s+/g,' ')) || /laboratory markers/.test(AW),'the blurb mentions the labs');
   ok(/\["Laboratory markers", labDraws\.length/.test(AW),'the card lists every section with what it holds');
   ok(/id: "rep"/.test(AW),'the report card collapses like the rest');
-  ok(/labs section is empty/.test(AW),'and says so when there is nothing in it');
+  ok(/labs section is empty/.test(AW) || /markers on file/.test(AW),'the empty-labs state is stated on the card that owns it');
   // the count in the card and the sections in the PDF must not drift apart
   const secs=(SW.match(/<h2>[^<]{3,60}<\/h2>/g) || []).length;
   ok(secs === 9, 'the PDF really has nine sections, matching the card (' + secs + ')');
@@ -1649,6 +1649,27 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
     } catch (err) { bad++; why=e.slice(0,40)+' → '+err.message; }
   }
   ok(bad === 0, 'every summary evaluates to a string, including with keyStatus null (' + why + ')');
+}
+
+
+// v0.9.186: Body's compact rows — duplications removed, engines merged while unready.
+{
+  const CF=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // lean mass was printed on Weight AND Composition, four rows apart. Composition measures it.
+  ok(!/lb lean held/.test(CF),'Weight no longer repeats the lean figure');
+  ok(/lb lean/.test(CF),'Composition still carries it');
+  // the report row repeated the lab count from the card directly beneath it
+  ok(!/includes \$\{LAB_MARKERS/.test(CF),'the report row no longer repeats the lab count');
+  // two cards whose only content was "not ready" become one, and split back when either can read
+  ok(/id: "learn"/.test(CF),'a single Still learning row exists');
+  ok(/if \(_arReady \|\| _drReady\) return null;/.test(CF),'it disappears the moment either engine becomes readable');
+  ok(/if \(!\(ar && ar\.pts != null && ar\.spanDays >= 14\)\) return null;/.test(CF),'adaptive targets stays silent until it can read');
+  ok(/if \(!\(dr && dr\.status === "ok"\)\) return null;/.test(CF),'and dose response likewise');
+  // protein adherence renders ONLY on Body — it was nearly removed on a claim that Today had it too
+  const t=CF.indexOf('const renderToday'); const tEnd=CF.indexOf('\n  const render', t + 20);
+  const today=CF.slice(t, tEnd > t ? tEnd : t + 20000);
+  ok(!/weekAdherence\(/.test(today), 'Today does not compute adherence — so Body must keep it');
+  ok(/id: "wk"/.test(CF),'the This week card stays');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
