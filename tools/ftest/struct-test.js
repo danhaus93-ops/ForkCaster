@@ -1602,5 +1602,35 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(n(/onClick=/g) === 20, 'all 20 handlers survive (' + n(/onClick=/g) + ')');
 }
 
+
+// v0.9.184: the settings summaries are EXECUTED, not eyeballed. One of them called MODES.find and
+// MODES is an object keyed by id — the app crashed on open, because the settings sheet renders
+// inside the tree and a throw there takes the whole app down. Every deep-render pass had settings
+// closed, so nothing caught it.
+{
+  const CE=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(!/MODES\.find\(/.test(CE),'nothing treats MODES as an array — it is keyed by id');
+  ok(/\(MODES\[mode\] \|\| \{\}\)\.label/.test(CE),'and the goal-mode summary reads label, the field that exists');
+  const exprs=[...CE.matchAll(/settingsGroup\("[^"]+", "[^"]+", (.+?), <>/g)].map((m)=>m[1]);
+  ok(exprs.length === 8, 'all eight summaries were found (' + exprs.length + ')');
+  // run each against the real shapes of the values it reads
+  const scope = {
+    THEMES: { midnight: { name: "Midnight" }, forest: { name: "Forest" } },
+    MODES: { glp1: { label: "GLP-1" } },
+    theme: "midnight", mode: "glp1", allergies: ["peanut"], diets: [], labs: [{}],
+    prefs: { compact: true, units: "imperial", reminderHour: 9 },
+    aiKeyState: { anthropic: true },
+  };
+  const names=Object.keys(scope), vals=names.map((n)=>scope[n]);
+  let bad=0, why='';
+  for (const e of exprs) {
+    try {
+      const v = new Function(...names, 'return (' + e + ');')(...vals);
+      if (v == null || typeof v === "object") { bad++; why = e.slice(0, 40); }
+    } catch (err) { bad++; why = e.slice(0, 40) + ' → ' + err.message; }
+  }
+  ok(bad === 0, 'every settings summary evaluates to a string (' + why + ')');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

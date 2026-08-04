@@ -6124,7 +6124,7 @@ export default function App() {
                   );
                 })}
               </div></>)}
-              {settingsGroup("goalmode", "Goal mode", (MODES.find((m) => m.id === mode) || {}).name || mode, <>
+              {settingsGroup("goalmode", "Goal mode", (MODES[mode] || {}).label || mode, <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
                 {Object.entries(MODES).map(([k, m]) => {
                   const on = mode === k;
