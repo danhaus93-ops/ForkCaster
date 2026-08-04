@@ -204,6 +204,14 @@ async function auditPage(page, label, compact) {
     const nums = list.map((p) => p.n).filter((v) => v != null).sort((a, b) => a - b);
     const shortest = nums.length ? nums[0] + "px" : "n/a";
     console.log(`    ${tab.padEnd(8)} ${String(list.length).padStart(3)}  smallest hit area ${shortest}`);
+    const seenLbl = new Set();
+    for (const p of list.slice().sort((a, b) => (a.n || 99) - (b.n || 99))) {
+      const lbl = (/"([^"]*)" hit area/.exec(p.msg) || [, "?"])[1];
+      if (seenLbl.has(lbl)) continue;
+      seenLbl.add(lbl);
+      if (seenLbl.size > 4) break;
+      console.log(`               ${String(p.n).padStart(3)}px  "${lbl.slice(0, 30)}"`);
+    }
   }
   if (touch.length) console.log("    (advisory — run with --shots to see them)");
   if (SHOT_DIR) console.log(`\n  screenshots written to ${SHOT_DIR}`);

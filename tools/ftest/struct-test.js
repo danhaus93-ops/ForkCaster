@@ -1446,5 +1446,14 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/cursor: "pointer", padding: "8px 12px" \}\}>skip<\/button>/.test(BV),'the rest-skip button is padded');
 }
 
+
+// v0.9.175: the report names the small controls instead of only counting them.
+{
+  const VE=require('fs').readFileSync(__FCROOT + '/tools/ftest/visual-audit.js','utf8');
+  ok(/const lbl = \(\/"\(\[\^"\]\*\)" hit area\//.test(VE),'each small control is named in the summary');
+  ok(/seenLbl\.size > 4/.test(VE),'at most four per tab, so it stays readable');
+  ok(/sort\(\(a, b\) => \(a\.n \|\| 99\) - \(b\.n \|\| 99\)\)/.test(VE),'smallest first — that is where the work is');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
