@@ -4538,25 +4538,10 @@ export default function App() {
             /* v0.9.189: the drop fills to how much of the panel is on file. The slot is empty on
                this card — no series to plot — so the icon earns it by carrying a number rather than
                decorating. Static red: it is an identity mark for blood, not a state colour. */
-            spark: (() => {
-              const total = LAB_MARKERS.length;
-              const pct = total ? drawn / total : 0;
-              const cut = 46 - pct * 34;           // the fill line inside the drop
-              return (
-                <svg width="44" height="52" viewBox="0 0 44 52" aria-hidden="true">
-                  <defs>
-                    <clipPath id="fcDropClip">
-                      <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z" />
-                    </clipPath>
-                  </defs>
-                  <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z"
-                    fill={LAB_DROP} opacity="0.16" />
-                  <rect x="0" y={cut} width="44" height="52" fill={LAB_DROP} opacity="0.72"
-                    clipPath="url(#fcDropClip)" />
-                  <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z"
-                    fill="none" stroke={LAB_DROP} strokeWidth="1.6" opacity="0.85" />
-                </svg>);
-            })(),
+            spark: (
+              <svg width="44" height="52" viewBox="0 0 44 52" aria-hidden="true">
+                <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z" fill={LAB_DROP} />
+              </svg>),
           }; })())}</div>
       {card(
         <>

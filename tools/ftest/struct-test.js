@@ -1718,11 +1718,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/tone \? LAB_DROP|LAB_DROP : /.test(labs),'the drop never changes colour with state');
   ok((CI.match(/fill=\{LAB_DROP\}/g) || []).length >= 1 && !/stroke=\{C\.(go|caution|avoid)\}/.test(labs),
      'and nothing else in the drop carries a state colour');
-  // the fill means something rather than decorating
-  ok(/const pct = total \? drawn \/ total : 0;/.test(CI),'the fill level is markers on file over total');
-  ok(/const cut = 46 - pct \* 34;/.test(CI),'mapped to a fill line inside the drop');
-  // an svg clipPath id must be unique in the document
-  ok((CI.match(/fcDropClip/g) || []).length === 2,'the clip path is defined once and referenced once');
+  // solid: one path, one fill, no clip and no opacity ramp. The card's hero number already states
+  // how many markers are on file; a part-filled icon repeated it and read as half-drawn.
+  ok(!/fcDropClip/.test(CI),'no clip path — the drop is not a gauge');
+  ok(!/const cut = 46 - pct/.test(CI),'and carries no fill maths');
+  ok(/<path d="M22 4C22 4 6 22 6 31\.5A16 16 0 0 0 38 31\.5C38 22 22 4 22 4Z" fill=\{LAB_DROP\} \/>/.test(CI),
+     'one path, filled solid');
+  ok(!/opacity="0\.\d+"[^>]*\{LAB_DROP\}|\{LAB_DROP\}[^>]*opacity="0\./.test(CI),'with no opacity on the drop itself');
   ok(/aria-hidden="true"/.test(labs),'the drop is decorative to a screen reader — the number is the content');
 }
 
