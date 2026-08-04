@@ -1528,5 +1528,20 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(same, "the server's day-roll behaves identically to the app's");
 }
 
+
+// v0.9.180: the overlay sweep — the last item on the redesign queue.
+{
+  const CA=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // a STRING radius is invisible to a numeric codemod, which is how 22px survived .167 on the four
+  // largest surfaces in the app. Check both forms from now on.
+  const strRadii=[...new Set([...CA.matchAll(/borderRadius: "(\d+px[^"]*)"/g)].map((m)=>m[1]))];
+  ok(strRadii.every((r)=>r.startsWith("18px")), 'string-form radii are on the card rung (' + strRadii.join(' | ') + ')');
+  ok(!/borderRadius: "22px/.test(CA),'no sheet keeps the off-scale 22px corner');
+  // one component, one surface
+  ok(!/background: C\.bg, borderRadius: "18px/.test(CA),'no sheet sits on C.bg while its siblings sit on C.surface');
+  ok((CA.match(/borderTop: `1px solid \$\{C\.hair\}`, borderRadius: "18px/g) || []).length === 4,
+     'all four sheets declare a top edge rather than dissolving into the scrim');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

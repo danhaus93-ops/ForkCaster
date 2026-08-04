@@ -5806,7 +5806,7 @@ export default function App() {
           )}
           {infoOpen && (
             <div onClick={() => setInfoOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(30,20,10,0.5)", zIndex: 90, display: "flex", alignItems: "flex-end" }}>
-              <div onClick={(e) => e.stopPropagation()} style={{ background: C.surface, borderRadius: "22px 22px 0 0", width: "100%", maxHeight: "86vh", overflowY: "auto", padding: "20px 20px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
+              <div onClick={(e) => e.stopPropagation()} style={{ background: C.surface, borderTop: `1px solid ${C.hair}`, borderRadius: "18px 18px 0 0", width: "100%", maxHeight: "86vh", overflowY: "auto", padding: "20px 20px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <div style={{ fontFamily: DISPLAY, fontSize: 23, fontWeight: 800, color: C.ink }}>How ForkCaster gets its numbers</div>
                   <button onClick={() => setInfoOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 18, width: 34, height: 34, fontSize: 17, color: C.ink, cursor: "pointer" }}>×</button>
@@ -5910,7 +5910,7 @@ export default function App() {
           </div>)}
         {logOpen && (
           <div onClick={() => setLogOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderTop: `1px solid ${C.hair}`, borderRadius: "18px 18px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 800, letterSpacing: 1.8, textTransform: "uppercase", color: C.ink }}>Scan or log food</div>
                 <button onClick={() => { stopCam(); setLogOpen(false); }} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 999, color: C.muted, fontSize: 17, cursor: "pointer" }}>✕</button>
@@ -6029,7 +6029,7 @@ export default function App() {
         {/* Settings sheet */}
         {simOpen && (
           <div onClick={() => setSimOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, maxHeight: "88dvh", overflowY: "auto", background: C.bg, borderRadius: "22px 22px 0 0", padding: "18px 18px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, maxHeight: "88dvh", overflowY: "auto", background: C.surface, borderTop: `1px solid ${C.hair}`, borderRadius: "18px 18px 0 0", padding: "18px 18px calc(24px + env(safe-area-inset-bottom, 0px))" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.ink }}>Body Forecaster</div>
                 <button onClick={() => setSimOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 18, width: 32, height: 32, color: C.muted, fontSize: 17, cursor: "pointer" }}>×</button>
@@ -6089,7 +6089,7 @@ export default function App() {
         )}
         {settingsOpen && (
           <div onClick={() => setSettingsOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderTop: `1px solid ${C.hair}`, borderRadius: "18px 18px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.ink }}>Settings</div>
                 <button onClick={() => setSettingsOpen(false)} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 999, color: C.muted, fontSize: 17, cursor: "pointer" }}>✕</button>
