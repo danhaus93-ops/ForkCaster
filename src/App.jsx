@@ -600,6 +600,7 @@ const LAB_GROUPS = ["Lipid panel", "Comprehensive metabolic panel", "Hemoglobin 
    sitting on a theme surface at all. Listed here so the next sweep for raw hex knows which ones
    are answers rather than oversights. */
 const SLEEP_STAGE = { deep: "#4C3FD4", rem: "#67E8F9", light: "#3B84BC" };   // awake uses C.avoid
+const LAB_DROP = "#C8322B";   // blood. Static — never carries state, never varies by theme.
 const CHART_DARK  = { fc: "#C7E04A", ah: "#67E8F9", wt: "#3BDF93", wk: "#F0B455", comp: "#3D7FD6" };
 const CHART_LIGHT = { fc: "#879C1B", ah: "#07A3B8", wt: "#1CAA68", wk: "#CD8512", comp: "#3D7FD6" };
 const MEDS = {
@@ -4534,7 +4535,28 @@ export default function App() {
             value: String(drawn), unit: drawn === 1 ? "marker on file" : "markers on file",
             sub: !labDraws.length ? "no results yet · import one to start a baseline"
               : `${labBaselineDate ? "baseline " + fmtDate(labBaselineDate) : ""}${labMissing.length ? " · " + labMissing.map((m) => m.name.toLowerCase()).join(" and ") + " never drawn" : ""}`,
-            spark: null,
+            /* v0.9.189: the drop fills to how much of the panel is on file. The slot is empty on
+               this card — no series to plot — so the icon earns it by carrying a number rather than
+               decorating. Static red: it is an identity mark for blood, not a state colour. */
+            spark: (() => {
+              const total = LAB_MARKERS.length;
+              const pct = total ? drawn / total : 0;
+              const cut = 46 - pct * 34;           // the fill line inside the drop
+              return (
+                <svg width="44" height="52" viewBox="0 0 44 52" aria-hidden="true">
+                  <defs>
+                    <clipPath id="fcDropClip">
+                      <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z" />
+                    </clipPath>
+                  </defs>
+                  <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z"
+                    fill={LAB_DROP} opacity="0.16" />
+                  <rect x="0" y={cut} width="44" height="52" fill={LAB_DROP} opacity="0.72"
+                    clipPath="url(#fcDropClip)" />
+                  <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z"
+                    fill="none" stroke={LAB_DROP} strokeWidth="1.6" opacity="0.85" />
+                </svg>);
+            })(),
           }; })())}</div>
       {card(
         <>

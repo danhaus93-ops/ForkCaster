@@ -1706,5 +1706,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/\{ minHeight: 118, \.\.\._shellExtra \}/.test(CH),'the floor is a default, not an override');
 }
 
+
+// v0.9.189: the lab card's blood drop.
+{
+  const CI=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const LAB_DROP = "#C8322B";/.test(CI),'the drop has one fixed colour');
+  // it is red on purpose, and that does NOT break the heart-rate rule: red SIGNALS heart rate, and
+  // a mark that never varies is not signalling. The test is that it never varies.
+  ok(!/LAB_DROP.*\?/.test(CI.split('\n').find((l)=>/const LAB_DROP/.test(l)) || ''),'declared as a constant, not a conditional');
+  const labs=CI.slice(CI.indexOf('id: "labs"') - 2600, CI.indexOf('id: "labs"') + 1800);
+  ok(!/tone \? LAB_DROP|LAB_DROP : /.test(labs),'the drop never changes colour with state');
+  ok((CI.match(/fill=\{LAB_DROP\}/g) || []).length >= 1 && !/stroke=\{C\.(go|caution|avoid)\}/.test(labs),
+     'and nothing else in the drop carries a state colour');
+  // the fill means something rather than decorating
+  ok(/const pct = total \? drawn \/ total : 0;/.test(CI),'the fill level is markers on file over total');
+  ok(/const cut = 46 - pct \* 34;/.test(CI),'mapped to a fill line inside the drop');
+  // an svg clipPath id must be unique in the document
+  ok((CI.match(/fcDropClip/g) || []).length === 2,'the clip path is defined once and referenced once');
+  ok(/aria-hidden="true"/.test(labs),'the drop is decorative to a screen reader — the number is the content');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
