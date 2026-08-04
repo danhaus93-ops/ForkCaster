@@ -1424,5 +1424,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/"#6b7a71"/.test(BU),'the score fallback uses a theme token');
 }
 
+
+// v0.9.173: the last of the measured touch findings.
+{
+  const BV=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const i=BV.indexOf('const renderTrain'), e=BV.indexOf('\n  const render', i + 20);
+  const train=BV.slice(i, e > i ? e : i + 40000);
+  let bare=0;
+  const re=/<button[^>]*?style=\{\{([^}]{0,300})\}\}>([^<{]{0,18})/g; let m;
+  while ((m = re.exec(train))) {
+    if (/height/.test(m[1])) continue;
+    const p=/padding: "(\d+)/.exec(m[1]);
+    if (!p || +p[1] < 6) bare++;
+  }
+  ok(bare === 0, 'no Train button relies on hit slop alone (' + bare + ' bare)');
+  ok(/cursor: "pointer", padding: "8px 12px" \}\}>skip<\/button>/.test(BV),'the rest-skip button is padded');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

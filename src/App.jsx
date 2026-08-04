@@ -3875,7 +3875,7 @@ export default function App() {
             <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmtRest(restLeft)}</div>
             <div style={{ fontSize: 13, opacity: .8, flex: 1 }}>rest</div>
             <button onClick={() => setRestEnd((t) => (t || Date.now()) + 30000)} style={{ background: C.go + "1A", border: `1px solid ${C.go}55`, color: C.go, borderRadius: 8, padding: "8px 11px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+30s</button>
-            <button onClick={() => setRestEnd(null)} style={{ background: "none", border: "none", color: C.surface, opacity: .75, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>skip</button>
+            <button onClick={() => setRestEnd(null)} style={{ background: "none", border: "none", color: C.surface, opacity: .75, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "8px 12px" }}>skip</button>
           </div>
         )}
       </div>
