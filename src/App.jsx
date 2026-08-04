@@ -2479,18 +2479,18 @@ export default function App() {
     const inView = (i) => photos[i] && viewOf(photos[i]) === view;
     return (
       <div style={{ marginTop: view === "back" ? 18 : 10 }}>
-        <div style={{ fontSize: 13, letterSpacing: 1.2, color: C.muted, fontWeight: 800, marginBottom: 7 }}>{label.toUpperCase()}</div>
+        <div style={{ fontSize: 13, letterSpacing: 1.2, color: C.muted, fontWeight: 800, marginBottom: 8 }}>{label.toUpperCase()}</div>
         {list.length === 0 ? (
           <div style={{ fontSize: 13, color: C.faint, marginBottom: 8 }}>No {label.toLowerCase()} photos yet.</div>
         ) : (
           <>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8 }}>
               {[["Before", "A", a], ["After", "B", b]].map(([lbl, sd, idx]) => {
                 const shown = inView(idx) ? photos[idx] : null;
                 const w = shown ? nearestWeight(shown.date) : null;
                 return (
                   <div key={lbl} style={{ flex: 1 }}>
-                    <button onClick={() => setSide(sd)} style={{ fontSize: 13, marginBottom: 5, fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: side === sd ? C.go : C.muted, padding: 0 }}>{side === sd ? "● " : ""}{lbl}</button>
+                    <button onClick={() => setSide(sd)} style={{ fontSize: 13, marginBottom: 4, fontWeight: 700, background: "none", border: "none", cursor: "pointer", color: side === sd ? C.go : C.muted, padding: 0 }}>{side === sd ? "● " : ""}{lbl}</button>
                     <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${side === sd ? C.go : C.hair}` }}>
                       {shown && <img src={shown.url} alt={lbl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                       {shown && <button onClick={() => deletePhoto(idx)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 12, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 15, cursor: "pointer" }}>✕</button>}
@@ -2507,13 +2507,13 @@ export default function App() {
               const d = wb.lbs - wa.lbs;
               return <div style={{ textAlign: "center", marginTop: 8, fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: d <= 0 ? C.go : C.caution }}>{d > 0 ? "+" : "−"}{fmtWt(Math.abs(d))} {wtU} between these photos</div>;
             })()}
-            <div style={{ display: "flex", gap: 6, overflowX: "auto", marginTop: 10, paddingBottom: 4 }}>
+            <div style={{ display: "flex", gap: 4, overflowX: "auto", marginTop: 8, paddingBottom: 4 }}>
               {list.map(({ p, i }) => (
                 <img key={p.id || i} src={p.url} onClick={() => (side === "A" ? setA(i) : setB(i))} alt="" style={{ width: 44, height: 58, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === a ? C.violet : i === b ? C.go : "transparent"}`, opacity: i === a || i === b ? 1 : 0.65 }} />
               ))}
             </div>
             <div style={{ fontSize: 11.5, color: C.faint, marginTop: 2 }}>Tap a pane label to choose which side the strip sets · purple = Before, green = After</div>
-            {list.length >= 2 && a !== b && inView(a) && inView(b) && <button onClick={() => shareComparison(a, b)} style={{ width: "100%", marginTop: 10, background: C.violet, color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Share this {label.toLowerCase()} comparison →</button>}
+            {list.length >= 2 && a !== b && inView(a) && inView(b) && <button onClick={() => shareComparison(a, b)} style={{ width: "100%", marginTop: 8, background: C.violet, color: "#fff", border: "none", borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Share this {label.toLowerCase()} comparison →</button>}
           </>
         )}
         <input ref={ref} type="file" accept="image/*" multiple onChange={(e) => addPhotos(e, view)} style={{ display: "none" }} />
@@ -3315,13 +3315,13 @@ export default function App() {
     const _arr = arrangeTab === tab;
     return cardShell(
       <div onClick={() => { if (_arr) return; setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when, sheetWhen: vd.sheetWhen }); }} style={{ cursor: "pointer" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           {dot}
           <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
           {vd.when && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 10.5, color: C.faint, letterSpacing: 0.5, textTransform: "uppercase", flexShrink: 0 }}>{vd.when}</span>}
           <span style={{ color: C.faint, fontSize: 15, lineHeight: 1, marginLeft: vd.when ? 6 : "auto", flexShrink: 0 }}>{"›"}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
             <span style={{ fontFamily: DATA, fontSize: 29, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1, color: C.ink }}>{vd.value}</span>
             {vd.unit && <span style={{ fontFamily: DATA, fontSize: 11.5, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
@@ -3373,7 +3373,7 @@ export default function App() {
   };
   const openQuick = (field, label, unit) => { setQuick({ field, label, unit }); setQuickVal(""); };
   const quickRow = () => quick && (
-    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 12px" }}>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 12px" }}>
       <span style={{ fontSize: 15, color: C.muted, whiteSpace: "nowrap" }}>add {quick.label}</span>
       <input autoFocus type="number" inputMode="decimal" value={quickVal} onChange={(e) => setQuickVal(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") commitQuick("add"); if (e.key === "Escape") { setQuick(null); setQuickVal(""); } }}
@@ -3387,34 +3387,34 @@ export default function App() {
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button onClick={() => detectLocation(true)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontSize: 13, letterSpacing: 1.1, color: C.muted, textTransform: "uppercase", fontWeight: 600, fontFamily: BODY }}>{geoLabel(geo, timeStr)}</button>
-        <div style={{ fontSize: 13, color: C.go, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: 999, background: C.go }} /> {MODES[mode].label}</div>
+        <div style={{ fontSize: 13, color: C.go, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: 999, background: C.go }} /> {MODES[mode].label}</div>
       </div>
 
       {(() => { const k = dayKeyAt(Date.now(), prefs); const plain = new Date().toLocaleDateString("sv-SE");
         const night = k !== plain;
         const rollAt = prefs.shiftMode === "nights" || night ? (prefs.nightRollHour == null ? 11 : prefs.nightRollHour) : (prefs.rolloverHour || 0);
         const h12 = (h) => `${((h + 11) % 12) + 1}${h < 12 ? "am" : "pm"}`;
-        return (<div onClick={() => setSettingsOpen(true)} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", cursor: "pointer" }}>
+        return (<div onClick={() => setSettingsOpen(true)} style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", cursor: "pointer" }}>
           <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: night ? C.violet : C.faint, border: `1px solid ${night ? C.violet + "55" : C.hair}`, background: night ? C.violet + "14" : "transparent", textTransform: "uppercase" }}>{night ? "Night day" : "Day"} · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}</span>
           <span style={{ fontSize: 13, color: C.faint }}>resets {h12(rollAt)}</span>
         </div>); })()}
 
-      <div style={{ marginTop: 16, display: "flex", alignItems: "baseline", gap: 10 }}>
+      <div style={{ marginTop: 16, display: "flex", alignItems: "baseline", gap: 8 }}>
         <div onClick={() => openQuick("protein", "protein", "g")} style={{ fontFamily: DISPLAY, fontSize: 56, fontWeight: 700, color: C.ink, lineHeight: 0.9, fontVariantNumeric: "tabular-nums", cursor: "pointer" }}>{proteinLeft}<span style={{ fontSize: 24, color: C.muted }}>g</span></div>
         <div style={{ paddingBottom: 6 }}><div onClick={() => openQuick("protein", "protein", "g")} style={{ fontSize: 17, fontWeight: 600, color: C.ink, cursor: "pointer" }}>protein to go</div><div onClick={() => openQuick("calories", "calories", "cal")} style={{ fontSize: 15, color: C.muted, cursor: "pointer" }}>{calLeft} cal left today</div></div>
       </div>
 
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 12 }}>
         <div style={{ height: 14, background: C.surface, borderRadius: 8, overflow: "hidden", border: `1px solid ${C.hair}`, display: "flex" }}>
           <div style={{ width: `${proteinPct}%`, background: C.go, borderRight: proteinPct < 100 ? `2px solid ${C.ink}` : "none" }} />
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 13, color: C.muted, fontVariantNumeric: "tabular-nums" }}><span>{eaten.protein}g eaten</span><span>{targets.protein}g goal</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 13, color: C.muted, fontVariantNumeric: "tabular-nums" }}><span>{eaten.protein}g eaten</span><span>{targets.protein}g goal</span></div>
       </div>
 
       {/* Remaining today — carbs, fat budget, hydration, fiber. Rings, because the mock has drawn
           them since the first pass and an arc reads before a digit does. The number inside stays
           the "to go" figure: what is left is the thing he acts on, not what is spent. */}
-      <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
+      <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
         {[
           { field: "carbs", short: "carbs", label: "carbs to go", left: Math.max(0, (targets.carbs || 0) - (eaten.carbs || 0)), unit: "g", pct: Math.min(100, ((eaten.carbs || 0) / Math.max(1, targets.carbs || 1)) * 100), col: C.ink },
           { field: "fat", short: "fat", label: "fat budget left", left: Math.max(0, (targets.fat || 0) - (eaten.fat || 0)), unit: "g", pct: Math.min(100, ((eaten.fat || 0) / Math.max(1, targets.fat || 1)) * 100), col: C.avoid },
@@ -3440,19 +3440,19 @@ export default function App() {
       <button onClick={() => setEditing((e) => !e)} style={linkBtn}>{editing ? "Done" : "Change today's goals →"}</button>
       {editing && card(
         <>
-          <div style={{ display: "flex", gap: 10 }}>{numField("Protein goal", targets.protein, (v) => setTargets({ ...targets, protein: +v }))}{numField("Calorie goal", targets.calories, (v) => setTargets({ ...targets, calories: +v }))}</div>
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField("Carbs goal", targets.carbs, (v) => setTargets({ ...targets, carbs: +v }))}{numField("Fat goal", targets.fat, (v) => setTargets({ ...targets, fat: +v }))}</div>
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Water goal (${volU})`, fmtVol(targets.waterOz), (v) => setTargets({ ...targets, waterOz: isMetric ? +v / ML_PER_OZ : +v }))}{numField("Fiber goal (g)", targets.fiber, (v) => setTargets({ ...targets, fiber: +v }))}</div>
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField("Protein eaten", eaten.protein, (v) => setEaten({ ...eaten, protein: +v }))}{numField("Calories eaten", eaten.calories, (v) => setEaten({ ...eaten, calories: +v }))}</div>
+          <div style={{ display: "flex", gap: 8 }}>{numField("Protein goal", targets.protein, (v) => setTargets({ ...targets, protein: +v }))}{numField("Calorie goal", targets.calories, (v) => setTargets({ ...targets, calories: +v }))}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>{numField("Carbs goal", targets.carbs, (v) => setTargets({ ...targets, carbs: +v }))}{numField("Fat goal", targets.fat, (v) => setTargets({ ...targets, fat: +v }))}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>{numField(`Water goal (${volU})`, fmtVol(targets.waterOz), (v) => setTargets({ ...targets, waterOz: isMetric ? +v / ML_PER_OZ : +v }))}{numField("Fiber goal (g)", targets.fiber, (v) => setTargets({ ...targets, fiber: +v }))}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>{numField("Protein eaten", eaten.protein, (v) => setEaten({ ...eaten, protein: +v }))}{numField("Calories eaten", eaten.calories, (v) => setEaten({ ...eaten, calories: +v }))}</div>
           <button onClick={() => { setPrefs({ ...prefs, customTargets: { ...targets } }); setMode("custom"); setPresetSaved(true); setTimeout(() => setPresetSaved(false), 2200); }} style={{ marginTop: 12, width: "100%", background: "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>{presetSaved ? "Preset saved ✓" : "Save these as \"My preset\""}</button>
-        </>, { marginTop: 10 })}
+        </>, { marginTop: 8 })}
 
       {onMed && nauseaRisk !== "low" && (
-        <div style={{ marginTop: 16, background: C.violet + "14", border: `1px solid ${C.violet}44`, borderRadius: 12, padding: "12px 14px", display: "flex", gap: 11 }}>
+        <div style={{ marginTop: 16, background: C.violet + "14", border: `1px solid ${C.violet}44`, borderRadius: 12, padding: "12px 14px", display: "flex", gap: 12 }}>
           <div style={{ width: 4, borderRadius: 4, background: C.violet, flexShrink: 0 }} />
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.violet, letterSpacing: 0.3 }}>MED-AWARE ORDERING · {nauseaRisk.toUpperCase()} NAUSEA RISK</div>
-            <div style={{ fontSize: 15, color: C.ink2, marginTop: 3, lineHeight: 1.4 }}>
+            <div style={{ fontSize: 15, color: C.ink2, marginTop: 2, lineHeight: 1.4 }}>
               {escalating ? "Dose-increase week" : "Recent nausea logged"} — {mode === "gain" ? "protein targets stay king; picks adjust texture and volume for comfort, never protein." : "picks skew lighter, lean, and protein-dense, steering off fried/greasy."} The only app that adapts restaurant ordering to your dose week.
             </div>
           </div>
@@ -3460,11 +3460,11 @@ export default function App() {
       )}
 
       {(allergies.length > 0 || diets.length > 0) && (
-        <div style={{ marginTop: 14, background: C.avoidSoft, border: `1px solid ${C.avoid}40`, borderRadius: 12, padding: "11px 14px", display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ marginTop: 12, background: C.avoidSoft, border: `1px solid ${C.avoid}40`, borderRadius: 12, padding: "11px 14px", display: "flex", gap: 8, alignItems: "center" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7z" stroke={C.avoid} strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke={C.avoid} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <div style={{ fontSize: 15, color: C.ink2, lineHeight: 1.4 }}>
             <b style={{ color: C.avoid }}>Filtering out:</b>
-            <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 5, margin: "0 0 0 5px", verticalAlign: "middle" }}>
+            <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 4, margin: "0 0 0 5px", verticalAlign: "middle" }}>
               {allergies.map((a) => (
                 <span key={a} onClick={() => setAllergies((xs) => xs.filter((y) => y !== a))} style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, borderRadius: 999, padding: "3px 8px", color: C.avoid, border: `1px solid ${C.avoid}44`, cursor: "pointer" }}>{a} ✕</span>))}
               {diets.map((d) => (
@@ -3475,30 +3475,30 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: 16 }}>
         {sectionTitle("Near you")}
         {rankState === "ranking" && (
-          <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 10 }}>Ranking venues by health fit for your goals right now…</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 8 }}>Ranking venues by health fit for your goals right now…</div>
         )}
         {rankState === "ranked" && (
-          <div style={{ fontSize: 13, color: C.go, fontWeight: 600, marginTop: -4, marginBottom: 10 }}>✓ Ranked by health fit — your macros, meds &amp; filters, not star ratings</div>
+          <div style={{ fontSize: 13, color: C.go, fontWeight: 600, marginTop: -4, marginBottom: 8 }}>✓ Ranked by health fit — your macros, meds &amp; filters, not star ratings</div>
         )}
         {rankState !== "idle" && rankState !== "ranking" && rankState !== "ranked" && (
-          <div style={{ fontSize: 13, color: C.avoid, marginTop: -4, marginBottom: 10, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 13, color: C.avoid, marginTop: -4, marginBottom: 8, lineHeight: 1.4 }}>
             Ranking hiccup ({rankState}) — {/deprecat|unsupported|invalid/i.test(String(rankState)) ? "the AI API rejected a request parameter (fixed in newer ForkCaster builds)" : "usually a cut-off AI response, not your key"}.{" "}
             <span onClick={() => rankVenues(venues, true)} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>tap to retry</span>.
           </div>
         )}
 
         {/* Live map with match pins */}
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 12 }}>
           <MapView C={C} geo={geo} restaurants={venues.slice(0, 12)} onPin={orderForMe} scoreColor={scoreColor} onSearchArea={(la, ln) => setGeo({ status: "ok", lat: la, lng: ln, manual: true })} prefs={prefs} />
         </div>
 
         {geo.status === "ok" && venues.length === 0 && (
-          <div style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 18, padding: "22px 18px", textAlign: "center", marginBottom: 6 }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 18, padding: "22px 18px", textAlign: "center", marginBottom: 4 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: C.ink }}>No food spots near you</div>
-            <div style={{ fontSize: 15, color: C.muted, marginTop: 5, lineHeight: 1.5 }}>Nothing within ~2 miles of this point. Keep driving, or drag the map ahead and tap "Search this area" to scout your route.</div>
+            <div style={{ fontSize: 15, color: C.muted, marginTop: 4, lineHeight: 1.5 }}>Nothing within ~2 miles of this point. Keep driving, or drag the map ahead and tap "Search this area" to scout your route.</div>
           </div>
         )}
         <div style={{ display: "flex", gap: 12, overflowX: "auto", margin: "0 -18px", padding: "0 18px 6px" }}>
@@ -3510,14 +3510,14 @@ export default function App() {
                   <FoodImg photo={PHOTOS[r.id] || r.photo} kind={FOOD_BY_ID[r.id] || "burger"} sc={sc} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 55%)" }} />
                   {r.menu && <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(200,140,20,0.95)", color: "#1a1200", borderRadius: 18, padding: "3px 9px", fontSize: 10.5, fontWeight: 800, letterSpacing: 0.5 }}>DEMO</div>}
-                  <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.95)", borderRadius: 18, padding: "3px 9px", display: "flex", alignItems: "center", gap: 3, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
+                  <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.95)", borderRadius: 18, padding: "3px 9px", display: "flex", alignItems: "center", gap: 2, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
                     <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : "#6b7a71" }}>{r.match != null ? r.match : r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
                     <span style={{ fontSize: 10.5, fontWeight: 700, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : "#6b7a71", textTransform: "uppercase" }}>{r.match != null || r.menu ? "match" : "★"}</span>
                   </div>
                   <div style={{ position: "absolute", left: 12, bottom: 9 }}>
                     <div style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: "#fff", lineHeight: 1, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{r.name}</div>
                     <div style={{ fontSize: 13, color: "rgba(255,255,255,0.92)", marginTop: 2, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{r.cuisine} · {r.lat != null && geo.status === "ok" ? `${distMi(geo.lat, geo.lng, r.lat, r.lng).toFixed(1)} mi` : r.eta}</div>
-                    {r.why && <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.85)", marginTop: 1, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{r.why}</div>}
+                    {r.why && <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.85)", marginTop: 0, textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}>{r.why}</div>}
                   </div>
                 </div>
                 <div style={{ padding: 12 }}>
@@ -3531,26 +3531,26 @@ export default function App() {
         <button onClick={() => setInfoOpen(true)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "6px 0 0", textDecoration: "underline" }}>ⓘ How these numbers are made — what's exact, what's estimated</button>
       </div>
 
-      <div style={{ marginTop: 6 }}>
+      <div style={{ marginTop: 4 }}>
         {error && <div style={{ background: C.avoidSoft, color: C.avoid, borderRadius: 12, padding: 14, fontSize: 15, marginTop: 12 }}>{error}</div>}
         {loading && !result && <div style={{ textAlign: "center", color: C.muted, fontSize: 15, padding: "22px 0" }}>Reading the menu against your {proteinLeft}g / {calLeft} cal…</div>}
         {result && result._menuSource && (<>
                 <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.4, color: result._menuSource === "live" ? C.go : C.faint, marginBottom: 8 }}>
                   {result._menuMethod === "chain" ? "● RANKED FROM THEIR PUBLISHED GLP-1 MENU" : result._menuMethod === "fatsecret" ? "● RANKED FROM PUBLISHED NUTRITION (FatSecret database)" : result._menuSource === "live" ? `● RANKED FROM THEIR LIVE MENU${result._menuMethod === "pdf" ? " (PDF)" : result._menuMethod === "js" ? " (RENDERED SITE)" : ""}` : result._menuSource === "photo" ? "● RANKED FROM YOUR MENU PHOTO" : result._menuSource === "ai" ? "AI-PROPOSED TYPICAL ORDERS (no readable menu online)" : ""}
                 </div>
-                <button onClick={() => menuPhotoRef.current && menuPhotoRef.current.click()} disabled={menuPhotoBusy} style={{ marginTop: 6, background: "none", color: C.violet, border: `1.5px dashed ${C.violet}88`, borderRadius: 8, padding: "9px 12px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: menuPhotoBusy ? 0.6 : 1 }}>{menuPhotoBusy ? "Reading menu photo…" : "Snap their paper menu instead"}</button>
+                <button onClick={() => menuPhotoRef.current && menuPhotoRef.current.click()} disabled={menuPhotoBusy} style={{ marginTop: 4, background: "none", color: C.violet, border: `1.5px dashed ${C.violet}88`, borderRadius: 8, padding: "9px 12px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: menuPhotoBusy ? 0.6 : 1 }}>{menuPhotoBusy ? "Reading menu photo…" : "Snap their paper menu instead"}</button>
                 <input ref={menuPhotoRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanMenuPhoto(e.target.files[0]); e.target.value = ""; }} />
               </>)}
               {result && (
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: 12 }}>
             {result.coachLine && (
-              <div style={{ background: C.goSoft, border: `1px solid ${C.go}33`, borderRadius: 12, padding: "13px 15px", marginBottom: 14 }}>
-                <div style={{ fontSize: 13, color: C.go, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 3 }}>Coach</div>
+              <div style={{ background: C.goSoft, border: `1px solid ${C.go}33`, borderRadius: 12, padding: "13px 15px", marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: C.go, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", marginBottom: 2 }}>Coach</div>
                 <div style={{ fontSize: 17, color: C.ink2, fontWeight: 500, lineHeight: 1.35 }}>{result.coachLine}</div>
               </div>
             )}
             {(result.picks || []).map((p, i) => (
-              <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", background: C.surface, marginBottom: 10, border: `1px solid ${C.hair}`, borderLeft: `4px solid ${medalColor(i)}`, borderRadius: 12, padding: "12px 14px" }}>
+              <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", background: C.surface, marginBottom: 8, border: `1px solid ${C.hair}`, borderLeft: `4px solid ${medalColor(i)}`, borderRadius: 12, padding: "12px 14px" }}>
                 <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, overflow: "hidden", position: "relative", boxShadow: `0 1px 3px ${C.ink}22` }}>
                   <FoodImg photo={PHOTOS[selected] || ((venues.find((v) => v.id === selected) || {}).photo)} kind={FOOD_BY_ID[selected] || "bowl"} sc={scoreColor(4.5)} />
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 999, background: medalColor(i), color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
@@ -3568,7 +3568,7 @@ export default function App() {
                   const _venue = ((venues.find((v) => v.id === selected) || {}).name) || _item;
                   return (
                     <>
-                      <div style={{ marginTop: 10, fontSize: 15, color: C.muted, fontFamily: BODY }}>Order "{_item}" from</div>
+                      <div style={{ marginTop: 8, fontSize: 15, color: C.muted, fontFamily: BODY }}>Order "{_item}" from</div>
                       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                         {DELIVERY_APPS.map((a) => (
                           <a key={a.label} href={a.url(_venue)} rel="noopener"
@@ -3576,18 +3576,18 @@ export default function App() {
                             style={{ flex: 1, textAlign: "center", textDecoration: "none", background: a.bg, color: a.fg, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: a.size, fontWeight: a.weight, letterSpacing: a.spacing, whiteSpace: "nowrap" }}>{a.label}</a>
                         ))}
                       </div>
-                      <div style={{ textAlign: "center", fontSize: 13, color: C.faint, marginTop: 7 }}>Opens the app at {_venue} and copies the item name — paste it in their search</div>
+                      <div style={{ textAlign: "center", fontSize: 13, color: C.faint, marginTop: 8 }}>Opens the app at {_venue} and copies the item name — paste it in their search</div>
                     </>
                   );
                 })()}
               </>
             )}
             {(result.avoid || []).length > 0 && (
-              <div style={{ marginTop: 18 }}>
+              <div style={{ marginTop: 16 }}>
                 {sectionTitle("Skip today", C.avoid)}
                 <div style={{ fontSize: 13, color: C.faint, marginTop: -4, marginBottom: 8, lineHeight: 1.45 }}>From your fat ceiling and today's symptom load.</div>
                 {result.avoid.map((a, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderBottom: i < result.avoid.length - 1 ? `1px solid ${C.hair}` : "none" }}>
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "8px 0", borderBottom: i < result.avoid.length - 1 ? `1px solid ${C.hair}` : "none" }}>
                     <span style={{ fontSize: 15, color: C.ink, fontWeight: 500 }}>{a.item || a.name}</span><span style={{ fontSize: 15, color: C.muted, textAlign: "right", maxWidth: "48%" }}>{a.reason}</span>
                   </div>
                 ))}
@@ -3597,7 +3597,7 @@ export default function App() {
                 nested inside it, so a menu with no Skip-today list — every curated chain menu since
                 v0.8.6 emptied that list — silently lost BOTH the Ask feature and the 96px clearance,
                 which is why the caption clipped under the tab bar. */}
-            <div style={{ marginTop: 14 }}>
+            <div style={{ marginTop: 12 }}>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={menuQ} onChange={(e) => setMenuQ(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") askMenu(); }} placeholder="Ask about this menu… (swaps, carbs, drinks)"
                   style={{ flex: 1, fontFamily: BODY, fontSize: 15, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "11px 13px", outline: "none" }} />
@@ -3647,7 +3647,7 @@ export default function App() {
     return (
       <div style={{ padding: "18px 18px 12px" , display: "flex", flexDirection: "column"}}>
         <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Today</div>
-        <div style={{ fontSize: 15, color: C.muted, marginBottom: 14 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{(() => { const k = todayISO(), plain = dayKeyAt(Date.now(), { rolloverHour: prefs.rolloverHour }); return k !== plain ? <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 800, color: C.violet, border: `1px solid ${C.violet}55`, borderRadius: 18, padding: "3px 9px" }}>NIGHT DAY · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short" })}</span> : null; })()}</div>
+        <div style={{ fontSize: 15, color: C.muted, marginBottom: 12 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{(() => { const k = todayISO(), plain = dayKeyAt(Date.now(), { rolloverHour: prefs.rolloverHour }); return k !== plain ? <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 800, color: C.violet, border: `1px solid ${C.violet}55`, borderRadius: 18, padding: "3px 9px" }}>NIGHT DAY · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short" })}</span> : null; })()}</div>
         {/* PROTEIN LEADS. The contract names it the one lever that decides whether the weight
             coming off is fat or muscle, so it gets the hero and everything else compresses. */}
         <div style={{ display: "contents" }}>{card(<>
@@ -3655,15 +3655,15 @@ export default function App() {
             {sectionTitle("Protein · your lead lever", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: pTone, border: `1px solid ${pTone}55`, background: pTone + "1A" }}>{pPct}% OF FLOOR</span>
           </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 7 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             <span style={{ width: 6, height: 6, borderRadius: 4, background: C.go, alignSelf: "center" }} />
             <span style={{ fontFamily: DATA, fontSize: 40, fontWeight: 700, color: C.ink, lineHeight: 1 }}>{eaten.protein || 0}</span>
             <span style={{ fontFamily: DATA, fontSize: 15, color: C.muted }}>/ {targets.protein}g</span>
           </div>
-          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4, overflow: "hidden", marginTop: 9 }}>
+          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4, overflow: "hidden", marginTop: 8 }}>
             <div style={{ width: `${pPct}%`, height: "100%", background: pTone, borderRadius: 4 }} />
           </div>
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 9, lineHeight: 1.5 }}>{pGap > 0 ? `${pGap}g short. A shake or a palm of chicken closes most of it.` : "Floor met. This is the day that protects the muscle."}</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>{pGap > 0 ? `${pGap}g short. A shake or a palm of chicken closes most of it.` : "Floor met. This is the day that protects the muscle."}</div>
         </>, { borderLeft: `2.5px solid ${pTone}` })}</div>
 
         <div style={{ display: "contents" }}>{card(<>
@@ -3674,12 +3674,12 @@ export default function App() {
           <div style={{ display: "flex", gap: 8 }}>
             {counters.map(([l, v, sub, fld]) => (<div key={l} onClick={() => fld && openQuick(fld, l, "")} style={{ flex: 1, minWidth: 0, cursor: fld ? "pointer" : "default" }}>
               <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.4, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
-              <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: C.ink, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>{v}</div>
-              <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 1 }}>{sub}</div>
+              <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: C.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{v}</div>
+              <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 0 }}>{sub}</div>
             </div>))}
           </div>
-          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4, overflow: "hidden", marginTop: 11 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
-          <div style={{ display: "flex", gap: 8, marginTop: 9 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
+          <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4, overflow: "hidden", marginTop: 12 }}><div style={{ width: `${Math.min(100, (eaten.waterOz / targets.waterOz) * 100)}%`, height: "100%", background: C.blue }} /></div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>{[8, 16, 24].map((oz) => (<button key={oz} onClick={() => setEaten((e) => ({ ...e, waterOz: e.waterOz + oz }))} style={chipBtn}>+{oz} oz</button>))}</div>
         </>)}</div>
 
         {/* THE LADDER. Every number in this app came from one of these five, and they are not equally
@@ -3687,20 +3687,20 @@ export default function App() {
         <div style={{ display: "contents" }}>{card(<div onClick={() => { setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ cursor: "pointer" }}><>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             {sectionTitle("Log a meal", C.muted)}
-            <span style={{ display: "flex", gap: 6, marginTop: -8 }}>
+            <span style={{ display: "flex", gap: 4, marginTop: -8 }}>
               <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", color: C.caution, border: `1px solid ${C.caution}55`, background: C.caution + "1A" }}>ACCURACY LADDER</span>
               </span>
           </div>
           {[["Barcode scan", "Most exact", C.go], ["Nutrition label photo", "Exact", C.go], ["Search USDA / Open Food Facts", "Good", C.muted], ["Photo estimate — snap your plate", "Estimate", C.caution], ["Describe it — AI estimate", "Least exact", C.caution]].map(([l, tier, tone], i) => (
-            <div key={l} onClick={(ev) => { if (i === 1) { ev.stopPropagation(); labelRef.current && labelRef.current.click(); return; } setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none", cursor: "pointer" }}>
+            <div key={l} onClick={(ev) => { if (i === 1) { ev.stopPropagation(); labelRef.current && labelRef.current.click(); return; } setScan({ status: "idle" }); setBarcode(""); setLogOpen(true); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none", cursor: "pointer" }}>
               <span style={{ fontSize: 15, color: C.ink2 }}>{l}</span>
               <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 8px", color: tone, border: `1px solid ${tone}55`, whiteSpace: "nowrap", textTransform: "uppercase" }}>{tier}</span>
             </div>))}
-          <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>Trends beat single meals. Snap labels when you can.</div>
+          <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>Trends beat single meals. Snap labels when you can.</div>
         </></div>)}</div>
 
         {mealLog.filter((m) => m.date === todayISO()).length > 0 && <div style={{ display: "contents" }}>{card(<>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             {sectionTitle("Logged today", C.muted)}
             <span onClick={() => openQuick("calories", "Calories", "")} style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.go, cursor: "pointer", marginTop: -8 }}>+ Quick add</span>
           </div>
@@ -3708,7 +3708,7 @@ export default function App() {
             <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
               <div style={{ minWidth: 0, paddingRight: 8 }}><div style={{ fontSize: 15, fontWeight: 600, color: C.ink, lineHeight: 1.3, wordBreak: "break-word" }}>{m.name}</div>
                 <div style={{ fontFamily: DATA, fontSize: 13, color: C.faint, marginTop: 2 }}>{[m.at ? new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null, `${m.protein} P`, m.src ? String(m.src).toLowerCase().replace(/ \(.*\)$/, "") : null].filter(Boolean).join(" · ")}</div></div>
-              <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}><span style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink2 }}>{m.calories}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}><span style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink2 }}>{m.calories}</span>
               <button onClick={() => { setEaten((e) => ({ ...e, protein: Math.max(0, e.protein - (m.protein || 0)), calories: Math.max(0, e.calories - (m.calories || 0)), carbs: Math.max(0, (e.carbs || 0) - (m.carbs || 0)), fat: Math.max(0, (e.fat || 0) - (m.fat || 0)), fiber: Math.max(0, (e.fiber || 0) - (m.fiber || 0)) })); setMealLog((l) => l.filter((x) => x.id !== m.id)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 17, cursor: "pointer", padding: 4, flexShrink: 0 }}>✕</button></div>
             </div>
           ))}
@@ -3717,18 +3717,18 @@ export default function App() {
         {/* THE SHOT DRIVES THE WEEK. Dose days and the day after get eased targets, so the week
             has to show where the shot falls — otherwise an eased day reads as a missed day. */}
         <div style={{ display: "contents" }}>{card(<>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             {sectionTitle("Your week · dose sync", C.muted)}
             {!doseDay && <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.faint, border: `1px solid ${C.hair}`, whiteSpace: "nowrap" }}>NO SHOT DAY SET</span>}
           </div>
-          <div style={{ display: "flex", gap: 5 }}>
+          <div style={{ display: "flex", gap: 4 }}>
             {wk7.map((d, i) => (
               <div key={i} style={{ flex: 1, textAlign: "center", borderRadius: 8, padding: "7px 0 6px", background: d.dose ? C.violet + "1A" : d.after ? C.violet + "0D" : "transparent", border: `1px solid ${d.dose ? C.violet + "55" : d.after ? C.violet + "22" : C.hair}` }}>
                 <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.2, color: d.dose || d.after ? C.violet : (i === 0 ? C.ink : C.faint), textTransform: "uppercase" }}>{d.label}</div>
-                <div style={{ fontSize: 11.5, marginTop: 3, color: C.violet, lineHeight: 1 }}>{d.dose ? "💉" : d.after ? "·" : " "}</div>
+                <div style={{ fontSize: 11.5, marginTop: 2, color: C.violet, lineHeight: 1 }}>{d.dose ? "💉" : d.after ? "·" : " "}</div>
               </div>))}
           </div>
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 10, lineHeight: 1.5 }}>{wk7[0] && wk7[0].dose ? "Shot day — lighter, low-fat and carb-forward keeps it down." : wk7[0] && wk7[0].after ? "Day after the shot — targets ease; eat slowly and lead with protein." : doseDay ? `Next shot lands on ${doseDayLong}. Targets ease that day and the one after.` : "Set your injection day on the GLP-1 tab and the week syncs to it."}</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>{wk7[0] && wk7[0].dose ? "Shot day — lighter, low-fat and carb-forward keeps it down." : wk7[0] && wk7[0].after ? "Day after the shot — targets ease; eat slowly and lead with protein." : doseDay ? `Next shot lands on ${doseDayLong}. Targets ease that day and the one after.` : "Set your injection day on the GLP-1 tab and the week syncs to it."}</div>
         </>)}</div>
 
         <div style={{ display: "contents" }}>{card(<>
@@ -3736,13 +3736,13 @@ export default function App() {
             {sectionTitle("Activity", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: syn > 0 ? C.go : C.faint, border: `1px solid ${syn > 0 ? C.go + "55" : C.hair}`, background: syn > 0 ? C.go + "1A" : "transparent" }}>{syn > 0 ? (prefs.stepSource || "SYNCED") : "NOT SYNCED"}</span>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", gap: 8 }}>
             {[["Steps", stepsShown ? stepsShown.toLocaleString() : null, syn > 0, syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"],
               ["Exercise", exMin ? exMin + " min" : null, synExMin > 0, synExMin > 0 ? "synced" : "logged cardio"],
               ["Active kcal", activeKcal ? String(activeKcal) : null, synKcal > 0, synKcal > 0 ? "synced · burned today" : "burned today"]].map(([l, v, measured, sub]) => (
               <div key={l} style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.4, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
-                <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                   {v && measured ? <span style={{ width: 5, height: 5, borderRadius: 4, background: C.go, flexShrink: 0 }} /> : null}
                   {v || <><span style={{ width: 7, height: 1.5, background: C.faint, flexShrink: 0 }} />—</>}
                 </div>
@@ -3753,7 +3753,7 @@ export default function App() {
             return (<div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 40, marginTop: 12 }}>
               {stepHist.map((d, i) => (<div key={i} style={{ flex: 1, height: `${Math.max(6, (d.v / mx) * 100)}%`, background: i === stepHist.length - 1 ? C.go : C.go + "44", borderRadius: 4 }} />))}
             </div>); })()}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 11, paddingTop: 10, borderTop: `1px solid ${C.hair}`, gap: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.hair}`, gap: 8 }}>
             <div style={{ fontSize: 13, color: C.faint, lineHeight: 1.5, minWidth: 0 }}>Wearables · Apple Health · Garmin · Whoop · Fitbit</div>
             
           </div>
@@ -3799,7 +3799,7 @@ export default function App() {
     const sets7 = weeklySets(workoutLog, exCatalog, (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toLocaleDateString("sv-SE"); })());
     const done7 = workoutLog.filter((s) => s.date >= (() => { const t = new Date(); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })()).length;
     const nav = (
-      <div style={{ display: "flex", gap: 7, margin: "0 0 12px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 8, margin: "0 0 12px", flexWrap: "wrap" }}>
         {[["today", "Today"], ["week", "Week"], ["lifts", "Lifts"], ["setup", "Routine"]].map(([k, l]) => (
           <button key={k} onClick={() => setTrainView(k)} style={{ background: trainView === k ? C.go + "22" : "transparent", color: trainView === k ? C.go : C.muted, border: `1.5px solid ${trainView === k ? C.go : C.hair}`, borderRadius: 999, padding: "8px 15px", fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>{l}</button>
         ))}
@@ -3807,7 +3807,7 @@ export default function App() {
     );
     if (trainView === "session" && liveSession) return (
       <div style={{ padding: "14px 18px" }}>
-        <button onClick={() => { setLiveSession(null); setTrainView("today"); }} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Cancel session</button>
+        <button onClick={() => { setLiveSession(null); setTrainView("today"); }} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 8 }}>← Cancel session</button>
         <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 12 }}>{liveSession.name}</div>
         {(() => {   // a core day runs as a circuit — say so once, at the top, instead of per-exercise
           const cc = ((routine && (routine.days_ || []).find((d) => d.id === liveSession.dayId)) || {}).coreCircuit;
@@ -3815,7 +3815,7 @@ export default function App() {
           return (
             <div style={{ marginBottom: 12, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 13px" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, fontFamily: BODY }}>Core runs as a circuit</div>
-              <div style={{ fontSize: 13, color: C.muted, marginTop: 3, lineHeight: 1.45 }}>{cc.rounds} rounds through the core movements — about {cc.betweenSec}s between movements, {cc.roundRestSec}s between rounds. Same work as straight sets, less standing around.</div>
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.45 }}>{cc.rounds} rounds through the core movements — about {cc.betweenSec}s between movements, {cc.roundRestSec}s between rounds. Same work as straight sets, less standing around.</div>
             </div>
           );
         })()}
@@ -3829,7 +3829,7 @@ export default function App() {
               <b>Ramp into {first.name}:</b> {ramp.map((r) => (r.w ? `${r.w} lb × ${r.reps}` : r.label)).join(" → ")} <span style={{ color: C.faint }}>· then your working sets</span>
             </div>}
             {dyn.map((x, i) => <div key={i} style={{ fontSize: 15, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
-          </div>, { marginBottom: 10 }); })()}
+          </div>, { marginBottom: 8 }); })()}
         {liveSession.entries.map((e, ei) => (<div key={ei}>
           {e.group === "core" && (ei === 0 || liveSession.entries[ei - 1].group !== "core") && (
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, margin: "16px 0 8px" }}>
@@ -3840,10 +3840,10 @@ export default function App() {
           {card(<div>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.ink }}>{e.name}</div>
           <div style={{ fontSize: 13, color: C.muted, margin: "2px 0 3px" }}>{e.group} · {e.equipment} · target {prescription(e)} · rest {e.restSec}s</div>
-          <div style={{ marginBottom: 6 }}>{demoLink(e.exId, e.name)}</div>
-          <div style={{ fontSize: 13, color: e.advice.action === "deload" ? C.caution : C.go, fontWeight: 700, marginBottom: 9, lineHeight: 1.45 }}>{e.advice.text}</div>
+          <div style={{ marginBottom: 4 }}>{demoLink(e.exId, e.name)}</div>
+          <div style={{ fontSize: 13, color: e.advice.action === "deload" ? C.caution : C.go, fontWeight: 700, marginBottom: 8, lineHeight: 1.45 }}>{e.advice.text}</div>
           {e.sets.map((st, si) => (
-            <div key={si} style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 6 }}>
+            <div key={si} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
               <div style={{ fontSize: 13, color: C.faint, width: 34 }}>set {si + 1}</div>
               {[["w", "lb"], ["reps", "reps"], ["rir", "RIR"]].map(([f, ph]) => (
                 <input key={f} inputMode="numeric" value={st[f]} placeholder={ph} onChange={(ev) => { const v = ev.target.value.replace(/[^\d.]/g, ""); setLiveSession((L) => { const n = { ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: x.sets.map((y, yi) => yi === si ? { ...y, [f]: v } : y) } : x) }; return n; }); }}
@@ -3851,22 +3851,22 @@ export default function App() {
               ))}
             </div>
           ))}
-          <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <button onClick={() => setLiveSession((L) => ({ ...L, entries: L.entries.map((x, xi) => xi === ei ? { ...x, sets: [...x.sets, { w: x.sets[x.sets.length - 1]?.w || "", reps: "", rir: "" }] } : x) }))} style={{ background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>+ add set</button>
             <button onClick={() => setRestEnd(Date.now() + (e.restSec || 90) * 1000)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>⏱ start {e.restSec}s rest</button>
             {(e.workHigh != null || e.holdHigh != null) && (() => { const w = e.workHigh != null ? e.workHigh : e.holdHigh; return (
               <button onClick={() => setRestEnd(Date.now() + w * 1000)} style={{ background: "none", border: "none", color: C.violet, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "4px 0 4px 12px" }}>▶ time a {w}s {e.hold ? "hold" : "set"}</button>
             ); })()}
           </div>
-        </div>, { marginBottom: 10 })}</div>))}
+        </div>, { marginBottom: 8 })}</div>))}
         {(() => { const cd = cooldownBlock(exCatalog, [...new Set(liveSession.entries.map((e) => e.group))]);
           return cd.length ? card(<div>
             {sectionTitle("Cool-down · hold these after, not before")}
             {cd.map((x, i) => <div key={i} style={{ fontSize: 15, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
-          </div>, { marginBottom: 10 }) : null; })()}
+          </div>, { marginBottom: 8 }) : null; })()}
         <button onClick={saveSession} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 17, fontWeight: 800, cursor: "pointer" }}>Finish &amp; log session ✓</button>
         {restEnd && (
-          <div style={{ position: "fixed", left: 12, right: 12, bottom: "calc(72px + env(safe-area-inset-bottom, 0px))", zIndex: 300, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.go}55`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
+          <div style={{ position: "fixed", left: 12, right: 12, bottom: "calc(72px + env(safe-area-inset-bottom, 0px))", zIndex: 300, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.go}55`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
             <div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmtRest(restLeft)}</div>
             <div style={{ fontSize: 13, opacity: .8, flex: 1 }}>rest</div>
             <button onClick={() => setRestEnd((t) => (t || Date.now()) + 30000)} style={{ background: C.go + "1A", border: `1px solid ${C.go}55`, color: C.go, borderRadius: 8, padding: "8px 11px", fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+30s</button>
@@ -3889,7 +3889,7 @@ export default function App() {
                 {sectionTitle("Readiness", C.muted)}
                 <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: BC, border: `1px solid ${BC}55`, background: BC + "1A" }}>{rd.band}</span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
                 <svg width="86" height="86" viewBox="0 0 86 86" style={{ flexShrink: 0 }}>
                   <circle cx="43" cy="43" r="34" fill="none" stroke={C.hair} strokeWidth="7.5" />
                   <circle cx="43" cy="43" r="34" fill="none" stroke={BC} strokeWidth="7.5" strokeLinecap="round"
@@ -3903,11 +3903,11 @@ export default function App() {
                     return (<div key={slot}>
                       <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{slot}</div>
                       {pt ? (
-                        <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: pt.score >= 90 ? C.ink : pt.score >= 75 ? C.caution : C.avoid, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: pt.score >= 90 ? C.ink : pt.score >= 75 ? C.caution : C.avoid, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                           <span style={{ width: 5, height: 5, borderRadius: 4, background: C.go, flexShrink: 0 }} />{pt.v}
                         </div>
                       ) : (
-                        <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.faint, marginTop: 3, display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                           <span style={{ width: 7, height: 1.5, background: C.faint, flexShrink: 0 }} />—
                         </div>
                       )}
@@ -3933,7 +3933,7 @@ export default function App() {
               : ["Doorway pec 45s", "Lat hang 30s", "Child's pose 45s"];
             const row = (title, list) => (<div style={{ display: "contents" }}>{card(<>
               {sectionTitle(title, C.muted)}
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {list.map((m) => (<span key={m} style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.8, color: C.ink2, border: `1px solid ${C.hair}`, background: "rgba(255,255,255,0.03)", borderRadius: 999, padding: "7px 13px" }}>{m}</span>))}
               </div>
             </>)}</div>);
@@ -3941,18 +3941,18 @@ export default function App() {
           })()}
           {nextSlot ? card(<div>
             {sectionTitle(nextSlot.iso === todayISO() ? "Today's session" : `Next session · ${nextSlot.label}`)}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3, gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2, gap: 8 }}>
               <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.ink }}>{nextSlot.day.name}</div>
               {(() => { const mins = Math.round((nextSlot.day.exercises || []).reduce((n, e) => n + ((e.sets || 3) * 2.6 + 1.5), 0));
                 return mins > 0 ? <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A", borderRadius: 999, padding: "4px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>START · ~{mins} MIN</span> : null; })()}
             </div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: nextSlot.note ? 7 : 10 }}>{nextSlot.day.exercises.length} exercises · {nextSlot.day.focus.join(", ")}</div>
-            {nextSlot.note && <div style={{ fontSize: 13, color: C.violet, fontWeight: 700, marginBottom: 10, lineHeight: 1.45 }}>{nextSlot.note}</div>}
+            {nextSlot.note && <div style={{ fontSize: 13, color: C.violet, fontWeight: 700, marginBottom: 8, lineHeight: 1.45 }}>{nextSlot.note}</div>}
             {nextSlot.day.exercises.map((x, i) => { const h = exHistory(x.exId); const last = h[h.length - 1]; const adv = progressionAdvice(h, x);
               const startsCore = x.group === "core" && (i === 0 || nextSlot.day.exercises[i - 1].group !== "core");
               return (<div key={i} style={{ padding: "8px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
                 {startsCore && (
-                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
                     <div style={{ fontSize: 13, letterSpacing: 1.4, color: C.muted, fontWeight: 800 }}>CORE</div>
                     <a href={sixpackUrl()} rel="noopener" onClick={() => { const t = setTimeout(() => { if (!document.hidden) window.location.href = SIXPACK.store; }, sixpackFallbackDelay(document.hidden)); const stop = () => clearTimeout(t); document.addEventListener("visibilitychange", stop, { once: true }); window.addEventListener("pagehide", stop, { once: true }); }} style={{ fontSize: 13, color: C.violet, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>or use {SIXPACK.label} →</a>
                   </div>
@@ -3961,7 +3961,7 @@ export default function App() {
                   <div style={{ fontSize: 15, color: C.ink, fontWeight: 700 }}>{x.name}</div>
                   <div style={{ fontSize: 13, color: C.muted, whiteSpace: "nowrap" }}>{x.sets}×{prescription(x).replace(" hold", "").replace(" reps", "")}</div>
                 </div>
-                <div style={{ marginTop: 1 }}>{demoLink(x.exId, x.name)}</div>
+                <div style={{ marginTop: 0 }}>{demoLink(x.exId, x.name)}</div>
                 <div style={{ fontSize: 13, color: adv.action === "add-weight" ? C.go : adv.action === "deload" ? C.caution : C.faint, marginTop: 2 }}>
                   {last ? `last: ${Math.max(...last.sets.map((y) => +y.w || 0))} lb × ${Math.max(...last.sets.map((y) => +y.reps || 0))} · ` : ""}{adv.action === "add-weight" ? `▲ go to ${adv.suggested} lb` : adv.action === "deload" ? `▼ deload to ${adv.suggested} lb` : adv.action === "start" ? "first time" : "add reps"}
                 </div>
@@ -3970,9 +3970,9 @@ export default function App() {
           </div>, { marginBottom: 12 }) : card(<div style={{ fontSize: 15, color: C.muted }}>Rest day — next session is on the Week view.</div>, { marginBottom: 12 })}
           {card(<div>
             {sectionTitle("Log cardio")}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 9 }}>{CARDIO_TYPES.map((t) => (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>{CARDIO_TYPES.map((t) => (
               <button key={t} onClick={() => setCardioDraft((d) => ({ ...d, type: t }))} style={{ background: cardioDraft.type === t ? C.go + "14" : "transparent", color: cardioDraft.type === t ? C.go : C.muted, border: `1px solid ${cardioDraft.type === t ? C.go + "55" : C.hair}`, borderRadius: 999, padding: "7px 12px", fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>{t}</button>))}</div>
-            <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input inputMode="numeric" value={cardioDraft.minutes} onChange={(e) => setCardioDraft((d) => ({ ...d, minutes: e.target.value.replace(/[^\d]/g, "") }))} style={{ width: 74, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 8, padding: "10px 8px", fontFamily: BODY, fontSize: 15, color: C.ink, textAlign: "center" }} />
               <span style={{ fontSize: 15, color: C.muted }}>min</span>
               {["easy", "zone 2", "hard"].map((iv) => (
@@ -3980,10 +3980,10 @@ export default function App() {
             </div>
             <button onClick={() => { const mins = +cardioDraft.minutes || 0; if (!mins) return;
               setWorkoutLog((L) => [...L, { date: todayISO(), kind: "cardio", type: cardioDraft.type, minutes: mins, intensity: cardioDraft.intensity }].slice(-400)); }}
-              style={{ marginTop: 10, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Log {cardioDraft.minutes || 0} min {cardioDraft.type}</button>
-            <div style={{ fontSize: 13, color: C.faint, marginTop: 7 }}>{cardioMin7} of {cardioTarget(routine.goal)} min this week · cardio helps the deficit but competes for recovery — it is placed around lifting, not piled on top.</div>
+              style={{ marginTop: 8, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Log {cardioDraft.minutes || 0} min {cardioDraft.type}</button>
+            <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>{cardioMin7} of {cardioTarget(routine.goal)} min this week · cardio helps the deficit but competes for recovery — it is placed around lifting, not piled on top.</div>
           </div>, { marginBottom: 12 })}
-          {card(<div>{sectionTitle("This week")}<div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {card(<div>{sectionTitle("This week")}<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[["sessions", `${done7}×`], ["hard sets", String(Object.values(sets7).reduce((n, v) => n + v, 0))], ["goal", routine.goal]].map(([l, v]) => (
               <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 8, padding: "9px 10px" }}>
                 <div style={{ fontSize: 17, fontWeight: 800, color: C.ink }}>{v}</div><div style={{ fontSize: 13, color: C.muted }}>{l}</div>
@@ -3995,14 +3995,14 @@ export default function App() {
           {(() => { const W = (week.length ? week : trainDates()); if (!W.length) return null;
             const hOf = (d) => { if (d.day) return 34; const c = (weekCardio.find((x) => x.iso === d.iso) || {}).cardio; return c ? 18 : 7; };
             const cOf = (d) => { if (d.dose || d.after) return C.violet; if (d.day) return C.go; const c = (weekCardio.find((x) => x.iso === d.iso) || {}).cardio; return c ? C.go + "77" : C.hair; };
-            return (<div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 46, marginBottom: 12 }}>
+            return (<div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 46, marginBottom: 12 }}>
               {W.map((d, i) => (<div key={i} style={{ flex: 1, textAlign: "center" }}>
                 <div style={{ height: hOf(d), background: cOf(d), borderRadius: 4, marginBottom: 4 }} />
                 <div style={{ fontFamily: DATA, fontSize: 10.5, color: (d.dose || d.after) ? C.violet : C.faint, fontWeight: 700 }}>{d.label || ""}</div>
               </div>))}
             </div>); })()}
           {(week.length ? week : trainDates()).map((d, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "9px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>
               <div><div style={{ fontSize: 15, fontWeight: 700, color: d.day ? C.ink : C.faint }}>{d.label}{(d.dose || d.after) ? " · shot window" : ""}</div>
                 {d.note && <div style={{ fontSize: 13, color: C.violet, marginTop: 2, lineHeight: 1.4 }}>{d.note}</div>}</div>
               <div style={{ fontSize: 15, color: d.day ? C.go : C.faint, fontWeight: 700, textAlign: "right" }}>{d.day ? d.day.name : (() => { const c = (weekCardio.find((x) => x.iso === d.iso) || {}).cardio; return c ? `${c.minutes} min ${c.intensity}` : "rest"; })()}</div>
@@ -4015,7 +4015,7 @@ export default function App() {
               : ["Doorway pec 45s", "Lat hang 30s", "Child's pose 45s"];
             return (<div style={{ margin: "10px 0" }}>{card(<>
               {sectionTitle("Cool-down · hold these after, not before", C.muted)}
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {down.map((m) => (<span key={m} style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.8, color: C.ink2, border: `1px solid ${C.hair}`, background: "rgba(255,255,255,0.03)", borderRadius: 999, padding: "7px 13px" }}>{m}</span>))}
               </div>
             </>)}</div>); })()}
@@ -4029,7 +4029,7 @@ export default function App() {
               <span style={{ fontSize: 15, color: C.ink }}>cardio</span>
               <span style={{ fontSize: 15, color: cardioMin7 >= cardioTarget((routine || {}).goal) ? C.go : C.muted, fontWeight: 700 }}>{cardioMin7} / {cardioTarget((routine || {}).goal)} min</span>
             </div>
-            <div style={{ fontSize: 13, color: C.faint, marginTop: 7 }}>10–20 hard sets per muscle per week is the usual growth range; less still protects muscle while cutting.</div>
+            <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>10–20 hard sets per muscle per week is the usual growth range; less still protects muscle while cutting.</div>
           </div>, { marginBottom: 12 })}
           {card(<div>{sectionTitle("Lifts · best estimated 1RM")}
             {[...new Set(workoutLog.flatMap((s) => (s.entries || []).map((e) => e.exId)))].map((id, i) => {
@@ -4046,24 +4046,24 @@ export default function App() {
           {sectionTitle("Build my routine")}
           {[["days", "Days per week", [3, 4, 5, 6]], ["minutes", "Session length", [30, 45, 60, 75]]].map(([k, label, opts]) => (
             <div key={k} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>{label}</div>
-              <div style={{ display: "flex", gap: 7 }}>{opts.map((o) => (
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>{label}</div>
+              <div style={{ display: "flex", gap: 8 }}>{opts.map((o) => (
                 <button key={o} onClick={() => setTrainPrefs((t) => ({ ...t, [k]: o }))} style={{ flex: 1, background: trainPrefs[k] === o ? C.go + "14" : "transparent", color: trainPrefs[k] === o ? C.go : C.muted, border: `1px solid ${trainPrefs[k] === o ? C.go + "55" : C.hair}`, borderRadius: 8, padding: "10px 0", fontFamily: DATA, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{o}{k === "minutes" ? "m" : ""}</button>))}</div>
             </div>))}
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>Goal</div>
-          <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>{[["preserve", "Protect muscle"], ["build", "Build"], ["maintain", "Maintain"]].map(([k, l]) => (
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>Goal</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>{[["preserve", "Protect muscle"], ["build", "Build"], ["maintain", "Maintain"]].map(([k, l]) => (
             <button key={k} onClick={() => setTrainPrefs((t) => ({ ...t, goal: k }))} style={{ flex: 1, background: trainPrefs.goal === k ? C.go + "14" : "transparent", color: trainPrefs.goal === k ? C.go : C.muted, border: `1px solid ${trainPrefs.goal === k ? C.go + "55" : C.hair}`, borderRadius: 8, padding: "10px 4px", fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase", cursor: "pointer" }}>{l}</button>))}</div>
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>Equipment you actually have</div>
-          <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 12 }}>{["bodyweight", "dumbbell", "barbell", "cable", "machine", "kettlebell", "bands", "ball", "other"].map((e) => {
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>Equipment you actually have</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>{["bodyweight", "dumbbell", "barbell", "cable", "machine", "kettlebell", "bands", "ball", "other"].map((e) => {
             const on = trainPrefs.equipment.includes(e);
             return (<button key={e} onClick={() => setTrainPrefs((t) => ({ ...t, equipment: on ? t.equipment.filter((x) => x !== e) : [...t.equipment, e] }))} style={{ background: on ? C.go + "14" : "transparent", color: on ? C.go : C.muted, border: `1px solid ${on ? C.go + "55" : C.hair}`, borderRadius: 999, padding: "7px 12px", fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>{({ bodyweight: "Bodyweight", dumbbell: "Dumbbells", barbell: "Barbell", cable: "Cables", machine: "Machines", kettlebell: "Kettlebell", bands: "Bands", ball: "Ball", other: "Other" })[e] || e}</button>); })}</div>
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>Prefer one coach's channel for form videos (optional)</div>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>Prefer one coach's channel for form videos (optional)</div>
           <input value={trainPrefs.videoChannel || ""} onChange={(e) => setTrainPrefs((t) => ({ ...t, videoChannel: e.target.value.replace(/^@/, "").replace(/[^A-Za-z0-9_.-]/g, "") }))} placeholder="leave blank — searches all of YouTube" autoCapitalize="none" autoCorrect="off" spellCheck={false}
             style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 4 }} />
           <div style={{ fontSize: 13, color: C.faint, marginBottom: 12, lineHeight: 1.45 }}>Handle only, no @. Demos are searched inside this channel first — leave blank to search all of YouTube for short clips instead.</div>
           <button onClick={() => { const r = buildRoutine(exCatalog, trainPrefs); setRoutine(r); setTrainView("today"); }} disabled={!exCatalog.length || !trainPrefs.equipment.length}
             style={{ width: "100%", background: exCatalog.length && trainPrefs.equipment.length ? C.go : C.hair, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 17, fontWeight: 800, cursor: "pointer" }}>{routine ? "Rebuild routine" : "Generate routine"}</button>
-          {routine && <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>{routine.blurb} Heavy days are kept off your shot day and the day after — your shot day eased around the injection; work nights eased too. Sessions log to Apple Health as strength training, which feeds the lean-mass engine on the Body tab.</div>}
+          {routine && <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>{routine.blurb} Heavy days are kept off your shot day and the day after — your shot day eased around the injection; work nights eased too. Sessions log to Apple Health as strength training, which feeds the lean-mass engine on the Body tab.</div>}
         </div>)}
       </div>
     );
@@ -4099,7 +4099,7 @@ export default function App() {
         const allOk = rows.every((r3) => r3.st === "ok");
         const PC = { ok: C.go, flag: C.caution, wait: C.faint };
         return (<div style={{ display: "contents" }}>{card(<>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             {sectionTitle("Weight", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: allOk ? C.go : C.caution, border: `1px solid ${(allOk ? C.go : C.caution)}55`, background: (allOk ? C.go : C.caution) + "1A", borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>{allOk ? "ON TRACK" : "CHECK SIGNALS"}</span>
           </div>
@@ -4124,7 +4124,7 @@ export default function App() {
             const yw = (v) => 8 + (1 - (v - lo) / span) * (GY - 14);
             const line = vs.map((v, i) => `${i ? "L" : "M"}${xw(i).toFixed(1)} ${yw(v).toFixed(1)}`).join(" ");
             const lastX = xw(vs.length - 1), lastY = yw(vs[vs.length - 1]);
-            return (<svg viewBox={`0 0 ${W2} ${H2}`} style={{ width: "100%", height: "auto", marginTop: 10, display: "block" }}>
+            return (<svg viewBox={`0 0 ${W2} ${H2}`} style={{ width: "100%", height: "auto", marginTop: 8, display: "block" }}>
               <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={C.go} stopOpacity="0.38" /><stop offset="1" stopColor={C.go} stopOpacity="0" /></linearGradient></defs>
               <path d={`${line} L${lastX.toFixed(1)} ${H2} L0 ${H2} Z`} fill="url(#wg)" />
               <path d={line} fill="none" stroke={C.go} strokeWidth="2" strokeLinejoin="round" />
@@ -4133,30 +4133,30 @@ export default function App() {
               <path d={`M0 ${GY}h${W2}`} stroke={C.hair} strokeDasharray="3 4" />
               <text x="2" y={GY - 3} fontFamily="ui-monospace,monospace" fontSize="7" fill={C.faint}>GOAL {fmtWt(goalWeight, 0)}</text>
             </svg>); })() : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 15 }}>Log your first weight below to start the trend.</div>}
-          {ct.status !== "incomplete" && <div style={{ display: "flex", gap: 7, marginTop: 10, marginBottom: 8 }}>
+          {ct.status !== "incomplete" && <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 8 }}>
             {[[Math.round(ct.lean || 0) + " lb", "LEAN TO HOLD"], [Math.round(ct.fatToLose || 0) + " lb", "FAT TO LOSE"], [ct.bfAtGoal ? "~" + Math.round(ct.bfAtGoal) + "%" : "—", "AT GOAL"]].map(([v4, l4]) => (
               <div key={l4} style={{ flex: 1 }}>
                 <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l4}</div>
-                <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: C.ink, marginTop: 3 }}>{v4}</div>
+                <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, color: C.ink, marginTop: 2 }}>{v4}</div>
               </div>))}
           </div>}
           {ct.status !== "incomplete" && (ct.weeksTarget || ct.weeksAtCurrent) && <div style={{ fontFamily: DATA, fontSize: 13, color: C.muted, marginBottom: 8 }}>{ct.weeksTarget ? `${ct.weeksTarget} wk at target rate` : ""}{ct.weeksAtCurrent ? `${ct.weeksTarget ? " · " : ""}${ct.weeksAtCurrent} wk at measured rate` : ""}</div>}
           {ct.status === "incomplete" && <div style={{ fontSize: 13, color: C.faint, marginBottom: 8 }}>{ct.reason}</div>}
           <div style={{ borderTop: `1px solid ${C.hair}` }}>
-            {rows.map((r4) => (<div key={r4.l} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
+            {rows.map((r4) => (<div key={r4.l} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ width: 6, height: 6, borderRadius: 4, background: PC[r4.st], flexShrink: 0 }} />
               <span style={{ fontSize: 15, color: C.muted, flex: 1 }}>{r4.l}</span>
               <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.7, color: PC[r4.st], border: `1px solid ${PC[r4.st]}55`, background: PC[r4.st] + "14", borderRadius: 999, padding: "3px 9px" }}>{r4.st === "ok" ? "OK" : r4.st === "flag" ? "MISS" : "WAIT"} · {r4.v}</span>
             </div>))}
           </div>
-          {pAvg != null && pAvg < pFloor && <button onClick={() => setTargets((t) => ({ ...t, protein: pFloor }))} style={{ width: "100%", marginTop: 11, background: "transparent", border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Raise protein target to {pFloor} g</button>}
-          {weightSeries.length > 0 && <div style={{ marginTop: 10 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
+          {pAvg != null && pAvg < pFloor && <button onClick={() => setTargets((t) => ({ ...t, protein: pFloor }))} style={{ width: "100%", marginTop: 12, background: "transparent", border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Raise protein target to {pFloor} g</button>}
+          {weightSeries.length > 0 && <div style={{ marginTop: 8 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
             <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ fontFamily: DATA, fontSize: 13, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
               {w.synced ? <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, color: C.muted, letterSpacing: 0.8, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "3px 8px" }}>{w.source ? ({ "apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH" }[w.source] || w.source.toUpperCase().replace(/-/g, " ")) : "SYNCED"}</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 15, cursor: "pointer", padding: 4 }}>✕</button>}
             </div>
           ))}</div>}
-          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <input type="number" value={newWeight} placeholder={`Log today's weight (${wtU})`} onChange={(e) => setNewWeight(e.target.value)} step="0.1" style={{ flex: 1, fontFamily: DATA, fontSize: 17, fontWeight: 600, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 13px", outline: "none", boxSizing: "border-box" }} />
             <button onClick={logWeight} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 20px", fontFamily: DATA, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Log</button>
           </div>
@@ -4196,31 +4196,31 @@ export default function App() {
             whether or not a scan exists — bmi comes from height and weight, and body fat falls back to
             the tape estimate — so each number carries its own source. Merging without the fallback
             would have blanked the tab for anyone without a smart scale. */}
-        <div style={{ display: "flex", gap: 9, marginTop: 4, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 4, marginBottom: 12 }}>
           {[["Body fat", bfShown != null ? bfShown.toFixed(1) : "—", "%", bfShown != null ? bfSource : "no data", bfMeasured],
             ["Lean", leanShown != null ? leanShown.toFixed(0) : "—", " lb", leanShown != null ? (bfMeasured ? "measured" : "fat-free mass") : "needs body fat", bfMeasured],
             ["BMI", bmi ? bmi.toFixed(1) : "—", "", bmi ? bmiBand(bmi) : "needs height", true]].map(([l, v, u, src, meas]) => (
             <div key={l} style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
               <div style={{ fontFamily: DATA, fontSize: 22, fontWeight: 700, color: C.ink, marginTop: 2 }}>{v}<span style={{ fontSize: 11.5, color: C.faint }}>{u}</span></div>
-              <div style={{ fontSize: 11.5, color: C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ fontSize: 11.5, color: C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ width: 5, height: 5, borderRadius: 4, flexShrink: 0, background: meas ? C.go : "transparent", border: meas ? "none" : `1.2px solid ${C.faint}`, boxSizing: "border-box" }} />{src}</div>
             </div>))}
         </div>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.45, marginBottom: 9 }}>Visceral fat, body water and per-limb figures have no HealthKit fields. Snap the report and they come across.</div>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.45, marginBottom: 8 }}>Visceral fat, body water and per-limb figures have no HealthKit fields. Snap the report and they come across.</div>
         <input ref={scanRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) scanBodyReport(e.target.files[0]); e.target.value = ""; }} />
         {(() => { const ds = ((healthSync && healthSync.days) || []).filter((d5) => d5.bodyFatPct != null || d5.muscleMassLbs != null || d5.visceralFat != null);
           const sc = ds.length ? ds[ds.length - 1] : null;
           if (!sc) return null;
           const tiles = [["BODY FAT", sc.bodyFatPct != null ? sc.bodyFatPct + "%" : null], ["LEAN", sc.leanMassLbs != null ? sc.leanMassLbs + " lb" : null], ["MUSCLE", sc.muscleMassLbs != null ? sc.muscleMassLbs + " lb" : null], ["VISCERAL", sc.visceralFat != null ? String(sc.visceralFat) : null], ["WATER", sc.bodyWaterLbs != null ? sc.bodyWaterLbs + " lb" : null], ["SUBCUT. FAT", sc.subcutaneousFatPct != null ? sc.subcutaneousFatPct + "%" : null]].filter((t5) => t5[1] != null);
-          return (<div style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          return (<div style={{ marginBottom: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {tiles.map(([l5, v5]) => (<div key={l5} style={{ flex: "1 1 30%", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.hair}`, borderRadius: 8, padding: "9px 10px" }}>
                 <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink }}>{v5}</div>
                 <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.9, color: C.faint, marginTop: 2 }}>{l5}</div>
               </div>))}
             </div>
-            <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.8, color: C.go, marginTop: 7 }}>MEASURED · {sc.date || "LAST SCAN"} — outranks the Navy estimate.</div>
+            <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.8, color: C.go, marginTop: 8 }}>MEASURED · {sc.date || "LAST SCAN"} — outranks the Navy estimate.</div>
           </div>); })()}
         <button onClick={() => scanRef.current && scanRef.current.click()} disabled={scanBusy}
           style={{ width: "100%", background: C.surfaceAlt, border: `1.5px dashed ${C.hair}`, color: C.ink, borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer", opacity: scanBusy ? 0.6 : 1 }}>
@@ -4231,17 +4231,17 @@ export default function App() {
           const v = bodyScan.values;
           const ROWS = [["Date", v.date + (v.dateAssumed ? "  (not read — using today)" : ""), ""], ["Weight", v.weightLbs, " lb"], ["Body fat", v.bodyFatPct, "%"], ["Lean mass", v.leanMassLbs, v.leanDerived ? " lb  (from weight & body fat)" : " lb"], ["Muscle mass", v.muscleMassLbs, " lb"], ["Skeletal muscle", v.skeletalMuscleLbs, " lb"], ["Body water", v.bodyWaterLbs, " lb"], ["Visceral fat", v.visceralFat, ""], ["Subcutaneous fat", v.subcutaneousFatPct, "%"]].filter((r) => r[1] != null);
           return (
-            <div style={{ marginTop: 11, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "11px 13px" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 7 }}>Check these before saving</div>
+            <div style={{ marginTop: 12, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "11px 13px" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: C.ink, marginBottom: 8 }}>Check these before saving</div>
               {ROWS.map(([k, val, u]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 15 }}>
                   <span style={{ color: C.muted }}>{k}</span><span style={{ fontFamily: DATA, color: C.ink, fontWeight: 600, fontSize: 15 }}>{val}{u}</span>
                 </div>
               ))}
-              {v.segmental && <div style={{ marginTop: 6, fontSize: 13, color: C.faint, lineHeight: 1.4 }}>Per-limb figures captured for reference. Scales model these rather than measuring each limb, so they are shown but never used to judge left/right balance.</div>}
+              {v.segmental && <div style={{ marginTop: 4, fontSize: 13, color: C.faint, lineHeight: 1.4 }}>Per-limb figures captured for reference. Scales model these rather than measuring each limb, so they are shown but never used to judge left/right balance.</div>}
               {bodyScan.warning && <div style={{ marginTop: 8, fontSize: 13, color: C.avoid, lineHeight: 1.45 }}>⚠ {bodyScan.warning}</div>}
-              {!!bodyScan.rejected.length && <div style={{ marginTop: 6, fontSize: 13, color: C.faint }}>Skipped as unreadable or out of range: {bodyScan.rejected.join(", ")}</div>}
-              <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
+              {!!bodyScan.rejected.length && <div style={{ marginTop: 4, fontSize: 13, color: C.faint }}>Skipped as unreadable or out of range: {bodyScan.rejected.join(", ")}</div>}
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <button onClick={saveBodyScan} style={{ flex: 1, background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Save</button>
                 <button onClick={() => setBodyScan(null)} style={{ flex: 1, background: "none", color: C.muted, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Discard</button>
               </div>
@@ -4262,9 +4262,9 @@ export default function App() {
             {sectionTitle("Body stats")}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.muted, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "3px 9px", marginTop: -8 }}>NAVY ESTIMATE</span>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>{["male", "female"].map((s) => (<button key={s} onClick={() => setBody({ ...body, sex: s })} style={{ flex: 1, padding: "9px 0", borderRadius: 999, border: `1.5px solid ${body.sex === s ? C.go : C.hair}`, background: body.sex === s ? C.go + "22" : "transparent", color: body.sex === s ? C.go : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" }}>{s}</button>))}</div>
-          <div style={{ display: "flex", gap: 10 }}>{numField(`Height (${isMetric ? "cm" : "in"})`, fmtLen(body.heightIn), (v) => setBody({ ...body, heightIn: parseLen(v) }))}{numField(`Neck (${isMetric ? "cm" : "in"})`, fmtLen(body.neck), (v) => setBody({ ...body, neck: parseLen(v) }))}</div>
-          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>{numField(`Waist (${isMetric ? "cm" : "in"})`, fmtLen(body.waist), (v) => setBody({ ...body, waist: parseLen(v) }))}{body.sex === "female" ? numField(`Hip (${isMetric ? "cm" : "in"})`, fmtLen(body.hip), (v) => setBody({ ...body, hip: parseLen(v) })) : numField(`Goal weight (${wtU})`, +fmtWt(goalWeight, 0), (v) => setGoalWeight(parseWt(v)))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>{["male", "female"].map((s) => (<button key={s} onClick={() => setBody({ ...body, sex: s })} style={{ flex: 1, padding: "9px 0", borderRadius: 999, border: `1.5px solid ${body.sex === s ? C.go : C.hair}`, background: body.sex === s ? C.go + "22" : "transparent", color: body.sex === s ? C.go : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1, cursor: "pointer", textTransform: "uppercase" }}>{s}</button>))}</div>
+          <div style={{ display: "flex", gap: 8 }}>{numField(`Height (${isMetric ? "cm" : "in"})`, fmtLen(body.heightIn), (v) => setBody({ ...body, heightIn: parseLen(v) }))}{numField(`Neck (${isMetric ? "cm" : "in"})`, fmtLen(body.neck), (v) => setBody({ ...body, neck: parseLen(v) }))}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>{numField(`Waist (${isMetric ? "cm" : "in"})`, fmtLen(body.waist), (v) => setBody({ ...body, waist: parseLen(v) }))}{body.sex === "female" ? numField(`Hip (${isMetric ? "cm" : "in"})`, fmtLen(body.hip), (v) => setBody({ ...body, hip: parseLen(v) })) : numField(`Goal weight (${wtU})`, +fmtWt(goalWeight, 0), (v) => setGoalWeight(parseWt(v)))}</div>
         </>)}</div>
 
       <div style={{ display: "contents" }}>{card(<>
@@ -4272,7 +4272,7 @@ export default function App() {
           {sectionTitle("Prescriber report")}
           <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.muted, border: `1px solid ${C.hair}` }}>9 SECTIONS</span>
         </div>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.45, marginBottom: 10 }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.45, marginBottom: 8 }}>
           Everything this app has measured about you, printed for a clinic visit: your per-dose
           response, your protocol and checkpoint, tolerability surveillance, laboratory markers,
           training and intake. It reports; it never recommends a dose.
@@ -4281,7 +4281,7 @@ export default function App() {
         {/* v0.9.145: the card shows what is actually in the report. "8 sections" told him a count
             and nothing else — he could not know the labs had been added, or what a section holds,
             without generating a PDF and reading it. */}
-        <div style={{ border: `1px solid ${C.hair}`, borderRadius: 12, overflow: "hidden", marginBottom: 11 }}>
+        <div style={{ border: `1px solid ${C.hair}`, borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
           {[
             ["Measured response at each dose", `${(glp.doseLog || []).length} dose${(glp.doseLog || []).length === 1 ? "" : "s"} logged`],
             ["Patient-authored protocol & checkpoint", medObj ? `${medObj.label} \u00b7 every ${injInterval} d` : "\u2014"],
@@ -4295,7 +4295,7 @@ export default function App() {
             ["Side effects", `${(glp.sideEffects || []).length} logged`],
             ["Daily nutrition", "last 14 logged days"],
           ].map(([label, meta], ri) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
               borderTop: ri === 0 ? "none" : `1px solid ${C.hair}`, background: ri % 2 ? "transparent" : C.surfaceAlt + "5C" }}>
               <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, width: 16, flexShrink: 0 }}>{ri + 1}</span>
               <span style={{ flex: 1, fontSize: 13, color: C.ink, minWidth: 0 }}>{label}</span>
@@ -4316,14 +4316,14 @@ export default function App() {
 
       <div style={{ display: "contents" }}>{card(
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             {sectionTitle("Lab panel", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 11.5, letterSpacing: 0.8, textTransform: "uppercase", color: C.faint }}>
               {labDraws.length ? `${labDraws.length} draw${labDraws.length > 1 ? "s" : ""}` : "none on file"}</span>
           </div>
 
           {labMissing.length > 0 && (
-            <div style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12,
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12,
               background: C.caution + "1A", border: `1px solid ${C.caution}4D`, marginBottom: 12 }}>
               <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.caution,
                 textTransform: "uppercase", whiteSpace: "nowrap", paddingTop: 1 }}>To draw</span>
@@ -4367,9 +4367,9 @@ export default function App() {
                     </div>); })}
                 {/* the panel's own footnotes, the way a report annotates beneath its results */}
                 {rows.some((m) => m.why && !labLatest(m.key)) && (
-                  <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, lineHeight: 1.5, marginTop: 5 }}>
+                  <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, lineHeight: 1.5, marginTop: 4 }}>
                     {rows.filter((m) => m.why && !labLatest(m.key)).map((m) => (
-                      <div key={m.key} style={{ marginTop: 3 }}>{m.name}: not drawn — {m.why}</div>))}
+                      <div key={m.key} style={{ marginTop: 2 }}>{m.name}: not drawn — {m.why}</div>))}
                   </div>)}
                 {g === "Hormones" && !bioT && bioTNeeds.length > 0 && bioTNeeds.length < 3 && (
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: "7px 0", opacity: 0.55 }}>
@@ -4394,16 +4394,16 @@ export default function App() {
                       textAlign: "right", whiteSpace: "nowrap" }}>{bioT.pct}% of total</span>
                   </div>)}
                 {g === "Hormones" && (
-                  <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, lineHeight: 1.5, marginTop: 5 }}>
+                  <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, lineHeight: 1.5, marginTop: 4 }}>
                     Bioavailable is calculated from total testosterone, SHBG and albumin — not drawn.
                   </div>)}
               </div>); })}
 
           {labDraws.length > 1 && (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.hair}` }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.hair}` }}>
               <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.3,
-                textTransform: "uppercase", color: C.faint, marginBottom: 7 }}>Compare against</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                textTransform: "uppercase", color: C.faint, marginBottom: 8 }}>Compare against</div>
+              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 {labDraws.map((d) => {
                   const on = d.id === labBaselineId;
                   return (
@@ -4424,17 +4424,17 @@ export default function App() {
                         color: on ? C.go : C.muted, fontFamily: DATA, fontSize: 11.5, fontWeight: 700,
                         cursor: "pointer" }}>{fmtDate(d.date)}</button>); })}
               </div>
-              <div style={{ fontSize: 13, color: C.faint, marginTop: 7, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>
                 Tap to compare against that draw; hold to delete it. Every change is measured from the
                 one you pick — choose the draw taken under the conditions you
                 want to compare against — an older panel stays on file as history either way.
               </div>
             </div>)}
           {labDraft ? (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.hair}` }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.hair}` }}>
               {labParsed && (
-                <div style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12,
-                  background: C.caution + "1A", border: `1px solid ${C.caution}4D`, marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12,
+                  background: C.caution + "1A", border: `1px solid ${C.caution}4D`, marginBottom: 8 }}>
                   <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.caution,
                     textTransform: "uppercase", whiteSpace: "nowrap", paddingTop: 1 }}>Read {labParsed.length}</span>
                   <span style={{ fontSize: 13, color: C.muted, lineHeight: 1.45 }}>
@@ -4473,7 +4473,7 @@ export default function App() {
                 onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; parseLabFile(f); }} />
               <button onClick={() => labFileRef.current && labFileRef.current.click()} disabled={labBusy}
                 style={{ display: "block", width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999,
-                  padding: 13, marginTop: 14, fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.1,
+                  padding: 13, marginTop: 12, fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.1,
                   textTransform: "uppercase", cursor: "pointer", opacity: labBusy ? 0.6 : 1 }}>
                 {labBusy ? "Reading\u2026" : "Import a lab report"}</button>
               <button onClick={() => { setLabParsed(null); setLabDraft({ date: todayISO(), values: {} }); }}
@@ -4482,7 +4482,7 @@ export default function App() {
                   fontSize: 13, fontWeight: 800, letterSpacing: 1.1, textTransform: "uppercase", cursor: "pointer" }}>Enter by hand</button>
             </>)}
 
-          <div style={{ fontSize: 13, color: C.faint, lineHeight: 1.5, marginTop: 11 }}>
+          <div style={{ fontSize: 13, color: C.faint, lineHeight: 1.5, marginTop: 12 }}>
             Reference ranges are the lab's; flag thresholds come from the published trial. This card
             records and compares — it never interprets a result or suggests a dose.
           </div>
@@ -4544,7 +4544,7 @@ export default function App() {
           {_rr.status === "collecting" && <div style={{ fontSize: 15, color: C.muted, marginTop: 8 }}>
             Learning your baseline — {_rr.have}/{_rr.need} days banked. The first week on file becomes the reference everything after is judged against.</div>}
           {_rr.status === "ready" && <div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
               <span style={{ fontFamily: DATA, fontSize: 32, fontWeight: 700, color: C.ink }}>{_rr.current}</span>
               <span style={{ fontSize: 13, color: C.faint }}>bpm today</span>
               <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 700, color: _rr.delta >= 8 ? RED : C.good }}>{_rr.delta >= 0 ? "+" : ""}{_rr.delta} vs your baseline ({_rr.baseline})</span>
@@ -4559,7 +4559,7 @@ export default function App() {
                 </g>; })()}
             </svg>
             {_rr.flagged
-              ? <div style={{ background: "rgba(240,82,82,0.10)", border: "1px solid rgba(240,82,82,0.35)", borderRadius: 8, padding: "9px 11px", marginTop: 9, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
+              ? <div style={{ background: "rgba(240,82,82,0.10)", border: "1px solid rgba(240,82,82,0.35)", borderRadius: 8, padding: "9px 11px", marginTop: 8, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
                   <b style={{ color: RED }}>Sustained +{_rr.delta} bpm</b> above your baseline across {_rr.run} days{_rr.escalated ? ", beginning near a dose increase" : ""}. A small rise is a known effect of this medication class; a persistent one is worth mentioning to your prescriber at your next touchpoint{_rr.softened ? " — though it also coincides with a recent change in your training, so recheck after a rest day first" : ""}. Informational only, not medical advice.</div>
               : <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
           </div>}
@@ -4584,19 +4584,19 @@ export default function App() {
               return (
                 <div key={p.key} style={{ flex: 1 }}>
                   <div style={{ height: 6, borderRadius: 4, background: done ? C.violet : cur ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
-                  <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.4, marginTop: 5, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>{p.label}</div>
+                  <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.4, marginTop: 4, fontWeight: cur ? 700 : 500, color: cur ? C.violet : C.faint, textAlign: "center", lineHeight: 1.2, textTransform: "uppercase" }}>{p.label}</div>
                 </div>
               );
             })}
           </div>
           <div style={{ background: C.violet + "12", borderRadius: 12, padding: "12px 14px" }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.violet }}>{PHASES[phaseIdx].label}</div>
-            <div style={{ fontSize: 15, color: C.ink2, marginTop: 3, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
+            <div style={{ fontSize: 15, color: C.ink2, marginTop: 2, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
           </div>
-          <div style={{ fontSize: 13, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Built for maintenance and coming off the drug, not just for reaching goal.</div>
+          <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>Built for maintenance and coming off the drug, not just for reaching goal.</div>
         </>)}</div>
       {daysToInjection <= 0 && !doseLogged && (
-        <div style={{ display: "flex", alignItems: "center", gap: 9, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
           {syr(C.violet, 17)}
           <span style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase", color: C.violet }}>Dose due today — log it once taken</span>
         </div>)}
@@ -4645,41 +4645,41 @@ export default function App() {
         }[cp.status];
         return (<>
           <div style={{ display: "contents" }}>{card(<div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {sectionTitle(protoEdit ? "Your protocol · editor" : "Your protocol", C.muted)}
                 {curMg != null && rungs.length > 0 && rungs.findIndex((rr9) => +rr9 === +curMg) >= 0 && <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: C.violet, border: `1px solid ${C.violet}55`, background: C.violet + "1A" }}>RUNG {rungs.findIndex((rr9) => +rr9 === +curMg) + 1} OF {rungs.length}</span>}
               </div>
               <span onClick={() => { if (!protoEdit) setProtoRungs(rungs.join(", ")); setProtoEdit((v) => !v); }} style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.violet, cursor: "pointer", marginTop: -8 }}>{protoEdit ? "done" : "edit"}</span>
             </div>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 4 }}>
               {rungs.map((r) => { const on = curMg != null && +r === +curMg; const done = curMg != null && +r < +curMg; return (
                 <div key={r} style={{ flex: 1 }}>
                   <div style={{ height: 6, borderRadius: 4, background: on || done ? C.violet : C.hair, opacity: done ? 0.45 : 1 }} />
-                  <div style={{ fontFamily: DATA, fontSize: 13, marginTop: 6, fontWeight: on ? 700 : 500, color: on ? C.violet : C.faint }}>{r} <span style={{ fontSize: 10.5, color: C.faint }}>mg</span></div>
+                  <div style={{ fontFamily: DATA, fontSize: 13, marginTop: 4, fontWeight: on ? 700 : 500, color: on ? C.violet : C.faint }}>{r} <span style={{ fontSize: 10.5, color: C.faint }}>mg</span></div>
                   {on && <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, marginTop: 2 }}>YOU ARE HERE</div>}
                 </div>); })}
             </div>
-            {!protoEdit && curMg != null && (() => { const L9 = (glp.doseLog || []).filter((d) => +d.mg > 0); let runN = 0; for (let i9 = L9.length - 1; i9 >= 0; i9--) { if (+L9[i9].mg === +curMg) runN++; else break; } const holdWk = Math.max(1, Math.round((((glp.protocol || {}).minHoldDays) || 28) / 7)); return (<div style={{ fontSize: 13, color: C.faint, marginTop: 7 }}>Dose {Math.max(1, runN)} of {holdWk} at this rung. Holding longer is always valid.</div>); })()}
-            {protoEdit ? (<div style={{ marginTop: 11 }}>
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 5 }}>Rungs (mg, separated by spaces or commas)</div>
+            {!protoEdit && curMg != null && (() => { const L9 = (glp.doseLog || []).filter((d) => +d.mg > 0); let runN = 0; for (let i9 = L9.length - 1; i9 >= 0; i9--) { if (+L9[i9].mg === +curMg) runN++; else break; } const holdWk = Math.max(1, Math.round((((glp.protocol || {}).minHoldDays) || 28) / 7)); return (<div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>Dose {Math.max(1, runN)} of {holdWk} at this rung. Holding longer is always valid.</div>); })()}
+            {protoEdit ? (<div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>Rungs (mg, separated by spaces or commas)</div>
               <input value={protoRungs} onChange={(e) => setProtoRungs(e.target.value)} type="text"
                 placeholder={medSteps.join(", ")} style={{ width: "100%", background: C.bg, border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "10px 11px", fontSize: 15, fontFamily: BODY, boxSizing: "border-box" }} />
               {(() => { const v = parseRungs(protoRungs); return v.length ? (
-                <div style={{ fontSize: 13, color: C.go, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>{"Will save: " + v.join(" \u2192 ") + " mg"}</div>
+                <div style={{ fontSize: 13, color: C.go, marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{"Will save: " + v.join(" \u2192 ") + " mg"}</div>
               ) : protoRungs.trim() ? (
-                <div style={{ fontSize: 13, color: C.caution, marginTop: 6 }}>No readable numbers yet</div>
+                <div style={{ fontSize: 13, color: C.caution, marginTop: 4 }}>No readable numbers yet</div>
               ) : null; })()}
               <div style={{ fontSize: 13, color: C.muted, margin: "10px 0 5px" }}>Minimum hold before a checkpoint</div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 4 }}>
                 {[4, 5, 6, 8].map((wk) => (<button key={wk} onClick={() => setGlp((g) => ({ ...g, protocol: { ...(g.protocol || {}), minHoldDays: wk * 7 } }))}
                   style={{ flex: 1, background: holdWk === wk ? C.hair : "transparent", border: `1px solid ${C.hair}`, color: holdWk === wk ? C.ink : C.muted, borderRadius: 8, padding: "9px 0", fontSize: 15, fontWeight: holdWk === wk ? 700 : 500, fontFamily: BODY, cursor: "pointer" }}>{wk} wk</button>))}
               </div>
               <button onClick={() => { const v = parseRungs(protoRungs);
                   setGlp((g) => ({ ...g, protocol: { ...(g.protocol || {}), rungs: v.length ? v : null } })); setProtoEdit(false); }}
-                style={{ width: "100%", marginTop: 10, background: C.go, color: C.surface, border: "none", borderRadius: 8, padding: "11px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Save protocol</button>
+                style={{ width: "100%", marginTop: 8, background: C.go, color: C.surface, border: "none", borderRadius: 8, padding: "11px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Save protocol</button>
             </div>) : (
-              <div style={{ marginTop: 11 }}>
+              <div style={{ marginTop: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderTop: `1px solid ${C.hair}` }}>
                   <span style={{ fontSize: 15, color: C.ink2 }}>Minimum hold</span>
                   <span style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink }}>{holdWk} wk</span>
@@ -4700,7 +4700,7 @@ export default function App() {
                 color: C.faint, fontFamily: BODY, fontSize: 15, fontWeight: 700 }}>
                 Waiting for your first logged dose
               </div>
-              <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                 Your ladder above is configuration {"—"} it stands on its own. The checkpoint starts counting
                 the day you log a dose of this medication.
               </div>
@@ -4710,15 +4710,15 @@ export default function App() {
                 signals are not opt-in, and they are the one thing that can contradict the scale. */}
             {cp.veto.length > 0 && (
               <div style={{ background: "rgba(240,82,82,0.10)", border: `1px solid rgba(240,82,82,0.35)`,
-                borderRadius: 8, padding: "9px 11px", marginBottom: 11, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
+                borderRadius: 8, padding: "9px 11px", marginBottom: 12, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
                 <b style={{ color: C.avoid }}>Tolerability flags right now:</b> {cp.veto.join("; ")}. Your protocol
                 holds escalation while these stand, whatever the scale is doing.
               </div>)}
             {cp.veto.length === 0 && cp.status !== "nodose" && rr.status === "ready" && sl.status === "ready" && (
-              <div style={{ fontSize: 13, color: C.faint, marginBottom: 11 }}>Tolerability flags right now: none — RHR steady, sleep steady.</div>)}
+              <div style={{ fontSize: 13, color: C.faint, marginBottom: 12 }}>Tolerability flags right now: none — RHR steady, sleep steady.</div>)}
 
             {locked ? (<div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 7 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
                 <span style={{ width: 7, height: 7, borderRadius: 8, background: C.go, alignSelf: "center", flexShrink: 0 }} />
                 <span style={{ fontFamily: DATA, fontSize: 32, fontWeight: 700, color: C.ink, lineHeight: 1 }}>{cp.days}</span>
                 <span style={{ fontFamily: DATA, fontSize: 15, color: C.muted }}>/ {cp.need} days at {cp.cur} mg</span>
@@ -4730,7 +4730,7 @@ export default function App() {
                 color: C.faint, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700 }}>
                 Unlocks in {cp.need - cp.days} days at this dose
               </button>
-              <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                 You're {cp.days} of {cp.need} days at {cp.cur} mg. Levels are still climbing toward steady state,
                 so an evaluation now would judge a dose you haven't fully received yet.
               </div>
@@ -4743,29 +4743,29 @@ export default function App() {
               </button>
               {!cpOpen && cp.stall.on && <div style={{ background: C.cautionSoft || "rgba(240,178,82,0.10)",
                 border: `1px solid rgba(240,178,82,0.35)`, borderRadius: 8, padding: "9px 11px",
-                marginTop: 11, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
+                marginTop: 12, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
                 <b style={{ color: C.caution }}>Loss has been flat for {cp.stall.weeks} weeks</b>
                 {cp.stall.lbsToGoal ? ` while you're still ${cp.stall.lbsToGoal} lb from your goal` : ""}.
                 That's the condition your protocol watches for {"—"} worth running the checkpoint.
               </div>}
-              {!cpOpen && <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+              {!cpOpen && <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                 {cp.days} days at {cp.cur} mg. Nothing here asks you to move up {"—"} press it when you want the
                 question answered, whether that's this week or six months from now.
               </div>}
             </div>)}
 
-            {cpOpen && !locked && (<div style={{ marginTop: 14 }}>
+            {cpOpen && !locked && (<div style={{ marginTop: 12 }}>
               {cp.status === "ask" ? (<div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 5, lineHeight: 1.3 }}>One thing only you can answer.</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 4, lineHeight: 1.3 }}>One thing only you can answer.</div>
                 <div style={{ fontSize: 15, color: C.muted, lineHeight: 1.55 }}>Your measured markers are in. How is appetite between meals?</div>
-                <div style={{ display: "flex", gap: 6, marginTop: 11 }}>
+                <div style={{ display: "flex", gap: 4, marginTop: 12 }}>
                   {[["controlled", "Controlled"], ["returning", "Returning"], ["suppressed", "Fully gone"]].map(([k, lbl]) => (
                     <button key={k} onClick={() => setGlp((g) => ({ ...g, checkpointAnswers: { ...(g.checkpointAnswers || {}), [String(cp.cur)]: k } }))}
                       style={{ flex: 1, background: "transparent", border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 8,
                         padding: "11px 0", fontFamily: BODY, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>{lbl}</button>))}
                 </div>
               </div>) : (<div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 0.6, color: tone,
                     border: `1px solid ${tone}55`, borderRadius: 999, padding: "3px 9px" }}>{CHIP[cp.status]}</span>
                   <span onClick={() => setGlp((g) => ({ ...g, checkpointAnswers: { ...(g.checkpointAnswers || {}), [String(cp.cur)]: null } }))}
@@ -4775,9 +4775,9 @@ export default function App() {
                 <div style={{ fontSize: 15, color: C.muted, lineHeight: 1.55 }}>{body}</div>
               </div>)}
 
-              <div style={{ marginTop: 13, borderTop: `1px solid ${C.hair}` }}>
+              <div style={{ marginTop: 12, borderTop: `1px solid ${C.hair}` }}>
                 {cp.rows.map((r) => (
-                  <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
+                  <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: `1px solid ${C.hair}` }}>
                     <span style={{ width: 6, height: 6, borderRadius: 4, background: DOT[r.status], flexShrink: 0 }} />
                     <span style={{ fontSize: 15, color: C.muted, flex: 1 }}>{r.label}</span>
                     <span style={{ fontSize: 13, color: C.ink, textAlign: "right" }}>{r.value}</span>
@@ -4788,7 +4788,7 @@ export default function App() {
                       borderRadius: 999, padding: "3px 8px", minWidth: 58, textAlign: "center", flexShrink: 0 }}>{r.origin.toUpperCase()}{r.status === "bad" ? " · FLAG" : ""}</span>
                   </div>))}
               </div>
-              <div style={{ fontSize: 13, color: C.faint, marginTop: 11, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: C.faint, marginTop: 12, lineHeight: 1.5 }}>
                 Seven markers, one of them asked {"—"} the rest read from your own logs. This card reports whether your
                 protocol's conditions are met; it never sets a dose{MEDS[glp.med] && MEDS[glp.med].investigational ? ". This medication is investigational and has no approved dosing" : ""}. Decisions stay with your prescriber.
               </div>
@@ -4818,16 +4818,16 @@ export default function App() {
               const A9 = fr.status === "ok";
               return (<div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${C.hair}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 10 }}>Your fat ceiling · dose window</div>
+                  <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 8 }}>Your fat ceiling · dose window</div>
                   <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: A9 ? C.go : C.faint, border: `1px solid ${A9 ? C.go + "55" : C.hair}`, background: A9 ? C.go + "1A" : "transparent" }}>{A9 ? "ACTIVE" : "COLLECTING"}</span>
                 </div>
                 {A9 ? (<div style={{ fontSize: 15, color: C.ink2, lineHeight: 1.55 }}>In your first 48 h post-dose, meals over <b style={{ fontFamily: DATA, color: C.caution }}>~{Math.round(fr.ceiling)} g fat</b> have run with more symptom days in your own log. Meal picks respect this ceiling automatically inside the window.</div>)
                 : (<div style={{ fontSize: 15, color: C.muted, lineHeight: 1.55 }}>Learning your dose-window fat ceiling from your own logs — needs 5 symptom days and 10 meal days before a verdict.</div>)}
-                <div style={{ display: "flex", gap: 10, marginTop: 9 }}>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   {[[fr.inWin ?? 0, "In window"], [fr.days ?? 0, "Meal days"], [fr.sym ?? 0, "Sym days"]].map(([v7, l7]) => (
                     <div key={l7} style={{ flex: 1 }}>
                       <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l7}</div>
-                      <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 3 }}>{v7}</div>
+                      <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 2 }}>{v7}</div>
                     </div>))}
                 </div>
               </div>); })()}
@@ -4852,7 +4852,7 @@ export default function App() {
               return (<div>
                 {dr2.rungs.map((r) => (
                   <div key={r.mg} style={{ borderTop: `1px solid ${C.hair}`, padding: "10px 0 8px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{r.mg} mg
                         <span style={{ fontSize: 13, fontWeight: 500, color: C.faint }}>{"\u2002·\u2002" + r.doses + (r.doses === 1 ? " dose" : " doses") + " · " + r.weeks + " wk" + (r.episodes > 1 ? " · " + r.episodes + " stays" : "")}</span></span>
                       <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.9, color: r.tier === "holding" ? C.go : C.faint,
@@ -4860,7 +4860,7 @@ export default function App() {
                         border: `1px solid ${r.tier === "holding" ? C.go + "55" : C.hair}`, borderRadius: 999, padding: "3px 9px", flexShrink: 0 }}>
                         {r.tier === "holding" ? "PATTERN HOLDING" : "DIRECTIONAL"}</span>
                     </div>
-                    <div style={{ display: "flex", gap: 7 }}>
+                    <div style={{ display: "flex", gap: 8 }}>
                       {cell("WT/WK", r.dWk == null ? null : (r.dWk > 0 ? "+" : r.dWk < 0 ? "−" : "") + fmtWt(Math.abs(r.dWk)) + " " + wtU, "wt", r.dWk)}
                       {cell("SYM DAYS", r.symWk, "sym", r.symWk)}
                       {cell("RHR \u0394", r.rhrDelta == null ? null : (r.rhrDelta > 0 ? "+" : "") + r.rhrDelta, "rhr", r.rhrDelta)}
@@ -4868,7 +4868,7 @@ export default function App() {
                       {cell("LIFTS/WK", r.trainWk, "lifts", r.trainWk)}
                     </div>
                   </div>))}
-                <div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                   Every number is measured from your own logs inside that rung's window; a dash means the floor
                   for that cell isn't met yet. DIRECTIONAL under 4 doses and 4 weeks. Patterns, not prescriptions
                   {"—"} bring the row to your prescriber, not to the syringe.
@@ -4894,7 +4894,7 @@ export default function App() {
   };
             const switchForm = (f) => { setMedFormSel(f); const list = Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === f); if (list.length && (MEDS[glp.med] && (MEDS[glp.med].cadence === "daily" ? "oral" : "inj")) !== f) pickMed(list[0][0]); };
             return (<>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             {[["inj", "\uD83D\uDC89 Injections"], ["oral", "\uD83D\uDC8A Daily pill"]].map(([f, lbl]) => (
               <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
@@ -4919,7 +4919,7 @@ export default function App() {
           ) : (
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               {donut(glp.dose, medObj.steps[medObj.steps.length - 1], C.violet, `${glp.dose}`, medObj.unit, C)}
-              <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 13, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontFamily: DATA, fontSize: 13, color: C.muted, marginTop: 6 }}>Week {weeksOnMed} · current dose {(() => { const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
+              <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{medObj.label}</div><div style={{ fontSize: 13, color: C.muted }}>{medObj.brand} · {medObj.cadence}</div><div style={{ fontFamily: DATA, fontSize: 13, color: C.muted, marginTop: 4 }}>Week {weeksOnMed} · current dose {(() => { const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0);
                       return L.length ? +L[L.length - 1].mg : glp.dose; })()} {medObj.unit}</div></div>
             </div>
           )}
@@ -4939,20 +4939,20 @@ export default function App() {
           const cur = injInterval;
           return (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 4 }}>
                 {[5, 6, 7, 10, 14].map((d) => (
                   <button key={d} onClick={() => setPrefs({ ...prefs, medIntervalDays: { ...(prefs.medIntervalDays || {}), [glp.med]: d } })}
                     style={{ flex: 1, minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1.5px solid ${cur === d ? C.violet : C.hair}`,
                       background: cur === d ? C.violet + "2E" : "transparent", color: cur === d ? C.violet : C.muted,
                       fontFamily: DATA, fontSize: 11.5, fontWeight: 700, cursor: "pointer" }}>{d}d</button>))}
               </div>
-              <div style={{ fontSize: 13, color: C.faint, marginTop: 7, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>
                 {medObj.label} half-life ~{hl} d · at every {cur} days you settle around {acc(cur).toFixed(2)}× a single dose
                 {cur !== 7 ? `, versus ${acc(7).toFixed(2)}× weekly — a higher trough, not a flatter curve` : ""}.
                 {medObj.investigational ? " Trials for this drug ran weekly only." : ""}
               </div>
             </div>); })()}
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 4 }}>
           {[["SU", "Su"], ["MO", "Mo"], ["TU", "Tu"], ["WE", "We"], ["TH", "Th"], ["FR", "Fr"], ["SA", "Sa"]].map(([k, l]) => (
             <button key={k} onClick={() => setGlp({ ...glp, injectionDay: k })}
               style={{ flex: 1, minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1.5px solid ${glp.injectionDay === k ? C.violet : C.hair}`, background: glp.injectionDay === k ? C.violet + "2E" : "transparent", color: glp.injectionDay === k ? C.violet : C.muted, fontFamily: DATA, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
@@ -4962,7 +4962,7 @@ export default function App() {
       {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       {(() => (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
           <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
             {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${weeksOnMed}` : "No dose logged yet"}
           </div>
@@ -4988,7 +4988,7 @@ export default function App() {
           </div>) }; })())}</div>}
       <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={async (di) => { if (await askConfirm(`Remove the dose logged on ${di}?`, true)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
       {medObj && medObj.cadence === "daily" && (() => { const _wk = weeksOnMed; return (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 11 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
           <div style={{ flex: 1, fontSize: 13, color: C.faint }}>
             {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${_wk}` : "No dose logged yet"}
           </div>
@@ -5071,12 +5071,12 @@ export default function App() {
           const yOf = (m) => BASE - (m / scale) * H;
           const avg = Math.round(_n7.reduce((n, d) => n + (+d.sleepMin || 0), 0) / cols);
           return (<div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 9, marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
               <span style={{ fontFamily: DATA, fontSize: 26, fontWeight: 700, color: C.ink }}>{hm(avg)}</span>
               <span style={{ fontFamily: DATA, fontSize: 13, color: C.faint }}>average</span>
               {sl.status === "ready" && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 13, fontWeight: 700, color: sl.flagged ? C.avoid : C.go }}>{sl.delta >= 0 ? "+" : ""}{sl.delta} min vs baseline</span>}
             </div>
-            <svg viewBox="0 0 300 126" style={{ width: "100%", display: "block", marginTop: 6 }}>
+            <svg viewBox="0 0 300 126" style={{ width: "100%", display: "block", marginTop: 4 }}>
               {[[420, "7H", C.hair2 || "#2C3742"], [300, "5H", C.hair]].map(([m, lab, col]) => (
                 <g key={lab}>
                   <line x1="34" y1={yOf(m)} x2="300" y2={yOf(m)} stroke={col} strokeDasharray="2 4" />
@@ -5096,7 +5096,7 @@ export default function App() {
                   <text x={x + colW / 2} y="118" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8" fill={dose ? C.violet : (i === cols - 1 ? C.ink : C.faint)}>{d.date ? new Date(d.date + "T12:00:00").toLocaleDateString([], { weekday: "short" }).slice(0, 2) : ""}</text>
                 </g>); })}
             </svg>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
               {[["Deep", "#4C3FD4", 1], ["REM", "#67E8F9", 0.9], ["Light", "#3B84BC", 0.9], ["Awake", C.avoid, 0.55]].map(([l, col, op]) => (
                 <span key={l} style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.7, textTransform: "uppercase", color: C.muted }}>
                   <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 4, background: col, opacity: op, marginRight: 6, verticalAlign: -1 }} />{l}</span>))}
@@ -5123,9 +5123,9 @@ export default function App() {
             return { ...r, pct, low, high, tone }; });
           const SCALE = 60;   // a bar spans the track at 60% of its category — keeps all four comparable
           const lowNames = rows.filter((r) => r.low).map((r) => r.k);
-          return (<div style={{ marginTop: 11 }}>
+          return (<div style={{ marginTop: 12 }}>
             {rows.map((r) => (
-              <div key={r.k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+              <div key={r.k} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.9, color: C.faint, textTransform: "uppercase", width: 34, flexShrink: 0 }}>{r.k}</div>
                 <div style={{ flex: 1, minWidth: 0, position: "relative", height: 11, borderRadius: 4, background: "rgba(255,255,255,.05)" }}>
                   {r.lo != null && <div style={{ position: "absolute", left: `${Math.min(100, (r.lo / SCALE) * 100)}%`, width: `${Math.min(100, ((r.hi - r.lo) / SCALE) * 100)}%`, top: 0, bottom: 0, background: C.go + "26" }} />}
@@ -5148,7 +5148,7 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {sectionTitle(weekReady ? (showWeek ? "Sleep · 7 nights" : "Sleep · last night") : "Sleep", CY)}
             {weekReady && (
-              <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,.04)", padding: 3, borderRadius: 8, marginTop: -8 }}>
+              <div style={{ display: "flex", gap: 2, background: "rgba(255,255,255,.04)", padding: 3, borderRadius: 8, marginTop: -8 }}>
                 {["night", "week"].map((v) => (
                   <button key={v} onClick={() => setSleepView(v)} style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 0.8, padding: "4px 10px", borderRadius: 8, border: "none", cursor: "pointer", textTransform: "capitalize", background: sleepView === v ? C.surfaceAlt : "transparent", color: sleepView === v ? C.ink : C.faint }}>{v}</button>))}
               </div>)}
@@ -5159,7 +5159,7 @@ export default function App() {
           {!showWeek && sl.status === "collecting" && <div><div style={{ fontSize: 15, color: C.muted }}>
             Learning your baseline {"—"} {sl.have}/{sl.need} days banked.</div>{stageBar}</div>}
           {!showWeek && sl.status === "ready" && <div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
               <span style={{ fontFamily: DISPLAY, fontSize: 31, fontWeight: 700, color: C.ink }}>{hm(sl.current)}</span>
               <span style={{ fontSize: 13, color: C.faint }}>this day</span>
               <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 700, color: sl.flagged ? C.avoid : C.go }}>{sl.delta >= 0 ? "+" : ""}{sl.delta} min vs your {hm(sl.baseline)}</span>
@@ -5173,7 +5173,7 @@ export default function App() {
                 </g>; })()}
             </svg>
             {sl.flagged
-              ? <div style={{ background: "rgba(240,82,82,0.10)", border: `1px solid rgba(240,82,82,0.35)`, borderRadius: 8, padding: "9px 11px", marginTop: 9, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
+              ? <div style={{ background: "rgba(240,82,82,0.10)", border: `1px solid rgba(240,82,82,0.35)`, borderRadius: 8, padding: "9px 11px", marginTop: 8, fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
                   Sleep has run {Math.abs(sl.delta)} min under your baseline for {sl.run} days{sl.escalated ? ", starting near a dose increase" : ""}. Short sleep also makes your resting heart rate read higher, so treat both cards as one picture. Worth mentioning to your prescriber if it holds.</div>
               : <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                   Judged against your own baseline, never against eight hours. Flags only a sustained drop {"—"} one short night is ignored. Counted per day on your own clock, so naps and night-shift sleep land right.</div>}
@@ -5200,12 +5200,12 @@ export default function App() {
         <div style={{ display: "contents" }}>{card(
           <>
             {sectionTitle("Titration tracker", C.go)}
-            {t.investigational && <div style={{ background: C.caution + "22", border: `1.5px solid ${C.caution}`, borderRadius: 8, padding: "8px 11px", marginBottom: 10, fontSize: 13, color: C.caution, fontWeight: 700 }}>RETATRUTIDE IS INVESTIGATIONAL — this ladder is the TRIUMPH trial escalation, not an approved schedule. The stepping decision is yours and your prescriber's.</div>}
-            <div style={{ display: "flex", gap: 6, marginBottom: 9, flexWrap: "wrap" }}>
+            {t.investigational && <div style={{ background: C.caution + "22", border: `1.5px solid ${C.caution}`, borderRadius: 8, padding: "8px 11px", marginBottom: 8, fontSize: 13, color: C.caution, fontWeight: 700 }}>RETATRUTIDE IS INVESTIGATIONAL — this ladder is the TRIUMPH trial escalation, not an approved schedule. The stepping decision is yours and your prescriber's.</div>}
+            <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
               {t.steps.map((mg) => (<span key={mg} style={{ padding: "6px 13px", borderRadius: 999, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.8, border: `1.5px solid ${mg === t.cur ? C.go : C.hair}`, color: mg === t.cur ? C.go : C.muted, background: mg === t.cur ? C.go + "1A" : "transparent" }}>{mg} {t.unit}</span>))}
               {t.custom && <span style={{ padding: "6px 13px", borderRadius: 999, fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.8, border: `1.5px solid ${C.go}`, color: C.go, background: C.go + "1A" }}>{t.cur} {t.unit} (custom)</span>}
             </div>
-            {t.need === 4 && <div style={{ display: "flex", gap: 7, marginBottom: 8, alignItems: "center" }}>{Array.from({ length: 4 }, (_, i) => (<span key={i} style={{ width: 13, height: 13, borderRadius: "50%", background: i < Math.min(t.n, 4) ? C.go : "transparent", border: `2px solid ${i < Math.min(t.n, 4) ? C.go : C.hair}` }} />))}{t.n > 4 && <span style={{ fontSize: 13, fontWeight: 800, color: C.go, marginLeft: 3 }}>+{t.n - 4}</span>}</div>}
+            {t.need === 4 && <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>{Array.from({ length: 4 }, (_, i) => (<span key={i} style={{ width: 13, height: 13, borderRadius: "50%", background: i < Math.min(t.n, 4) ? C.go : "transparent", border: `2px solid ${i < Math.min(t.n, 4) ? C.go : C.hair}` }} />))}{t.n > 4 && <span style={{ fontSize: 13, fontWeight: 800, color: C.go, marginLeft: 3 }}>+{t.n - 4}</span>}</div>}
             <div style={{ fontSize: 15, color: C.ink, lineHeight: 1.5 }}>
               {t.holding ? <><b>You're holding at {t.cur} {t.unit} — {t.n} {t.need === 4 ? "weekly doses" : "days"} and counting.</b> A valid choice many people make; losing well at a lower dose needs no fixing. The next rung remains {t.next} {t.unit} whenever you and your prescriber decide.</>
                : t.due ? <><b>{t.n} {t.need === 4 ? "weekly doses" : "days"} completed at {t.cur} {t.unit}.</b> {t.investigational ? "The trial protocol escalated to" : "The published schedule steps to"} <b>{t.next} {t.unit}</b> next — if this stretch went well (side effects tolerable, no red flags), that's the usual move. Confirm with your prescriber; log whatever you actually take.</>
@@ -5238,14 +5238,14 @@ export default function App() {
             eaten.waterOz < targets.waterOz ? [`Hydration low (${fmtVol(eaten.waterOz)}/${fmtVol(targets.waterOz)} ${volU})`, "GLP-1 raises dehydration risk. Keep sipping.", C.blue] : ["Hydration on track", "Good — helps with nausea and constipation.", C.blue],
             ["Fiber for GI comfort", "Constipation is common on-med. Aim 25g+ fiber.", C.caution],
           ].map(([t, d, col], i) => (
-            <div key={i} style={{ display: "flex", gap: 11, padding: "10px 0", borderBottom: i < 2 ? `1px solid ${C.hair}` : "none" }}><div style={{ width: 4, borderRadius: 4, background: col, flexShrink: 0 }} /><div><div style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>{t}</div><div style={{ fontSize: 13, color: C.muted, marginTop: 1 }}>{d}</div></div></div>
+            <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: i < 2 ? `1px solid ${C.hair}` : "none" }}><div style={{ width: 4, borderRadius: 4, background: col, flexShrink: 0 }} /><div><div style={{ fontSize: 15, fontWeight: 600, color: C.ink }}>{t}</div><div style={{ fontSize: 13, color: C.muted, marginTop: 0 }}>{d}</div></div></div>
           ))}
         </>)}</div>
 
       <div style={{ display: "contents" }}>{card(
         <>
           {sectionTitle("Projection")}
-          <div style={{ display: "flex", gap: 14, alignItems: "baseline" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
             <div><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.ink }}>{projReady ? `${recentRate.toFixed(1)} lb/wk` : "—"}</div><div style={{ fontSize: 13, color: C.faint }}>{projReady ? "recent avg" : "collecting"}</div></div>
             <div><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.go }}>{goalDate ? fmtDate(goalDate) : "—"}</div><div style={{ fontSize: 13, color: C.faint }}>{weeksToGoal ? `${goalWeight} lb in ~${weeksToGoal} wks` : "log more to project"}</div></div>
           </div>
@@ -5260,7 +5260,7 @@ export default function App() {
               <span style={{ fontFamily: DISPLAY, fontSize: 36, fontWeight: 700, color: C.violet, fontVariantNumeric: "tabular-nums" }}>{fatCorrelation.hits}/{fatCorrelation.total}</span>
               <span style={{ fontSize: 15, color: C.ink2, fontWeight: 500, lineHeight: 1.3 }}>of your nausea flares<br />followed a high-fat meal</span>
             </div>
-            <div style={{ fontSize: 15, color: C.muted, marginTop: 10, lineHeight: 1.45 }}>
+            <div style={{ fontSize: 15, color: C.muted, marginTop: 8, lineHeight: 1.45 }}>
               Those meals averaged <b style={{ color: C.ink }}>{fatCorrelation.avgFat}g fat</b>. High-fat food is a known GLP-1 nausea trigger — so today's ordering steers you off it automatically.
             </div>
             <div style={{ marginTop: 12 }}>
@@ -5271,14 +5271,14 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: 13, color: C.faint, marginTop: 10 }}>Correlation, not proof — the more you log, the sharper this gets. No competitor connects symptoms to meals.</div>
+            <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>Correlation, not proof — the more you log, the sharper this gets. No competitor connects symptoms to meals.</div>
           </>)}</div>
       )}
 
       <div style={{ display: "contents" }}>{card(
         <>
           {sectionTitle("Side-effect journal")}
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             {(() => {
         // v0.9.143: the app reports and does not interpret — with one exception. Severe abdominal
         // pain is the pancreatitis pattern, and a journal that stays quiet about it is failing at
@@ -5287,8 +5287,8 @@ export default function App() {
         if (!sev.length) return null;
         const last = sev.reduce((a, b) => (a.date >= b.date ? a : b));
         return (
-          <div style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12,
-            background: C.avoid + "1A", border: `1px solid ${C.avoid}52`, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12,
+            background: C.avoid + "1A", border: `1px solid ${C.avoid}52`, marginBottom: 8 }}>
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1,
               color: C.avoid, textTransform: "uppercase", whiteSpace: "nowrap", paddingTop: 1 }}>Logged {fmtDate(last.date)}</span>
             <span style={{ fontSize: 13, color: C.muted, lineHeight: 1.45 }}>
@@ -5308,7 +5308,7 @@ export default function App() {
               </div>
             </div>
           ))}
-          <div style={{ fontSize: 13, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Not medical advice. Severe or persistent symptoms — contact your prescriber. This log is designed to export for clinic visits.</div>
+          <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>Not medical advice. Severe or persistent symptoms — contact your prescriber. This log is designed to export for clinic visits.</div>
         </>, {}, (() => {
           const se = (glp.sideEffects || []).slice();
           const last = se[se.length - 1];
@@ -5337,10 +5337,10 @@ export default function App() {
           ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
           ["Scans", hd.filter((d) => d.bodyFatPct != null).length], ["Nights", hd.filter((d) => d.sleepMin).length]];
         return (<div style={{ padding: "0 18px 4px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint }}>Reading from</span>
           </div>
-          <div style={{ display: "flex", gap: 7 }}>
+          <div style={{ display: "flex", gap: 8 }}>
             {cells.map(([l, v]) => (<div key={l} style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
               <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
@@ -5351,8 +5351,8 @@ export default function App() {
         </div>); })()}
       {coachMsgs.length <= 1 && (
         <div style={{ padding: "10px 18px 2px" }}>
-          <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint, marginBottom: 7 }}>What it actually does</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint, marginBottom: 8 }}>What it actually does</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {["Plans your week", "Ranks nearby spots", "Proposes orders", "Writes lists & tips"].map((t) => (
               <span key={t} style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 600, letterSpacing: 0.6, borderRadius: 999, padding: "4px 9px", color: C.go, border: `1px solid ${C.go}44`, background: C.go + "12" }}>{t}</span>))}
             <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 600, letterSpacing: 0.6, borderRadius: 999, padding: "4px 9px", color: C.avoid, border: `1px solid ${C.avoid}44`, background: C.avoid + "12" }}>✕ Give medical advice</span>
@@ -5361,7 +5361,7 @@ export default function App() {
         </div>)}
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 18px" }}>
         {coachMsgs.map((m, i) => (coachMsgs.length <= 1 && i === 0 && m.role !== "user") ? null : (
-          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
+          <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
             <div style={{ maxWidth: "82%", padding: "11px 14px", borderRadius: 18, fontSize: 15, lineHeight: 1.45, background: m.role === "user" ? C.surfaceAlt : C.surface, color: m.role === "user" ? C.ink : C.ink2, border: `1px solid ${C.hair}`, borderBottomRightRadius: m.role === "user" ? 4 : 16, borderBottomLeftRadius: m.role === "user" ? 16 : 4 }}>{m.text}</div>
           </div>
         ))}
@@ -5384,7 +5384,7 @@ export default function App() {
       <div>
         {sectionTitle("Plan your week")}
         {onMed && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: C.violet, letterSpacing: 0.5, marginBottom: 3 }}>DOSE-SYNCED PREP</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: C.violet, letterSpacing: 0.5, marginBottom: 2 }}>DOSE-SYNCED PREP</div>
           <div style={{ fontSize: 15, color: C.ink, lineHeight: 1.45 }}><b>Shot {doseDayName}</b> — that day and the next run lean, bland, small-volume with eased targets. The week still averages your goal.{escalating ? " Dose-increase weeks ease further." : ""}</div>
         </div>}
         {card(<div>
@@ -5398,19 +5398,19 @@ export default function App() {
         </div>, { marginBottom: 12 })}
         {card(<div>
           {sectionTitle("Prep length")}
-          <div style={{ display: "flex", background: C.surfaceAlt, borderRadius: 12, padding: 3, marginBottom: 14 }}>
+          <div style={{ display: "flex", background: C.surfaceAlt, borderRadius: 12, padding: 3, marginBottom: 12 }}>
             {[3, 5, 7].map((n) => (<button key={n} onClick={() => setPlanDaysN(n)} style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 8, fontFamily: BODY, fontSize: 15, fontWeight: 700, background: planDaysN === n ? C.surface : "transparent", color: planDaysN === n ? C.ink : C.muted }}>{n} days</button>))}
           </div>
           {sectionTitle("Meals per day")}
           <div style={{ display: "flex", background: C.surfaceAlt, borderRadius: 12, padding: 3 }}>
             {[3, 4, 5].map((n) => (<button key={n} onClick={() => { setPlanMealCount(n); setPlanMealsOn(_slotsFor(n)); }} style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 8, fontFamily: BODY, fontSize: 15, fontWeight: 700, background: planMealCount === n ? C.surface : "transparent", color: planMealCount === n ? C.ink : C.muted }}>{n} meals</button>))}
           </div>
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 10, lineHeight: 1.45 }}>{planMealCount === 3 ? `Three big plates, no snacks — every meal runs maximum protein (~${Math.round(targets.protein / 3)}g each).` : planMealCount === 5 ? "Breakfast, lunch, dinner + two snacks — five small feedings, the kindest mode for a GLP-1 appetite." : "Three meals + one snack — the snack carries ~15% of your protein."}</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.45 }}>{planMealCount === 3 ? `Three big plates, no snacks — every meal runs maximum protein (~${Math.round(targets.protein / 3)}g each).` : planMealCount === 5 ? "Breakfast, lunch, dinner + two snacks — five small feedings, the kindest mode for a GLP-1 appetite." : "Three meals + one snack — the snack carries ~15% of your protein."}</div>
         </div>, { marginBottom: 12 })}
         {allergies.length > 0 && <div style={{ fontSize: 15, color: C.avoid, marginBottom: 12 }}><b>Filtering out:</b> {allergies.join(", ")} — hidden from every meal, same as ordering.</div>}
         <button onClick={() => generatePlan(false)} disabled={!!planBusy} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 17, fontWeight: 800, cursor: "pointer", opacity: planBusy ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
-        {mealPlan && !planBusy && <button onClick={() => setPlanView("week")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 15, marginTop: 10, cursor: "pointer", textDecoration: "underline" }}>Back to current plan</button>}
-        {planErr && <div style={{ fontSize: 15, color: C.avoid, marginTop: 10 }}>Plan hiccup: {planErr}</div>}
+        {mealPlan && !planBusy && <button onClick={() => setPlanView("week")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 15, marginTop: 8, cursor: "pointer", textDecoration: "underline" }}>Back to current plan</button>}
+        {planErr && <div style={{ fontSize: 15, color: C.avoid, marginTop: 8 }}>Plan hiccup: {planErr}</div>}
         {planNote && <div style={{ fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>{planNote}</div>}
         <div style={{ textAlign: "center", fontSize: 13, color: C.faint, marginTop: 12 }}>Runs on your own node · nothing leaves your server</div>
       </div>
@@ -5418,29 +5418,29 @@ export default function App() {
     if (planView === "grocery") { const done = mealPlan.grocery.filter((g) => g.checked).length; const sections = [...new Set(mealPlan.grocery.map((g) => g.section))];
       const groceryEst = estimateGroceryCost(mealPlan.grocery, priceLog, _ingKey, todayISO()); return (
       <div>
-        <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← Your week</button>
+        <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 8 }}>← Your week</button>
         {sectionTitle(`Grocery · ${mealPlan.days.length} days`)}
         {card(<div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, marginBottom: 8 }}><b style={{ color: C.ink }}>{done} of {mealPlan.grocery.length} gathered</b><span style={{ color: C.muted }}>consolidated across all meals</span></div>
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4 }}><div style={{ height: 6, width: `${mealPlan.grocery.length ? (done / mealPlan.grocery.length) * 100 : 0}%`, background: C.go, borderRadius: 4, transition: "width .25s" }} /></div>
           {(() => { const est = groceryEst;
-            if (!est.matched) return (<div style={{ fontSize: 13, color: C.faint, marginTop: 9, lineHeight: 1.45 }}>No cost estimate yet — prices you save in Shop Mode build a price book per store, and this totals only what you have actually paid.</div>);
-            return (<div style={{ marginTop: 9 }}>
+            if (!est.matched) return (<div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>No cost estimate yet — prices you save in Shop Mode build a price book per store, and this totals only what you have actually paid.</div>);
+            return (<div style={{ marginTop: 8 }}>
               {est.stores.map((st) => (
                 <div key={st.store} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, padding: "3px 0" }}>
                   <span style={{ fontSize: 15, color: C.ink, fontWeight: 700, textTransform: "capitalize" }}>{st.store}{est.cheapest && est.cheapest.store === st.store ? <span style={{ color: C.go, fontWeight: 700 }}> · cheapest</span> : ""}</span>
                   <span style={{ fontSize: 15, color: C.ink, fontWeight: 800, whiteSpace: "nowrap" }}>≈ ${st.total.toFixed(2)} <span style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}>· {st.matched}/{mealPlan.grocery.length}</span></span>
                 </div>))}
-              <div style={{ fontSize: 13, color: C.faint, marginTop: 5, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 13, color: C.faint, marginTop: 4, lineHeight: 1.45 }}>
                 From your own price book, kept separate per store{est.stale ? ` · ${est.stale} price${est.stale > 1 ? "s" : ""} over 3 months old` : ""}{est.unpriced ? ` · ${est.unpriced} item${est.unpriced > 1 ? "s" : ""} not priced anywhere yet` : ""}
               </div>
             </div>); })()}
-          {groceryNote && <div style={{ fontSize: 13, color: C.muted, marginTop: 7 }}>Built-in package math shown — AI consolidation hiccup: {groceryNote}</div>}
+          {groceryNote && <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>Built-in package math shown — AI consolidation hiccup: {groceryNote}</div>}
         </div>, { marginBottom: 12 })}
         {sections.map((sec) => card(<div key={sec}>
           {sectionTitle(sec, C.muted)}
           {mealPlan.grocery.map((g, i) => g.section !== sec ? null : (
-            <div key={i} onClick={() => toggleGroceryItem(i)} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0", borderTop: `1px solid ${C.hair}`, cursor: "pointer" }}>
+            <div key={i} onClick={() => toggleGroceryItem(i)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderTop: `1px solid ${C.hair}`, cursor: "pointer" }}>
               <div style={{ width: 21, height: 21, borderRadius: 4, flexShrink: 0, border: `2px solid ${g.checked ? C.go : C.hair}`, background: g.checked ? C.go : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: C.surface, fontSize: 15, fontWeight: 800 }}>{g.checked ? "✓" : ""}</div>
               <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 600, color: g.checked ? C.faint : C.ink, textDecoration: g.checked ? "line-through" : "none" }}>{g.item}</div>{g.qty ? <div style={{ fontSize: 13, color: C.muted }}>{g.qty}{groceryEst.priced[g.item] ? <span style={{ color: C.faint }}> · ${groceryEst.priced[g.item].price.toFixed(2)} at {groceryEst.priced[g.item].store || "?"}</span> : null}</div> : null}</div>
             </div>
@@ -5449,14 +5449,14 @@ export default function App() {
         {card(<div>
           {sectionTitle("Shop Mode · scan at the shelf")}
           {shopScan.status !== "found" && (camOn && camFor === "shop" ? (
-            <div style={{ borderRadius: 12, overflow: "hidden", position: "relative", marginBottom: 10, background: "#000" }}>
+            <div style={{ borderRadius: 12, overflow: "hidden", position: "relative", marginBottom: 8, background: "#000" }}>
               <canvas ref={camCanvasRef} style={{ width: "100%", height: 200, objectFit: "cover", display: "block", background: "#000" }} />
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}><div style={{ width: "72%", height: 80, border: "2.5px solid rgba(99,212,140,0.95)", borderRadius: 12, boxShadow: "0 0 0 2000px rgba(0,0,0,0.35)" }} /></div>
               <button onClick={stopCam} style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", borderRadius: 18, padding: "6px 13px", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Stop</button>
               <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: 600, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>Center the shelf item's barcode in the box</div>
             </div>
           ) : (
-            <button onClick={() => startCam("shop")} style={{ width: "100%", borderRadius: 12, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "16px 14px", textAlign: "center", marginBottom: 10, cursor: "pointer" }}>
+            <button onClick={() => startCam("shop")} style={{ width: "100%", borderRadius: 12, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "16px 14px", textAlign: "center", marginBottom: 8, cursor: "pointer" }}>
               <div style={{ fontFamily: BODY, fontSize: 15, fontWeight: 700, color: C.go }}>📷 Scan with camera</div>
               <div style={{ fontFamily: BODY, fontSize: 13, color: C.muted, marginTop: 2 }}>Point at the shelf item's barcode — or type it below</div>
             </button>
@@ -5471,8 +5471,8 @@ export default function App() {
               <div style={{ fontSize: 17, fontWeight: 700, color: C.ink }}>{f.name}{f.brand ? <span style={{ color: C.muted, fontWeight: 500 }}> · {f.brand}</span> : null}</div>
               <div style={{ fontSize: 15, color: C.muted, margin: "3px 0 7px" }}>per {f.basis}: <b style={{ color: C.go }}>{f.protein}g protein</b> · {f.calories} cal · {f.carbs}g carb · {f.fat}g fat</div>
               {dense ? <div style={{ fontSize: 15, color: C.go, fontWeight: 700 }}>✓ Protein-dense — fits the plan</div> : <div style={{ fontSize: 15, color: C.caution, fontWeight: 700 }}>Light on protein for its calories{f.fat >= 15 ? " · higher fat — go slow" : ""}</div>}
-              {mi >= 0 && !mealPlan.grocery[mi].checked && <button onClick={() => toggleGroceryItem(mi)} style={{ marginTop: 9, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>✓ Check off "{mealPlan.grocery[mi].item}"</button>}
-              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              {mi >= 0 && !mealPlan.grocery[mi].checked && <button onClick={() => toggleGroceryItem(mi)} style={{ marginTop: 8, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>✓ Check off "{mealPlan.grocery[mi].item}"</button>}
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <input value={shopPrice} onChange={(e) => setShopPrice(e.target.value)} placeholder="$ price" inputMode="decimal" style={{ width: 90, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "10px 11px", color: C.ink, fontFamily: BODY, fontSize: 15, outline: "none" }} />
                 <input value={shopStore} onChange={(e) => setShopStore(e.target.value)} placeholder="Store" style={{ flex: 1, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "10px 11px", color: C.ink, fontFamily: BODY, fontSize: 15, outline: "none" }} />
                 <button onClick={rememberShopPrice} style={{ background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "0 15px", fontFamily: DATA, fontWeight: 800, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Save</button>
@@ -5480,13 +5480,13 @@ export default function App() {
               <button onClick={() => { setShopScan({ status: "idle" }); setShopBc(""); }} style={{ marginTop: 8, background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 13, cursor: "pointer", textDecoration: "underline", padding: 0 }}>Scan another</button>
             </div>
           ); })()}
-          <div style={{ fontSize: 13, color: C.faint, marginTop: 9 }}>{priceLog.length > 0 ? `${priceLog.length} price${priceLog.length > 1 ? "s" : ""} remembered — your per-store price book grows with every trip.` : "Type the numbers under any barcode. Prices you save build your per-store price book."}</div>
+          <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>{priceLog.length > 0 ? `${priceLog.length} price${priceLog.length > 1 ? "s" : ""} remembered — your per-store price book grows with every trip.` : "Type the numbers under any barcode. Prices you save build your per-store price book."}</div>
         </div>, { marginBottom: 12 })}
       </div>
     ); }
     if (planView === "meal") { const [di, si] = planMealRef; const day = mealPlan.days[di]; const slot = day && day.slots[si]; if (!slot) { setPlanView("week"); return null; } const img = slot.photo || slot.image; return (
       <div>
-        <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 10 }}>← {day.label} · Your week</button>
+        <button onClick={() => setPlanView("week")} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 8 }}>← {day.label} · Your week</button>
         <div style={{ borderRadius: 18, overflow: "hidden", position: "relative", height: 170, marginBottom: 12, background: C.surfaceAlt }}>
           {img ? <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 15, fontFamily: BODY }}>No photo yet — yours goes here</div>}
           <label style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "linear-gradient(transparent, rgba(0,0,0,.55))", color: "#fff", fontSize: 15, fontWeight: 700, fontFamily: BODY, padding: "20px 12px 9px", cursor: "pointer" }}>
@@ -5499,25 +5499,25 @@ export default function App() {
         <div style={{ fontSize: 15, color: C.go, fontWeight: 800, marginBottom: 12 }}>{Math.round(slot.perServing.protein * slot.servings)}g protein <span style={{ color: C.muted, fontWeight: 500 }}>· {Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.carbs || 0) * slot.servings)}g carbs · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat · {slot.servings}× serving</span></div>
         {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12, fontSize: 15, color: C.ink, lineHeight: 1.45 }}><b style={{ color: C.violet }}>Why this meal today:</b> post-shot, warm bland low-fat food is easiest to keep down. Eat slowly — stop at comfortable, not full.</div>}
         {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 15, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, { marginBottom: 12 })}
-        {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 9, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 15 }}>{i + 1}</b><span style={{ fontSize: 15, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, { marginBottom: 12 })}
+        {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 15 }}>{i + 1}</b><span style={{ fontSize: 15, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, { marginBottom: 12 })}
         {slot.url && <a href={slot.url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 13, color: C.faint, marginBottom: 12, textDecoration: "underline" }}>Original recipe source ↗</a>}
         <button onClick={() => logPlannedMeal(di, si)} style={{ width: "100%", background: slot.logged ? C.surfaceAlt : C.go, color: slot.logged ? C.go : C.bg, border: slot.logged ? `1.5px solid ${C.go}` : "none", borderRadius: 12, padding: "14px 0", fontFamily: DATA, fontSize: 15, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{slot.logged ? "Logged ✓" : "Log this meal ✓"}</button>
 
         {/* SWAP. Same two sources the week builder uses, so a swapped meal carries ingredients and
             steps like every other slot — a swap that lands a name with no recipe is worse than none. */}
-        <button onClick={() => (swapList === null ? findSwaps(slot) : setSwapList(null))} disabled={swapBusy} style={{ width: "100%", marginTop: 9, background: "transparent", color: C.go, border: `1px solid ${C.go}55`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", opacity: swapBusy ? 0.6 : 1 }}>{swapBusy ? "Searching recipes for your macros…" : swapList === null ? "Swap this meal" : "Close"}</button>
+        <button onClick={() => (swapList === null ? findSwaps(slot) : setSwapList(null))} disabled={swapBusy} style={{ width: "100%", marginTop: 8, background: "transparent", color: C.go, border: `1px solid ${C.go}55`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", opacity: swapBusy ? 0.6 : 1 }}>{swapBusy ? "Searching recipes for your macros…" : swapList === null ? "Swap this meal" : "Close"}</button>
 
         {swapList !== null && !swapBusy && (
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 8 }}>
             {swapList.length === 0 ? (
               <div style={{ fontSize: 13, color: C.faint, lineHeight: 1.45, padding: "4px 2px" }}>No swap matched this slot's macros without hitting your filters. Try again later, or edit the meal by hand.</div>
             ) : (<>
-              <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint, marginBottom: 7 }}>Matched to this slot</div>
+              <div style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint, marginBottom: 8 }}>Matched to this slot</div>
               {swapList.map((r, i) => (
-                <div key={i} onClick={() => applySwap(di, si, r)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "11px 13px", marginBottom: 8, cursor: "pointer" }}>
+                <div key={i} onClick={() => applySwap(di, si, r)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "11px 13px", marginBottom: 8, cursor: "pointer" }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{r.name}</div>
-                    <div style={{ fontFamily: DATA, fontSize: 13, color: C.faint, marginTop: 3 }}>{Math.round(r.p || 0)} P · {Math.round(r.cal || 0)} cal · {(r.ingredients || []).length} ingredients</div>
+                    <div style={{ fontFamily: DATA, fontSize: 13, color: C.faint, marginTop: 2 }}>{Math.round(r.p || 0)} P · {Math.round(r.cal || 0)} cal · {(r.ingredients || []).length} ingredients</div>
                   </div>
                   <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "4px 10px", flexShrink: 0 }}>Swap</span>
                 </div>))}
@@ -5534,8 +5534,8 @@ export default function App() {
     return (
       <div>
         {sectionTitle("Your week")}
-        {onMed && <div style={{ fontSize: 15, fontWeight: 700, color: C.go, marginBottom: 10 }}>✓ Synced to your dose calendar — shot {doseDayName}</div>}
-        <div style={{ display: "flex", gap: 5, marginBottom: 12 }}>
+        {onMed && <div style={{ fontSize: 15, fontWeight: 700, color: C.go, marginBottom: 8 }}>✓ Synced to your dose calendar — shot {doseDayName}</div>}
+        <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
           {mealPlan.days.map((w, i) => { const on = i === Math.min(planSel, mealPlan.days.length - 1); const dd = w.dose || w.after; return (
             <button key={i} onClick={() => setPlanSel(i)} style={{ flex: 1, border: `1.5px solid ${on ? "transparent" : dd ? C.violet + "55" : C.hair}`, cursor: "pointer", borderRadius: 12, padding: "8px 0 6px", fontFamily: BODY, background: on ? (dd ? C.violet : C.go) : dd ? C.violet + "14" : C.surface }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: on ? C.surface : dd ? C.violet : C.ink }}>{w.label}</div>
@@ -5544,20 +5544,20 @@ export default function App() {
           ); })}
         </div>
         {card(<div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
             <b style={{ fontSize: 15, color: hit ? C.go : C.caution }}>{tot.p}g of {day.target.protein}g protein {hit ? "✓" : ""}</b>
             <span style={{ fontSize: 13, color: C.muted }}>{tot.cal.toLocaleString()} cal · {tot.carbs}g carb{(day.dose || day.after) ? " · dose-adjusted" : ""}</span>
           </div>
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4 }}><div style={{ height: 6, width: `${Math.min(100, (tot.p / day.target.protein) * 100)}%`, background: hit ? C.go : C.caution, borderRadius: 4 }} /></div>
         </div>, { marginBottom: 12 })}
-        {planPhotoNote && day.slots.some((x) => !x.photo && !x.image) && <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>Dish photos unavailable right now ({/402/.test(planPhotoNote) ? "Spoonacular daily quota used up — they'll fill in automatically tomorrow" : /401|unauthor/i.test(planPhotoNote) ? "key rejected — check Settings" : planPhotoNote}).</div>}
-        {(day.dose || day.after || day.night || day.postNights) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 13, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()}{(day.dose || day.after) ? ` · TARGET EASED TO ${day.target.protein}G` : ""}</div><div style={{ fontSize: 15, color: C.ink, marginTop: 3, lineHeight: 1.45 }}>{day.night ? "Your day runs into tomorrow morning — meals after midnight still count here." : day.postNights ? "Sleep is the workout today. Protein when you wake; don't chase the full target." : "Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal."}</div></div>}
+        {planPhotoNote && day.slots.some((x) => !x.photo && !x.image) && <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Dish photos unavailable right now ({/402/.test(planPhotoNote) ? "Spoonacular daily quota used up — they'll fill in automatically tomorrow" : /401|unauthor/i.test(planPhotoNote) ? "key rejected — check Settings" : planPhotoNote}).</div>}
+        {(day.dose || day.after || day.night || day.postNights) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 13, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()}{(day.dose || day.after) ? ` · TARGET EASED TO ${day.target.protein}G` : ""}</div><div style={{ fontSize: 15, color: C.ink, marginTop: 2, lineHeight: 1.45 }}>{day.night ? "Your day runs into tomorrow morning — meals after midnight still count here." : day.postNights ? "Sleep is the workout today. Protein when you wake; don't chase the full target." : "Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal."}</div></div>}
         {day.slots.map((slot, si) => (
-          <div key={si} onClick={() => { setPlanMealRef([Math.min(planSel, mealPlan.days.length - 1), si]); setPlanView("meal"); }} style={{ background: C.surface, border: `1px solid ${si === tonightIdx ? C.go + "66" : C.hair}`, borderRadius: 18, display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", marginBottom: 10, cursor: "pointer" }}>
+          <div key={si} onClick={() => { setPlanMealRef([Math.min(planSel, mealPlan.days.length - 1), si]); setPlanView("meal"); }} style={{ background: C.surface, border: `1px solid ${si === tonightIdx ? C.go + "66" : C.hair}`, borderRadius: 18, display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", marginBottom: 8, cursor: "pointer" }}>
             <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: (day.dose || day.after) ? C.violet : medalColor(si) }} />
             <div style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0, background: C.surfaceAlt, overflow: "hidden" }}>{(slot.photo || slot.image) ? <img src={slot.photo || slot.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{slot.slot === "snack2" ? "snack" : slot.slot}</div>
                 {si === tonightIdx && <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "2px 7px", color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>TONIGHT</span>}
               </div>
@@ -5566,12 +5566,12 @@ export default function App() {
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: 21, fontWeight: 800, color: C.go, lineHeight: 1 }}>{Math.round(slot.perServing.protein * slot.servings)}g</div>
               <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.carbs || 0) * slot.servings)}g carb · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat</div>
-              <button onClick={(e) => { e.stopPropagation(); logPlannedMeal(Math.min(planSel, mealPlan.days.length - 1), si); }} style={{ marginTop: 5, background: slot.logged ? C.go : "none", color: slot.logged ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 18, padding: "3px 12px", fontFamily: BODY, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{slot.logged ? "✓" : "Log"}</button>
+              <button onClick={(e) => { e.stopPropagation(); logPlannedMeal(Math.min(planSel, mealPlan.days.length - 1), si); }} style={{ marginTop: 4, background: slot.logged ? C.go : "none", color: slot.logged ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 18, padding: "3px 12px", fontFamily: BODY, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>{slot.logged ? "✓" : "Log"}</button>
             </div>
           </div>
         ))}
         {!planBusy && <button onClick={() => generatePlan(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 15, margin: "2px 0 10px", cursor: "pointer", textDecoration: "underline" }}>↻ Fresh ideas — re-search recipes (uses API quota)</button>}
-        <div style={{ display: "flex", gap: 9 }}>
+        <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setPlanView("setup")} style={{ flex: 1, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, color: C.ink, cursor: "pointer" }}>Plan settings</button>
           <button onClick={() => setPlanView("grocery")} style={{ flex: 1.3, background: C.go, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, color: C.surface, cursor: "pointer" }}>Grocery list →</button>
         </div>
@@ -5641,18 +5641,18 @@ export default function App() {
                 <div style={{ fontSize: 15, color: C.muted, lineHeight: 1.55 }}>Set a goal weight and {ct.reason} — then this turns your forecast picture into the numbers that get you there.</div>
               ) : (<div>
                 <div style={{ fontSize: 15, color: C.ink, fontWeight: 700, lineHeight: 1.5 }}>{ct.line}</div>
-                {!ct.plausible && <div style={{ fontSize: 13, color: C.caution, marginTop: 6, lineHeight: 1.45 }}>That goal implies under {ct.floorBf}% body fat with your current muscle — either the goal is low, or it assumes losing lean mass. Worth a conversation with your prescriber.</div>}
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+                {!ct.plausible && <div style={{ fontSize: 13, color: C.caution, marginTop: 4, lineHeight: 1.45 }}>That goal implies under {ct.floorBf}% body fat with your current muscle — either the goal is low, or it assumes losing lean mass. Worth a conversation with your prescriber.</div>}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                   {[["fat to lose", `${Math.round(ct.fatToLose)} lb`], ["lean to protect", `${Math.round(ct.lean)} lb`], ["protein floor", `${ct.proteinFloor} g`]].map(([l, v]) => (
                     <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 8, padding: "9px 10px" }}>
                       <div style={{ fontSize: 17, fontWeight: 800, color: C.ink }}>{v}</div><div style={{ fontSize: 13, color: C.muted }}>{l}</div>
                     </div>))}
                 </div>
-                <div style={{ fontSize: 13, color: C.muted, marginTop: 9, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
                   At {ct.rateBand.target}%/week that is about {ct.weeksTarget} weeks{fmtETA(ct.etaTarget) ? ` — ${fmtETA(ct.etaTarget)}` : ""}.
                   {ct.weeksAtCurrent ? ` Your measured rate puts it at ${ct.weeksAtCurrent} weeks${fmtETA(ct.etaCurrent) ? ` (${fmtETA(ct.etaCurrent)})` : ""}.` : " Log a few more weigh-ins and this switches to your real rate."}
                 </div>
-                {targets.protein < ct.proteinFloor && <button onClick={() => setTargets({ ...targets, protein: ct.proteinFloor })} style={{ marginTop: 10, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}33` }}>Raise protein target to {ct.proteinFloor}g</button>}
+                {targets.protein < ct.proteinFloor && <button onClick={() => setTargets({ ...targets, protein: ct.proteinFloor })} style={{ marginTop: 8, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}33` }}>Raise protein target to {ct.proteinFloor}g</button>}
                 <div style={{ marginTop: 12 }}>
                   {contractScorecard({ mealLog, targets, workoutLog, adaptive: adaptiveRead(weightLog, hd0, glp, 0) || {}, contract: ct, todayISO: todayISO() }).map((r, i) => (
                     <div key={r.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderTop: i ? `1px solid ${C.hair}` : `1px solid ${C.hair}` }}>
@@ -5682,17 +5682,17 @@ export default function App() {
               {hd.length === 0 ? (
                 <div style={{ fontSize: 15, color: C.muted, lineHeight: 1.55 }}>
                   Steps and weight flow from your iPhone using Apple's <b style={{ color: C.ink }}>Shortcuts</b> app — no third-party apps, no cloud:
-                  <div style={{ marginTop: 7 }}>1. Shortcuts → + → add <b style={{ color: C.ink }}>Find Health Samples</b> (Type: Steps · Date is Today), then <b style={{ color: C.ink }}>Calculate Statistics → Sum</b>.</div>
+                  <div style={{ marginTop: 8 }}>1. Shortcuts → + → add <b style={{ color: C.ink }}>Find Health Samples</b> (Type: Steps · Date is Today), then <b style={{ color: C.ink }}>Calculate Statistics → Sum</b>.</div>
                   <div>2. Add a second <b style={{ color: C.ink }}>Find Health Samples</b> (Type: Weight · Latest · Limit 1).</div>
                   <div>3. Add <b style={{ color: C.ink }}>Format Date</b> (Current Date → custom <span style={{ color: C.ink }}>yyyy-MM-dd</span>).</div>
                   <div>4. Add <b style={{ color: C.ink }}>Get Contents of URL</b> → Method POST → Request Body JSON with fields <span style={{ color: C.ink }}>date</span> (formatted date), <span style={{ color: C.ink }}>steps</span> (statistics), <span style={{ color: C.ink }}>weightLbs</span> (sample magnitude) → URL:</div>
                   <div style={{ background: C.surfaceAlt, borderRadius: 8, padding: "8px 10px", margin: "6px 0", fontSize: 13, wordBreak: "break-all", color: C.ink }}>{`${window.location.origin}/api/health/sync?token=${healthSync ? healthSync.token : "…"}`}</div>
                   <div>5. Automation → Time of Day → daily → Run Immediately → your shortcut.</div>
-                  <div style={{ marginTop: 6, color: C.faint, fontSize: 13 }}>Health Auto Export can post to the same URL. Manual weigh-ins stay authoritative.</div>
+                  <div style={{ marginTop: 4, color: C.faint, fontSize: 13 }}>Health Auto Export can post to the same URL. Manual weigh-ins stay authoritative.</div>
                 </div>
               ) : (
                 <div>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {(() => { const lastBf = [...hd].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd].reverse().find((d) => d.leanMassLbs != null || (d.bodyFatPct != null && d.weightLbs != null));
                       const lmVal = lastLm ? (lastLm.leanMassLbs != null ? +lastLm.leanMassLbs : Math.round(lastLm.weightLbs * (1 - lastLm.bodyFatPct / 100) * 10) / 10) : null;
                       return [["avg steps/day", avgSteps ? avgSteps.toLocaleString() : "—"], ["strength this wk", `${strengthWk}×`], ["last synced weight", lastW ? `${lastW.weightLbs} lb` : "—"], ...(lastBf ? [["body fat", `${lastBf.bodyFatPct}%`]] : []), ...(lmVal ? [["lean mass", `${lmVal} lb`]] : [])]; })().map(([l, v]) => (
@@ -5702,9 +5702,9 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <button onClick={async () => { try { await fetch(`/api/health/sync?token=${healthSync.token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: todayISO(), strength: 1 }) }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ ...healthSync, days: sm.days || [] }); } catch {} }} style={{ marginTop: 9, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>🏋️ Log a strength session today</button>
-                  <div style={{ fontSize: 13, color: C.faint, marginTop: 7 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines</div>
-                  <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+                  <button onClick={async () => { try { await fetch(`/api/health/sync?token=${healthSync.token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date: todayISO(), strength: 1 }) }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync({ ...healthSync, days: sm.days || [] }); } catch {} }} style={{ marginTop: 8, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>🏋️ Log a strength session today</button>
+                  <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>{hd.length} day{hd.length > 1 ? "s" : ""} synced · data feeds the adaptive-target and dose-response engines</div>
+                  <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
                     <button onClick={async () => { if (!(await askConfirm("Clear all synced Apple Health data on your node? Steps, weight, workouts and body composition from the phone will be wiped. Your sync setup keeps working — the next sync refills it.", true))) return;
                       try { await fetch("/api/health/data", { method: "DELETE" }); const sm = await fetch("/api/health/summary").then((r) => r.json()); setHealthSync((x) => ({ ...(x || {}), days: sm.days || [] })); } catch {} }}
                       style={{ background: "none", border: "none", color: C.caution, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Clear synced data</button>
@@ -5729,11 +5729,11 @@ export default function App() {
             const col = ar.flag === "lean-mass" ? C.avoid : ar.flag === "on-track" ? C.go : C.caution;
             return card(<div>
               {sectionTitle("Adaptive targets · learned from your trend")}
-              <div style={{ display: "flex", gap: 10, marginBottom: 9 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                 {[["Formula", "trend vs dose"], ["Measured", "your weigh-ins"], ["Confidence", "grows weekly"]].map(([l6, v6]) => (
                   <div key={l6} style={{ flex: 1 }}>
                     <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1.1, color: C.faint, textTransform: "uppercase" }}>{l6}</div>
-                    <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.ink2, marginTop: 3 }}>{v6}</div>
+                    <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.ink2, marginTop: 2 }}>{v6}</div>
                   </div>))}
               </div>
               {ar.status === "collecting" ? (
@@ -5741,10 +5741,10 @@ export default function App() {
               ) : (
                 <div>
                   <div style={{ fontSize: 15, color: col, fontWeight: 700, lineHeight: 1.45 }}>{ar.detail}</div>
-                  {ar.suggestion && ar.suggestion.extra && <div style={{ fontSize: 13, color: C.muted, marginTop: 5, lineHeight: 1.45 }}>{ar.suggestion.extra}</div>}
-                  {ar.suggestion && !applied && <button onClick={() => { const sg = ar.suggestion; setTargets({ ...targets, ...(sg.proteinDelta ? { protein: targets.protein + sg.proteinDelta } : {}), ...(sg.calDelta ? { calories: Math.max(1000, targets.calories + sg.calDelta) } : {}) }); setPrefs({ ...prefs, adaptiveAppliedOn: todayISO() }); }} style={{ marginTop: 9, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}33` }}>Apply: {ar.suggestion.label}</button>}
-                  {applied && <div style={{ fontSize: 13, color: C.go, marginTop: 7, fontWeight: 700 }}>✓ Applied today — adjust anytime in Plan settings.</div>}
-                  <div style={{ fontSize: 13, color: C.faint, marginTop: 7 }}>{ar.pts} weigh-ins over {ar.spanDays} days · a suggestion, not a prescription — your prescriber owns your targets</div>
+                  {ar.suggestion && ar.suggestion.extra && <div style={{ fontSize: 13, color: C.muted, marginTop: 4, lineHeight: 1.45 }}>{ar.suggestion.extra}</div>}
+                  {ar.suggestion && !applied && <button onClick={() => { const sg = ar.suggestion; setTargets({ ...targets, ...(sg.proteinDelta ? { protein: targets.protein + sg.proteinDelta } : {}), ...(sg.calDelta ? { calories: Math.max(1000, targets.calories + sg.calDelta) } : {}) }); setPrefs({ ...prefs, adaptiveAppliedOn: todayISO() }); }} style={{ marginTop: 8, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}33` }}>Apply: {ar.suggestion.label}</button>}
+                  {applied && <div style={{ fontSize: 13, color: C.go, marginTop: 8, fontWeight: 700 }}>✓ Applied today — adjust anytime in Plan settings.</div>}
+                  <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>{ar.pts} weigh-ins over {ar.spanDays} days · a suggestion, not a prescription — your prescriber owns your targets</div>
                 </div>
               )}
             </div>, { marginBottom: 12 }, { id: "at", tone: applied ? C.go : "none", color: C.go, title: "Adaptive targets",
@@ -5764,8 +5764,8 @@ export default function App() {
               ) : (
                 <div>
                   <div style={{ fontSize: 15, color: C.ink, fontWeight: 700, lineHeight: 1.5 }}>Meals over ~{dr.ceiling}g fat {dr.scope} preceded GI symptoms {dr.aboveSym} of {dr.above} times — at or under, {dr.belowSym} of {dr.below}.</div>
-                  <div style={{ fontSize: 15, color: C.go, fontWeight: 700, marginTop: 7 }}>Your personal fat ceiling: ~{dr.ceiling}g (generic default: 15g). "Order for me" now uses YOUR number during dose windows.</div>
-                  <div style={{ fontSize: 13, color: C.faint, marginTop: 7 }}>Correlation from your own {dr.days} logged days — a pattern, not proof. Worth showing your prescriber.</div>
+                  <div style={{ fontSize: 15, color: C.go, fontWeight: 700, marginTop: 8 }}>Your personal fat ceiling: ~{dr.ceiling}g (generic default: 15g). "Order for me" now uses YOUR number during dose windows.</div>
+                  <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>Correlation from your own {dr.days} logged days — a pattern, not proof. Worth showing your prescriber.</div>
                 </div>
               )}
             </div>, { marginBottom: 12 }, { id: "dr", tone: dr && dr.status === "ok" ? C.go : "none", color: C.caution, title: "Dose response",
@@ -5795,7 +5795,7 @@ export default function App() {
                   <path d="M22.80 35.00 C21.04 32.80 18.40 31.26 18.40 28.20 L18.40 24.80 L19.45 19.80 L20.50 24.80 L20.50 28.20 L21.43 28.20 L21.43 24.80 L22.48 19.80 L23.53 24.80 L23.53 28.20 L24.47 28.20 L24.47 24.80 L25.52 19.80 L26.57 24.80 L26.57 28.20 L27.50 28.20 L27.50 24.80 L28.55 19.80 L29.60 24.80 L29.60 28.20 C29.60 31.26 26.96 32.80 25.20 35.00 L26.00 45.80 A2.00 2.00 0 0 1 22.00 45.80 Z" fill="#63D48C" />
                 </svg>
                 <div style={{ fontFamily: DISPLAY, fontSize: 31, fontWeight: 700, color: "#f2f7f4", marginTop: 24, letterSpacing: -0.3 }}>Fork<span style={{ color: "#63D48C" }}>Caster</span></div>
-                <div style={{ fontFamily: BODY, fontSize: 15, color: "#94a89c", marginTop: 10 }}>Your best body is in the <span style={{ color: "#63D48C" }}>forecast</span>.</div>
+                <div style={{ fontFamily: BODY, fontSize: 15, color: "#94a89c", marginTop: 8 }}>Your best body is in the <span style={{ color: "#63D48C" }}>forecast</span>.</div>
               </div>
             </div>
           )}
@@ -5806,7 +5806,7 @@ export default function App() {
                   <div style={{ fontFamily: DISPLAY, fontSize: 23, fontWeight: 800, color: C.ink }}>How ForkCaster gets its numbers</div>
                   <button onClick={() => setInfoOpen(false)} style={{ background: C.surfaceAlt, border: "none", borderRadius: 18, width: 34, height: 34, fontSize: 17, color: C.ink, cursor: "pointer" }}>×</button>
                 </div>
-                <div style={{ fontSize: 15, color: C.muted, lineHeight: 1.5, marginBottom: 14 }}>Plain answers about what's measured, what's estimated, and how much to trust each number. Everything below runs on your own server — your data never leaves it.</div>
+                <div style={{ fontSize: 15, color: C.muted, lineHeight: 1.5, marginBottom: 12 }}>Plain answers about what's measured, what's estimated, and how much to trust each number. Everything below runs on your own server — your data never leaves it.</div>
                 {[
                   ["Most exact → least exact", [
                     ["Nutrition labels you photograph", "Read digit-for-digit from the label. As exact as the label itself."],
@@ -5833,10 +5833,10 @@ export default function App() {
                     ["Snap labels when you can", "A photographed Nutrition Facts label beats every estimate. The camera reads it exactly."],
                   ]],
                 ].map(([title, rows]) => (
-                  <div key={title} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: C.go, marginBottom: 6 }}>{title}</div>
+                  <div key={title} style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: C.go, marginBottom: 4 }}>{title}</div>
                     {rows.map(([h, b]) => (
-                      <div key={h} style={{ marginBottom: 7 }}>
+                      <div key={h} style={{ marginBottom: 8 }}>
                         <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{h} — </span>
                         <span style={{ fontSize: 15, color: C.muted, lineHeight: 1.5 }}>{b}</span>
                       </div>
@@ -5851,7 +5851,7 @@ export default function App() {
 
         {/* Bottom nav */}
         <div style={{ position: "fixed", bottom: 0, width: "100%", maxWidth: 430, background: C.dark ? "rgba(24,32,41,0.94)" : "rgba(255,255,255,0.94)", backdropFilter: "blur(12px)", borderTop: `1px solid ${C.hair}`, display: "flex", padding: "8px 6px calc(10px + env(safe-area-inset-bottom, 0px))" }}>
-          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => { if (t.id !== tab) { setQuick(null); setQuickVal(""); } setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: _cmp ? "3px 0" : "6px 0", minHeight: _cmp ? 44 : 48 }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 13, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
+          {TABS.map((t) => { const on = tab === t.id; return (<button key={t.id} onClick={() => { if (t.id !== tab) { setQuick(null); setQuickVal(""); } setTab(t.id); }} style={{ flex: 1, background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, padding: _cmp ? "3px 0" : "6px 0", minHeight: _cmp ? 44 : 48 }}>{t.icon(on ? C.go : C.faint)}<span style={{ fontSize: 13, fontWeight: on ? 700 : 500, color: on ? C.go : C.faint }}>{t.label}</span></button>); })}
         </div>
 
         {/* Scan / log food sheet */}
@@ -5868,7 +5868,7 @@ export default function App() {
                 padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,.6)",
                 animation: "fcToastIn .18s cubic-bezier(.2,.7,.3,1)" }}>
               <div style={{ fontSize: 15, lineHeight: 1.45, color: C.ink, marginBottom: 16 }}>{askState.msg}</div>
-              <div style={{ display: "flex", gap: 9 }}>
+              <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => askAnswer(false)}
                   style={{ flex: 1, minHeight: 44, borderRadius: 999, border: `1px solid ${C.hair}`,
                     background: "transparent", color: C.muted, fontFamily: DATA, fontSize: 13,
@@ -5885,7 +5885,7 @@ export default function App() {
           <div onClick={() => setToastMsg(null)}
             style={{ position: "fixed", left: 12, right: 12, bottom: "calc(78px + env(safe-area-inset-bottom, 0px))",
               zIndex: 58, display: "flex", justifyContent: "center", pointerEvents: "auto" }}>
-            <div style={{ maxWidth: 406, width: "100%", display: "flex", alignItems: "flex-start", gap: 10,
+            <div style={{ maxWidth: 406, width: "100%", display: "flex", alignItems: "flex-start", gap: 8,
               background: C.surfaceAlt, border: `1px solid ${toastMsg.tone === "bad" ? C.avoid + "66" : toastMsg.tone === "good" ? C.go + "66" : C.hair}`,
               borderLeft: `3px solid ${toastMsg.tone === "bad" ? C.avoid : toastMsg.tone === "good" ? C.go : C.muted}`,
               borderRadius: 12, padding: "12px 14px", boxShadow: "0 10px 28px rgba(0,0,0,.5)",
@@ -5895,7 +5895,7 @@ export default function App() {
           </div>)}
         {sheetCard && (
           <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 50, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
-            <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 10, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>
+            <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 8, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>
               <button onClick={() => setSheetCard(null)} style={{ width: 30, height: 30, borderRadius: 999, background: C.surfaceAlt, border: "none", color: C.ink2, fontSize: 19, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}>{"‹"}</button>
               <span style={{ fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase", color: sheetCard.color || C.ink }}>{sheetCard.title}</span>
               {(sheetCard.sheetWhen || sheetCard.when) && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 10.5, color: C.faint, letterSpacing: 0.6, textTransform: "uppercase" }}>{sheetCard.sheetWhen || sheetCard.when}</span>}
@@ -5913,7 +5913,7 @@ export default function App() {
 
               {/* live camera scanner (video element lives at app root — shared with Shop Mode) */}
               {camOn && camFor === "log" ? (
-                <div style={{ borderRadius: 12, overflow: "hidden", position: "relative", marginBottom: 14, background: "#000" }}>
+                <div style={{ borderRadius: 12, overflow: "hidden", position: "relative", marginBottom: 12, background: "#000" }}>
                   <canvas ref={camCanvasRef} style={{ width: "100%", height: 240, objectFit: "cover", display: "block", background: "#000" }} />
                   <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
                     <div style={{ width: "72%", height: 90, border: "2.5px solid rgba(99,212,140,0.95)", borderRadius: 12, boxShadow: "0 0 0 2000px rgba(0,0,0,0.35)" }} />
@@ -5922,13 +5922,13 @@ export default function App() {
                   <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: 600, textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>{camHint ? "Struggling? More light, hold 4–8 inches away, keep steady — or type the number below" : "Center the barcode in the box"}</div>
                 </div>
               ) : (
-                <button onClick={startCam} style={{ width: "100%", borderRadius: 12, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "22px 16px", textAlign: "center", marginBottom: 14, cursor: "pointer" }}>
+                <button onClick={startCam} style={{ width: "100%", borderRadius: 12, border: `1.5px dashed ${C.go}88`, background: C.goSoft, padding: "22px 16px", textAlign: "center", marginBottom: 12, cursor: "pointer" }}>
                   <svg width="30" height="30" viewBox="0 0 24 24" fill="none" style={{ margin: "0 auto 8px", display: "block" }}><path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14M21 5v14" stroke={C.go} strokeWidth="1.8" strokeLinecap="round" /></svg>
                   <div style={{ fontFamily: DATA, fontSize: 15, fontWeight: 800, letterSpacing: 1.6, textTransform: "uppercase", color: C.go }}>Scan with camera</div>
-                  <div style={{ fontFamily: BODY, fontSize: 13, color: C.muted, marginTop: 5 }}>Point at any food barcode — or type it below</div>
+                  <div style={{ fontFamily: BODY, fontSize: 13, color: C.muted, marginTop: 4 }}>Point at any food barcode — or type it below</div>
                 </button>
               )}
-              {camErr && <div style={{ fontSize: 13, color: C.avoid, marginTop: -6, marginBottom: 10 }}>{camErr}</div>}
+              {camErr && <div style={{ fontSize: 13, color: C.avoid, marginTop: -6, marginBottom: 8 }}>{camErr}</div>}
 
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                 <input value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") lookupBarcode(barcode); }} placeholder="Barcode number" inputMode="numeric"
@@ -5952,7 +5952,7 @@ export default function App() {
                 <div style={{ marginTop: 8 }}>
                   {foodResults.map((f, i) => (
                     <div key={i} onClick={() => { setScan({ status: "found", food: f }); setFoodResults(null); setFoodQuery(""); }}
-                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.hair}`, marginBottom: 6, cursor: "pointer", background: C.surfaceAlt }}>
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.hair}`, marginBottom: 4, cursor: "pointer", background: C.surfaceAlt }}>
                       <div style={{ minWidth: 0, paddingRight: 10 }}>
                         <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, lineHeight: 1.3, wordBreak: "break-word" }}>{f.name}</div>
                         <div style={{ fontSize: 13, color: C.faint }}>{f.brand || f.source} · per {f.basis}</div>
@@ -5966,17 +5966,17 @@ export default function App() {
                 </div>
               )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 0 14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0 14px" }}>
                 <div style={{ flex: 1, height: 1, background: C.hair }} /><span style={{ fontSize: 13, color: C.faint }}>or</span><div style={{ flex: 1, height: 1, background: C.hair }} />
               </div>
               <input ref={labelRef} type="file" accept="image/*" capture="environment" onChange={(e) => estimateFromPhoto(e, "label")} style={{ display: "none" }} />
-              <button onClick={() => labelRef.current && labelRef.current.click()} disabled={scan.status === "loading"} style={{ width: "100%", marginBottom: 8, background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, opacity: scan.status === "loading" ? 0.6 : 1, boxShadow: `0 4px 14px ${C.go}33` }}>
+              <button onClick={() => labelRef.current && labelRef.current.click()} disabled={scan.status === "loading"} style={{ width: "100%", marginBottom: 8, background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: scan.status === "loading" ? 0.6 : 1, boxShadow: `0 4px 14px ${C.go}33` }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="3" width="14" height="18" rx="2" stroke={C.bg} strokeWidth="1.8" /><path d="M8 8h8M8 12h8M8 16h5" stroke={C.bg} strokeWidth="1.8" strokeLinecap="round" /></svg>
                 {scan.status === "loading" ? "Reading…" : "Photograph a nutrition label"}
               </button>
-              <div style={{ fontSize: 13, color: C.faint, textAlign: "center", marginBottom: 14, lineHeight: 1.45 }}>Read digit-for-digit — as exact as the label itself.</div>
+              <div style={{ fontSize: 13, color: C.faint, textAlign: "center", marginBottom: 12, lineHeight: 1.45 }}>Read digit-for-digit — as exact as the label itself.</div>
               <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={estimateFromPhoto} style={{ display: "none" }} />
-              <button onClick={() => photoRef.current && photoRef.current.click()} disabled={scan.status === "loading"} style={{ width: "100%", marginBottom: 16, background: C.violet, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, opacity: scan.status === "loading" ? 0.6 : 1 }}>
+              <button onClick={() => photoRef.current && photoRef.current.click()} disabled={scan.status === "loading"} style={{ width: "100%", marginBottom: 16, background: C.violet, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: scan.status === "loading" ? 0.6 : 1 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z" stroke={C.bg} strokeWidth="1.8" strokeLinejoin="round" /><circle cx="12" cy="13" r="3.2" stroke={C.bg} strokeWidth="1.8" /></svg>
                 {scan.status === "loading" ? "Analyzing…" : "Estimate a plate from photo (AI)"}
               </button>
@@ -5986,14 +5986,14 @@ export default function App() {
                 <div ref={resultRef} style={{ background: C.goSoft, border: `1px solid ${C.go}44`, borderRadius: 12, padding: 15, marginBottom: 12 }}>
                   <div style={{ fontSize: 17, fontWeight: 700, color: C.ink }}>{scan.food.name}</div>
                   {scan.food.brand && <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>{scan.food.brand}</div>}
-                  <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                     {[["Cal", scan.food.calories], ["Protein", `${scan.food.protein}g`], ["Carbs", `${scan.food.carbs}g`], ["Fat", `${scan.food.fat}g`], ["Fiber", `${scan.food.fiber || 0}g`]].map(([l, v]) => (
                       <div key={l}><div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink }}>{v}</div><div style={{ fontSize: 13, color: C.faint }}>{l}</div></div>
                     ))}
                   </div>
                   <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>per {scan.food.basis} · source: {scan.food.source || "Open Food Facts"}</div>
                   {Array.isArray(scan.food.items) && scan.food.items.length > 0 && (
-                    <div style={{ marginTop: 6 }}>
+                    <div style={{ marginTop: 4 }}>
                       {scan.food.items.map((it, i) => (
                         <div key={i} style={{ fontSize: 13, color: C.faint }}>{it.qty ? `${it.qty} ` : ""}{it.item} — {it.calories} cal</div>
                       ))}
@@ -6023,8 +6023,8 @@ export default function App() {
                 if (!list.length) return null;
                 return (
                   <div key={v}>
-                    <div style={{ fontSize: 13, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>{lbl}{v === "back" ? " · optional" : ""}</div>
-                    <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4, marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>{lbl}{v === "back" ? " · optional" : ""}</div>
+                    <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4, marginBottom: 12 }}>
                       {v === "back" && <button onClick={() => setSimSelBack(-1)} style={{ width: 48, height: 64, flexShrink: 0, borderRadius: 8, background: C.surfaceAlt, color: sel === -1 ? C.violet : C.faint, border: `2px solid ${sel === -1 ? C.violet : "transparent"}`, fontSize: 11.5, cursor: "pointer" }}>none</button>}
                       {list.map(({ p, i }) => (
                         <img key={p.id || i} src={p.url} onClick={() => setSel(i)} alt="" style={{ width: 48, height: 64, objectFit: "cover", borderRadius: 8, flexShrink: 0, cursor: "pointer", border: `2px solid ${i === sel ? C.violet : "transparent"}`, opacity: i === sel ? 1 : 0.6 }} />
@@ -6044,15 +6044,15 @@ export default function App() {
                 return (
                   <div>
                     {rows.map(([lbl, src, shot]) => (
-                      <div key={lbl} style={{ marginBottom: 10 }}>
+                      <div key={lbl} style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 13, color: C.faint, marginBottom: 4, fontWeight: 700, letterSpacing: 0.6 }}>{lbl.toUpperCase()}</div>
-                        <div style={{ display: "flex", gap: 10 }}>
+                        <div style={{ display: "flex", gap: 8 }}>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, color: C.muted, marginBottom: 5, fontWeight: 600 }}>Now</div>
+                            <div style={{ fontSize: 13, color: C.muted, marginBottom: 4, fontWeight: 600 }}>Now</div>
                             <div style={{ aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1px solid ${C.hair}` }}>{src && <img src={src.url} alt="Now" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}</div>
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, color: C.violet, marginBottom: 5, fontWeight: 600 }}>At goal · AI preview</div>
+                            <div style={{ fontSize: 13, color: C.violet, marginBottom: 4, fontWeight: 600 }}>At goal · AI preview</div>
                             <div style={{ position: "relative", aspectRatio: "3/4", borderRadius: 12, overflow: "hidden", background: C.surfaceAlt, border: `1.5px solid ${C.violet}66` }}>
                               {shot ? <img src={shot.url} alt="Goal" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: C.faint, fontSize: 13, padding: 12, textAlign: "center" }}>{simBusy ? "Forecasting… ≈15s" : "No forecast yet"}</div>}
                               {shot && <button onClick={() => deleteSim(simShots.indexOf(shot))} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: 12, background: "rgba(14,20,26,0.72)", color: "#fff", border: "none", fontSize: 15, cursor: "pointer" }}>✕</button>}
@@ -6073,13 +6073,13 @@ export default function App() {
         {settingsOpen && (
           <div onClick={() => setSettingsOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderRadius: "22px 22px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <div style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, color: C.ink }}>Settings</div>
                 <button onClick={() => setSettingsOpen(false)} style={{ background: C.surfaceAlt, border: "none", width: 30, height: 30, borderRadius: 999, color: C.muted, fontSize: 17, cursor: "pointer" }}>✕</button>
               </div>
 
               {sectionTitle("Theme")}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 22 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 24 }}>
                 {Object.entries(THEMES).map(([k, t]) => {
                   const on = theme === k;
                   return (
@@ -6096,7 +6096,7 @@ export default function App() {
               </div>
 
               {sectionTitle("Goal mode")}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
                 {Object.entries(MODES).map(([k, m]) => {
                   const on = mode === k;
                   return (
@@ -6109,23 +6109,23 @@ export default function App() {
               </div>
 
               {sectionTitle("Allergies")}
-              <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 10, lineHeight: 1.4 }}>Tap to flag. ForkCaster will never suggest a food that contains these.</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 8, lineHeight: 1.4 }}>Tap to flag. ForkCaster will never suggest a food that contains these.</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                 {ALLERGENS.map((a) => {
                   const on = allergies.includes(a);
                   return (
-                    <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 18, cursor: "pointer", fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", border: `1px solid ${on ? C.avoid : C.hair}`, background: on ? C.avoid : C.surface, color: on ? "#fff" : C.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                    <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 18, cursor: "pointer", fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", border: `1px solid ${on ? C.avoid : C.hair}`, background: on ? C.avoid : C.surface, color: on ? "#fff" : C.muted, display: "flex", alignItems: "center", gap: 4 }}>
                       {on && <span style={{ fontSize: 13 }}>✕</span>}{a}
                     </button>
                   );
                 })}
                 {allergies.filter((a) => !ALLERGENS.includes(a)).map((a) => (
-                  <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 18, cursor: "pointer", fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", border: `1px solid ${C.avoid}`, background: C.avoid, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                  <button key={a} onClick={() => toggleIn(allergies, setAllergies, a)} style={{ padding: "8px 13px", borderRadius: 18, cursor: "pointer", fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 0.7, textTransform: "uppercase", border: `1px solid ${C.avoid}`, background: C.avoid, color: "#fff", display: "flex", alignItems: "center", gap: 4 }}>
                     <span style={{ fontSize: 13 }}>✕</span>{a}
                   </button>
                 ))}
               </div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 20, marginTop: -10 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 16, marginTop: -10 }}>
                 <input value={customAllergy} onChange={(e) => setCustomAllergy(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} placeholder="Add another allergy (e.g. mustard, avocado)"
                   style={{ flex: 1, fontFamily: BODY, fontSize: 15, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "10px 12px", outline: "none" }} />
                 <button onClick={() => { if (customAllergy.trim()) { toggleIn(allergies, setAllergies, customAllergy.trim()); setCustomAllergy(""); } }} style={{ background: "transparent", color: C.avoid, border: `1px solid ${C.avoid}66`, borderRadius: 999, padding: "0 15px", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Add</button>
@@ -6142,7 +6142,7 @@ export default function App() {
               </div>
               <div style={{ fontSize: 13, color: C.faint, marginTop: 12, lineHeight: 1.4 }}>Switching goal mode resets today's targets to that preset. Allergy filtering applies to every meal suggestion and the coach.</div>
 
-              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("Preferences")}
                 {(() => {
                   const row = (label, control) => (
@@ -6165,8 +6165,8 @@ export default function App() {
                       {row("Card density", sel(prefs.compact ? "compact" : "comfortable", [["comfortable", "Comfortable"], ["compact", "Compact"]], (v) => setPrefs({ ...prefs, compact: v === "compact" })))}
                       {(P.shiftMode === "nights" || P.shiftMode === "varies") && row("Night day rolls at", sel(String(P.nightRollHour == null ? 11 : P.nightRollHour), [["9", "9 AM"], ["10", "10 AM"], ["11", "11 AM"], ["12", "Noon"], ["13", "1 PM"], ["14", "2 PM"]], (v) => set("nightRollHour")(+v)))}
                       {P.shiftMode === "varies" && <div style={{ margin: "10px 0 4px" }}>
-                        <div style={{ fontSize: 13, color: C.muted, marginBottom: 7 }}>Tap the nights you work — everything else behaves like a normal day.</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5 }}>
+                        <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Tap the nights you work — everything else behaves like a normal day.</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
                           {Array.from({ length: 14 }, (_, i) => { const t = new Date(); t.setDate(t.getDate() - 2 + i); const iso = t.toLocaleDateString("sv-SE"); const on = (P.workNights || []).includes(iso); return (
                             <button key={iso} onClick={() => { const cur = P.workNights || []; const keepFrom = (() => { const q = new Date(); q.setDate(q.getDate() - 30); return q.toLocaleDateString("sv-SE"); })(); set("workNights")((on ? cur.filter((x) => x !== iso) : [...cur, iso]).filter((x) => x >= keepFrom).sort()); }} style={{ padding: "8px 0", borderRadius: 8, border: `1.5px solid ${on ? C.violet : C.hair}`, background: on ? C.violet : C.surfaceAlt, color: on ? "#fff" : C.muted, fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 0.8, textTransform: "uppercase", cursor: "pointer" }}>
                               <div>{t.toLocaleDateString([], { weekday: "short" }).slice(0, 2)}</div><div style={{ fontSize: 15 }}>{t.getDate()}</div>
@@ -6193,21 +6193,21 @@ export default function App() {
                       {row("Score refresh (hours)", num(P.rankCacheHours, set("rankCacheHours"), 64, 0.5))}
                       {row("Injections per site per cycle", num(P.sitePerCycle || 1, set("sitePerCycle"), 64, 1))}
                       {row("Reminder hour (0-23)", num(P.reminderHour == null ? 9 : P.reminderHour, set("reminderHour"), 64, 1))}
-                      <div style={{ fontSize: 13, color: C.faint, marginTop: 10, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
+                      <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>Changes save automatically and apply immediately. Haiku costs ~10x less per coach chat and venue ranking.</div>
                     </div>
                   );
                 })()}
               </div>
 
-              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("API keys")}
-                <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 10, lineHeight: 1.45 }}>
+                <div style={{ fontSize: 13, color: C.muted, marginTop: -4, marginBottom: 8, lineHeight: 1.45 }}>
                   Saved to secrets.json on your node — never leaves your hardware. Anthropic: <b style={{ color: keyStatus && keyStatus.anthropic ? C.go : C.avoid }}>{keyStatus ? (keyStatus.anthropic ? `set ${keyStatus.anthropicTail}` : "not set") : "…"}</b> · Google Places: <b style={{ color: keyStatus && keyStatus.places ? C.go : C.avoid }}>{keyStatus ? (keyStatus.places ? `set ${keyStatus.placesTail}` : "not set") : "…"}</b> · FatSecret: <b style={{ color: keyStatus && keyStatus.fatsecret ? C.go : C.avoid }}>{keyStatus ? (keyStatus.fatsecret ? "set" : "not set") : "…"}</b> · USDA: <b style={{ color: keyStatus && keyStatus.usda ? C.go : C.muted }}>{keyStatus ? (keyStatus.usda ? "set" : "DEMO_KEY") : "…"}</b>
                 </div>
                 <input value={keyIn.a} onChange={(e) => setKeyIn({ ...keyIn, a: e.target.value })} placeholder="Anthropic key (sk-ant-…)" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 8 }} />
-                <input value={keyIn.g} onChange={(e) => setKeyIn({ ...keyIn, g: e.target.value })} placeholder="Google Places key (AIza…) — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 10 }} />
+                <input value={keyIn.g} onChange={(e) => setKeyIn({ ...keyIn, g: e.target.value })} placeholder="Google Places key (AIza…) — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 8 }} />
                 <input value={keyIn.fi} onChange={(e) => setKeyIn({ ...keyIn, fi: e.target.value })} placeholder="FatSecret Client ID — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 8 }} />
-                <input value={keyIn.fs} onChange={(e) => setKeyIn({ ...keyIn, fs: e.target.value })} placeholder="FatSecret Client Secret — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 10 }} />
+                <input value={keyIn.fs} onChange={(e) => setKeyIn({ ...keyIn, fs: e.target.value })} placeholder="FatSecret Client Secret — optional" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 8 }} />
                 <input value={keyIn.gm} onChange={(e) => setKeyIn({ ...keyIn, gm: e.target.value })} placeholder="Google AI (Gemini) key — for goal body simulation" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginTop: 8, marginBottom: 8 }} />
                 <input value={keyIn.yt || ""} onChange={(e) => setKeyIn({ ...keyIn, yt: e.target.value })} placeholder="YouTube Data API key (optional) — short exercise demo clips" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 8 }} />
                 <input value={keyIn.sp || ""} onChange={(e) => setKeyIn({ ...keyIn, sp: e.target.value })} placeholder="Spoonacular key (optional) — recipe discovery for the Plan tab" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={{ width: "100%", boxSizing: "border-box", background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "11px 12px", color: C.ink, fontFamily: BODY, fontSize: 15, marginBottom: 8 }} />
@@ -6219,10 +6219,10 @@ export default function App() {
                 {keyMsg && <div style={{ fontSize: 13, color: keyMsg.includes("✓") ? C.go : C.muted, marginTop: 8 }}>{keyMsg}</div>}
               </div>
 
-              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
                 {sectionTitle("Danger zone")}
                 {sectionTitle("Reminders")}
-                <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", marginBottom: 6, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
+                <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", marginBottom: 4, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
                 <div style={{ fontSize: 13, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>Fires at your reminder hour on dose day with the suggested site. iPhone: add ForkCaster to the Home Screen first (Share → Add to Home Screen).</div>
                 {sectionTitle("Export & backup")}
                 <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "13px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", marginBottom: 8 }}>Export PDF report — for your prescriber</button>
@@ -6233,7 +6233,7 @@ export default function App() {
                 <div style={{ fontSize: 13, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>The PDF is a clean, organized report (doses &amp; sites, weight, side effects, nutrition) you can email or AirDrop to your care team. JSON is the full-fidelity backup for restore.</div>
                 <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 12, padding: "11px 12px" }}>
                   <div style={{ fontSize: 15, color: C.ink, fontWeight: 700 }}>Restore a previous save</div>
-                  <div style={{ fontSize: 13, color: C.faint, marginTop: 3, lineHeight: 1.45 }}>Your node keeps recent snapshots of your data. If a save ever comes back emptier than it should, restore the one before it.</div>
+                  <div style={{ fontSize: 13, color: C.faint, marginTop: 2, lineHeight: 1.45 }}>Your node keeps recent snapshots of your data. If a save ever comes back emptier than it should, restore the one before it.</div>
                   <button onClick={async () => { try { const d = await fetch("/api/state/backups").then((r) => r.json()); setBackups(d.backups || []); } catch { setBackups([]); } }}
                     style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "8px 12px", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Show snapshots</button>
                   {backups && backups.map((b) => (
@@ -6251,7 +6251,7 @@ export default function App() {
                 {prefs.hideHealthCard && <button onClick={() => setPrefs({ ...prefs, hideHealthCard: false })} style={{ width: "100%", marginBottom: 12, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Show the Apple Health card again</button>}
                 <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 12, padding: "11px 12px" }}>
                   <div style={{ fontSize: 15, color: C.ink, fontWeight: 700 }}>Images on your node</div>
-                  <div style={{ fontSize: 13, color: C.muted, marginTop: 3 }}>{photoUsage ? (photoUsage.count == null ? "storage unreadable — check the node" : `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB`) : "checking…"}</div>
+                  <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{photoUsage ? (photoUsage.count == null ? "storage unreadable — check the node" : `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB`) : "checking…"}</div>
                   <button onClick={async () => {
                     try {
                       const keep = (stateBlob.match(/\/api\/photo\/[A-Za-z0-9._-]+/g) || []);
@@ -6260,11 +6260,11 @@ export default function App() {
                       toast(r.deleted ? `Removed ${r.deleted} unreferenced image${r.deleted === 1 ? "" : "s"} (${Math.round((r.freed || 0) / 1024)} KB freed).` : "Nothing to sweep — every image on the node is still in use.", "info");
                     } catch { toast("Sweep failed.", "bad"); }
                   }} style={{ marginTop: 8, background: "none", border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "8px 12px", fontFamily: DATA, fontSize: 11.5, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Sweep orphaned images</button>
-                  <div style={{ fontSize: 13, color: C.faint, marginTop: 6 }}>Deletes only images the app no longer references — photos, comparisons and forecasts in use are kept.</div>
+                  <div style={{ fontSize: 13, color: C.faint, marginTop: 4 }}>Deletes only images the app no longer references — photos, comparisons and forecasts in use are kept.</div>
                 </div>
                 <button onClick={async () => { if ((await askConfirm("Reset ALL ForkCaster data on your node? Weight, meals, GLP-1 logs, settings — AND every progress photo and forecast image stored on the node. This cannot be undone.", true))) { hydrated.current = false; try { await fetch("/api/state?photos=1", { method: "DELETE" }); } catch {} window.location.reload(); } }} style={{ width: "100%", background: "none", color: C.avoid, border: `1.5px solid ${C.avoid}66`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer" }}>Reset all data — start fresh</button>
               </div>
-              <div style={{ textAlign: "center", fontSize: 13, color: C.faint, marginTop: 18 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
+              <div style={{ textAlign: "center", fontSize: 13, color: C.faint, marginTop: 16 }}>ForkCaster {appVer ? `v${appVer}` : ""}</div>
             </div>
           </div>
         )}
@@ -6407,7 +6407,7 @@ export function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
   const { HL_DAYS, hl, ke, ka, doses, now, start, end, declared, gaps, cadence, lastDose, dueT, firstT, virtual, mk, level, levelProj, ssVirtual, ssLevel, ssPeak, maxL, ssPct, climbing, tPeakH, lastPeakT, absorbing, absPeakPct, absDays, nextDoseT, slots, futDoses, tCursor, seq, ghosts, fullSeq, steadyIdx, fnAll, nLedger, PER, scrolls, W, H, PADB, xi, y, cycLen, cyc, nowIdx0, refPeak, vsPeak, nowFrac, nowX, nowY, nowLabY, pkRawY, pkLabY, ptsSeq, before, after, ghostPts, pt, nowPt, ghost, past, fut, nextPct, nextVsPeak, nextDoseIdx } = M;
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, gap: 8 }}>
         <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.6, whiteSpace: "nowrap" }}>Estimated med level</div>
         <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1, color: C.violet, background: C.violet + "22", border: `1px solid ${C.violet}66`, borderRadius: 999, padding: "5px 12px", whiteSpace: "nowrap", flexShrink: 0 }}>{absorbing ? "ABSORBING" : climbing ? "CLIMBING" : "STEADY"} · {vsPeak}%</div>
       </div>
@@ -6438,31 +6438,31 @@ export function MedLevelChart({ C, doseLog, med, dueISO, intervalDays }) {
       {/* v0.9.120: the numbers live here, not in the plot. A label placed at the peak's own height
           collides with the steady-state line by definition once the peak approaches it — which is
           exactly what climbing toward steady state means. Out here they cannot collide with anything. */}
-      <div style={{ display: "flex", gap: 9, marginTop: 11 }}>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Now</div>
-          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 3, color: C.violet }}>{vsPeak}%</div>
+          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 2, color: C.violet }}>{vsPeak}%</div>
         </div>
         {absorbing && cyc[nowIdx] && <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Peaks</div>
-          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 3, color: C.ink }}>~{Math.round((cyc[nowIdx].pkL / Math.max(refPeak, 1e-9)) * 100)}%</div>
+          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 2, color: C.ink }}>~{Math.round((cyc[nowIdx].pkL / Math.max(refPeak, 1e-9)) * 100)}%</div>
         </div>}
         {nextVsPeak != null && <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Next dose</div>
-          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 3, color: C.ink }}>~{nextVsPeak}%</div>
+          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 2, color: C.ink }}>~{nextVsPeak}%</div>
         </div>}
         {steadyIdx >= 0 && <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>Steady</div>
-          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 3, color: C.go }}>D{steadyIdx + 1}</div>
+          <div style={{ fontFamily: DATA, fontSize: 17, fontWeight: 700, marginTop: 2, color: C.go }}>D{steadyIdx + 1}</div>
         </div>}
       </div>
-      <div style={{ display: "flex", gap: 13, flexWrap: "wrap", marginTop: 10, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 8, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
         {[["Logged", C.violet, false], ["Planned", C.violet, true], ["Steady state", C.go, true]].map(([l, col, dash]) => (
-          <span key={l} style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.7, textTransform: "uppercase", color: C.muted, display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span key={l} style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.7, textTransform: "uppercase", color: C.muted, display: "inline-flex", alignItems: "center", gap: 4 }}>
             <svg width="16" height="4"><line x1="0" y1="2" x2="16" y2="2" stroke={col} strokeWidth="2" strokeDasharray={dash ? "3 2" : undefined} opacity={dash ? 0.6 : 1} /></svg>{l}</span>))}
       </div>
       {scrolls && <div style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 1, color: C.faint, marginTop: 4, textAlign: "right" }}>← SCROLL TO REVIEW EVERY DOSE</div>}
-      <div style={{ fontSize: 11.5, color: C.faint, marginTop: 6, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses — solid is logged, dashed is planned. Each dose lands on the remains of the last, so the troughs climb; that climb is why the same dose feels stronger in week 4 than week 1. Steady state is the highest of your peak levels this dose and schedule will produce. Informational only — not medical advice.</div>
+      <div style={{ fontSize: 11.5, color: C.faint, marginTop: 4, lineHeight: 1.4 }}>Simple decay model from published half-life ({hl}d{med === "retatrutide" ? ", trial estimate" : ""}) and your logged doses — solid is logged, dashed is planned. Each dose lands on the remains of the last, so the troughs climb; that climb is why the same dose feels stronger in week 4 than week 1. Steady state is the highest of your peak levels this dose and schedule will produce. Informational only — not medical advice.</div>
     </div>
   );
 }
@@ -6490,7 +6490,7 @@ function SymptomPatterns({ C, sideEffects, doseLog }) {
   return (
     <div>
       <div style={{ fontSize: 13, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Symptom patterns</div>
-      {lines.map((l) => <div key={l.sym} style={{ fontSize: 15, color: C.ink2, lineHeight: 1.5, marginBottom: 6 }}>{"\u2022"} {l.text}</div>)}
+      {lines.map((l) => <div key={l.sym} style={{ fontSize: 15, color: C.ink2, lineHeight: 1.5, marginBottom: 4 }}>{"\u2022"} {l.text}</div>)}
       <div style={{ fontSize: 11.5, color: C.faint, marginTop: 4 }}>Computed from your logs {"—"} worth mentioning to your prescriber if a pattern is disruptive.</div>
     </div>
   );
@@ -6533,7 +6533,7 @@ function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, 
         {kpi(String(doses), doses ? "dose logged" : "no dose this week", doses ? C.violet : C.muted)}
         {kpi(String(ses.length), ses.length === 1 ? "side effect" : "side effects", ses.length ? C.caution : C.go)}
       </div>
-      <div style={{ fontSize: 11.5, color: C.faint, marginTop: 7 }}>{loggedDays}/7 days with food logged · adherence = average of daily protein vs goal</div>
+      <div style={{ fontSize: 11.5, color: C.faint, marginTop: 8 }}>{loggedDays}/7 days with food logged · adherence = average of daily protein vs goal</div>
       {(() => {
         const wl = weightLog || [];
         if (wl.length < 3 || !goalLbs) return null;
@@ -6542,12 +6542,12 @@ function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, 
         const days = Math.max(1, (tN - t0) / 86400000);
         const slope = (recent[recent.length - 1].lbs - recent[0].lbs) / days;
         const cur = wl[wl.length - 1].lbs;
-        if (slope >= -0.01) return <div style={{ fontSize: 13, color: C.faint, marginTop: 6 }}>Goal ETA: needs a downward trend to project.</div>;
+        if (slope >= -0.01) return <div style={{ fontSize: 13, color: C.faint, marginTop: 4 }}>Goal ETA: needs a downward trend to project.</div>;
         const daysTo = Math.round((cur - goalLbs) / -slope);
-        if (daysTo <= 0) return <div style={{ fontSize: 13, color: C.go, marginTop: 6, fontWeight: 700 }}>You’re at (or past) goal — maintenance mode.</div>;
+        if (daysTo <= 0) return <div style={{ fontSize: 13, color: C.go, marginTop: 4, fontWeight: 700 }}>You’re at (or past) goal — maintenance mode.</div>;
         if (daysTo > 900) return null;
         const eta = new Date(); eta.setDate(eta.getDate() + daysTo);
-        return <div style={{ fontSize: 13, color: C.ink2, marginTop: 6 }}><b style={{ color: C.go }}>{fmtW(goalLbs, 0)} {unit} ≈ {eta.toLocaleDateString("en-US", { month: "short", day: "numeric", year: eta.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined })}</b> at your recent pace · pace varies, this will shift</div>;
+        return <div style={{ fontSize: 13, color: C.ink2, marginTop: 4 }}><b style={{ color: C.go }}>{fmtW(goalLbs, 0)} {unit} ≈ {eta.toLocaleDateString("en-US", { month: "short", day: "numeric", year: eta.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined })}</b> at your recent pace · pace varies, this will shift</div>;
       })()}
       {(() => {
         const wl = weightLog || [];
@@ -6555,7 +6555,7 @@ function WeeklyCard({ C, mealLog, weightLog, doseLog, sideEffects, proteinGoal, 
         const lost = wl[0].lbs - wl[wl.length - 1].lbs;
         const hit = [100, 75, 50, 25, 10].find((m) => lost >= m);
         if (!hit) return null;
-        return <button onClick={() => onShareMilestone && onShareMilestone(hit, lost)} style={{ width: "100%", marginTop: 10, background: "none", color: C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "11px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Share your −{hit} {unit} milestone →</button>;
+        return <button onClick={() => onShareMilestone && onShareMilestone(hit, lost)} style={{ width: "100%", marginTop: 8, background: "none", color: C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "11px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Share your −{hit} {unit} milestone →</button>;
       })()}
     </div>
   );
@@ -6681,7 +6681,7 @@ export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPend
       <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, letterSpacing: 1.6, textTransform: "uppercase",  fontSize: 13, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>
         Injection site — rotate{pendingSite ? <span style={{ textTransform: "none", color: C.violet }}> · next dose: {pendingSite}{pendingSite.startsWith("Arm") ? " (back of arm)" : ""}</span> : null}
       </div>
-      <div style={{ fontSize: 13, color: C.faint, marginBottom: 6 }}>Cycle {cycleLogged}/{cyc} · {perSite} per site · resets when every site is used</div>
+      <div style={{ fontSize: 13, color: C.faint, marginBottom: 4 }}>Cycle {cycleLogged}/{cyc} · {perSite} per site · resets when every site is used</div>
       <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: 240, margin: "0 auto" }}>
         <g fontWeight="700" fontSize="9">
           <text x="26" y="14" fill={C.muted} textAnchor="middle">R</text>
@@ -6759,14 +6759,14 @@ const pillIc = (color, s = 12) => (
           if (d == null) return <div key={i} />;
           const di = iso(d), lg = logged(di), due = di === dueISO, today = di === todayIso;
           return (
-            <div key={i} onClick={() => { if (lg && onRemove) onRemove(di); }} style={{ height: 36, cursor: lg ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1, borderRadius: 8, margin: "0 2px", border: due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: lg ? C.goSoft : "transparent" }}>
+            <div key={i} onClick={() => { if (lg && onRemove) onRemove(di); }} style={{ height: 36, cursor: lg ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 8, margin: "0 2px", border: due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: lg ? C.goSoft : "transparent" }}>
               <span style={{ fontSize: 13, fontWeight: today || due || lg ? 800 : 500, color: lg ? C.go : due ? C.violet : today ? C.ink : C.muted }}>{d}</span>
               {lg ? (pill ? pillIc(C.go) : syr(C.go)) : due ? <span style={{ fontSize: 10.5, color: C.violet, fontWeight: 800, letterSpacing: 0.5 }}>DUE</span> : <span style={{ height: 11 }} />}
             </div>
           );
         })}
       </div>
-      <div style={{ display: "flex", gap: 14, justifyContent: "center", marginTop: 10, fontSize: 11.5, color: C.faint, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 8, fontSize: 11.5, color: C.faint, alignItems: "center" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}>{pill ? pillIc(C.go, 10) : syr(C.go, 10)} dose logged</span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 4, border: `1.5px dashed ${C.violet}`, display: "inline-block" }} /> due</span>
         <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 4, border: `1.5px solid ${C.go}88`, display: "inline-block" }} /> today</span>
@@ -6962,7 +6962,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea, prefs }
   return (
     <div style={{ position: "relative", height: 280, borderRadius: 18, overflow: "hidden", border: `1px solid ${C.hair}`, isolation: "isolate", zIndex: 0 }}>
       <div ref={ref} style={{ position: "absolute", inset: 0, background: S.dark ? "#11181f" : "#e8ecef" }} />
-      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 800, background: pillBg, borderRadius: 18, padding: "4px 11px", fontSize: 13, fontWeight: 600, color: pillInk, display: "flex", gap: 5, alignItems: "center", pointerEvents: "none" }}>
+      <div style={{ position: "absolute", top: 10, left: 10, zIndex: 800, background: pillBg, borderRadius: 18, padding: "4px 11px", fontSize: 13, fontWeight: 600, color: pillInk, display: "flex", gap: 4, alignItems: "center", pointerEvents: "none" }}>
         <span style={{ width: 7, height: 7, borderRadius: 999, background: C.go }} /> {geo.status === "ok" ? `${restaurants.length === 0 ? "No spots here" : `${restaurants.length} spots`}${geo.live && geo.ts ? ` · fix ${Math.max(0, Math.round((Date.now() - geo.ts) / 1000))}s ago` : geo.manual ? " · pinned" : ""}` : "Demo area"}
       </div>
       <div style={{ position: "absolute", top: 10, right: 10, zIndex: 800, display: "flex", gap: 4, background: pillBg, borderRadius: 18, padding: 3 }}>

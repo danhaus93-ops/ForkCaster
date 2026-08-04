@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.169"
+version: "0.9.170"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The icon buttons — map controls and the like — were left out of the last fix by
-  mistake, so they were still hard to hit. They now get the same enlarged tap area as
-  everything else.
+  Spacing between things is consistent now — the app was using twenty slightly
+  different gaps where seven do the job. Most cards get a touch tighter; nothing
+  moved by more than a couple of pixels.
 dependencies: []
 path: ""
 defaultUsername: ""

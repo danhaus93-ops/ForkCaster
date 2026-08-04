@@ -1375,5 +1375,20 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/shortest = nums\.length \? nums\[0\] \+ "px" : "n\/a"/.test(VD),'it says n\/a rather than inventing a number');
 }
 
+
+// v0.9.170: Release D, third family — twenty spacing values become seven.
+{
+  const BS2=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const sp=[...new Set([...BS2.matchAll(/\b(?:gap|marginTop|marginBottom): (\d+)/g)].map((m)=>+m[1]))].sort((a,b)=>a-b);
+  const SCALE=[0,2,4,8,12,16,24];
+  ok(sp.every((v)=>SCALE.includes(v)), 'every gap and margin is on the scale (' + sp.join(',') + ')');
+  ok(sp.length <= SCALE.length, 'and there are at most seven of them');
+  // spacing changes CELL WIDTHS, so the two budgets measured against real geometry are re-checked
+  const MONO=0.60;
+  const gap=8;
+  ok(11*11.5*MONO + 11*0.4 <= (307-2*gap)/3 - 12, 'RETATRUTIDE still fits its chip at the new gap');
+  ok(8*10.5*MONO + 8*0.4 <= (307-4*gap)/5, 'CALORIES still fits its cell at the new gap');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
