@@ -3257,6 +3257,23 @@ export default function App() {
   // Tapping opens the FULL card in a sheet, and the sheet renders the very same children the
   // comfortable card renders, so the detail can never drift from the card it summarises.
   // v0.9.105: one sparkline helper for every collapsed row — same shape, same rules.
+  const _bars = (vals, col, goal) => {
+    const v = (vals || []).map((x) => (Number.isFinite(x) ? x : 0));
+    if (!v.length) return null;
+    const hi = Math.max(...v, goal || 0) || 1;
+    const n = v.length, gap = n > 10 ? 1.5 : 3;
+    const w = (92 - gap * (n - 1)) / n;
+    return (
+      <svg width="92" height="32" viewBox="0 0 92 32">
+        {goal ? <line x1="0" y1={(32 - (goal / hi) * 28).toFixed(1)} x2="92" y2={(32 - (goal / hi) * 28).toFixed(1)}
+          stroke={col} strokeWidth="1" strokeDasharray="2 3" opacity="0.45" /> : null}
+        {v.map((n2, i) => {
+          const h = Math.max(1.5, (n2 / hi) * 28);
+          return <rect key={i} x={(i * (w + gap)).toFixed(1)} y={(32 - h).toFixed(1)} width={w.toFixed(1)}
+            height={h.toFixed(1)} rx={Math.min(1.5, w / 2)} fill={col} opacity={n2 ? (i === n - 1 ? 1 : 0.62) : 0.18} />;
+        })}
+      </svg>);
+  };
   const _spark = (vals, col, band) => { const v = (vals || []).filter((x) => Number.isFinite(x));
     if (v.length < 2) return null;
     const lo = Math.min(...v), hi = Math.max(...v), pad = (hi - lo) * 0.25 || 1;
@@ -5707,6 +5724,43 @@ export default function App() {
                 </div>
               ) : (
                 <div>
+                  {/* v0.9.187: steps are a daily COUNT, so they get bars. A line between daily
+                      totals implies the value moved between the points, which it did not — this is
+                      why Health draws bars here and a line for weight. Today is full opacity, the
+                      rest dimmed, and a dashed rule marks the goal when one is set. */}
+                  {wk.length > 0 && (() => {
+                    const vals = wk.map((d) => +d.steps || 0);
+                    const goal = +prefs.stepGoal || 0;
+                    const hi = Math.max(...vals, goal) || 1;
+                    const dayL = ["S", "M", "T", "W", "T", "F", "S"];
+                    return (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 92 }}>
+                          {vals.map((v, i2) => {
+                            const h = Math.max(3, (v / hi) * 88);
+                            const last = i2 === vals.length - 1;
+                            return (
+                              <div key={i2} style={{ flex: 1, display: "flex", flexDirection: "column",
+                                alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+                                <span style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginBottom: 4 }}>
+                                  {v >= 1000 ? (v / 1000).toFixed(1) + "k" : v || ""}</span>
+                                <div style={{ width: "100%", height: h, borderRadius: 4,
+                                  background: CHART.ah, opacity: v ? (last ? 1 : 0.55) : 0.15 }} />
+                              </div>);
+                          })}
+                        </div>
+                        <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                          {vals.map((v, i2) => (
+                            <span key={i2} style={{ flex: 1, textAlign: "center", fontFamily: DATA,
+                              fontSize: 10.5, color: i2 === vals.length - 1 ? C.ink : C.faint }}>
+                              {dayL[(new Date(wk[i2].date + "T12:00:00").getDay())]}</span>))}
+                        </div>
+                        {goal ? (
+                          <div style={{ fontFamily: DATA, fontSize: 10.5, color: C.faint, marginTop: 8 }}>
+                            goal {goal.toLocaleString()} · {vals.filter((v) => v >= goal).length} of {vals.length} days met
+                          </div>) : null}
+                      </div>);
+                  })()}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {(() => { const lastBf = [...hd].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd].reverse().find((d) => d.leanMassLbs != null || (d.bodyFatPct != null && d.weightLbs != null));
                       const lmVal = lastLm ? (lastLm.leanMassLbs != null ? +lastLm.leanMassLbs : Math.round(lastLm.weightLbs * (1 - lastLm.bodyFatPct / 100) * 10) / 10) : null;
@@ -5735,7 +5789,7 @@ export default function App() {
                 value: avgSteps ? avgSteps.toLocaleString() : "—", unit: "avg steps/day",
                 sub: [lastW ? `${fmtWt(lastW.weightLbs, 1)} ${wtU} last synced` : null,
                       `${strengthWk}× strength this week`, _label].filter(Boolean).join(" · "),
-                spark: _spark(wk.map((d) => +d.steps || 0), CHART.ah) }; })());
+                spark: _bars(wk.map((d) => +d.steps || 0), CHART.ah, +prefs.stepGoal || 0) }; })());
           })()}{(() => {
           /* v0.9.186: when NEITHER engine can read yet, they collapse to one row. Two cards whose
              only content is "not ready" cost two of eleven rows to say the same thing twice. The

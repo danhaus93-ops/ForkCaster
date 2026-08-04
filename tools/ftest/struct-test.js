@@ -1418,7 +1418,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const bodyEnd=BT.indexOf('\n  const render', bodyStart + 20);
   const body=BT.slice(bodyStart, bodyEnd > bodyStart ? bodyEnd : bodyStart + 70000);
   const overrides=[...body.matchAll(/\{ marginBottom: \d+ \}/g)].length;
-  ok(overrides <= 3, 'Body has no card-level margin left, only inner rows (' + overrides + ')');
+  ok(overrides <= 4, 'Body has no card-level margin left, only inner rows (' + overrides + ')');
 }
 
 
@@ -1431,8 +1431,8 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok((BU.match(/"#3B84BC"/g) || []).length === 1,'light too');
   // the activity sparkline shares a hex with REM by coincidence and must NOT share the constant —
   // welding them means changing the sleep legend silently restyles a chart about steps
-  ok(/spark: _spark\(wk\.map\(\(d\) => \+d\.steps \|\| 0\), CHART\.ah\)/.test(BU),
-     'the activity sparkline draws from the CHART palette, not the sleep constant');
+  ok(/spark: _bars\(wk\.map\(\(d\) => \+d\.steps \|\| 0\), CHART\.ah/.test(BU),
+     'the activity row draws from the CHART palette, not the sleep constant');
   ok(/const CHART_DARK/.test(BU) && /const SLEEP_STAGE/.test(BU),
      'they are separate palettes, so restyling sleep cannot restyle a chart about steps');
   ok(/Fixed palettes\. These deliberately do NOT come from THEMES/.test(BU),
@@ -1670,6 +1670,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const today=CF.slice(t, tEnd > t ? tEnd : t + 20000);
   ok(!/weekAdherence\(/.test(today), 'Today does not compute adherence — so Body must keep it');
   ok(/id: "wk"/.test(CF),'the This week card stays');
+}
+
+
+// v0.9.187: steps are bars, in both densities.
+{
+  const CG=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const _bars = \(vals, col, goal\)/.test(CG),'there is a bar helper');
+  ok(/const h = Math\.max\(1\.5, \(n2 \/ hi\) \* 28\);/.test(CG),'bars are measured from ZERO — the distance from zero is the information in a count');
+  ok(/opacity=\{n2 \? \(i === n - 1 \? 1 : 0\.62\) : 0\.18\}/.test(CG),'today reads full strength, earlier days dimmer, a zero day faintest');
+  ok(/spark: _bars\(wk\.map\(\(d\) => \+d\.steps/.test(CG),'the collapsed row uses them');
+  // the comfortable card gets the labelled week
+  ok(/const dayL = \["S", "M", "T", "W", "T", "F", "S"\];/.test(CG),'the full card labels each day');
+  ok(/new Date\(wk\[i2\]\.date \+ "T12:00:00"\)\.getDay\(\)/.test(CG),'from the real date, not the array position');
+  ok(/v >= 1000 \? \(v \/ 1000\)\.toFixed\(1\) \+ "k"/.test(CG),'and abbreviates thousands so seven labels fit');
+  ok(/vals\.filter\(\(v\) => v >= goal\)\.length/.test(CG),'a step goal, when set, reports days met');
+  // weight stays a line — it is a continuous measure, not a daily count
+  ok(/_spark\(weightSeries/.test(CG),'weight is still a line, because it is a trend rather than a count');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
