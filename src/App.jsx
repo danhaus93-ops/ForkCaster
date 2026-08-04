@@ -2904,7 +2904,7 @@ export default function App() {
       const d = await res.json();
       if (!d || !d.found) { setScan({ status: "miss" }); return; }
       setScan({ status: "found", food: { name: d.name, brand: d.brand, basis: d.basis, source: d.source, calories: d.calories || 0, protein: d.protein || 0, carbs: d.carbs || 0, fat: d.fat || 0, fiber: d.fiber || 0 } });
-    } catch { setScan({ status: "failed" }); }
+    } catch { setScan({ status: "failed", code: bc }); }
   }
 
   async function shrinkToJpeg(file, maxDim = 1280, q = 0.82) {
@@ -6008,7 +6008,19 @@ export default function App() {
                   <button onClick={addLoggedFood} style={{ width: "100%", marginTop: 12, background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 17, fontWeight: 700, cursor: "pointer" }}>Add to today →</button>
                 </div>
               )}
-              {scan.status === "miss" && <div style={{ fontSize: 15, color: C.muted, padding: "4px 2px" }}>Not found in Open Food Facts, USDA, or FatSecret. Try another barcode, or use the AI photo estimate below.</div>}
+              {scan.status === "failed" && (
+                  <div style={{ padding: "4px 2px" }}>
+                    <div style={{ fontSize: 15, color: C.avoid, lineHeight: 1.45 }}>
+                      Couldn't reach the food databases. That's a connection problem on your node,
+                      not a missing barcode — the code may well be fine.
+                    </div>
+                    <button onClick={() => lookupBarcode(scan.code || barcode)}
+                      style={{ marginTop: 12, minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1px solid ${C.hair}`,
+                        background: "transparent", color: C.ink, fontFamily: DATA, fontSize: 13, fontWeight: 700,
+                        letterSpacing: 1, textTransform: "uppercase", padding: "0 18px", cursor: "pointer" }}>
+                      Try again</button>
+                  </div>)}
+                {scan.status === "miss" && <div style={{ fontSize: 15, color: C.muted, padding: "4px 2px" }}>Not found in Open Food Facts, USDA, or FatSecret. Try another barcode, or use the AI photo estimate below.</div>}
               {scan.status === "error" && <div style={{ fontSize: 15, color: C.avoid, padding: "4px 2px", lineHeight: 1.45 }}>{scan.message || "Couldn't reach your node — check the connection (or log into the Umbrel dashboard once) and retry."}</div>}
             </div>
           </div>

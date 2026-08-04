@@ -1476,5 +1476,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/padding: "8px 0", cursor: "pointer", textAlign: "left", fontSize: 13, letterSpacing: 1\.1/.test(BX),'the GPS pin row is padded');
 }
 
+
+// v0.9.178: every scan status the code can SET must have somewhere to render.
+{
+  const BY=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const set=new Set([...BY.matchAll(/setScan\(\{ status: "(\w+)"/g)].map((m)=>m[1]));
+  const rendered=new Set([...BY.matchAll(/scan\.status === "(\w+)"/g)].map((m)=>m[1]));
+  // idle and loading are handled by the sheet's own shape rather than a status branch
+  const orphans=[...set].filter((k)=>!rendered.has(k) && k !== "idle" && k !== "loading");
+  ok(orphans.length === 0, 'no scan status is set without a way to show it (' + orphans.join(',') + ')');
+  const ghosts=[...rendered].filter((k)=>!set.has(k));
+  ok(ghosts.length === 0, 'and nothing renders for a status that can never happen (' + ghosts.join(',') + ')');
+  // the specific one that was silent: a thrown lookup, which is a connection fault not a bad code
+  ok(/scan\.status === "failed"/.test(BY),'a failed lookup says something');
+  ok(/That's a connection problem on your node/.test(BY),"and distinguishes itself from a barcode that is genuinely missing");
+  ok(/onClick=\{\(\) => lookupBarcode\(scan\.code \|\| barcode\)\}/.test(BY),'with a retry that reuses the scanned code');
+  ok(/status: "failed", code: bc/.test(BY),'which is why the code is kept on the state');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
