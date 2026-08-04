@@ -6228,7 +6228,6 @@ export default function App() {
               </div>
 
               <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.hair}` }}>
-                {sectionTitle("Danger zone")}
                 {sectionTitle("Reminders")}
                 <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", marginBottom: 4, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
                 <div style={{ fontSize: 13, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>Fires at your reminder hour on dose day with the suggested site. iPhone: add ForkCaster to the Home Screen first (Share → Add to Home Screen).</div>

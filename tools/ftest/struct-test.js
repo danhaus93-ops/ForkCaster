@@ -1570,5 +1570,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/go: "#12884A"/.test(CB),"and its go clears 4.5:1");
 }
 
+
+// v0.9.182: an orphan heading in settings.
+{
+  const CC=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(!/sectionTitle\("Danger zone"\)/.test(CC),'the Danger zone heading is gone — it labelled nothing');
+  // it sat immediately above Reminders with no content between them, while the actual destructive
+  // controls live under Export & backup. A heading over nothing is a promise the sheet does not keep.
+  ok(!/\{sectionTitle\("[^"]+"\)\}\s*\{sectionTitle\(/.test(CC),'no section heading is immediately followed by another');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
