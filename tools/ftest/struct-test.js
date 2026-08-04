@@ -1360,5 +1360,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/borderRadius: _cmp \? 15 : 18/.test(BR),'the card chassis keeps its own radius, 18 comfortable and 15 compact');
 }
 
+
+// v0.9.168: the audit stopped re-reading its own printed strings.
+{
+  const VD=require('fs').readFileSync(__FCROOT + '/tools/ftest/visual-audit.js','utf8');
+  ok(/const note = \(kind, msg, n = null\)/.test(VD),'a finding carries its measurement');
+  ok(/list\.map\(\(p\) => p\.n\)/.test(VD),'and the summary reads that number, not the sentence it printed');
+  ok(!/\/is \(\\d\+\)x\//.test(VD),'the regex that parsed the old wording is gone');
+  ok(/shortest = nums\.length \? nums\[0\] \+ "px" : "n\/a"/.test(VD),'it says n\/a rather than inventing a number');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -39,7 +39,7 @@ const TOUCH_MIN = 44;          // Apple HIG
 const TOUCH_MIN_COMPACT = 38;  // the density he opted into
 
 const problems = [];
-const note = (kind, msg) => problems.push({ kind, msg });
+const note = (kind, msg, n = null) => problems.push({ kind, msg, n });
 
 async function auditPage(page, label, compact) {
   return page.evaluate(({ TOUCH_MIN, TOUCH_MIN_COMPACT, compact }) => {
@@ -157,7 +157,7 @@ async function auditPage(page, label, compact) {
           summary.push({ label, scrollH: res.scrollH, cards: res.cards, small: res.small.length });
 
           for (const s of res.small)
-            note("TOUCH", `${label}: "${s.label}" hit area ${s.h}px (drawn ${s.drawn}px), under the ${compact ? TOUCH_MIN_COMPACT : TOUCH_MIN}px floor`);
+            note("TOUCH", `${label}: "${s.label}" hit area ${s.h}px (drawn ${s.drawn}px), under the ${compact ? TOUCH_MIN_COMPACT : TOUCH_MIN}px floor`, s.h);
           for (const c of res.clipped)
             note(c.ell ? "TRUNCATED" : "CLIP",
               `${label}: "${c.text}" ${c.ell ? "truncates" : "is hard-clipped"} by ${c.by}px`);
@@ -183,12 +183,12 @@ async function auditPage(page, label, compact) {
     console.log(`  ${s.label.padEnd(26)} ${(s.scrollH / 852).toFixed(1)} screens · ${s.cards} cards`);
 
   const byKind = {};
-  for (const p of problems) (byKind[p.kind] = byKind[p.kind] || []).push(p.msg);
+  for (const p of problems) (byKind[p.kind] = byKind[p.kind] || []).push(p);
   console.log("\n=== FINDINGS ===");
   for (const k of ["CLIP", "OVERFLOW", "TRUNCATED"]) {
     const list = byKind[k] || [];
     console.log(`  ${k}: ${list.length}`);
-    for (const m of list) console.log("    " + m);
+    for (const m of list) console.log("    " + m.msg);
   }
   /* Touch findings are counted BY TAB. Listing 168 lines told him nothing except that the tool
      was noisy; knowing that 96 of them are the Now tab's place list says where an afternoon of
@@ -196,13 +196,14 @@ async function auditPage(page, label, compact) {
   const touch = byKind.TOUCH || [];
   console.log(`  TOUCH: ${touch.length} controls under the floor`);
   const perTab = {};
-  for (const m of touch) {
-    const tab = (m.split(":")[0] || "").split("/").pop();
-    (perTab[tab] = perTab[tab] || []).push(m);
+  for (const p of touch) {
+    const tab = (p.msg.split(":")[0] || "").split("/").pop();
+    (perTab[tab] = perTab[tab] || []).push(p);
   }
   for (const [tab, list] of Object.entries(perTab).sort((a, b) => b[1].length - a[1].length)) {
-    const shortest = list.map((m) => +(/is (\d+)x/.exec(m) || [0, 99])[1]).sort((a, b) => a - b)[0];
-    console.log(`    ${tab.padEnd(8)} ${String(list.length).padStart(3)}  smallest ${shortest}px`);
+    const nums = list.map((p) => p.n).filter((v) => v != null).sort((a, b) => a - b);
+    const shortest = nums.length ? nums[0] + "px" : "n/a";
+    console.log(`    ${tab.padEnd(8)} ${String(list.length).padStart(3)}  smallest hit area ${shortest}`);
   }
   if (touch.length) console.log("    (advisory — run with --shots to see them)");
   if (SHOT_DIR) console.log(`\n  screenshots written to ${SHOT_DIR}`);
