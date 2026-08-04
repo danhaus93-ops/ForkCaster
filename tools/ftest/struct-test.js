@@ -1465,5 +1465,16 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/margin: "2px 0 10px", padding: "8px 4px"/.test(BW),'and the re-search link');
 }
 
+
+// v0.9.177: the last three named controls.
+{
+  const BX=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/fontFamily: BODY, padding: "8px 10px" \}\}>Clear<\/button>/.test(BX),"Coach's Clear is padded");
+  // the 6 Pack hand-off is an ANCHOR, not a button, which is why every button-shaped pass missed it
+  ok(/display: "inline-block", padding: "8px 4px" \}\}>or use \{SIXPACK\.label\}/.test(BX),'the 6 Pack link is padded');
+  ok(/display: "inline-block"/.test(BX),'and made inline-block, since padding does nothing on an inline anchor');
+  ok(/padding: "8px 0", cursor: "pointer", textAlign: "left", fontSize: 13, letterSpacing: 1\.1/.test(BX),'the GPS pin row is padded');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

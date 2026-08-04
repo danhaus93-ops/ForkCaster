@@ -3391,7 +3391,7 @@ export default function App() {
   const renderNow = () => (
     <div style={{ padding: "18px 18px 12px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button onClick={() => detectLocation(true)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontSize: 13, letterSpacing: 1.1, color: C.muted, textTransform: "uppercase", fontWeight: 600, fontFamily: BODY }}>{geoLabel(geo, timeStr)}</button>
+        <button onClick={() => detectLocation(true)} style={{ background: "none", border: "none", padding: "8px 0", cursor: "pointer", textAlign: "left", fontSize: 13, letterSpacing: 1.1, color: C.muted, textTransform: "uppercase", fontWeight: 600, fontFamily: BODY }}>{geoLabel(geo, timeStr)}</button>
         <div style={{ fontSize: 13, color: C.go, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 7, height: 7, borderRadius: 999, background: C.go }} /> {MODES[mode].label}</div>
       </div>
 
@@ -3839,7 +3839,7 @@ export default function App() {
           {e.group === "core" && (ei === 0 || liveSession.entries[ei - 1].group !== "core") && (
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, margin: "16px 0 8px" }}>
               <div style={{ fontSize: 13, letterSpacing: 1.6, color: C.muted, fontWeight: 800 }}>CORE · timed circuit</div>
-              <a href={sixpackUrl()} rel="noopener" onClick={() => { const t = setTimeout(() => { if (!document.hidden) window.location.href = SIXPACK.store; }, sixpackFallbackDelay(document.hidden)); const stop = () => clearTimeout(t); document.addEventListener("visibilitychange", stop, { once: true }); window.addEventListener("pagehide", stop, { once: true }); }} style={{ fontSize: 13, color: C.violet, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>or use {SIXPACK.label} →</a>
+              <a href={sixpackUrl()} rel="noopener" onClick={() => { const t = setTimeout(() => { if (!document.hidden) window.location.href = SIXPACK.store; }, sixpackFallbackDelay(document.hidden)); const stop = () => clearTimeout(t); document.addEventListener("visibilitychange", stop, { once: true }); window.addEventListener("pagehide", stop, { once: true }); }} style={{ fontSize: 13, color: C.violet, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", display: "inline-block", padding: "8px 4px" }}>or use {SIXPACK.label} →</a>
             </div>
           )}
           {card(<div>
@@ -3959,7 +3959,7 @@ export default function App() {
                 {startsCore && (
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
                     <div style={{ fontSize: 13, letterSpacing: 1.4, color: C.muted, fontWeight: 800 }}>CORE</div>
-                    <a href={sixpackUrl()} rel="noopener" onClick={() => { const t = setTimeout(() => { if (!document.hidden) window.location.href = SIXPACK.store; }, sixpackFallbackDelay(document.hidden)); const stop = () => clearTimeout(t); document.addEventListener("visibilitychange", stop, { once: true }); window.addEventListener("pagehide", stop, { once: true }); }} style={{ fontSize: 13, color: C.violet, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>or use {SIXPACK.label} →</a>
+                    <a href={sixpackUrl()} rel="noopener" onClick={() => { const t = setTimeout(() => { if (!document.hidden) window.location.href = SIXPACK.store; }, sixpackFallbackDelay(document.hidden)); const stop = () => clearTimeout(t); document.addEventListener("visibilitychange", stop, { once: true }); window.addEventListener("pagehide", stop, { once: true }); }} style={{ fontSize: 13, color: C.violet, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", display: "inline-block", padding: "8px 4px" }}>or use {SIXPACK.label} →</a>
                   </div>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
@@ -5336,7 +5336,7 @@ export default function App() {
 
   const renderCoach = () => (
     <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
-      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={async () => { if (await askConfirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 13, cursor: "pointer", fontFamily: BODY }}>Clear</button></div></div>
+      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={async () => { if (await askConfirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 13, cursor: "pointer", fontFamily: BODY, padding: "8px 10px" }}>Clear</button></div></div>
       {(() => { const hd = (healthSync && healthSync.days) || [];
         const cells = [["Doses", ((glp && glp.doseLog) || []).length], ["Meals", (mealLog || []).length],
           ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
