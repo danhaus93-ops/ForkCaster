@@ -506,7 +506,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/const _cmp = !!prefs\.compact;/.test(A9),'density reads from one stored preference');
   // v0.9.105: the radii moved a point when the collapsed row landed; the invariant is that ONE
   // helper owns card geometry, not the exact numbers.
-  ok(/borderRadius: _cmp \? 1[45] : 18, padding: _cmp \? 1[12] : 16/.test(A9),'the card primitive is the only place geometry changes');
+  ok(/borderRadius: 18, padding: _cmp \? 16 : 18/.test(A9),'the card primitive is the only place geometry changes');
   ok((A9.match(/const cardShell = /g) || []).length === 1,'exactly one card shell draws every card');
   ok(/marginBottom: _cmp \? 7 : 10/.test(A9),'section titles tighten with it');
   ok(!/_cmp \?[^:]*display: "none"/.test(A9),'compact never hides anything');
@@ -1376,7 +1376,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(radii.includes(4), 'the small rung survives — a 3px bar snapped to 8 would clamp to half its height and read as a lozenge');
   ok(radii.includes(999), 'pills are still pills');
   // the chassis is the one pinned design decision and is deliberately off the scale
-  ok(/borderRadius: _cmp \? 15 : 18/.test(BR),'the card chassis keeps its own radius, 18 comfortable and 15 compact');
+  ok(/borderRadius: 18, padding: _cmp \? 16 : 18/.test(BR),'the chassis is radius 18 in both densities, with padding carrying the difference');
 }
 
 
@@ -1687,6 +1687,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/vals\.filter\(\(v\) => v >= goal\)\.length/.test(CG),'a step goal, when set, reports days met');
   // weight stays a line — it is a continuous measure, not a daily count
   ok(/_spark\(weightSeries/.test(CG),'weight is still a line, because it is a trend rather than a count');
+}
+
+
+// v0.9.188: every collapsed row is the same box.
+{
+  const CH=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // height varied 88 vs 104px purely on whether the sub happened to wrap onto a second line, so
+  // the grid was set by sentence length. The sub RESERVES two lines whether it needs them or not.
+  ok(/minHeight: 32, display: "-webkit-box"/.test(CH),'the sub reserves two lines');
+  ok(/WebkitLineClamp: 2/.test(CH),'and is clamped to two, so a long caption cannot push the row taller');
+  ok(/\{vd\.sub \|\| ""\}/.test(CH),'a row with no sub still holds the space, or it would be shorter than its neighbours');
+  ok(/<\/div>, \{ minHeight: 118, \.\.\._shellExtra \}, _id0\);/.test(CH),'and the shell carries a floor of 118');
+  // bigger, per the preview he approved
+  ok(/fontSize: 34, fontWeight: 700, letterSpacing: -0\.8/.test(CH),'the hero number is 34px');
+  ok(/borderRadius: 18, padding: _cmp \? 16 : 18/.test(CH),'compact padding is 16 and the radius matches comfortable');
+  // the floor must come BEFORE the spread, so a card can still override it if it ever needs to
+  ok(/\{ minHeight: 118, \.\.\._shellExtra \}/.test(CH),'the floor is a default, not an override');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

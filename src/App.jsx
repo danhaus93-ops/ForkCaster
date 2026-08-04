@@ -3323,7 +3323,7 @@ export default function App() {
       onContextMenu={arrangeable ? ((e) => e.preventDefault()) : undefined}
       style={{ marginBottom: _cmp ? 9 : 14,
         background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface,
-        border: `1px solid ${lifted ? C.go : C.hair}`, borderRadius: _cmp ? 15 : 18, padding: _cmp ? 12 : 16,
+        border: `1px solid ${lifted ? C.go : C.hair}`, borderRadius: 18, padding: _cmp ? 16 : 18,
         boxShadow: lifted ? `0 18px 40px rgba(0,0,0,.55), 0 0 0 1px ${C.go}55` : (C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none"),
         transform: lifted ? `translateY(${dragRef.current.dy}px) scale(1.03)` : (arming ? "scale(0.99)" : "none"),
         transition: lifted ? "none" : "transform .16s ease, box-shadow .16s ease",
@@ -3358,13 +3358,15 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontFamily: DATA, fontSize: 29, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1, color: C.ink }}>{vd.value}</span>
-            {vd.unit && <span style={{ fontFamily: DATA, fontSize: 11.5, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
-            {vd.sub && <div style={{ fontFamily: DATA, fontSize: 11.5, color: vd.subTone || C.faint, marginTop: 4, letterSpacing: 0.3, lineHeight: 1.35 }}>{vd.sub}</div>}
+            <span style={{ fontFamily: DATA, fontSize: 34, fontWeight: 700, letterSpacing: -0.8, lineHeight: 1, color: C.ink }}>{vd.value}</span>
+            {vd.unit && <span style={{ fontFamily: DATA, fontSize: 13, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
+            <div style={{ fontFamily: DATA, fontSize: 11.5, color: vd.subTone || C.faint, marginTop: 8,
+            letterSpacing: 0.3, lineHeight: 1.4, minHeight: 32, display: "-webkit-box",
+            WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{vd.sub || ""}</div>
           </div>
           {vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>}
         </div>
-      </div>, _shellExtra, _id0);
+      </div>, { minHeight: 118, ..._shellExtra }, _id0);
   };
   const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 10 : 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
