@@ -1811,7 +1811,7 @@ export default function App() {
   }
   const demoLink = (exId, name) => {
     const v = demoVids[exId];
-    return (<button onClick={() => openDemo(exId, name)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "2px 0", textDecoration: "underline" }}>
+    return (<button onClick={() => openDemo(exId, name)} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "8px 4px", textDecoration: "underline" }}>
       {v && v.loading ? "finding clip…" : v && v.channel ? `▶ ${v.channel}${v.seconds ? ` · ${Math.round(v.seconds / 60)}m` : ""}` : "▶ how to do this"}
       {v && v.fallback && v.reason && <span style={{ color: C.faint, fontWeight: 500, textDecoration: "none" }}> · {v.reason === "no-key" ? "add a YouTube key in Settings for exact clips" : v.reason === "quota-reserve" ? "daily video quota used — search only" : v.reason === "no-results" ? "no match found — search only" : "search only"}</span>}
     </button>);
@@ -3223,7 +3223,7 @@ export default function App() {
   }
 
   // theme-aware style helpers
-  const linkBtn = { marginTop: 12, background: "none", border: "none", color: C.muted, fontSize: 15, fontFamily: BODY, cursor: "pointer", textDecoration: "underline", padding: 0 };
+  const linkBtn = { marginTop: 12, background: "none", border: "none", color: C.muted, fontSize: 15, fontFamily: BODY, cursor: "pointer", textDecoration: "underline", padding: "8px 4px" };
   const chipBtn = { background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 18, padding: "7px 13px", fontSize: 15, fontWeight: 600, color: C.ink, cursor: "pointer", fontFamily: BODY };
   const arrowBtn = { background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, width: 30, height: 26, fontSize: 17, color: C.ink, cursor: "pointer" };
   const selectStyle = { flex: 1, fontFamily: BODY, fontSize: 15, color: C.ink, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 8, padding: "10px 11px", outline: "none" };
@@ -5575,7 +5575,7 @@ export default function App() {
             </div>
           </div>
         ))}
-        {!planBusy && <button onClick={() => generatePlan(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 15, margin: "2px 0 10px", cursor: "pointer", textDecoration: "underline" }}>↻ Fresh ideas — re-search recipes (uses API quota)</button>}
+        {!planBusy && <button onClick={() => generatePlan(true)} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 15, margin: "2px 0 10px", padding: "8px 4px", cursor: "pointer", textDecoration: "underline" }}>↻ Fresh ideas — re-search recipes (uses API quota)</button>}
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setPlanView("setup")} style={{ flex: 1, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, color: C.ink, cursor: "pointer" }}>Plan settings</button>
           <button onClick={() => setPlanView("grocery")} style={{ flex: 1.3, background: C.go, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: BODY, fontSize: 15, fontWeight: 800, color: C.surface, cursor: "pointer" }}>Grocery list →</button>

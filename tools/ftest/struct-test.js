@@ -1455,5 +1455,15 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/sort\(\(a, b\) => \(a\.n \|\| 99\) - \(b\.n \|\| 99\)\)/.test(VE),'smallest first — that is where the work is');
 }
 
+
+// v0.9.176: the named text links get real padding.
+{
+  const BW=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const linkBtn = \{[^}]*padding: "8px 4px"/.test(BW),'the shared link style is padded, which covers several call sites at once');
+  ok(!/const linkBtn = \{[^}]*padding: 0 \}/.test(BW),'and no longer ships with zero padding');
+  ok(/cursor: "pointer", padding: "8px 4px", textDecoration: "underline" \}\}>/.test(BW),'the how-to link is padded');
+  ok(/margin: "2px 0 10px", padding: "8px 4px"/.test(BW),'and the re-search link');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
