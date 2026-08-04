@@ -1390,5 +1390,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(8*10.5*MONO + 8*0.4 <= (307-4*gap)/5, 'CALORIES still fits its cell at the new gap');
 }
 
+
+// v0.9.171: the gap between cards belongs to the shell alone.
+{
+  const BT=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/marginBottom: _cmp \? 9 : 14/.test(BT),'the shell sets the gap, 9 compact and 14 comfortable');
+  // a card passing its own marginBottom in extra spreads AFTER the shell value and overrides it,
+  // which is how Body ended up alternating 9, 12, 8 and 4px between cards
+  ok(!/, \{ marginBottom: \d+ \}\)/.test(BT),'no card overrides the gap through its extra');
+  ok(!/<\/div>,\s*\{ marginBottom: \d+ \}/.test(BT),'including the multi-line form');
+  // inner rows inside a card may still carry their own margin — that is layout, not card spacing
+  const bodyStart=BT.indexOf('{tab === "body" && <div style={{');
+  const bodyEnd=BT.indexOf('\n  const render', bodyStart + 20);
+  const body=BT.slice(bodyStart, bodyEnd > bodyStart ? bodyEnd : bodyStart + 70000);
+  const overrides=[...body.matchAll(/\{ marginBottom: \d+ \}/g)].length;
+  ok(overrides <= 3, 'Body has no card-level margin left, only inner rows (' + overrides + ')');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

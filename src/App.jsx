@@ -3813,7 +3813,7 @@ export default function App() {
           const cc = ((routine && (routine.days_ || []).find((d) => d.id === liveSession.dayId)) || {}).coreCircuit;
           if (!cc) return null;
           return (
-            <div style={{ marginBottom: 12, background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 13px" }}>
+            <div style={{ background: C.surfaceAlt, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "10px 13px" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, fontFamily: BODY }}>Core runs as a circuit</div>
               <div style={{ fontSize: 13, color: C.muted, marginTop: 2, lineHeight: 1.45 }}>{cc.rounds} rounds through the core movements — about {cc.betweenSec}s between movements, {cc.roundRestSec}s between rounds. Same work as straight sets, less standing around.</div>
             </div>
@@ -3829,7 +3829,7 @@ export default function App() {
               <b>Ramp into {first.name}:</b> {ramp.map((r) => (r.w ? `${r.w} lb × ${r.reps}` : r.label)).join(" → ")} <span style={{ color: C.faint }}>· then your working sets</span>
             </div>}
             {dyn.map((x, i) => <div key={i} style={{ fontSize: 15, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
-          </div>, { marginBottom: 8 }); })()}
+          </div>, {}); })()}
         {liveSession.entries.map((e, ei) => (<div key={ei}>
           {e.group === "core" && (ei === 0 || liveSession.entries[ei - 1].group !== "core") && (
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, margin: "16px 0 8px" }}>
@@ -3858,12 +3858,12 @@ export default function App() {
               <button onClick={() => setRestEnd(Date.now() + w * 1000)} style={{ background: "none", border: "none", color: C.violet, fontFamily: BODY, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "4px 0 4px 12px" }}>▶ time a {w}s {e.hold ? "hold" : "set"}</button>
             ); })()}
           </div>
-        </div>, { marginBottom: 8 })}</div>))}
+        </div>, {})}</div>))}
         {(() => { const cd = cooldownBlock(exCatalog, [...new Set(liveSession.entries.map((e) => e.group))]);
           return cd.length ? card(<div>
             {sectionTitle("Cool-down · hold these after, not before")}
             {cd.map((x, i) => <div key={i} style={{ fontSize: 15, color: C.muted, padding: "3px 0" }}>{x.name} <span style={{ color: C.faint }}>· {x.prescribe}</span></div>)}
-          </div>, { marginBottom: 8 }) : null; })()}
+          </div>, {}) : null; })()}
         <button onClick={saveSession} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 17, fontWeight: 800, cursor: "pointer" }}>Finish &amp; log session ✓</button>
         {restEnd && (
           <div style={{ position: "fixed", left: 12, right: 12, bottom: "calc(72px + env(safe-area-inset-bottom, 0px))", zIndex: 300, background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.go}55`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px rgba(0,0,0,.28)" }}>
@@ -3967,7 +3967,7 @@ export default function App() {
                 </div>
               </div>); })}
             <button onClick={() => startSession(nextSlot.day)} style={{ marginTop: 12, width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: DATA, fontSize: 15, fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 16px ${C.go}33` }}>Start session</button>
-          </div>, { marginBottom: 12 }) : card(<div style={{ fontSize: 15, color: C.muted }}>Rest day — next session is on the Week view.</div>, { marginBottom: 12 })}
+          </div>, {}) : card(<div style={{ fontSize: 15, color: C.muted }}>Rest day — next session is on the Week view.</div>, {})}
           {card(<div>
             {sectionTitle("Log cardio")}
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>{CARDIO_TYPES.map((t) => (
@@ -3982,7 +3982,7 @@ export default function App() {
               setWorkoutLog((L) => [...L, { date: todayISO(), kind: "cardio", type: cardioDraft.type, minutes: mins, intensity: cardioDraft.intensity }].slice(-400)); }}
               style={{ marginTop: 8, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Log {cardioDraft.minutes || 0} min {cardioDraft.type}</button>
             <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>{cardioMin7} of {cardioTarget(routine.goal)} min this week · cardio helps the deficit but competes for recovery — it is placed around lifting, not piled on top.</div>
-          </div>, { marginBottom: 12 })}
+          </div>, {})}
           {card(<div>{sectionTitle("This week")}<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[["sessions", `${done7}×`], ["hard sets", String(Object.values(sets7).reduce((n, v) => n + v, 0))], ["goal", routine.goal]].map(([l, v]) => (
               <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 8, padding: "9px 10px" }}>
@@ -4030,7 +4030,7 @@ export default function App() {
               <span style={{ fontSize: 15, color: cardioMin7 >= cardioTarget((routine || {}).goal) ? C.go : C.muted, fontWeight: 700 }}>{cardioMin7} / {cardioTarget((routine || {}).goal)} min</span>
             </div>
             <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>10–20 hard sets per muscle per week is the usual growth range; less still protects muscle while cutting.</div>
-          </div>, { marginBottom: 12 })}
+          </div>, {})}
           {card(<div>{sectionTitle("Lifts · best estimated 1RM")}
             {[...new Set(workoutLog.flatMap((s) => (s.entries || []).map((e) => e.exId)))].map((id, i) => {
               const h = exHistory(id); const name = (workoutLog.flatMap((s) => s.entries || []).find((e) => e.exId === id) || {}).name || id;
@@ -4816,7 +4816,7 @@ export default function App() {
             {(() => { // v0.9.70: the fat-ceiling engine finally gets its card
               const fr = doseResponseRead(mealLog, glp);
               const A9 = fr.status === "ok";
-              return (<div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${C.hair}` }}>
+              return (<div style={{ paddingBottom: 12, borderBottom: `1px solid ${C.hair}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ fontFamily: DATA, fontSize: 13, fontWeight: 700, color: C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 8 }}>Your fat ceiling · dose window</div>
                   <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: A9 ? C.go : C.faint, border: `1px solid ${A9 ? C.go + "55" : C.hair}`, background: A9 ? C.go + "1A" : "transparent" }}>{A9 ? "ACTIVE" : "COLLECTING"}</span>
@@ -5395,7 +5395,7 @@ export default function App() {
             <div><span style={{ fontSize: 22, fontWeight: 800, color: C.ink }}>~{targets.carbs}g</span><span style={{ fontSize: 15, color: C.muted, marginLeft: 4 }}>carbs</span></div>
             <div><span style={{ fontSize: 22, fontWeight: 800, color: C.ink }}>≤{targets.fat}g</span><span style={{ fontSize: 15, color: C.muted, marginLeft: 4 }}>fat</span></div>
           </div>
-        </div>, { marginBottom: 12 })}
+        </div>, {})}
         {card(<div>
           {sectionTitle("Prep length")}
           <div style={{ display: "flex", background: C.surfaceAlt, borderRadius: 12, padding: 3, marginBottom: 12 }}>
@@ -5406,7 +5406,7 @@ export default function App() {
             {[3, 4, 5].map((n) => (<button key={n} onClick={() => { setPlanMealCount(n); setPlanMealsOn(_slotsFor(n)); }} style={{ flex: 1, border: "none", cursor: "pointer", padding: "8px 0", borderRadius: 8, fontFamily: BODY, fontSize: 15, fontWeight: 700, background: planMealCount === n ? C.surface : "transparent", color: planMealCount === n ? C.ink : C.muted }}>{n} meals</button>))}
           </div>
           <div style={{ fontSize: 13, color: C.muted, marginTop: 8, lineHeight: 1.45 }}>{planMealCount === 3 ? `Three big plates, no snacks — every meal runs maximum protein (~${Math.round(targets.protein / 3)}g each).` : planMealCount === 5 ? "Breakfast, lunch, dinner + two snacks — five small feedings, the kindest mode for a GLP-1 appetite." : "Three meals + one snack — the snack carries ~15% of your protein."}</div>
-        </div>, { marginBottom: 12 })}
+        </div>, {})}
         {allergies.length > 0 && <div style={{ fontSize: 15, color: C.avoid, marginBottom: 12 }}><b>Filtering out:</b> {allergies.join(", ")} — hidden from every meal, same as ordering.</div>}
         <button onClick={() => generatePlan(false)} disabled={!!planBusy} style={{ width: "100%", background: C.go, color: C.surface, border: "none", borderRadius: 12, padding: "14px 0", fontFamily: BODY, fontSize: 17, fontWeight: 800, cursor: "pointer", opacity: planBusy ? 0.6 : 1 }}>{busyLabel || (mealPlan ? "Regenerate my week →" : "Generate my week →")}</button>
         {mealPlan && !planBusy && <button onClick={() => setPlanView("week")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontFamily: BODY, fontSize: 15, marginTop: 8, cursor: "pointer", textDecoration: "underline" }}>Back to current plan</button>}
@@ -5436,7 +5436,7 @@ export default function App() {
               </div>
             </div>); })()}
           {groceryNote && <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>Built-in package math shown — AI consolidation hiccup: {groceryNote}</div>}
-        </div>, { marginBottom: 12 })}
+        </div>, {})}
         {sections.map((sec) => card(<div key={sec}>
           {sectionTitle(sec, C.muted)}
           {mealPlan.grocery.map((g, i) => g.section !== sec ? null : (
@@ -5445,7 +5445,7 @@ export default function App() {
               <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 600, color: g.checked ? C.faint : C.ink, textDecoration: g.checked ? "line-through" : "none" }}>{g.item}</div>{g.qty ? <div style={{ fontSize: 13, color: C.muted }}>{g.qty}{groceryEst.priced[g.item] ? <span style={{ color: C.faint }}> · ${groceryEst.priced[g.item].price.toFixed(2)} at {groceryEst.priced[g.item].store || "?"}</span> : null}</div> : null}</div>
             </div>
           ))}
-        </div>, { marginBottom: 12 }))}
+        </div>, {}))}
         {card(<div>
           {sectionTitle("Shop Mode · scan at the shelf")}
           {shopScan.status !== "found" && (camOn && camFor === "shop" ? (
@@ -5481,7 +5481,7 @@ export default function App() {
             </div>
           ); })()}
           <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>{priceLog.length > 0 ? `${priceLog.length} price${priceLog.length > 1 ? "s" : ""} remembered — your per-store price book grows with every trip.` : "Type the numbers under any barcode. Prices you save build your per-store price book."}</div>
-        </div>, { marginBottom: 12 })}
+        </div>, {})}
       </div>
     ); }
     if (planView === "meal") { const [di, si] = planMealRef; const day = mealPlan.days[di]; const slot = day && day.slots[si]; if (!slot) { setPlanView("week"); return null; } const img = slot.photo || slot.image; return (
@@ -5498,8 +5498,8 @@ export default function App() {
         <div style={{ fontFamily: DISPLAY, fontSize: 23, fontWeight: 800, color: C.ink, margin: "4px 0 5px", lineHeight: 1.2 }}>{slot.name}</div>
         <div style={{ fontSize: 15, color: C.go, fontWeight: 800, marginBottom: 12 }}>{Math.round(slot.perServing.protein * slot.servings)}g protein <span style={{ color: C.muted, fontWeight: 500 }}>· {Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.carbs || 0) * slot.servings)}g carbs · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat · {slot.servings}× serving</span></div>
         {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12, fontSize: 15, color: C.ink, lineHeight: 1.45 }}><b style={{ color: C.violet }}>Why this meal today:</b> post-shot, warm bland low-fat food is easiest to keep down. Eat slowly — stop at comfortable, not full.</div>}
-        {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 15, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, { marginBottom: 12 })}
-        {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 15 }}>{i + 1}</b><span style={{ fontSize: 15, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, { marginBottom: 12 })}
+        {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 15, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, {})}
+        {slot.steps.length > 0 && card(<div>{sectionTitle("Steps")}{slot.steps.map((x, i) => <div key={i} style={{ display: "flex", gap: 8, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}><b style={{ color: C.go, fontSize: 15 }}>{i + 1}</b><span style={{ fontSize: 15, color: C.ink, lineHeight: 1.45 }}>{x}</span></div>)}</div>, {})}
         {slot.url && <a href={slot.url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 13, color: C.faint, marginBottom: 12, textDecoration: "underline" }}>Original recipe source ↗</a>}
         <button onClick={() => logPlannedMeal(di, si)} style={{ width: "100%", background: slot.logged ? C.surfaceAlt : C.go, color: slot.logged ? C.go : C.bg, border: slot.logged ? `1.5px solid ${C.go}` : "none", borderRadius: 12, padding: "14px 0", fontFamily: DATA, fontSize: 15, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{slot.logged ? "Logged ✓" : "Log this meal ✓"}</button>
 
@@ -5549,7 +5549,7 @@ export default function App() {
             <span style={{ fontSize: 13, color: C.muted }}>{tot.cal.toLocaleString()} cal · {tot.carbs}g carb{(day.dose || day.after) ? " · dose-adjusted" : ""}</span>
           </div>
           <div style={{ height: 6, background: C.surfaceAlt, borderRadius: 4 }}><div style={{ height: 6, width: `${Math.min(100, (tot.p / day.target.protein) * 100)}%`, background: hit ? C.go : C.caution, borderRadius: 4 }} /></div>
-        </div>, { marginBottom: 12 })}
+        </div>, {})}
         {planPhotoNote && day.slots.some((x) => !x.photo && !x.image) && <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Dish photos unavailable right now ({/402/.test(planPhotoNote) ? "Spoonacular daily quota used up — they'll fill in automatically tomorrow" : /401|unauthor/i.test(planPhotoNote) ? "key rejected — check Settings" : planPhotoNote}).</div>}
         {(day.dose || day.after || day.night || day.postNights) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12 }}><div style={{ fontSize: 13, fontWeight: 800, color: C.violet, letterSpacing: 0.4 }}>{(day.doseLabel || "").toUpperCase()}{(day.dose || day.after) ? ` · TARGET EASED TO ${day.target.protein}G` : ""}</div><div style={{ fontSize: 15, color: C.ink, marginTop: 2, lineHeight: 1.45 }}>{day.night ? "Your day runs into tomorrow morning — meals after midnight still count here." : day.postNights ? "Sleep is the workout today. Protein when you wake; don't chase the full target." : "Smaller portions, low fat, liquid protein where solids are hard — the week still averages your goal."}</div></div>}
         {day.slots.map((slot, si) => (
@@ -5662,7 +5662,7 @@ export default function App() {
                 </div>
                 <div style={{ fontSize: 13, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>The picture is a visualization, not a promise — lighting and genetics are not macros. These four levers are the part you control.</div>
               </div>)}
-            </div>, { marginBottom: 12 }, ct && ct.status === "ok" ? {
+            </div>, {}, ct && ct.status === "ok" ? {
               id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
               sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
@@ -5712,7 +5712,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-            </div>, { marginBottom: 12 }, (() => {
+            </div>, {}, (() => {
               const _src = [...hd].reverse().find((d) => d.source);
               const _label = _src ? ({ "apple-health": "Apple Health", "google-health": "Google Health" }[_src.source] || _src.source) : null;
               return { id: "ah", tone: hd.length ? C.go : "none", color: C.blue, title: "Health data",
@@ -5747,7 +5747,7 @@ export default function App() {
                   <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>{ar.pts} weigh-ins over {ar.spanDays} days · a suggestion, not a prescription — your prescriber owns your targets</div>
                 </div>
               )}
-            </div>, { marginBottom: 12 }, { id: "at", tone: applied ? C.go : "none", color: C.go, title: "Adaptive targets",
+            </div>, {}, { id: "at", tone: applied ? C.go : "none", color: C.go, title: "Adaptive targets",
               when: applied ? "Applied" : "Watching",
               value: ar && ar.pts != null ? String(ar.pts) : "—",
               unit: ar && ar.pts === 1 ? "weigh-in banked" : "weigh-ins banked", sub: ar && ar.spanDays != null ? `across ${ar.spanDays} days · ${applied ? "targets follow your trend" : "needs ~2 weeks to read"}` : "log weigh-ins to start it" });
@@ -5768,7 +5768,7 @@ export default function App() {
                   <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>Correlation from your own {dr.days} logged days — a pattern, not proof. Worth showing your prescriber.</div>
                 </div>
               )}
-            </div>, { marginBottom: 12 }, { id: "dr", tone: dr && dr.status === "ok" ? C.go : "none", color: C.caution, title: "Dose response",
+            </div>, {}, { id: "dr", tone: dr && dr.status === "ok" ? C.go : "none", color: C.caution, title: "Dose response",
               when: dr && dr.status === "ok" ? "Learned" : "Learning",
               value: dr && dr.sym != null ? `${dr.sym}/5` : "—",
               unit: "symptom days", sub: dr && dr.days != null ? `${dr.days}/10 meal days · needs both to read` : "log symptoms and meals to teach it" });
@@ -6231,7 +6231,7 @@ export default function App() {
                   <label style={{ flex: 1, background: "none", color: C.ink2, border: `1.5px solid ${C.hair}`, borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", textAlign: "center" }}>Restore…<input type="file" accept=".json,application/json" style={{ display: "none" }} onChange={(e) => { if (e.target.files && e.target.files[0]) restoreJSON(e.target.files[0]); e.target.value = ""; }} /></label>
                 </div>
                 <div style={{ fontSize: 13, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>The PDF is a clean, organized report (doses &amp; sites, weight, side effects, nutrition) you can email or AirDrop to your care team. JSON is the full-fidelity backup for restore.</div>
-                <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 12, padding: "11px 12px" }}>
+                <div style={{ background: C.surfaceAlt, borderRadius: 12, padding: "11px 12px" }}>
                   <div style={{ fontSize: 15, color: C.ink, fontWeight: 700 }}>Restore a previous save</div>
                   <div style={{ fontSize: 13, color: C.faint, marginTop: 2, lineHeight: 1.45 }}>Your node keeps recent snapshots of your data. If a save ever comes back emptier than it should, restore the one before it.</div>
                   <button onClick={async () => { try { const d = await fetch("/api/state/backups").then((r) => r.json()); setBackups(d.backups || []); } catch { setBackups([]); } }}
@@ -6249,7 +6249,7 @@ export default function App() {
                   {backups && backups.length === 0 && <div style={{ fontSize: 13, color: C.faint, marginTop: 8 }}>No snapshots yet — one is kept the first time your data changes after an update.</div>}
                 </div>
                 {prefs.hideHealthCard && <button onClick={() => setPrefs({ ...prefs, hideHealthCard: false })} style={{ width: "100%", marginBottom: 12, background: C.surfaceAlt, border: `1.5px solid ${C.hair}`, color: C.ink, borderRadius: 12, padding: "11px 0", fontFamily: DATA, fontSize: 13, fontWeight: 800, letterSpacing: 0.9, textTransform: "uppercase", cursor: "pointer" }}>Show the Apple Health card again</button>}
-                <div style={{ marginBottom: 12, background: C.surfaceAlt, borderRadius: 12, padding: "11px 12px" }}>
+                <div style={{ background: C.surfaceAlt, borderRadius: 12, padding: "11px 12px" }}>
                   <div style={{ fontSize: 15, color: C.ink, fontWeight: 700 }}>Images on your node</div>
                   <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{photoUsage ? (photoUsage.count == null ? "storage unreadable — check the node" : `${photoUsage.count} file${photoUsage.count === 1 ? "" : "s"} · ${(photoUsage.bytes / 1048576).toFixed(1)} MB`) : "checking…"}</div>
                   <button onClick={async () => {
