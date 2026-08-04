@@ -78,7 +78,8 @@ ok(/\{weekReady && \(/.test(SRC),'the toggle itself is hidden below seven nights
 ok(/useState\("week"\)/.test(SRC),'week is the default once it appears');
 ok(/!showWeek && sl\.status === "collecting"/.test(SRC),'the collecting night view yields to the week');
 ok(/!showWeek && sl\.status === "ready"/.test(SRC),'the ready night view yields to the week');
-ok(SRC.includes('["Deep", "#4C3FD4", 1], ["REM", "#67E8F9", 0.9], ["Light", "#3B84BC", 0.9], ["Awake", C.avoid, 0.55]'),'the key names all four stages');
+ok(SRC.includes('["Deep", SLEEP_STAGE.deep, 1], ["REM", SLEEP_STAGE.rem, 0.9], ["Light", SLEEP_STAGE.light, 0.9], ["Awake", C.avoid, 0.55]'),'the key names all four stages');
+ok(/const SLEEP_STAGE = \{ deep: "#4C3FD4", rem: "#67E8F9", light: "#3B84BC" \}/.test(SRC),'and the stage palette is defined once');
 ok(/_doseDays\.has\(d\.date\)/.test(SRC),'shot nights are marked on the week');
 ok(/\[\[420, "7H"/.test(SRC),'a 7h target line is drawn');
 ok(/Math\.max\(540, \.\.\.totals\)/.test(SRC),'the scale never shrinks below 9h, so bar heights stay comparable week to week');

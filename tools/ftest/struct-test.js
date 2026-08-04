@@ -1407,5 +1407,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(overrides <= 3, 'Body has no card-level margin left, only inner rows (' + overrides + ')');
 }
 
+
+// v0.9.172: Release D, last family — and most of it turned out to be correct already.
+{
+  const BU=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const SLEEP_STAGE = \{ deep: "#4C3FD4", rem: "#67E8F9", light: "#3B84BC" \}/.test(BU),
+     'the sleep stage palette is named once');
+  ok((BU.match(/"#4C3FD4"/g) || []).length === 1,'and deep is written exactly once');
+  ok((BU.match(/"#3B84BC"/g) || []).length === 1,'light too');
+  // the activity sparkline shares a hex with REM by coincidence and must NOT share the constant —
+  // welding them means changing the sleep legend silently restyles a chart about steps
+  ok(/spark: _spark\(wk\.map\(\(d\) => \+d\.steps \|\| 0\), "#67E8F9"\)/.test(BU),
+     'the activity sparkline keeps its own colour, not the sleep constant');
+  ok(/Fixed palettes\. These deliberately do NOT come from THEMES/.test(BU),
+     'the fixed colours are documented as answers rather than oversights');
+  ok(!/"#6b7a71"/.test(BU),'the score fallback uses a theme token');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -607,6 +607,11 @@ const LAB_MARKERS = [
 ];
 const LAB_GROUPS = ["Lipid panel", "Comprehensive metabolic panel", "Hemoglobin A1c", "Pancreatic enzymes", "CBC", "Hormones"];
 
+/* Fixed palettes. These deliberately do NOT come from THEMES: a legend has to mean the same thing
+   whatever theme is on, and a colour rendered into a shared image or drawn over a map is not
+   sitting on a theme surface at all. Listed here so the next sweep for raw hex knows which ones
+   are answers rather than oversights. */
+const SLEEP_STAGE = { deep: "#4C3FD4", rem: "#67E8F9", light: "#3B84BC" };   // awake uses C.avoid
 const MEDS = {
   tirzepatide: { label: "Tirzepatide", brand: "Zepbound / Mounjaro", cadence: "weekly", investigational: false,
     steps: [2.5, 5, 7.5, 10, 12.5, 15], unit: "mg",
@@ -3511,8 +3516,8 @@ export default function App() {
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 55%)" }} />
                   {r.menu && <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(200,140,20,0.95)", color: "#1a1200", borderRadius: 18, padding: "3px 9px", fontSize: 10.5, fontWeight: 800, letterSpacing: 0.5 }}>DEMO</div>}
                   <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.95)", borderRadius: 18, padding: "3px 9px", display: "flex", alignItems: "center", gap: 2, boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }}>
-                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : "#6b7a71" }}>{r.match != null ? r.match : r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
-                    <span style={{ fontSize: 10.5, fontWeight: 700, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : "#6b7a71", textTransform: "uppercase" }}>{r.match != null || r.menu ? "match" : "★"}</span>
+                    <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : C.faint }}>{r.match != null ? r.match : r.menu ? Math.round(r.score * 20) : r.score.toFixed(1)}</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: r.match != null ? scoreColor(r.match / 20) : r.menu ? sc : C.faint, textTransform: "uppercase" }}>{r.match != null || r.menu ? "match" : "★"}</span>
                   </div>
                   <div style={{ position: "absolute", left: 12, bottom: 9 }}>
                     <div style={{ fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: "#fff", lineHeight: 1, textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{r.name}</div>
@@ -5083,7 +5088,7 @@ export default function App() {
                   <text x="0" y={yOf(m) + 3} fontFamily="ui-monospace, monospace" fontSize="7" fill={C.faint}>{lab}</text>
                 </g>))}
               {_n7.map((d, i) => { const x = 40 + i * (colW + gap);
-                const seg = [["awake", +d.awakeMin || 0, C.avoid, 0.55], ["rem", +d.remMin || 0, "#67E8F9", 0.9], ["light", +d.lightMin || 0, "#3B84BC", 0.9], ["deep", +d.deepMin || 0, "#4C3FD4", 1]];
+                const seg = [["awake", +d.awakeMin || 0, C.avoid, 0.55], ["rem", +d.remMin || 0, SLEEP_STAGE.rem, 0.9], ["light", +d.lightMin || 0, SLEEP_STAGE.light, 0.9], ["deep", +d.deepMin || 0, SLEEP_STAGE.deep, 1]];
                 const known = seg.reduce((n, sg) => n + sg[1], 0);
                 let yb = BASE;
                 const stack = (known ? seg.slice().reverse() : [["sleep", +d.sleepMin || 0, C.faint, 0.4]]).map(([k, v, col, op]) => {
@@ -5097,7 +5102,7 @@ export default function App() {
                 </g>); })}
             </svg>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
-              {[["Deep", "#4C3FD4", 1], ["REM", "#67E8F9", 0.9], ["Light", "#3B84BC", 0.9], ["Awake", C.avoid, 0.55]].map(([l, col, op]) => (
+              {[["Deep", SLEEP_STAGE.deep, 1], ["REM", SLEEP_STAGE.rem, 0.9], ["Light", SLEEP_STAGE.light, 0.9], ["Awake", C.avoid, 0.55]].map(([l, col, op]) => (
                 <span key={l} style={{ fontFamily: DATA, fontSize: 10.5, letterSpacing: 0.7, textTransform: "uppercase", color: C.muted }}>
                   <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: 4, background: col, opacity: op, marginRight: 6, verticalAlign: -1 }} />{l}</span>))}
             </div>
@@ -5113,9 +5118,9 @@ export default function App() {
           const asleep = deep + rem + light;
           if (!asleep) return null;
           const rows = [
-            { k: "Deep", v: deep, lo: 13, hi: 23, col: "#4C3FD4", of: asleep },
-            { k: "REM", v: rem, lo: 20, hi: 25, col: "#67E8F9", of: asleep },
-            { k: "Light", v: light, lo: 45, hi: 55, col: "#3B84BC", of: asleep },
+            { k: "Deep", v: deep, lo: 13, hi: 23, col: SLEEP_STAGE.deep, of: asleep },
+            { k: "REM", v: rem, lo: 20, hi: 25, col: SLEEP_STAGE.rem, of: asleep },
+            { k: "Light", v: light, lo: 45, hi: 55, col: SLEEP_STAGE.light, of: asleep },
             { k: "Wake", v: wake, lo: null, hi: null, col: C.avoid, of: asleep + wake },
           ].map((r) => { const pct = r.of ? (r.v / r.of) * 100 : 0;
             const low = r.lo != null && pct < r.lo, high = r.hi != null && pct > r.hi;
@@ -5188,7 +5193,7 @@ export default function App() {
             sub: sl.status === "ready" ? `${sl.delta >= 0 ? "+" : ""}${sl.delta} min vs your ${hm(sl.baseline)}` : `learning baseline · ${sl.have}/${sl.need} nights`,
             subTone: sl.flagged ? C.avoid : C.faint,
             spark: tt ? (<svg width="92" height="32" viewBox="0 0 92 32">
-              {[[dp, "#4C3FD4", 1], [rm, "#67E8F9", 0.9], [lt, "#3B84BC", 0.9], [wk, C.avoid, 0.6]].reduce((acc, [v, c, o]) => {
+              {[[dp, SLEEP_STAGE.deep, 1], [rm, SLEEP_STAGE.rem, 0.9], [lt, SLEEP_STAGE.light, 0.9], [wk, C.avoid, 0.6]].reduce((acc, [v, c, o]) => {
                 const w = (v / tt) * 92; const el = v > 0 ? <rect key={c} x={acc.x} y="11" width={Math.max(1.5, w - 1)} height="10" rx="2" fill={c} opacity={o} /> : null;
                 acc.x += w; if (el) acc.out.push(el); return acc; }, { x: 0, out: [] }).out}
             </svg>) : null }; })())}</div>;
