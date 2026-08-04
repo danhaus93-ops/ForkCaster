@@ -1797,6 +1797,66 @@ async function labDueTick() {
     })).catch(() => {});
   } catch {}
 }
+/* v0.9.179: weigh-in and protein reminders.
+   dayKeyAt is MIRRORED from src/App.jsx and must stay identical — on nights his day does not roll
+   at midnight, it holds until 11am, and a reminder that used the wall clock would fire at 9am on a
+   day the app still calls yesterday. A struct guard compares the two implementations. */
+function dayKeyAt(now, prefsLike) {
+  const p = prefsLike || {};
+  const mode = p.shiftMode || "days";
+  const local = (ms) => new Date(ms).toLocaleDateString("sv-SE");
+  const t = now instanceof Date ? now.getTime() : (now || Date.now());
+  const plain = local(t - (p.rolloverHour || 0) * 3600000);
+  if (mode === "days") return plain;
+  const cand = local(t - (p.nightRollHour == null ? 11 : p.nightRollHour) * 3600000);
+  if (mode === "nights") return cand;
+  return cand !== plain && (p.workNights || []).includes(cand) ? cand : plain;
+}
+let _weighNoticeOn = null, _proteinNoticeOn = null;
+async function habitTick() {
+  try {
+    const st = pushStore();
+    if (!st.sub) return;
+    const state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    const prefs = state.prefs || {};
+    const wp = webpushLib(); if (!wp) return;
+    const now = new Date();
+    const hour = Math.max(0, Math.min(23, parseInt(prefs.reminderHour) || 9));
+    const today = dayKeyAt(now, prefs);          // the day the APP is on, not the calendar
+
+    /* Weigh-in. Silent once he has weighed for the tracked day — a reminder that fires after you
+       have already done the thing is how people learn to dismiss reminders without reading them. */
+    if (prefs.weighReminder !== false && now.getHours() === hour && _weighNoticeOn !== today) {
+      const logged = (state.weightLog || []).some((w) => w && String(w.date).slice(0, 10) === today);
+      if (!logged) {
+        _weighNoticeOn = today;
+        await wp.sendNotification(st.sub, JSON.stringify({
+          title: "\u2696\uFE0F Weigh-in",
+          body: "No weight logged yet today. Same conditions each time keeps the trend honest.",
+        })).catch(() => {});
+      } else { _weighNoticeOn = today; }
+    }
+
+    /* Protein, late in the day and only when it is still actionable. It carries the numbers rather
+       than telling him to log food — 72 of 160 with hours left is a decision; "log your food" is
+       noise he already knows. */
+    const pHour = Math.min(20, hour + 7);
+    if (prefs.proteinReminder !== false && now.getHours() === pHour && _proteinNoticeOn !== today) {
+      const eaten = state.eaten || {}, tgt = state.targets || {};
+      const floor = +tgt.protein || 0;
+      const got = +eaten.protein || 0;
+      const sameDay = String(state.eatenDate || "").slice(0, 10) === today;
+      if (floor > 0 && sameDay && got < floor * 0.5) {
+        _proteinNoticeOn = today;
+        await wp.sendNotification(st.sub, JSON.stringify({
+          title: "\uD83E\uDD69 Protein",
+          body: `${Math.round(got)} of ${Math.round(floor)} g so far \u2014 still time to close the gap.`,
+        })).catch(() => {});
+      } else if (floor > 0 && sameDay && got >= floor * 0.5) { _proteinNoticeOn = today; }
+    }
+  } catch {}
+}
+setInterval(habitTick, 10 * 60 * 1000);
 setInterval(labDueTick, 10 * 60 * 1000);
 setInterval(doseReminderTick, 10 * 60 * 1000);
 

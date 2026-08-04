@@ -1494,5 +1494,39 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/status: "failed", code: bc/.test(BY),'which is why the code is kept on the state');
 }
 
+
+// v0.9.179: weigh-in and protein reminders, and the day-roll they depend on.
+{
+  const fs6=require('fs');
+  const BZ=fs6.readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const SZ2=fs6.readFileSync(__FCROOT + '/server/server.js','utf8');
+  ok(/async function habitTick\(\)/.test(SZ2),'the habit reminders exist');
+  ok(/setInterval\(habitTick, 10 \* 60 \* 1000\);/.test(SZ2),'on the same clock as the dose and lab reminders');
+  ok(/prefs\.weighReminder !== false/.test(SZ2) && /prefs\.proteinReminder !== false/.test(SZ2),'each can be switched off');
+  ok(/_weighNoticeOn !== today/.test(SZ2) && /_proteinNoticeOn !== today/.test(SZ2),'each fires at most once per day');
+  ok(/const pHour = Math\.min\(20, hour \+ 7\);/.test(SZ2),'protein comes later in the day than the weigh-in');
+  ok(/got < floor \* 0\.5/.test(SZ2),'and only when he is genuinely behind');
+  ok(/\$\{Math\.round\(got\)\} of \$\{Math\.round\(floor\)\} g so far/.test(SZ2),'carrying the numbers, not an instruction to log food');
+  // the day-roll is mirrored from the app; if the two drift, a night-shift reminder fires on the
+  // wrong day — extract BOTH and run them, rather than trusting that they look alike
+  const grab=(src)=>{ const i=src.indexOf('function dayKeyAt('); let d=0, k=src.indexOf('{', i);
+    while (k < src.length) { if (src[k]==='{') d++; else if (src[k]==='}') { d--; if (!d) break; } k++; }
+    return src.slice(i, k+1); };
+  const appFn=grab(BZ), srvFn=grab(SZ2);
+  ok(appFn.length > 80 && srvFn.length > 80, 'both implementations were found');
+  const mk=(body,name)=>new Function('return ' + body.replace('function dayKeyAt', 'function ' + name))();
+  const A=mk(appFn,'a'), B=mk(srvFn,'b');
+  const cases=[
+    [Date.UTC(2026,7,4,3,0), {shiftMode:"nights", nightRollHour:11}],
+    [Date.UTC(2026,7,4,15,0),{shiftMode:"nights", nightRollHour:11}],
+    [Date.UTC(2026,7,4,3,0), {shiftMode:"days"}],
+    [Date.UTC(2026,7,4,3,0), {shiftMode:"varies", workNights:["2026-08-03"], nightRollHour:11}],
+    [Date.UTC(2026,7,4,9,0), {}],
+  ];
+  let same=true;
+  for (const [t,p2] of cases) if (A(t,p2) !== B(t,p2)) same=false;
+  ok(same, "the server's day-roll behaves identically to the app's");
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

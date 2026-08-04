@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.178"
+version: "0.9.179"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  A barcode scan that could not reach the food databases used to show nothing at all —
-  the sheet just sat there. It now says the lookup failed to connect, makes clear the
-  barcode itself may be fine, and offers a retry.
+  Two new reminders, using the notification time you already set. A weigh-in nudge if
+  you have not stepped on the scale that day, and a protein check later on if you are
+  well under your floor with time left. Both stay quiet once you have done the thing,
+  and the weigh-in follows your night-shift day rather than the clock.
 dependencies: []
 path: ""
 defaultUsername: ""
