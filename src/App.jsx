@@ -5593,6 +5593,9 @@ export default function App() {
           button,[role="button"]{transition:transform .12s cubic-bezier(.2,.7,.3,1),filter .12s ease;}
           button:active,[role="button"]:active{transform:scale(.97);filter:brightness(1.14);}
           button:disabled{filter:none;transform:none;}
+          button{position:relative;}
+          button::after{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;}
+          button:has(> svg):after,button.fc-nohit::after{display:none;}
           @media (prefers-reduced-motion:reduce){button,[role="button"]{transition:none;}}
           @keyframes fcToastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div style={{ width: "100%", maxWidth: 430, background: C.bg, minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
@@ -6962,7 +6965,7 @@ function MapView({ C, geo, restaurants, onPin, scoreColor, onSearchArea, prefs }
       </div>
       <div style={{ position: "absolute", top: 10, right: 10, zIndex: 800, display: "flex", gap: 4, background: pillBg, borderRadius: 20, padding: 3 }}>
         {["auto", "day", "night", "sat"].map((k) => (
-          <button key={k} onClick={() => setPick(k)} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "3px 9px", fontFamily: BODY, fontSize: 13, fontWeight: 700, background: pick === k ? C.go : "transparent", color: pick === k ? "#fff" : pillInk, textTransform: "capitalize" }}>{k}</button>
+          <button key={k} onClick={() => setPick(k)} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "7px 11px", fontFamily: BODY, fontSize: 13, fontWeight: 700, background: pick === k ? C.go : "transparent", color: pick === k ? "#fff" : pillInk, textTransform: "capitalize" }}>{k}</button>
         ))}
       </div>
       {moved && (

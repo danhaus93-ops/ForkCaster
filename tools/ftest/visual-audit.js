@@ -68,12 +68,21 @@ async function auditPage(page, label, compact) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
       // height is what a thumb misses; a full-width row 30px tall is the real failure mode
-      if (r.height >= floor) continue;
+      /* v0.9.166: measure the HIT area, not the painted box. Buttons carry an ::after that extends
+         the touch target 8px above and below without moving anything on screen, so the rectangle
+         a thumb can land on is taller than the rectangle that is drawn. Reading the pseudo-element
+         is the only honest way to check this — its own getBoundingClientRect would report the
+         visual box and keep flagging controls that are already reachable. */
+      const after = getComputedStyle(el, "::after");
+      const slop = after && after.content !== "none"
+        ? (parseFloat(after.top) || 0) + (parseFloat(after.bottom) || 0) : 0;
+      const hit = r.height + Math.abs(slop);
+      if (hit >= floor) continue;
       const label = (el.textContent || "").trim().slice(0, 28) || el.tagName.toLowerCase();
       const key = label + "|" + Math.round(r.height);
       if (seen.has(key)) continue;
       seen.add(key);
-      out.small.push({ label, h: Math.round(r.height), w: Math.round(r.width) });
+      out.small.push({ label, h: Math.round(hit), w: Math.round(r.width), drawn: Math.round(r.height) });
     }
 
     for (const el of document.querySelectorAll("span, div")) {
@@ -148,7 +157,7 @@ async function auditPage(page, label, compact) {
           summary.push({ label, scrollH: res.scrollH, cards: res.cards, small: res.small.length });
 
           for (const s of res.small)
-            note("TOUCH", `${label}: "${s.label}" is ${s.h}x${s.w}px, under the ${compact ? TOUCH_MIN_COMPACT : TOUCH_MIN}px floor`);
+            note("TOUCH", `${label}: "${s.label}" hit area ${s.h}px (drawn ${s.drawn}px), under the ${compact ? TOUCH_MIN_COMPACT : TOUCH_MIN}px floor`);
           for (const c of res.clipped)
             note(c.ell ? "TRUNCATED" : "CLIP",
               `${label}: "${c.text}" ${c.ell ? "truncates" : "is hard-clipped"} by ${c.by}px`);

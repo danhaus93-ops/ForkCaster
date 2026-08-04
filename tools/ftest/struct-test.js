@@ -1212,7 +1212,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the tool must not drown its own findings
   ok(/const isNested = /.test(VB),'the audit reports the outermost control, not every nested layer');
   ok(/const inScroller = /.test(VB),'and does not call a carousel a layout fault');
-  ok(/if \(r\.height >= floor\) continue;/.test(VB),'touch is judged on height, which is what a thumb misses');
+  ok(/if \(hit >= floor\) continue;/.test(VB),'touch is judged on the hit height, which is what a thumb lands on');
   ok(/kind === "CLIP" \|\| p\.kind === "OVERFLOW"/.test(VB),'only real layout defects fail the run');
   ok(/VISUAL_AUDIT_OK with /.test(VB),'advisories are reported without blocking a release');
 }
@@ -1327,6 +1327,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const MONO=0.60;
   ok(11*11.5*MONO + 11*0.4 <= (307-16)/3 - 12, 'RETATRUTIDE still fits its chip');
   ok(8*10.5*MONO + 8*0.4 <= (307-4*8)/5, 'CALORIES still fits its cell');
+}
+
+
+// v0.9.166: touch targets reachable without moving the layout.
+{
+  const fs5=require('fs');
+  const BQ=fs5.readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const VC=fs5.readFileSync(__FCROOT + '/tools/ftest/visual-audit.js','utf8');
+  ok(/button::after\{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;\}/.test(BQ),
+     'buttons carry 8px of vertical hit slop');
+  ok(/button\{position:relative;\}/.test(BQ),'anchored so the pseudo-element lands on the button');
+  ok(/left:0;right:0/.test(BQ),'vertical only — horizontal expansion would make neighbouring chips overlap');
+  // a 25px row was the commonest finding; with slop it clears the compact floor
+  ok(25 + 16 >= 38, 'a 25px row becomes a 41px target, over the 38px compact floor');
+  // and the audit must read the slop or it reports controls that are already reachable
+  ok(/getComputedStyle\(el, "::after"\)/.test(VC),'the audit measures the hit area, not the painted box');
+  ok(/drawn: Math\.round\(r\.height\)/.test(VC),'and still reports what is actually drawn');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
