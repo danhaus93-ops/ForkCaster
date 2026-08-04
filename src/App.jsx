@@ -21,24 +21,12 @@ const DATA = "ui-monospace,'SF Mono','JetBrains Mono',Menlo,monospace"; // v0.9.
 const THEMES = {
   forest: { name: "Forest",
     bg: "#E9EEE4", surface: "#FFFFFF", surfaceAlt: "#F5F8F1", ink: "#152019", ink2: "#26352C", muted: "#5E6B62", faint: "#6B786D",
-    go: "#128A4B", goSoft: "#DDF0E4", gold: "#B8860B", silver: "#7C8891", bronze: "#B06A34",
-    caution: "#D08A22", cautionSoft: "#F7ECD8", avoid: "#C24631", avoidSoft: "#F6E1DC", hair: "#D3DBCC", blue: "#2E6F8E", violet: "#6A5AA6" },
+    go: "#12884A", goSoft: "#DDF0E4", gold: "#B8860B", silver: "#7C8891", bronze: "#B06A34",
+    caution: "#A26B1A", cautionSoft: "#F7ECD8", avoid: "#C24631", avoidSoft: "#F6E1DC", hair: "#D3DBCC", blue: "#2E6F8E", violet: "#6A5AA6" },
   midnight: { name: "Midnight", dark: true,
     bg: "#0A0E13", surface: "#141C25", surfaceAlt: "#1B2530", ink: "#F2F6F4", ink2: "#C9D3CD", muted: "#8595A2", faint: "#778795",
     go: "#3BDF93", goSoft: "#0F2E22", gold: "#E3B24C", silver: "#9AA7B0", bronze: "#C98A55",
     caution: "#F0B455", cautionSoft: "#2C2413", avoid: "#F0705A", avoidSoft: "#2E1A16", hair: "#232E3A", blue: "#7CC7F0", violet: "#AE9BF6" },
-  ocean: { name: "Ocean",
-    bg: "#E7EEF2", surface: "#FFFFFF", surfaceAlt: "#EEF4F8", ink: "#10202B", ink2: "#22333F", muted: "#566873", faint: "#627682",
-    go: "#0E8F9B", goSoft: "#D5EEF0", gold: "#C69A3C", silver: "#7C8891", bronze: "#B06A34",
-    caution: "#D68A2A", cautionSoft: "#F6ECD9", avoid: "#C9504A", avoidSoft: "#F6E0DE", hair: "#CFDBE2", blue: "#2E6F8E", violet: "#5E6AB0" },
-  ember: { name: "Ember",
-    bg: "#F6EFE9", surface: "#FFFFFF", surfaceAlt: "#FBEDE3", ink: "#241813", ink2: "#3B2A22", muted: "#7A6355", faint: "#896E5B",
-    go: "#C4632F", goSoft: "#F6E2D4", gold: "#B8860B", silver: "#8A8078", bronze: "#A9682F",
-    caution: "#CE8A2A", cautionSoft: "#F7ECD6", avoid: "#B23B2F", avoidSoft: "#F4DDD7", hair: "#E4D6C9", blue: "#3E7C8E", violet: "#7A5AA6" },
-  mono: { name: "Mono",
-    bg: "#F0F1EF", surface: "#FFFFFF", surfaceAlt: "#F5F6F4", ink: "#1A1B18", ink2: "#33352F", muted: "#63665E", faint: "#72746B",
-    go: "#1F6E3A", goSoft: "#E1EBE2", gold: "#8A7A3A", silver: "#808881", bronze: "#977A54",
-    caution: "#9A7A2E", cautionSoft: "#EEEAD9", avoid: "#8E3B33", avoidSoft: "#EEDEDB", hair: "#DBDCD7", blue: "#40606E", violet: "#5A566E" },
 };
 
 const ALLERGENS = ["Milk", "Eggs", "Fish", "Shellfish", "Tree nuts", "Peanuts", "Wheat/Gluten", "Soy", "Sesame"];
@@ -612,6 +600,8 @@ const LAB_GROUPS = ["Lipid panel", "Comprehensive metabolic panel", "Hemoglobin 
    sitting on a theme surface at all. Listed here so the next sweep for raw hex knows which ones
    are answers rather than oversights. */
 const SLEEP_STAGE = { deep: "#4C3FD4", rem: "#67E8F9", light: "#3B84BC" };   // awake uses C.avoid
+const CHART_DARK  = { fc: "#C7E04A", ah: "#67E8F9", wt: "#3BDF93", wk: "#F0B455", comp: "#3D7FD6" };
+const CHART_LIGHT = { fc: "#879C1B", ah: "#07A3B8", wt: "#1CAA68", wk: "#CD8512", comp: "#3D7FD6" };
 const MEDS = {
   tirzepatide: { label: "Tirzepatide", brand: "Zepbound / Mounjaro", cadence: "weekly", investigational: false,
     steps: [2.5, 5, 7.5, 10, 12.5, 15], unit: "mg",
@@ -3238,6 +3228,7 @@ export default function App() {
   seqRef.current = 0;
   idSeenRef.current = {};
   if (rowsRef.current) rowsRef.current[tab] = [];
+  const CHART = C.dark ? CHART_DARK : CHART_LIGHT;
   const _cmp = !!prefs.compact;
   // v0.9.105: compact is a layer, and a collapsed card still READS. The row carries the same
   // number the open card leads with, its unit, the finding and a sparkline — Apple's Health shape.
@@ -4176,7 +4167,7 @@ export default function App() {
                   leanShown != null ? `${leanShown.toFixed(0)} lb lean held` : null,
                   _toGo != null && _toGo > 0 ? `${_toGo.toFixed(1)} to goal` : null].filter(Boolean).join(" · "),
             subTone: C.go,
-            spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), "#3BDF93") }; })())}</div>);
+            spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), CHART.wt) }; })())}</div>);
       })()}
       <div style={{ display: "contents" }}>{card(<WeeklyCard C={C} mealLog={mealLog} weightLog={weightSeries} doseLog={glp.doseLog || []} sideEffects={glp.sideEffects || []} proteinGoal={targets.protein} fmtW={(x, d) => fmtWt(x, d)} unit={wtU} goalLbs={goalWeight} onShareMilestone={shareMilestone} />, {}, (() => {
         const _wa = weekAdherence(mealLog, targets.protein);
@@ -4185,7 +4176,7 @@ export default function App() {
           color: C.go, title: "This week", when: `${_wa.loggedDays}/7 logged`,
           value: _adh != null ? String(_adh) : "—", unit: _adh != null ? "% protein adherence" : "not enough logged",
           sub: `${_wa.loggedDays} of 7 days with food logged`, subTone: C.faint,
-          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), "#F0B455") }; })())}</div>
+          spark: _spark(_wa.days.map((d) => _wa.byDay[d] || 0), CHART.wk) }; })())}</div>
 
 
 
@@ -4258,7 +4249,7 @@ export default function App() {
         when: bfMeasured ? "Measured" : "Estimated",
         value: bfShown != null ? bfShown.toFixed(1) : "—", unit: "% body fat",
         sub: `${leanShown != null ? `${leanShown.toFixed(0)} lb lean` : "lean unknown"}${bmi ? ` · ${bmi.toFixed(1)} BMI` : ""}`,
-        spark: _spark(((healthSync && healthSync.days) || []).filter((d) => d.bodyFatPct != null).slice(-10).map((d) => d.bodyFatPct), "#3D7FD6"),
+        spark: _spark(((healthSync && healthSync.days) || []).filter((d) => d.bodyFatPct != null).slice(-10).map((d) => d.bodyFatPct), CHART.comp),
       })}</div>
 
       <div style={{ display: "contents" }}>{card(
@@ -5671,7 +5662,7 @@ export default function App() {
               id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
               sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
-              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), "#C7E04A"),
+              spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), CHART.fc),
             } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
               value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {
@@ -5725,7 +5716,7 @@ export default function App() {
                 value: avgSteps ? avgSteps.toLocaleString() : "—", unit: "avg steps/day",
                 sub: [lastW ? `${fmtWt(lastW.weightLbs, 1)} ${wtU} last synced` : null,
                       `${strengthWk}× strength this week`, _label].filter(Boolean).join(" · "),
-                spark: _spark(wk.map((d) => +d.steps || 0), "#67E8F9") }; })());
+                spark: _spark(wk.map((d) => +d.steps || 0), CHART.ah) }; })());
           })()}{(() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];
             const strengthWk = hd.slice(-7).reduce((n, d) => n + (d.strength || 0), 0);

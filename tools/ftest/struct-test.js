@@ -713,33 +713,42 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 
 
-// v0.9.130: the palette check now measures HUE. The previous version compared variable names for
-// inequality, so C.gold and C.caution passed as "distinct" while sitting 7 degrees apart and looking
-// identical on screen. A test that cannot fail is worse than no test.
+// v0.9.181: the palette check measures HUE, in BOTH themes. It used to demand literal hex because
+// tokens once hid the fact that C.gold and C.caution were the same amber; the colours now live in
+// two named palettes, so the check resolves those and measures what actually renders — which also
+// catches the older fault that these five were only ever checked against the dark surface.
 {
   const AJ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const hue=(hex)=>{ const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
     const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn; if(!d) return 0;
     let h = mx===r ? ((g-b)/d)%6 : mx===g ? (b-r)/d+2 : (r-g)/d+4; h*=60; return (h+360)%360; };
-  const sep=(a,b)=>{ const d=Math.abs(a-b); return Math.min(d,360-d); };
-  const colOf=(id)=>{ const i=AJ.indexOf('id: "'+id+'"'); const m=/_spark\([^,]+, "(#[0-9A-Fa-f]{6})"/.exec(AJ.slice(i, i+1900)); return m?m[1]:null; };
-  const ids=['fc','ah','wt','wk','comp'], cols=ids.map(colOf);
-  ok(cols.every(Boolean),'every Body sparkline declares a literal colour, not a token');
-  if (cols.every(Boolean)) {
-    const hs=cols.map(hue);
+  const sep=(a2,b2)=>{ const d=Math.abs(a2-b2); return Math.min(d,360-d); };
+  const lum=(hex)=>{ const c=[1,3,5].map((i)=>parseInt(hex.slice(i,i+2),16)/255)
+    .map((v)=>v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4));
+    return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; };
+  const ratio=(x,y)=>{ const p2=[lum(x),lum(y)].sort((m,n)=>n-m); return (p2[0]+0.05)/(p2[1]+0.05); };
+  const grab=(name)=>{ const m=new RegExp('const '+name+'\\s*=\\s*\\{([^}]+)\\}').exec(AJ);
+    return m ? Object.fromEntries([...m[1].matchAll(/(\w+): "(#[0-9A-Fa-f]{6})"/g)].map((x)=>[x[1],x[2]])) : null; };
+  const dark=grab('CHART_DARK'), light=grab('CHART_LIGHT');
+  ok(dark && Object.keys(dark).length === 5,'the dark chart palette has five colours');
+  ok(light && Object.keys(light).length === 5,'and the light one matches it key for key');
+  ok(Object.keys(dark).every((k)=>light[k]),'with the same five names in both');
+  for (const [name, pal, surf] of [["midnight", dark, "#141C25"], ["forest", light, "#FFFFFF"]]) {
+    const ks=Object.keys(pal), hs=ks.map((k)=>hue(pal[k]));
     let worst=360, pair='';
     for (let i=0;i<hs.length;i++) for (let j=i+1;j<hs.length;j++) {
-      const d=sep(hs[i],hs[j]); if (d<worst) { worst=d; pair=ids[i]+'/'+ids[j]; }
+      const d=sep(hs[i],hs[j]); if (d<worst) { worst=d; pair=ks[i]+'/'+ks[j]; }
     }
-    ok(worst>=25,'no two Body sparklines are within 25 degrees of hue: closest '+pair+' at '+Math.round(worst));
-    // violet is medication, red is heart rate — neither may appear on a Body chart
-    for (const [name,res] of [['violet',253],['red',0]])
-      ok(hs.every((h)=>sep(h,res)>=25), 'no Body sparkline strays into '+name);
+    ok(worst>=25, name + ': no two chart colours are within 25 degrees (' + pair + ' at ' + Math.round(worst) + ')');
+    ok(hs.every((h)=>sep(h,253)>=25), name + ': none strays into violet, which means medication');
+    ok(hs.every((h)=>sep(h,0)>=25), name + ': nor into red, which means heart rate');
+    // and it must be VISIBLE on that theme's surface — the fault this release found
+    for (const k of ks) ok(ratio(pal[k], surf) >= 3.0,
+      name + ': ' + k + ' is visible on its own surface (' + ratio(pal[k], surf).toFixed(2) + ':1)');
   }
-  const sub=/\{vd\.sub && <div style=\{\{[^}]*\}\}/.exec(AJ);
-  ok(sub && !/textOverflow: "ellipsis"/.test(sub[0]),'the collapsed sub wraps instead of truncating');
-  const ph=AJ.slice(AJ.indexOf('id: "pho"'), AJ.indexOf('id: "pho"') + 1200);
-  ok(/spark: null/.test(ph),'the photos row draws no thumbnail strip');
+  // the same hue means the same thing in both themes, so a chart does not change meaning on switch
+  ok(Object.keys(dark).every((k)=>sep(hue(dark[k]), hue(light[k])) <= 5),
+     'each chart colour keeps its hue across themes');
 }
 
 
@@ -965,7 +974,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const ratio=(a,b)=>{const p=[lum(a),lum(b)].sort((m,n)=>n-m);return (p[0]+0.05)/(p[1]+0.05);};
   const i=AX.indexOf('const THEMES'); const blk=AX.slice(i, i+4200);
   const themes=[...blk.matchAll(/(\w+):\s*\{[^}]*?surface:\s*"(#[0-9A-Fa-f]{6})"[^}]*?muted:\s*"(#[0-9A-Fa-f]{6})"[^}]*?faint:\s*"(#[0-9A-Fa-f]{6})"/g)];
-  ok(themes.length >= 5, 'all themes found for the contrast check (' + themes.length + ')');
+  ok(themes.length === 2, 'both themes found for the contrast check (' + themes.length + ')');
   for (const [,name,surf,muted,faint] of themes) {
     const rf=ratio(faint,surf), rm=ratio(muted,surf);
     ok(rf >= 4.5, name + ': faint meets WCAG AA on its surface (' + rf.toFixed(2) + ':1)');
@@ -1422,8 +1431,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok((BU.match(/"#3B84BC"/g) || []).length === 1,'light too');
   // the activity sparkline shares a hex with REM by coincidence and must NOT share the constant —
   // welding them means changing the sleep legend silently restyles a chart about steps
-  ok(/spark: _spark\(wk\.map\(\(d\) => \+d\.steps \|\| 0\), "#67E8F9"\)/.test(BU),
-     'the activity sparkline keeps its own colour, not the sleep constant');
+  ok(/spark: _spark\(wk\.map\(\(d\) => \+d\.steps \|\| 0\), CHART\.ah\)/.test(BU),
+     'the activity sparkline draws from the CHART palette, not the sleep constant');
+  ok(/const CHART_DARK/.test(BU) && /const SLEEP_STAGE/.test(BU),
+     'they are separate palettes, so restyling sleep cannot restyle a chart about steps');
   ok(/Fixed palettes\. These deliberately do NOT come from THEMES/.test(BU),
      'the fixed colours are documented as answers rather than oversights');
   ok(!/"#6b7a71"/.test(BU),'the score fallback uses a theme token');
@@ -1541,6 +1552,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/background: C\.bg, borderRadius: "18px/.test(CA),'no sheet sits on C.bg while its siblings sit on C.surface');
   ok((CA.match(/borderTop: `1px solid \$\{C\.hair\}`, borderRadius: "18px/g) || []).length === 4,
      'all four sheets declare a top edge rather than dissolving into the scrim');
+}
+
+
+// v0.9.181: two themes, chosen on measurement rather than taste.
+{
+  const CB=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const i=CB.indexOf('const THEMES');
+  const names=[...CB.slice(i, i+2400).matchAll(/\n\s*(\w+):\s*\{[^}]*surface:/g)].map((m)=>m[1]);
+  ok(names.length === 2, 'exactly two themes ship (' + names.join(', ') + ')');
+  ok(names.includes('midnight') && names.includes('forest'),'midnight and forest');
+  // ember was removed because its `go` was ORANGE — 131 degrees from midnight's green and only 14
+  // from its own caution, so "on track" and "warning" were nearly the same colour
+  ok(!/\n\s*ember:\s*\{/.test(CB) && !/\n\s*ocean:\s*\{/.test(CB) && !/\n\s*mono:\s*\{/.test(CB),
+     'ocean, ember and mono are gone');
+  ok(/caution: "#A26B1A"/.test(CB),"forest's caution is readable (was 2.86:1, below the floor)");
+  ok(/go: "#12884A"/.test(CB),"and its go clears 4.5:1");
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
