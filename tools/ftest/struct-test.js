@@ -2129,5 +2129,27 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok((CZ.match(/\{sheetCard && \(/g) || []).length === 1,'there is exactly one sheet, at app root');
 }
 
+
+// v0.9.215: the step chart answers "what was that day".
+{
+  const DA=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const \[pick, setPick\] = useState\(null\)/.test(DA),'one pick state serves every chart');
+  ok(/p0\.chart === "steps" && p0\.i === i2 \? null : \{ chart: "steps", i: i2 \}/.test(DA),
+     'tapping the same bar twice clears the pick');
+  ok(/opacity: _pk == null \? \(v \? \(last \? 1 : 0\.55\) : 0\.15\) : \(_pk === i2 \? 1 : 0\.22\)/.test(DA),
+     'the other bars dim so the pick reads');
+  // the S M T W T F S row already names the weekday, so the readout carries the DATE
+  ok(/_pkDay \? fmtDate\(_pkDay\.date\) : "this week"/.test(DA),'the readout shows a date, not a weekday');
+  ok(!/_pkDay \? \w*\[_pk\]/.test(DA),'the readout does not index a weekday-name array');
+  // the goal LABEL left the plot — right-aligned it sat over the last bar's own number
+  ok(!/top: 180 - \(goal \/ hi\) \* 158 - 15/.test(DA),'the goal label is no longer inside the plot');
+  ok(/marginLeft: "auto", fontFamily: DATA, fontSize: 12, color: CHART\.ah/.test(DA),'it sits on the header line');
+  // the collision he found, in numbers: the last bar's value label and the goal label overlapped
+  const H=180, SCALE=158, hi=10400, goal=8000;
+  const labTop = H - (goal/hi)*SCALE - 15;
+  const satNum = H - (7400/hi)*SCALE - 20;
+  ok(!(satNum + 15 < labTop || satNum > labTop + 15), 'and they genuinely overlapped where they were');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

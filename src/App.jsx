@@ -1629,6 +1629,7 @@ export default function App() {
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
   const [sheetCard, setSheetCard] = useState(null);
+  const [pick, setPick] = useState(null)   /* {chart, i} — the data point he is asking about */;
   /* v0.9.160: toast. Replaces the OS alert dialog, which stopped the app dead in an OS-chrome box with a system
      font — the least premium element available on the web, in an app that otherwise looks like an
      instrument. Errors stay up longer than confirmations because they are read, not glanced at. */
@@ -5855,30 +5856,48 @@ export default function App() {
                       rest dimmed, and a dashed rule marks the goal when one is set. */}
                   {wk.length > 0 && (() => {
                     const vals = wk.map((d) => +d.steps || 0);
+                    /* v0.9.215: the readout. Tapping a bar answers "what was that day" — and it carries
+                       the DATE, because the S M T W T F S row underneath already names the weekday. */
+                    const _pk = pick && pick.chart === "steps" ? pick.i : null;
+                    const _pkDay = _pk != null && wk[_pk] ? wk[_pk] : null;
                     const goal = +prefs.stepGoal || 0;
                     const hi = Math.max(...vals, goal) || 1;
                     const dayL = ["S", "M", "T", "W", "T", "F", "S"];
                     return (
                       <div style={{ marginBottom: 16 }}>
+                        {/* the readout, and the goal label that used to sit over the last bar */}
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8, minHeight: 16 }}>
+                          <span style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase", color: C.faint }}>
+                            {_pkDay ? fmtDate(_pkDay.date) : "this week"}</span>
+                          {goal ? (
+                            <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, color: CHART.ah, opacity: 0.8 }}>
+                              goal {goal.toLocaleString()}</span>) : null}
+                        </div>
+                        <div style={{ fontFamily: DATA, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 8, minHeight: 32 }}>
+                          {_pkDay ? (+_pkDay.steps || 0).toLocaleString() : Math.round(vals.reduce((a, b) => a + b, 0) / (vals.length || 1)).toLocaleString()}
+                          <span style={{ fontFamily: DATA, fontSize: 13.5, color: C.faint, marginLeft: 4, fontWeight: 600 }}>
+                            {_pkDay ? (goal && +_pkDay.steps >= goal ? "steps · goal met" : "steps") : "avg steps/day"}</span>
+                        </div>
                         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 8, height: 180, position: "relative" }}>
                           {goal ? (
-                            <>
-                              <div style={{ position: "absolute", left: 0, right: 0, top: 180 - (goal / hi) * 158,
-                                borderTop: `1.5px dashed ${CHART.ah}`, opacity: 0.5, pointerEvents: "none" }} />
-                              <div style={{ position: "absolute", right: 0, top: 180 - (goal / hi) * 158 - 15,
-                                fontFamily: DATA, fontSize: 12, color: CHART.ah, opacity: 0.75 }}>
-                                goal {goal.toLocaleString()}</div>
-                            </>) : null}
+                            /* the rule stays; the LABEL moved to the card header. Right-aligned here it
+                               sat directly over the last bar's own number — an 11px overlap he caught. */
+                            <div style={{ position: "absolute", left: 0, right: 0, top: 180 - (goal / hi) * 158,
+                              borderTop: `1.5px dashed ${CHART.ah}`, opacity: 0.5, pointerEvents: "none" }} />
+                            ) : null}
                           {vals.map((v, i2) => {
                             const h = Math.max(3, (v / hi) * 158);
                             const last = i2 === vals.length - 1;
                             return (
-                              <div key={i2} style={{ width: 26, display: "flex", flexDirection: "column",
+                              <div key={i2} onClick={() => setPick((p0) =>
+                                  p0 && p0.chart === "steps" && p0.i === i2 ? null : { chart: "steps", i: i2 })}
+                                style={{ width: 26, display: "flex", flexDirection: "column", cursor: "pointer",
                                 alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
                                 <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginBottom: 4 }}>
                                   {v >= 1000 ? (v / 1000).toFixed(1) + "k" : v || ""}</span>
-                                <div style={{ width: "100%", height: h, borderRadius: 4,
-                                  background: CHART.ah, opacity: v ? (last ? 1 : 0.55) : 0.15 }} />
+                                <div style={{ width: "100%", height: h, borderRadius: 4, background: CHART.ah,
+                                  transition: "opacity .16s ease",
+                                  opacity: _pk == null ? (v ? (last ? 1 : 0.55) : 0.15) : (_pk === i2 ? 1 : 0.22) }} />
                               </div>);
                           })}
                         </div>
@@ -6783,7 +6802,7 @@ function SymptomPatterns({ C, sideEffects, doseLog }) {
   return (
     <div>
       <div style={{ fontSize: 15.5, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>Symptom patterns</div>
-      {lines.map((l) => <div key={l.sym} style={{ fontSize: 17.5, color: C.ink2, lineHeight: 1.5, marginBottom: 4 }}>{"\u2022"} {l.text}</div>)}
+      {lines.map((l) => <div key={l.sym} style={{ fontSize: 17.5, color: C.ink2, lineHeight: 1.5, marginBottom: 4 }}>• {l.text}</div>)}
       <div style={{ fontSize: 13.5, color: C.faint, marginTop: 4 }}>Computed from your logs {"—"} worth mentioning to your prescriber if a pattern is disruptive.</div>
     </div>
   );
