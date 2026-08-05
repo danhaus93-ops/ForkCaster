@@ -1736,5 +1736,20 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/aria-hidden="true"/.test(labs),'the drop is decorative to a screen reader — the number is the content');
 }
 
+
+// v0.9.192: the collapsed row header, matched to the approved preview.
+{
+  const CJ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/fontSize: 11\.5, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CJ),
+     'the row title is on the eyebrow rung, not the micro rung');
+  ok(/alignItems: "center", gap: 8, marginBottom: 12 \}\}>\s*<span style=\{\{ width: 6\.5/.test(CJ.replace(/\n\s*/g,' ')) ||
+     /gap: 8, marginBottom: 12/.test(CJ), 'and the gap beneath it is 12, not 8');
+  // the title grew, so re-check the widest title against its corner at the narrowest device
+  const MONO=0.60, inner=307-32;
+  const fits=(t,c)=>t.length*11.5*MONO + t.length*1.1 + c.length*11.5*MONO + c.length*0.8 + 24 <= inner;
+  ok(fits("PATH TO YOUR FORECAST","CONTRACT"),'the longest title still fits beside its corner at 375pt');
+  ok(fits("PROGRESS PHOTOS","TAP TO SEE"),'and the next longest');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

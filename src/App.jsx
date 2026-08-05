@@ -3351,9 +3351,9 @@ export default function App() {
     const _arr = arrangeTab === tab;
     return cardShell(
       <div onClick={() => { if (_arr) return; setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when, sheetWhen: vd.sheetWhen }); }} style={{ cursor: "pointer" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           {dot}
-          <span style={{ fontFamily: DATA, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
+          <span style={{ fontFamily: DATA, fontSize: 11.5, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
           {vd.when && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 10.5, color: C.faint, letterSpacing: 0.5, textTransform: "uppercase", flexShrink: 0 }}>{vd.when}</span>}
           <span style={{ color: C.faint, fontSize: 15, lineHeight: 1, marginLeft: vd.when ? 6 : "auto", flexShrink: 0 }}>{"›"}</span>
         </div>
