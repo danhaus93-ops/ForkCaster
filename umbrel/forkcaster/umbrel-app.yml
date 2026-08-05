@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.210"
+version: "0.9.211"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Card titles are larger on every tab. A few long ones were shortened on the collapsed
-  row so the rest could grow — the full heading inside each card is unchanged. The body
-  fat chart now sits at the top of its card with a dot on every reading.
+  The Still learning card was asking for 14 weigh-ins. It actually needs 4 weigh-ins
+  spread over 12 days — you already have the weigh-ins, so it now shows how far along
+  the 12 days you are.
 dependencies: []
 path: ""
 defaultUsername: ""

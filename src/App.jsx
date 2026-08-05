@@ -5925,10 +5925,12 @@ export default function App() {
              number of its own, and merging would hide it. */
           const _ar = adaptiveRead(weightLog, mealLog, targets, prefs);
           const _dr = doseResponseRead(mealLog, glp);
-          const _arReady = !!(_ar && _ar.pts != null && _ar.spanDays >= 14);
+          const _arReady = !!(_ar && _ar.status !== "collecting");
           const _drReady = !!(_dr && _dr.status === "ok");
           if (_arReady || _drReady) return null;
           const banked = (_ar && _ar.pts) || 0;
+          const spanned = (_ar && _ar.spanDays) || 0;
+          const needCount = banked < 4;
           return card(<div>
             {sectionTitle("Still learning · two engines")}
             <div style={{ fontSize: 15.5, color: C.muted, lineHeight: 1.5, marginTop: 8 }}>
@@ -5938,7 +5940,8 @@ export default function App() {
             </div>
           </div>, {}, {
             id: "learn", tone: "none", color: C.faint, title: "Still learning",
-            when: "2 engines", value: String(banked), unit: `of 14 weigh-ins`,
+            when: "2 engines", value: String(needCount ? banked : spanned),
+            unit: needCount ? "of 4 weigh-ins" : "of 12 days spanned",
             sub: `${(_dr && _dr.days) || 0} of 10 meal days · ${(_dr && _dr.sym) || 0} of 5 symptom days`,
             spark: null,
           });
@@ -5950,7 +5953,7 @@ export default function App() {
             const applied = prefs.adaptiveAppliedOn === todayISO();
             const col = ar.flag === "lean-mass" ? C.avoid : ar.flag === "on-track" ? C.go : C.caution;
             /* v0.9.186: silent until readable — the "Still learning" row speaks for it before that */
-            if (!(ar && ar.pts != null && ar.spanDays >= 14)) return null;
+            if (!ar || ar.status === "collecting") return null;
             return card(<div>
               {sectionTitle("Adaptive targets · learned from your trend")}
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>

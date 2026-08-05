@@ -1663,7 +1663,9 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // two cards whose only content was "not ready" become one, and split back when either can read
   ok(/id: "learn"/.test(CF),'a single Still learning row exists');
   ok(/if \(_arReady \|\| _drReady\) return null;/.test(CF),'it disappears the moment either engine becomes readable');
-  ok(/if \(!\(ar && ar\.pts != null && ar\.spanDays >= 14\)\) return null;/.test(CF),'adaptive targets stays silent until it can read');
+  ok(/if \(!ar \|\| ar\.status === "collecting"\) return null;/.test(CF),
+     'adaptive targets asks the engine whether it can read, rather than re-deriving a threshold');
+  ok(!/spanDays >= 14/.test(CF),'no invented 14-day threshold anywhere');
   ok(/if \(!\(dr && dr\.status === "ok"\)\) return null;/.test(CF),'and dose response likewise');
   // protein adherence renders ONLY on Body — it was nearly removed on a claim that Today had it too
   const t=CF.indexOf('const renderToday'); const tEnd=CF.indexOf('\n  const render', t + 20);
@@ -2057,6 +2059,26 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/pts\.map\(\(p0, n\) => \(\s*<circle key=\{n\}/.test(CV.replace(/\n\s*/g, ' ')),
      'each point on the composition line is drawn');
   ok(/r=\{n === pts\.length - 1 \? 4\.5 : 2\.8\}/.test(CV),'with the latest one larger');
+}
+
+
+// v0.9.211: "6 of 14 weigh-ins" was wrong twice over.
+{
+  const CW=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // adaptiveRead needs FOUR weigh-ins and a TWELVE-day span. With six he had passed the count
+  // already, and the row told him he was less than half way to a number that did not exist.
+  ok(!/of 14 weigh-ins/.test(CW),'the invented 14 is gone');
+  ok(/const needCount = banked < 4;/.test(CW),'four is the real weigh-in threshold');
+  ok(/unit: needCount \? "of 4 weigh-ins" : "of 12 days spanned"/.test(CW),
+     'and the row names whichever half of the rule is actually missing');
+  // the engine states the threshold once; nothing else may restate it
+  const i=CW.search(/(?:const|function)\s+adaptiveRead/);
+  let d=0, k=CW.indexOf('{', i);
+  while (k < CW.length) { if (CW[k]==='{') d++; else if (CW[k]==='}') { d--; if (!d) break; } k++; }
+  const eng=CW.slice(i, k+1);
+  ok(/pts\.length < 4 \|\| spanDays < 12/.test(eng),'the engine still owns the rule');
+  const readers=(CW.match(/spanDays >= \d+/g) || []);
+  ok(readers.length === 0, 'and no card re-derives it (' + readers.join(',') + ')');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
