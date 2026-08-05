@@ -2209,6 +2209,10 @@ export default function App() {
     : null;
   const labEvery = Math.max(30, +prefs.labIntervalDays || 90);
   const labDueIn = labAgeDays == null ? null : labEvery - labAgeDays;
+  /* v0.9.194: one state for the whole card. Blood is owed when the panel has never been drawn,
+     when it is past its interval, or when a marker flagged required has never been measured —
+     all three mean the same thing to him, so they get the same signal. */
+  const labsDue = labDueIn == null || labDueIn <= 0 || labMissing.length > 0;
   const nextInjection = (() => {
     if (injInterval !== 7) {
       return lastDoseDate
@@ -4542,9 +4546,9 @@ export default function App() {
           const tone = flagged.length ? C.avoid : (labMissing.length || (labAgeDays != null && labAgeDays > 180)) ? C.caution : outs.length ? C.caution : C.go;
           return {
             id: "labs", tone, color: tone, title: "Lab panel",
-            when: labMissing.length ? `${labMissing.length} to draw`
-              : labDueIn == null ? "none on file"
-              : labDueIn <= 0 ? "due now" : `due in ${labDueIn}d`,
+            when: labsDue ? "Labs due"
+              : labDueIn != null && labDueIn <= 14 ? `due in ${labDueIn}d`
+              : labDraws.length ? fmtDate(labDraws[labDraws.length - 1].date) : "on file",
             value: String(drawn), unit: drawn === 1 ? "marker on file" : "markers on file",
             sub: !labDraws.length ? "no results yet · import one to start a baseline"
               : `${labBaselineDate ? "baseline " + fmtDate(labBaselineDate) : ""}${labMissing.length ? " · " + labMissing.map((m) => m.name.toLowerCase()).join(" and ") + " never drawn" : ""}`,
@@ -4553,7 +4557,9 @@ export default function App() {
                decorating. Static red: it is an identity mark for blood, not a state colour. */
             spark: (
               <svg width="34" height="40" viewBox="0 0 44 52" aria-hidden="true">
-                <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z" fill={LAB_DROP} />
+                <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z"
+                    fill={labsDue ? "none" : LAB_DROP}
+                    stroke={labsDue ? LAB_DROP : "none"} strokeWidth={labsDue ? 2.6 : 0} />
               </svg>),
           }; })())}</div>
       {card(

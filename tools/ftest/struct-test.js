@@ -1119,7 +1119,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/if \(prefs\.labReminder === false\) return;/.test(BE),'and can be switched off');
   // the same state is visible in the card without waiting for a notification
   ok(/const labDueIn = labAgeDays == null \? null : labEvery - labAgeDays;/.test(BD),'the card computes the same countdown');
-  ok(/labDueIn <= 0 \? "due now"/.test(BD),'and says due now when it is');
+  ok(/labsDue \? "Labs due"/.test(BD),'and says so when a draw is owed');
   // v0.9.152: the third TDZ this project has caught. Pin the order rather than trusting it.
   ok(BD.indexOf('const labAgeDays') < BD.indexOf('const labDueIn'),'labAgeDays is declared before the countdown that reads it');
 }
@@ -1715,25 +1715,29 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 
 
-// v0.9.189: the lab card's blood drop.
+// v0.9.194: the drop is the due signal — empty means blood is owed, solid means the panel is
+// current. The .189 rule still holds and is what makes this safe: the COLOUR never changes, so red
+// never becomes a state. Only fill-versus-outline carries meaning.
 {
   const CI=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/const LAB_DROP = "#C8322B";/.test(CI),'the drop has one fixed colour');
-  // it is red on purpose, and that does NOT break the heart-rate rule: red SIGNALS heart rate, and
-  // a mark that never varies is not signalling. The test is that it never varies.
-  ok(!/LAB_DROP.*\?/.test(CI.split('\n').find((l)=>/const LAB_DROP/.test(l)) || ''),'declared as a constant, not a conditional');
-  const labs=CI.slice(CI.indexOf('id: "labs"') - 2600, CI.indexOf('id: "labs"') + 1800);
-  ok(!/tone \? LAB_DROP|LAB_DROP : /.test(labs),'the drop never changes colour with state');
-  ok((CI.match(/fill=\{LAB_DROP\}/g) || []).length >= 1 && !/stroke=\{C\.(go|caution|avoid)\}/.test(labs),
-     'and nothing else in the drop carries a state colour');
-  // solid: one path, one fill, no clip and no opacity ramp. The card's hero number already states
-  // how many markers are on file; a part-filled icon repeated it and read as half-drawn.
-  ok(!/fcDropClip/.test(CI),'no clip path — the drop is not a gauge');
-  ok(!/const cut = 46 - pct/.test(CI),'and carries no fill maths');
-  ok(/<path d="M22 4C22 4 6 22 6 31\.5A16 16 0 0 0 38 31\.5C38 22 22 4 22 4Z" fill=\{LAB_DROP\} \/>/.test(CI),
-     'one path, filled solid');
-  ok(!/opacity="0\.\d+"[^>]*\{LAB_DROP\}|\{LAB_DROP\}[^>]*opacity="0\./.test(CI),'with no opacity on the drop itself');
-  ok(/aria-hidden="true"/.test(labs),'the drop is decorative to a screen reader — the number is the content');
+  ok(/const labsDue = labDueIn == null \|\| labDueIn <= 0 \|\| labMissing\.length > 0;/.test(CI),
+     'due means never drawn, past its interval, or a required marker missing');
+  ok(/fill=\{labsDue \? "none" : LAB_DROP\}/.test(CI),'empty when due, solid when current');
+  ok(/stroke=\{labsDue \? LAB_DROP : "none"\}/.test(CI),'the outline uses the same red, never another');
+  // the colour is never conditional — only the fill is. That is the whole safety argument.
+  const dropLine=(CI.match(/fill=\{labsDue[^>]*\/>/s) || [''])[0];
+  ok(!/C\.(go|caution|avoid|muted)/.test(dropLine),'no state colour appears in the drop');
+  ok((dropLine.match(/LAB_DROP/g) || []).length === 2,'both the fill and the stroke are the same constant');
+  // and the reminder goes with it
+  ok(/when: labsDue \? "Labs due"/.test(CI),'the corner says Labs due while blood is owed');
+  ok(/labDueIn != null && labDueIn <= 14 \? `due in \$\{labDueIn\}d`/.test(CI),'counts down only in the last fortnight');
+  ok(/labDraws\.length \? fmtDate\(labDraws\[labDraws\.length - 1\]\.date\)/.test(CI),
+     'and otherwise shows the draw date — nothing on the card asking for anything');
+  ok(/aria-hidden="true"/.test(CI),'the drop is decorative to a screen reader — the corner carries the state in words');
+  // 22 imported markers; bioavailable testosterone is derived, making 23 rows
+  const blk=/const LAB_MARKERS = \[([\s\S]*?)\n\];/.exec(CI)[1];
+  ok((blk.match(/key: "/g) || []).length === 22,'22 markers are imported from a report');
 }
 
 
