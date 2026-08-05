@@ -1235,12 +1235,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.159: labels the visual audit measured as clipped. Budget checked at the narrowest device.
 {
   const BK=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const MONO=0.60, cell375=(307-4*8)/5;
+  const MONO=0.60, cell375=(307-4*4)/5;
   const fits=(t,fs,tr)=>t.length*fs*MONO + t.length*tr <= cell375;
-  ok(fits("CALORIES",10.5,0.4),'CALORIES fits its counter cell at 375pt');
-  ok(fits("LIFTS/WK",10.5,0.4),'LIFTS/WK fits its cell at 375pt');
-  ok(!fits("CALORIES",11,1.1),'and the previous size genuinely did not — this is why it clipped');
-  ok((BK.match(/letterSpacing: 0\.4, color: C\.faint, textTransform: "uppercase", whiteSpace: "nowrap" \}\}>\{l\}/g) || []).length === 2,
+  ok(fits("CALORIES",12,0),'CALORIES fits its counter cell at 375pt');
+  ok(fits("LIFTS/WK",12,0),'LIFTS/WK fits its cell at 375pt');
+  ok(!fits("CALORIES",12,0.4),'and it needed the tracking dropped to get there');
+  ok((BK.match(/letterSpacing: 0, color: C\.faint, textTransform: "uppercase", whiteSpace: "nowrap" \}\}>\{l\}/g) || []).length === 2,
      'both counter rows carry the fix, not just the one that was measured');
 }
 
@@ -1330,17 +1330,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const BP=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const sizes=[...BP.matchAll(/fontSize: (\d+(?:\.\d+)?)/g)].map((m)=>+m[1]);
   const small=[...new Set(sizes.filter((v)=>v<=18))].sort((a,b)=>a-b);
-  const SCALE=[10.5,11.5,13,15,17];
+  const SCALE=[12,13.5,15.5,17.5];
   ok(small.length === SCALE.length, 'the body range uses ' + SCALE.length + ' sizes (found ' + small.length + ': ' + small.join(',') + ')');
   ok(small.every((v)=>SCALE.includes(v)), 'and every one of them is on the scale');
-  ok(Math.min(...small) >= 10.5, 'the 10.5px floor still holds');
+  ok(Math.min(...small) >= 12, 'the floor is 12px — half the app used to render at 10.5');
   // display and hero sizes are deliberate and were left alone — forcing 56px onto a scale is not
   // a tidy-up, it is a redesign nobody asked for
   ok(sizes.some((v)=>v>=34), 'the hero sizes are untouched');
   // the budgets measured this week must still hold at the narrowest device
   const MONO=0.60;
-  ok(11*11.5*MONO + 11*0.4 <= (307-16)/3 - 12, 'RETATRUTIDE still fits its chip');
-  ok(8*10.5*MONO + 8*0.4 <= (307-4*8)/5, 'CALORIES still fits its cell');
+  ok(11*12*MONO + 11*0.4 <= (307-16)/3 - 12, 'RETATRUTIDE still fits its chip');
+  ok(8*12*MONO <= (307-4*4)/5, 'CALORIES still fits its cell');
 }
 
 
@@ -1400,8 +1400,8 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // spacing changes CELL WIDTHS, so the two budgets measured against real geometry are re-checked
   const MONO=0.60;
   const gap=8;
-  ok(11*11.5*MONO + 11*0.4 <= (307-2*gap)/3 - 12, 'RETATRUTIDE still fits its chip at the new gap');
-  ok(8*10.5*MONO + 8*0.4 <= (307-4*gap)/5, 'CALORIES still fits its cell at the new gap');
+  ok(11*12*MONO + 11*0.4 <= (307-2*8)/3 - 12, 'RETATRUTIDE still fits its chip');
+  ok(8*12*MONO <= (307-4*4)/5, 'CALORIES still fits its cell at the new gap');
 }
 
 
@@ -1484,7 +1484,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the 6 Pack hand-off is an ANCHOR, not a button, which is why every button-shaped pass missed it
   ok(/display: "inline-block", padding: "8px 4px" \}\}>or use \{SIXPACK\.label\}/.test(BX),'the 6 Pack link is padded');
   ok(/display: "inline-block"/.test(BX),'and made inline-block, since padding does nothing on an inline anchor');
-  ok(/padding: "8px 0", cursor: "pointer", textAlign: "left", fontSize: 13, letterSpacing: 1\.1/.test(BX),'the GPS pin row is padded');
+  ok(/padding: "8px 0", cursor: "pointer", textAlign: "left", fontSize: 15.5, letterSpacing: 1\.1/.test(BX),'the GPS pin row is padded');
 }
 
 
@@ -1744,15 +1744,37 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.192: the collapsed row header, matched to the approved preview.
 {
   const CJ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  ok(/fontSize: 11\.5, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CJ),
-     'the row title is on the eyebrow rung, not the micro rung');
+  ok(/fontSize: 12, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CJ),
+     'the row title is on the label rung — 13.5 overflows 375pt and would truncate');
   ok(/alignItems: "center", gap: 8, marginBottom: 12 \}\}>\s*<span style=\{\{ width: 6\.5/.test(CJ.replace(/\n\s*/g,' ')) ||
      /gap: 8, marginBottom: 12/.test(CJ), 'and the gap beneath it is 12, not 8');
   // the title grew, so re-check the widest title against its corner at the narrowest device
   const MONO=0.60, inner=307-32;
-  const fits=(t,c)=>t.length*11.5*MONO + t.length*1.1 + c.length*11.5*MONO + c.length*0.8 + 24 <= inner;
+  const fits=(t,c)=>t.length*12*MONO + t.length*1.1 + c.length*12*MONO + c.length*0.8 + 24 <= inner;
   ok(fits("PATH TO YOUR FORECAST","CONTRACT"),'the longest title still fits beside its corner at 375pt');
   ok(fits("PROGRESS PHOTOS","TAP TO SEE"),'and the next longest');
+}
+
+
+// v0.9.195: the scale was raised app-wide because half the app rendered at the 10.5px floor.
+{
+  const CK=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const sizes=[...CK.matchAll(/fontSize: (\d+(?:\.\d+)?)/g)].map((m)=>+m[1]);
+  ok(Math.min(...sizes) >= 12, 'nothing in the app is declared below 12px (' + Math.min(...sizes) + ')');
+  // the section title is a TERNARY, which is exactly how it stayed at 10.5 through the preview
+  ok(/fontSize: _cmp \? 12 : 13, fontWeight: 700/.test(CK),'including the section title, which is written as a ternary');
+  // the three narrow cells needed their own fix rather than a smaller scale for everything
+  const MONO=0.60;
+  ok(8*12*MONO <= (307-4*4)/5, 'CALORIES fits its cell once the row gap drops to 4');
+  ok(!(8*12*MONO <= (307-4*8)/5), 'and it genuinely did not at the old gap — this is why the gap moved');
+  ok(11*12*MONO + 11*0.4 <= (307-16)/3 - 12, 'RETATRUTIDE fits its chip on the label rung');
+  ok(/display: "flex", gap: 4 \}\}>\s*\{counters\.map/.test(CK),'the counter row uses a 4px gap');
+  // the collapsed row title is the one place the bigger rung does NOT fit
+  const inner=307-32;
+  const titleFits=(t,c,fs)=>t.length*fs*MONO + t.length*1.1 + c.length*fs*MONO + c.length*0.8 + 24 <= inner;
+  ok(titleFits("PATH TO YOUR FORECAST","CONTRACT",12),'the longest collapsed title fits at 12px');
+  ok(!titleFits("PATH TO YOUR FORECAST","CONTRACT",13.5),
+     'and would have overflowed at 13.5 — it carries an ellipsis, so it would have truncated a label');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
