@@ -1677,7 +1677,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 {
   const CG=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   ok(/const _bars = \(vals, col, goal\)/.test(CG),'there is a bar helper');
-  ok(/const h = Math\.max\(1\.5, \(n2 \/ hi\) \* 28\);/.test(CG),'bars are measured from ZERO — the distance from zero is the information in a count');
+  ok(/const h = Math\.max\(1\.5, \(n2 \/ hi\) \* 40\);/.test(CG),'bars are measured from ZERO — the distance from zero is the information in a count');
   ok(/opacity=\{n2 \? \(i === n - 1 \? 1 : 0\.62\) : 0\.18\}/.test(CG),'today reads full strength, earlier days dimmer, a zero day faintest');
   ok(/spark: _bars\(wk\.map\(\(d\) => \+d\.steps/.test(CG),'the collapsed row uses them');
   // the comfortable card gets the labelled week
@@ -1961,6 +1961,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the row TITLE does not grow with the card: the width available did not change
   ok(/fontSize: 12, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CR),
      'the row title stays at 12 — bigger cards do not widen the screen');
+}
+
+
+// v0.9.206: bars sized like bars.
+{
+  const CS=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // a bar filling its flex column is 36px wide at 375pt, which reads as a block. The column keeps
+  // owning the spacing; the bar just sits inside it.
+  ok(/width: "100%", maxWidth: 14, height: h/.test(CS),'the week bars are capped at 14px');
+  const inner=275, n=7, gap=4;
+  ok((inner - gap*(n-1))/n > 14, 'which is comfortably inside a ' + Math.round((inner-gap*(n-1))/n) + 'px column');
+  // the collapsed chart fills the taller art band rather than floating in it
+  ok(/<svg width="92" height="44" viewBox="0 0 92 44">/.test(CS),'the collapsed bar chart is 44 tall');
+  ok(/\(n2 \/ hi\) \* 40/.test(CS),'with heights scaled to it');
+  ok(/44 - \(goal \/ hi\) \* 40/.test(CS),'and the goal rule on the same scale');
+  // the goal line only exists when a goal exists — which is why he has never seen it
+  ok(/const goal = \+prefs\.stepGoal \|\| 0;/.test(CS),'the goal line reads prefs.stepGoal');
+  ok(/goal \? <line/.test(CS) || /\{goal \?/.test(CS),'and draws nothing when no goal is set');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

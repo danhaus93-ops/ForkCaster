@@ -3291,12 +3291,12 @@ export default function App() {
     const n = v.length, gap = n > 10 ? 1.5 : 3;
     const w = (92 - gap * (n - 1)) / n;
     return (
-      <svg width="92" height="32" viewBox="0 0 92 32">
-        {goal ? <line x1="0" y1={(32 - (goal / hi) * 28).toFixed(1)} x2="92" y2={(32 - (goal / hi) * 28).toFixed(1)}
+      <svg width="92" height="44" viewBox="0 0 92 44">
+        {goal ? <line x1="0" y1={(44 - (goal / hi) * 40).toFixed(1)} x2="92" y2={(44 - (goal / hi) * 40).toFixed(1)}
           stroke={col} strokeWidth="1" strokeDasharray="2 3" opacity="0.45" /> : null}
         {v.map((n2, i) => {
-          const h = Math.max(1.5, (n2 / hi) * 28);
-          return <rect key={i} x={(i * (w + gap)).toFixed(1)} y={(32 - h).toFixed(1)} width={w.toFixed(1)}
+          const h = Math.max(1.5, (n2 / hi) * 40);
+          return <rect key={i} x={(i * (w + gap)).toFixed(1)} y={(44 - h).toFixed(1)} width={w.toFixed(1)}
             height={h.toFixed(1)} rx={Math.min(1.5, w / 2)} fill={col} opacity={n2 ? (i === n - 1 ? 1 : 0.62) : 0.18} />;
         })}
       </svg>);
@@ -5828,7 +5828,7 @@ export default function App() {
                                 alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
                                 <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginBottom: 4 }}>
                                   {v >= 1000 ? (v / 1000).toFixed(1) + "k" : v || ""}</span>
-                                <div style={{ width: "100%", height: h, borderRadius: 4,
+                                <div style={{ width: "100%", maxWidth: 14, height: h, borderRadius: 4,
                                   background: CHART.ah, opacity: v ? (last ? 1 : 0.55) : 0.15 }} />
                               </div>);
                           })}
