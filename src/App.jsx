@@ -3749,9 +3749,9 @@ export default function App() {
             {sectionTitle("Counters", C.muted)}
             <span onClick={() => openQuick("calories", "Calories", "")} style={{ fontFamily: DATA, fontSize: 13.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", color: C.go, cursor: "pointer", marginTop: -8 }}>Set / add</span>
           </div>
-          <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", gap: 2 }}>
             {counters.map(([l, v, sub, fld]) => (<div key={l} onClick={() => fld && openQuick(fld, l, "")} style={{ flex: 1, minWidth: 0, cursor: fld ? "pointer" : "default" }}>
-              <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
+              <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: -0.3, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
               <div style={{ fontFamily: DATA, fontSize: 17.5, fontWeight: 700, color: C.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{v}</div>
               <div style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginTop: 0 }}>{sub}</div>
             </div>))}
@@ -3819,7 +3819,7 @@ export default function App() {
               ["Exercise", exMin ? exMin + " min" : null, synExMin > 0, synExMin > 0 ? "synced" : "logged cardio"],
               ["Active kcal", activeKcal ? String(activeKcal) : null, synKcal > 0, synKcal > 0 ? "synced · burned today" : "burned today"]].map(([l, v, measured, sub]) => (
               <div key={l} style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
+                <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: -0.3, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
                 <div style={{ fontFamily: DATA, fontSize: 20, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                   {v && measured ? <span style={{ width: 5, height: 5, borderRadius: 4, background: C.go, flexShrink: 0 }} /> : null}
                   {v || <><span style={{ width: 7, height: 1.5, background: C.faint, flexShrink: 0 }} />—</>}
@@ -5024,7 +5024,7 @@ export default function App() {
               <button key={f} onClick={() => switchForm(f)} style={{ flex: 1, padding: "11px 0", borderRadius: 999, border: `1.5px solid ${form === f ? C.violet : C.hair}`, background: form === f ? C.violet + "2E" : "transparent", color: form === f ? C.violet : C.muted, fontFamily: DATA, fontSize: 15.5, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "1 1 0", minWidth: 0, padding: "8px 6px", minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>{Object.entries(MEDS).filter(([, m]) => (m.cadence === "daily" ? "oral" : "inj") === form).map(([k, m]) => (<button key={k} onClick={() => pickMed(k)} style={{ flex: "1 1 0", minWidth: 0, padding: "8px 6px", minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1px solid ${glp.med === k ? C.violet : C.hair}`, background: glp.med === k ? C.violet + "2E" : "transparent", color: glp.med === k ? C.violet : C.muted, fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: -0.3, textTransform: "uppercase", cursor: "pointer", textAlign: "center", whiteSpace: "nowrap" }}>{m.label}</button>))}</div>
             </>);
           })()}
           {medObj.investigational ? (

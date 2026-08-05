@@ -623,7 +623,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // actually constrained, measured at mono 0.60em and Inter 0.52em on the narrowest phone (375pt).
 {
   const AD=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const MONO=0.60, INTER=0.52;
+  const MONO=0.627, INTER=0.52;
   const need=(t,size,ls,pad,mono)=>t.length*size*(mono?MONO:INTER)+t.length*ls+pad;
   // v0.9.121: sizes tracked the second bump. The measurement is the pin, not the numbers.
   const rows=[["dose-sync pills",7,315,"Today",10.5,0.2,4,0,true],
@@ -1235,12 +1235,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.159: labels the visual audit measured as clipped. Budget checked at the narrowest device.
 {
   const BK=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const MONO=0.60, cell375=(307-4*4)/5;
+  const MONO=0.627, cell375=(307-4*2)/5;
   const fits=(t,fs,tr)=>t.length*fs*MONO + t.length*tr <= cell375;
-  ok(fits("CALORIES",12,0),'CALORIES fits its counter cell at 375pt');
-  ok(fits("LIFTS/WK",12,0),'LIFTS/WK fits its cell at 375pt');
-  ok(!fits("CALORIES",12,0.4),'and it needed the tracking dropped to get there');
-  ok((BK.match(/letterSpacing: 0, color: C\.faint, textTransform: "uppercase", whiteSpace: "nowrap" \}\}>\{l\}/g) || []).length === 2,
+  ok(fits("CALORIES",12,-0.3),'CALORIES fits its counter cell at 375pt with real margin');
+  ok(fits("LIFTS/WK",12,-0.3),'LIFTS/WK fits its cell at 375pt');
+  ok(!fits("CALORIES",12,0),'and it genuinely did not at zero tracking — the audit measured that twice');
+  ok((BK.match(/letterSpacing: -0\.3, color: C\.faint, textTransform: "uppercase", whiteSpace: "nowrap" \}\}>\{l\}/g) || []).length === 2,
      'both counter rows carry the fix, not just the one that was measured');
 }
 
@@ -1338,9 +1338,9 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // a tidy-up, it is a redesign nobody asked for
   ok(sizes.some((v)=>v>=34), 'the hero sizes are untouched');
   // the budgets measured this week must still hold at the narrowest device
-  const MONO=0.60;
-  ok(11*12*MONO + 11*0.4 <= (307-16)/3 - 12, 'RETATRUTIDE still fits its chip');
-  ok(8*12*MONO <= (307-4*4)/5, 'CALORIES still fits its cell');
+  const MONO=0.627;
+  ok(11*12*MONO + 11*-0.3 <= (307-16)/3 - 12, 'RETATRUTIDE still fits its chip');
+  ok(8*12*MONO + 8*-0.3 <= (307-4*2)/5, 'CALORIES still fits its cell');
 }
 
 
@@ -1398,10 +1398,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(sp.every((v)=>SCALE.includes(v)), 'every gap and margin is on the scale (' + sp.join(',') + ')');
   ok(sp.length <= SCALE.length, 'and there are at most seven of them');
   // spacing changes CELL WIDTHS, so the two budgets measured against real geometry are re-checked
-  const MONO=0.60;
+  const MONO=0.627;
   const gap=8;
-  ok(11*12*MONO + 11*0.4 <= (307-2*8)/3 - 12, 'RETATRUTIDE still fits its chip');
-  ok(8*12*MONO <= (307-4*4)/5, 'CALORIES still fits its cell at the new gap');
+  ok(11*12*MONO + 11*-0.3 <= (307-2*8)/3 - 12, 'RETATRUTIDE still fits its chip');
+  ok(8*12*MONO + 8*-0.3 <= (307-4*2)/5, 'CALORIES still fits its cell at the new gap');
 }
 
 
@@ -1753,7 +1753,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/alignItems: "center", gap: 8, marginBottom: 12 \}\}>\s*<span style=\{\{ width: 6\.5/.test(CJ.replace(/\n\s*/g,' ')) ||
      /gap: 8, marginBottom: 12/.test(CJ), 'and the gap beneath it is 12, not 8');
   // the title grew, so re-check the widest title against its corner at the narrowest device
-  const MONO=0.60, inner=307-32;
+  const MONO=0.627, inner=307-32;
   const fits=(t,c)=>t.length*12*MONO + t.length*1.1 + c.length*12*MONO + c.length*0.8 + 24 <= inner;
   ok(fits("PATH TO YOUR FORECAST","CONTRACT"),'the longest title still fits beside its corner at 375pt');
   ok(fits("PROGRESS PHOTOS","TAP TO SEE"),'and the next longest');
@@ -1768,11 +1768,11 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the section title is a TERNARY, which is exactly how it stayed at 10.5 through the preview
   ok(/fontSize: _cmp \? 12 : 13, fontWeight: 700/.test(CK),'including the section title, which is written as a ternary');
   // the three narrow cells needed their own fix rather than a smaller scale for everything
-  const MONO=0.60;
-  ok(8*12*MONO <= (307-4*4)/5, 'CALORIES fits its cell once the row gap drops to 4');
+  const MONO=0.627;
+  ok(8*12*MONO + 8*-0.3 <= (307-4*2)/5, 'CALORIES fits its cell once the row gap drops to 4');
   ok(!(8*12*MONO <= (307-4*8)/5), 'and it genuinely did not at the old gap — this is why the gap moved');
-  ok(11*12*MONO + 11*0.4 <= (307-16)/3 - 12, 'RETATRUTIDE fits its chip on the label rung');
-  ok(/display: "flex", gap: 4 \}\}>\s*\{counters\.map/.test(CK),'the counter row uses a 4px gap');
+  ok(11*12*MONO + 11*-0.3 <= (307-16)/3 - 12, 'RETATRUTIDE fits its chip on the label rung');
+  ok(/display: "flex", gap: 2 \}\}>\s*\{counters\.map/.test(CK),'the counter row uses a 2px gap');
   // the collapsed row title is the one place the bigger rung does NOT fit
   const inner=307-32;
   const titleFits=(t,c,fs)=>t.length*fs*MONO + t.length*1.1 + c.length*fs*MONO + c.length*0.8 + 24 <= inner;
@@ -1807,7 +1807,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/lineHeight: 1\.25, minWidth: 0, overflowWrap: "anywhere" \}\}>\{slot\.name\}/.test(CM),'the tonight row too');
   ok(/lineHeight: 1\.25, minWidth: 0, overflowWrap: "anywhere" \}\}>\{r\.name\}/.test(CM),'and the swap suggestions');
   // the counter value: five cells across 307pt is a 58px cell, and a five-character number needs 60
-  const MONO=0.60, cell=(307-4*4)/5;
+  const MONO=0.627, cell=(307-4*4)/5;
   ok(5*17.5*MONO <= cell, 'a five-character counter value fits at 17.5px');
   ok(!(5*20*MONO <= cell), 'and genuinely did not at 20 — the audit measured exactly that 2px');
   ok(/fontSize: 17\.5, fontWeight: 700, color: C\.ink, marginTop: 2, fontVariantNumeric: "tabular-nums"/.test(CM),
@@ -1957,7 +1957,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // 375pt, so the size steps down by length — the same fit-to-box a short number gets for free.
   ok(/if \(t\.length <= 5\) return 48;/.test(CR),'a short value takes 48px');
   ok(/return 28;/.test(CR),'and a phrase steps down rather than clipping');
-  const MONO=0.60, avail=307-40-52-14;
+  const MONO=0.627, avail=307-40-52-14;
   const size=(t)=>t.length<=5?48:t.length<=7?40:t.length<=9?34:28;
   for (const t of ["212.5","4,541","Ramp-up","Abdomen L","Active loss","Semaglutide"])
     ok(t.length*size(t)*MONO <= avail, `"${t}" fits at ${size(t)}px (${Math.round(t.length*size(t)*MONO)} of ${avail})`);
@@ -1965,7 +1965,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the row TITLE does not grow with the card: the width available did not change
   // the measurement that decides it, run against the longest surviving pair
   {
-    const MONO=0.60, inner=307-40;
+    const MONO=0.627, inner=307-40;
     const w=(t,c)=>t.length*15.5*MONO + t.length*1.1 + c.length*12*MONO + c.length*0.8 + 22;
     ok(w("Adaptive targets","Watching") <= inner, 'the tightest title still fits at 15.5');
     ok(w("Path to your forecast","Needs a goal") > inner, 'and the old longest genuinely did not');
@@ -2079,6 +2079,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/pts\.length < 4 \|\| spanDays < 12/.test(eng),'the engine still owns the rule');
   const readers=(CW.match(/spanDays >= \d+/g) || []);
   ok(readers.length === 0, 'and no card re-derives it (' + readers.join(',') + ')');
+}
+
+
+// v0.9.212: the width constant was wrong, and every budget built on it was optimistic.
+{
+  const CX=require('fs').readFileSync(__FCROOT + '/tools/ftest/struct-test.js','utf8');
+  // the visual audit measured CALORIES at 60.2px where the model predicted 57.6. IBM Plex Mono
+  // advances 0.627 em, not 0.60 — a 4% error, which is larger than the margin most of these
+  // budgets were relying on. It clipped twice before the constant was questioned.
+  ok(!/MONO=0\.60\b/.test(CX),'no budget still uses the optimistic 0.60');
+  ok(/MONO=0\.627/.test(CX),'they use the calibrated 0.627');
+  const K=0.627;
+  // both cells that clipped, now with real slack rather than a rounding error
+  ok((307-4*2)/5 - (8*12*K + 8*-0.3) >= 1.5, 'CALORIES has real margin in its cell');
+  ok((307-16)/3 - 12 - (11*12*K + 11*-0.3) >= 3, 'and RETATRUTIDE in its chip');
+  // recalibrating immediately found the second one, which had been passing on a false model
+  ok(!((307-16)/3 - 12 >= 11*12*K + 11*0.4), 'RETATRUTIDE genuinely did not fit at the old tracking');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

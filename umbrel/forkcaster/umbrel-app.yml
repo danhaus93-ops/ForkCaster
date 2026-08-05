@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.211"
+version: "0.9.212"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The Still learning card was asking for 14 weigh-ins. It actually needs 4 weigh-ins
-  spread over 12 days — you already have the weigh-ins, so it now shows how far along
-  the 12 days you are.
+  Fixes "Calories" being clipped on the Today counters, and the same problem on the
+  medication chips which had not shown up yet.
 dependencies: []
 path: ""
 defaultUsername: ""
