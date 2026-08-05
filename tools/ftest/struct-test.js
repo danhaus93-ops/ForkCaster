@@ -1812,5 +1812,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(8*12*MONO <= (275-3*8)/4, 'SESSIONS fits its cell once the tracking is dropped');
 }
 
+
+// v0.9.198: four GLP-1 cards get a verdict so compact can do its job on that tab.
+{
+  const CN=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  for (const id of ['proj','med','doseday','ceil'])
+    ok(new RegExp('id: "' + id + '"').test(CN), 'the ' + id + ' card carries a verdict');
+  // his v0.9.115 decision stands: these three stay whole. The guard blocked a change that would
+  // have reversed it, which is the guard doing exactly what it exists for.
+  ok(!/id: "(nudge|proto|journey)"/.test(CN),'the ladder, the nudges and the stages are still NOT collapsed');
+  // the fat-ceiling engine returns empty | ready | nodose — never "ok". Checking for "ok" would
+  // have pinned this row on "collecting" forever, silently, which is the worst kind of wrong.
+  ok(/_fc\.status === "ready"/.test(CN),'the ceiling row reads the status the engine actually returns');
+  ok(!/_fc\.status === "ok"/.test(CN),'and not a status that does not exist');
+  ok(/when: _ready \? "now reading" : "collecting"/.test(CN),
+     'it announces itself the moment it can read, rather than popping open and breaking compact');
+  // every verdict must use variables that exist — three invented ones reached his phone this week
+  ok(/value: medObj \? medObj\.label/.test(CN),'the medication row reads medObj, which is in scope');
+  ok(/when: `every \$\{injInterval\}d`/.test(CN),'and dose day reads injInterval');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

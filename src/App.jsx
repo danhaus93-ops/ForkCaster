@@ -4935,7 +4935,18 @@ export default function App() {
                 </div>
               </div>);
             })()}
-          </div>)}</div>
+          </div>, {}, (() => {
+            const _fc = doseResponseRead(mealLog, glp) || {};
+            const _ready = _fc.status === "ready";
+            return {
+              id: "ceil", tone: _ready ? "ok" : "none", color: _ready ? C.go : C.faint,
+              title: "Fat ceiling",
+              when: _ready ? "now reading" : "collecting",
+              value: _ready ? String((_fc.rows || []).length) : String(_fc.days || 0),
+              unit: _ready ? "rungs compared" : `of ${_fc.need || 10} meal days`,
+              spark: null,
+            };
+          })())}</div>
         </>);
       })()}
 
@@ -4983,7 +4994,12 @@ export default function App() {
                       return L.length ? +L[L.length - 1].mg : glp.dose; })()} {medObj.unit}</div></div>
             </div>
           )}
-        </>)}</div>
+        </>, {}, {
+            id: "med", tone: "none", color: C.violet, title: "Medication",
+            when: medObj && medObj.cadence === "daily" ? "daily pill" : "injection",
+            value: medObj ? medObj.label : String(glp.med || "\u2014"),
+            unit: "", spark: null,
+          })}</div>
 
       
 
@@ -5018,7 +5034,11 @@ export default function App() {
               style={{ flex: 1, minHeight: _cmp ? 38 : 44, borderRadius: 999, border: `1.5px solid ${glp.injectionDay === k ? C.violet : C.hair}`, background: glp.injectionDay === k ? C.violet + "2E" : "transparent", color: glp.injectionDay === k ? C.violet : C.muted, fontFamily: DATA, fontWeight: 800, fontSize: 15.5, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", opacity: (prefs.injIntervalDays || 7) !== 7 ? 0.45 : 1 }}>{l}</button>
           ))}
         </div>
-      </>)}</div>}
+      </>, {}, {
+            id: "doseday", tone: "none", color: C.violet, title: "Dose day",
+            when: `every ${injInterval}d`,
+            value: String(injInterval), unit: "days between shots", spark: null,
+          })}</div>}
       {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
       {(() => (
@@ -5310,7 +5330,12 @@ export default function App() {
             <div><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.go }}>{goalDate ? fmtDate(goalDate) : "—"}</div><div style={{ fontSize: 15.5, color: C.faint }}>{weeksToGoal ? `${goalWeight} lb in ~${weeksToGoal} wks` : "log more to project"}</div></div>
           </div>
           {goalDate ? lineChart(projection(curWeight, goalWeight, recentRate), { color: C.violet, goal: goalWeight, goalLabel: `${goalWeight}`, dashed: true }, C) : <div style={{ padding: "22px 0", textAlign: "center", color: C.faint, fontSize: 17.5, lineHeight: 1.5 }}>Collecting — log ~2 weeks of weigh-ins for a real projection.<br/>A rate needs at least 4 weigh-ins across 12+ days.</div>}
-        </>)}</div>
+        </>, {}, {
+            id: "proj", tone: projReady ? "ok" : "none", color: projReady ? C.go : C.faint,
+            title: "Projection", when: projReady && goalDate ? fmtDate(goalDate) : "collecting",
+            value: projReady ? recentRate.toFixed(1) : String((weightLog || []).length),
+            unit: projReady ? "lb/wk recent" : "of 4 weigh-ins needed", spark: null,
+          })}</div>
 
       {fatCorrelation && (
         <div style={{ display: "contents" }}>{card(
