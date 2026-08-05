@@ -4186,7 +4186,7 @@ export default function App() {
           {weightSeries.length > 1 ? (() => { // v0.9.66: the mock's own weight chart — gradient fill, glow endpoint, dashed goal rule
             const vs = weightSeries.map((w) => +fmtWt(w.lbs));
             const gl = +fmtWt(goalWeight);
-            const W2 = 300, H2 = 70, GY = 63;
+            const W2 = 300, H2 = 118, GY = 108;
             const hi = Math.max(...vs), lo = Math.min(...vs.concat([gl]));
             const span = Math.max(1, hi - lo);
             const xw = (i) => (vs.length === 1 ? W2 - 6 : (i / (vs.length - 1)) * (W2 - 6));
@@ -5819,9 +5819,17 @@ export default function App() {
                     const dayL = ["S", "M", "T", "W", "T", "F", "S"];
                     return (
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 8, height: 92 }}>
+                        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 8, height: 180, position: "relative" }}>
+                          {goal ? (
+                            <>
+                              <div style={{ position: "absolute", left: 0, right: 0, top: 180 - (goal / hi) * 158,
+                                borderTop: `1.5px dashed ${CHART.ah}`, opacity: 0.5, pointerEvents: "none" }} />
+                              <div style={{ position: "absolute", right: 0, top: 180 - (goal / hi) * 158 - 15,
+                                fontFamily: DATA, fontSize: 12, color: CHART.ah, opacity: 0.75 }}>
+                                goal {goal.toLocaleString()}</div>
+                            </>) : null}
                           {vals.map((v, i2) => {
-                            const h = Math.max(3, (v / hi) * 88);
+                            const h = Math.max(3, (v / hi) * 158);
                             const last = i2 === vals.length - 1;
                             return (
                               <div key={i2} style={{ width: 26, display: "flex", flexDirection: "column",

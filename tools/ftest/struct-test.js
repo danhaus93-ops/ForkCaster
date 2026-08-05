@@ -1970,7 +1970,18 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // a bar filling its flex column is 36px wide at 375pt, which reads as a block. The column keeps
   // owning the spacing; the bar just sits inside it.
   ok(/width: 26, display: "flex", flexDirection: "column"/.test(CS),'each bar column is 26px wide');
-  ok(/justifyContent: "center", gap: 8, height: 92/.test(CS),'with an 8px gap, centred in the card');
+  ok(/justifyContent: "center", gap: 8, height: 180, position: "relative"/.test(CS),
+     'with an 8px gap, centred, in a 180px box');
+  ok(/const h = Math\.max\(3, \(v \/ hi\) \* 158\);/.test(CS),'bars scaled to the taller box');
+  // the dashed goal line the FULL card never had — .187 put it only on the collapsed sparkline
+  ok(/borderTop: `1\.5px dashed \$\{CHART\.ah\}`/.test(CS),'the full card draws the dashed goal line');
+  ok(/top: 180 - \(goal \/ hi\) \* 158/.test(CS),'positioned on the same scale as the bars');
+  ok(/goal \{goal\.toLocaleString\(\)\}/.test(CS),'and labelled with the goal itself');
+  ok(/\{goal \? \(/.test(CS),'drawn only when a goal is set');
+  // the weight chart rendered 64px — shorter than the step chart and less than half the med chart
+  ok(/const W2 = 300, H2 = 118, GY = 108;/.test(CS),'the weight chart is 118 tall in its viewBox');
+  ok(275 * (118/300) > 92, 'which renders taller than the step chart used to be');
+  ok(8 + (108 - 14) <= 118, 'and its goal line still lands inside the box');
   const BAR=26, GAP=8, N=7;
   ok(BAR / GAP >= 3, 'the bar is at least three times the gap — what makes it read as one series');
   ok(N*BAR + (N-1)*GAP <= 275, 'and the whole chart fits a 275px card (' + (N*BAR+(N-1)*GAP) + 'px)');
