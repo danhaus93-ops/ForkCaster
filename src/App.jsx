@@ -3388,7 +3388,7 @@ export default function App() {
       <div onClick={() => { if (_arr) return; setSheetCard({ id: vd.id, title: vd.title, color: vd.color, when: vd.when, sheetWhen: vd.sheetWhen }); }} style={{ cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
           {dot}
-          <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
+          <span style={{ fontFamily: DATA, fontSize: 15.5, fontWeight: 700, letterSpacing: 1.1, textTransform: "uppercase", color: vd.color || C.muted, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vd.title}</span>
           {vd.when && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, color: C.faint, letterSpacing: 0.5, textTransform: "uppercase", flexShrink: 0 }}>{vd.when}</span>}
           <span style={{ color: C.faint, fontSize: 17.5, lineHeight: 1, marginLeft: vd.when ? 6 : "auto", flexShrink: 0 }}>{"›"}</span>
         </div>
@@ -3730,7 +3730,7 @@ export default function App() {
             coming off is fat or muscle, so it gets the hero and everything else compresses. */}
         <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            {sectionTitle("Protein · your lead lever", C.muted)}
+            {sectionTitle("Protein", C.muted)}
             <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: pTone, border: `1px solid ${pTone}55`, background: pTone + "1A" }}>{pPct}% OF FLOOR</span>
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -4263,6 +4263,31 @@ export default function App() {
 
 
       <div style={{ display: "contents" }}>{card(<>
+          {(() => {
+            const pts = ((healthSync && healthSync.days) || [])
+              .filter((d0) => d0.bodyFatPct != null)
+              .slice(-14)
+              .map((d0) => ({ date: d0.date, v: +d0.bodyFatPct }));
+            if (pts.length < 2) return null;
+            const W3 = 300, H3 = 110;
+            const hi = Math.max(...pts.map((p0) => p0.v)), lo = Math.min(...pts.map((p0) => p0.v));
+            const span = Math.max(0.6, hi - lo);
+            const xc = (n) => 6 + (n / (pts.length - 1)) * (W3 - 12);
+            const yc = (v) => 12 + (1 - (v - lo) / span) * (H3 - 40);
+            const d3 = pts.map((p0, n) => `${n ? "L" : "M"}${xc(n).toFixed(1)} ${yc(p0.v).toFixed(1)}`).join(" ");
+            const lastP = pts[pts.length - 1];
+            return (
+              <svg viewBox={`0 0 ${W3} ${H3}`} style={{ width: "100%", height: "auto", marginBottom: 16, display: "block" }}>
+                <path d={d3} fill="none" stroke={CHART.comp} strokeWidth="2.6"
+                  strokeLinecap="round" strokeLinejoin="round" />
+                {pts.map((p0, n) => (
+                    <circle key={n} cx={xc(n)} cy={yc(p0.v)} r={n === pts.length - 1 ? 4.5 : 2.8}
+                      fill={CHART.comp} opacity={n === pts.length - 1 ? 1 : 0.65} />))}
+                <text x="6" y={H3 - 6} fontFamily={DATA} fontSize="12" fill={C.faint}>{fmtDate(pts[0].date)}</text>
+                <text x={W3 - 6} y={H3 - 6} textAnchor="end" fontFamily={DATA} fontSize="12" fill={C.faint}>
+                  {lastP.v}%</text>
+              </svg>);
+          })()}
         {(() => { const ds0 = ((healthSync && healthSync.days) || []).filter((d0) => d0.bodyFatPct != null || d0.muscleMassLbs != null || d0.visceralFat != null);
           const sc0 = ds0.length ? ds0[ds0.length - 1] : null;
           const nM = sc0 ? ["bodyFatPct", "leanMassLbs", "muscleMassLbs", "visceralFat", "bodyWaterLbs", "subcutaneousFatPct"].filter((k0) => sc0[k0] != null).length : 0;
@@ -4326,29 +4351,7 @@ export default function App() {
             </div>
           );
         })()}
-      {(() => {
-            const pts = ((healthSync && healthSync.days) || [])
-              .filter((d0) => d0.bodyFatPct != null)
-              .slice(-14)
-              .map((d0) => ({ date: d0.date, v: +d0.bodyFatPct }));
-            if (pts.length < 2) return null;
-            const W3 = 300, H3 = 110;
-            const hi = Math.max(...pts.map((p0) => p0.v)), lo = Math.min(...pts.map((p0) => p0.v));
-            const span = Math.max(0.6, hi - lo);
-            const xc = (n) => 6 + (n / (pts.length - 1)) * (W3 - 12);
-            const yc = (v) => 12 + (1 - (v - lo) / span) * (H3 - 40);
-            const d3 = pts.map((p0, n) => `${n ? "L" : "M"}${xc(n).toFixed(1)} ${yc(p0.v).toFixed(1)}`).join(" ");
-            const lastP = pts[pts.length - 1];
-            return (
-              <svg viewBox={`0 0 ${W3} ${H3}`} style={{ width: "100%", height: "auto", marginTop: 12, display: "block" }}>
-                <path d={d3} fill="none" stroke={CHART.comp} strokeWidth="2.6"
-                  strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx={xc(pts.length - 1)} cy={yc(lastP.v)} r="4" fill={CHART.comp} />
-                <text x="6" y={H3 - 6} fontFamily={DATA} fontSize="12" fill={C.faint}>{fmtDate(pts[0].date)}</text>
-                <text x={W3 - 6} y={H3 - 6} textAnchor="end" fontFamily={DATA} fontSize="12" fill={C.faint}>
-                  {lastP.v}%</text>
-              </svg>);
-          })()}
+      
           </>, {}, {
         id: "comp", tone: bfMeasured ? C.go : "none", color: C.blue, title: "Composition",
         when: bfMeasured ? "Measured" : "Estimated",
@@ -4406,7 +4409,7 @@ export default function App() {
 
         <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "12px", fontFamily: DATA, fontSize: 15.5, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", boxShadow: `0 4px 14px ${C.go}44` }}>Generate PDF</button>
       </>, {}, {
-        id: "rep", tone: C.muted, color: C.muted, title: "Prescriber report",
+        id: "rep", tone: C.muted, color: C.muted, title: "Report",
         when: "9 sections",
         value: String(9), unit: "sections",
         sub: `${(glp.doseLog || []).length} doses \u00b7 ${(weightLog || []).length} weigh-ins \u00b7 printed for a clinic visit`,
@@ -4671,7 +4674,7 @@ export default function App() {
               : <div style={{ fontSize: 15.5, color: C.faint, marginTop: 8 }}>Tracking within your baseline. Flags only a rise of 8+ bpm sustained 7+ days — single spiky days are ignored. Works for any medication on your list.</div>}
           </div>}
         </div>, { borderLeft: `2.5px solid ${_edge}` }, { id: "rhr", tone: _rr.status !== "ready" ? "none" : (_rr.flagged ? RED : C.go),
-      color: RED, title: "Resting heart rate", when: _rr.status === "ready" ? "Today" : "Collecting",
+      color: RED, title: "Resting HR", when: _rr.status === "ready" ? "Today" : "Collecting",
       value: _rr.status === "ready" ? String(_rr.current) : `${_rr.have}/${_rr.need}`,
       unit: _rr.status === "ready" ? "bpm" : "days banked",
       sub: _rr.status === "ready" ? `${_rr.delta >= 0 ? "+" : ""}${_rr.delta} vs baseline ${_rr.baseline}` : "learning your baseline",
@@ -5348,7 +5351,7 @@ export default function App() {
             let runN = 0; for (let i9 = L9.length - 1; i9 >= 0; i9--) { if (+L9[i9].mg === +_cur9) runN++; else break; }
             const holdWk = Math.max(1, Math.round((+_proto9.minHoldDays || 28) / 7));
             const idx = _rungs9.findIndex((r) => +r === +_cur9);
-            return { id: "tit", tone: C.go, color: C.go, title: "Titration tracker",
+            return { id: "tit", tone: C.go, color: C.go, title: "Titration",
               when: idx >= 0 ? `rung ${idx + 1} of ${_rungs9.length}` : "off ladder",
               value: String(Math.max(1, runN)), unit: `of ${holdWk} doses`,
               sub: idx >= 0 && idx + 1 < _rungs9.length ? `next rung ${_rungs9[idx + 1]} mg` : "top of your ladder",
@@ -5457,7 +5460,7 @@ export default function App() {
           const hrs = last && last.at ? Math.round((Date.now() - new Date(last.at).getTime()) / 3600000) : null;
           const wk = se.filter((x) => x.date && x.date >= new Date(Date.now() - 6 * 864e5).toLocaleDateString("sv-SE")).length;
           return { id: "se", tone: !se.length ? "none" : (worst >= 3 ? C.avoid : worst === 2 ? C.caution : C.go),
-            color: C.caution, title: "Side-effect journal", when: "Tap to log",   // the one card whose whole purpose is that you add to it
+            color: C.caution, title: "Side effects", when: "Tap to log",   // the one card whose whole purpose is that you add to it
             sheetWhen: last ? (hrs != null && hrs < 48 ? `${hrs} h ago` : `last ${last.date}`) : "nothing logged yet",
             value: String(se.length), unit: se.length === 1 ? "logged" : "logged",
             sub: se.length ? `${wk} this week · worst ${["none", "mild", "moderate", "severe"][worst]}` : "no symptoms recorded",
@@ -5528,7 +5531,7 @@ export default function App() {
           <div style={{ fontSize: 17.5, color: C.ink, lineHeight: 1.45 }}><b>Shot {doseDayName}</b> — that day and the next run lean, bland, small-volume with eased targets. The week still averages your goal.{escalating ? " Dose-increase weeks ease further." : ""}</div>
         </div>}
         {card(<div>
-          {sectionTitle("Your daily targets · from Body")}
+          {sectionTitle("Daily targets")}
           <div style={{ display: "flex", gap: 16 }}>
             <div><span style={{ fontSize: 22, fontWeight: 800, color: C.go }}>{targets.calories.toLocaleString()}</span><span style={{ fontSize: 17.5, color: C.muted, marginLeft: 4 }}>cal</span></div>
             <div><span style={{ fontSize: 22, fontWeight: 800, color: C.go }}>{targets.protein}g</span><span style={{ fontSize: 17.5, color: C.muted, marginLeft: 4 }}>protein</span></div>
@@ -5812,11 +5815,11 @@ export default function App() {
                 <div style={{ fontSize: 15.5, color: C.faint, marginTop: 8, lineHeight: 1.45 }}>The picture is a visualization, not a promise — lighting and genetics are not macros. These four levers are the part you control.</div>
               </div>)}
             </div>, {}, ct && ct.status === "ok" ? {
-              id: "fc", tone: C.go, color: C.go, title: "Path to your forecast", when: "Contract",
+              id: "fc", tone: C.go, color: C.go, title: "Forecast", when: "Contract",
               value: String(Math.round(ct.fatToLose)), unit: "lb of fat to go",
               sub: `${Math.round(ct.lean)} lb lean to protect · ${Math.round(ct.proteinFloor)} g protein floor`,
               spark: _spark(weightSeries.slice(-10).map((w) => w.lbs), CHART.fc),
-            } : { id: "fc", tone: "none", color: C.go, title: "Path to your forecast", when: "Needs a goal",
+            } : { id: "fc", tone: "none", color: C.go, title: "Forecast", when: "Needs a goal",
               value: "—", unit: "set a goal weight", sub: "and log a few weigh-ins" });
           })()}{prefs.hideHealthCard ? null : (() => {
             const hd = healthSync && healthSync.days ? healthSync.days : [];

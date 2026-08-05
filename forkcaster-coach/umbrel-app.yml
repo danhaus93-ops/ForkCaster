@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.209"
+version: "0.9.210"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Your scale scans now count toward lean mass even when the scale reports body fat and
-  weight rather than lean mass directly — which is why the weight card kept asking for
-  more scans. Composition also plots your body fat over time now.
+  Card titles are larger on every tab. A few long ones were shortened on the collapsed
+  row so the rest could grow — the full heading inside each card is unchanged. The body
+  fat chart now sits at the top of its card with a dot on every reading.
 dependencies: []
 path: ""
 defaultUsername: ""

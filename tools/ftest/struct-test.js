@@ -1744,8 +1744,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.192: the collapsed row header, matched to the approved preview.
 {
   const CJ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  ok(/fontSize: 12, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CJ),
-     'the row title is on the label rung — 13.5 overflows 375pt and would truncate');
+  ok(/fontSize: 15\.5, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CJ),
+     'the row title is 15.5 — possible only because seven long titles were shortened first');
+  ok(!/title: "Path to your forecast"/.test(CJ),'the longest title is gone');
+  ok(/title: "Forecast"/.test(CJ),'replaced by a row label that fits');
   ok(/alignItems: "center", gap: 8, marginBottom: 12 \}\}>\s*<span style=\{\{ width: 6\.5/.test(CJ.replace(/\n\s*/g,' ')) ||
      /gap: 8, marginBottom: 12/.test(CJ), 'and the gap beneath it is 12, not 8');
   // the title grew, so re-check the widest title against its corner at the narrowest device
@@ -1959,8 +1961,13 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
     ok(t.length*size(t)*MONO <= avail, `"${t}" fits at ${size(t)}px (${Math.round(t.length*size(t)*MONO)} of ${avail})`);
   ok(!(9*48*MONO <= avail), 'and "Abdomen L" genuinely did not fit at 48 — this is why the step exists');
   // the row TITLE does not grow with the card: the width available did not change
-  ok(/fontSize: 12, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CR),
-     'the row title stays at 12 — bigger cards do not widen the screen');
+  // the measurement that decides it, run against the longest surviving pair
+  {
+    const MONO=0.60, inner=307-40;
+    const w=(t,c)=>t.length*15.5*MONO + t.length*1.1 + c.length*12*MONO + c.length*0.8 + 22;
+    ok(w("Adaptive targets","Watching") <= inner, 'the tightest title still fits at 15.5');
+    ok(w("Path to your forecast","Needs a goal") > inner, 'and the old longest genuinely did not');
+  }
 }
 
 
@@ -2032,6 +2039,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/filter\(\(d0\) => d0\.bodyFatPct != null\)/.test(CU),'composition reads body fat from the scale');
   ok(/if \(pts\.length < 2\) return null;/.test(CU),'and draws nothing from a single reading');
   ok(/const W3 = 300, H3 = 110;/.test(CU),'at a height worth reading');
+}
+
+
+// v0.9.210: seven titles shortened so every row label could grow, and the composition chart leads.
+{
+  const CV=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  for (const t of ["Forecast","Side effects","Resting HR","Titration","Report"])
+    ok(new RegExp('title: "' + t + '"').test(CV), 'the row label is "' + t + '"');
+  ok(/sectionTitle\("Daily targets"\)/.test(CV),'and Plan\'s heading is shorter');
+  ok(/sectionTitle\("Protein", C\.muted\)/.test(CV),"as is Today's");
+  // the composition chart leads its card, the way the weight card does — it was at 87% through
+  ok(/card\(<>\s*\{\(\(\) => \{\s*const pts = \(\(healthSync/.test(CV.replace(/\n\s*/g, ' ')) ||
+     CV.indexOf('const pts = ((healthSync') - CV.lastIndexOf('card(<>', CV.indexOf('const pts = ((healthSync')) < 400,
+     'the composition chart is at the top of its card');
+  // every reading is a real weigh-in, so every reading gets a dot
+  ok(/pts\.map\(\(p0, n\) => \(\s*<circle key=\{n\}/.test(CV.replace(/\n\s*/g, ' ')),
+     'each point on the composition line is drawn');
+  ok(/r=\{n === pts\.length - 1 \? 4\.5 : 2\.8\}/.test(CV),'with the latest one larger');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
