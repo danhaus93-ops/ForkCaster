@@ -4662,7 +4662,11 @@ export default function App() {
             <div style={{ fontSize: 17.5, color: C.ink2, marginTop: 2, lineHeight: 1.45 }}>{PHASES[phaseIdx].focus}</div>
           </div>
           <div style={{ fontSize: 15.5, color: C.faint, marginTop: 8, lineHeight: 1.4 }}>Built for maintenance and coming off the drug, not just for reaching goal.</div>
-        </>)}</div>
+        </>, {}, {
+            id: "journey", tone: "none", color: C.violet, title: "Your journey",
+            when: `stage ${phaseIdx + 1} of ${PHASES.length}`,
+            value: PHASES[phaseIdx].label, unit: "", spark: null,
+          })}</div>
       {daysToInjection <= 0 && !doseLogged && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.violet + "22", border: `1px solid ${C.violet}55`, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
           {syr(C.violet, 17)}

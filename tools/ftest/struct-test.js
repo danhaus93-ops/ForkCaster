@@ -576,7 +576,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/tone: !se\.length \? "none"/.test(se2),'no symptoms logged shows a hollow dot, not a green all-clear');
   // v0.9.115: he asked for the calendar and the injection map, so the line moved — but it still
   // exists. The protocol ladder, the on-med nudges and the journey stages stay whole.
-  ok(!/id: "(nudge|proto|journey)"/.test(AA),'the ladder, the nudges and the stages are NOT collapsed');
+  ok(!/id: "(nudge|proto)"/.test(AA),'the ladder and the nudges are NOT collapsed (journey now is, per v0.9.201)');
   ok(/id: "site"/.test(AA) && /id: "cal"/.test(AA),'the injection map and the calendar carry verdicts');
   ok(/const _spark = \(vals, col, band\)/.test(AA),'one sparkline helper for every row');
   ok(/if \(v\.length < 2\) return null;/.test(AA),'a single reading draws no sparkline rather than a fake line');
@@ -1822,7 +1822,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
      'the medication picker is NOT collapsed — it owns the form switch and the med list');
   // his v0.9.115 decision stands: these three stay whole. The guard blocked a change that would
   // have reversed it, which is the guard doing exactly what it exists for.
-  ok(!/id: "(nudge|proto|journey)"/.test(CN),'the ladder, the nudges and the stages are still NOT collapsed');
+  ok(!/id: "(nudge|proto)"/.test(CN),'the ladder and the nudges are still NOT collapsed');
+  ok(/id: "journey"/.test(CN),'the journey stages DO collapse — he asked for that in v0.9.201');
+  ok(/value: PHASES\[phaseIdx\]\.label/.test(CN),'showing the phase he is actually in');
+  ok(/when: `stage \$\{phaseIdx \+ 1\} of \$\{PHASES\.length\}`/.test(CN),'and where that sits in the four');
   // the fat-ceiling engine returns empty | ready | nodose — never "ok". Checking for "ok" would
   // have pinned this row on "collecting" forever, silently, which is the worst kind of wrong.
   ok(/_fc\.status === "ready"/.test(CN),'the ceiling row reads the status the engine actually returns');
