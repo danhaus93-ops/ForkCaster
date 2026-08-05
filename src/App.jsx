@@ -3359,15 +3359,14 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontFamily: DATA, fontSize: 34, fontWeight: 700, letterSpacing: -0.8, lineHeight: 1, color: C.ink }}>{vd.value}</span>
+            <span style={{ fontFamily: DATA, fontSize: 36, fontWeight: 700, letterSpacing: -0.9, lineHeight: 1, color: C.ink }}>{vd.value}</span>
             {vd.unit && <span style={{ fontFamily: DATA, fontSize: 13, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
-            <div style={{ fontFamily: DATA, fontSize: 11.5, color: vd.subTone || C.faint, marginTop: 8,
-            letterSpacing: 0.3, lineHeight: 1.4, minHeight: 32, display: "-webkit-box",
-            WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{vd.sub || ""}</div>
+            
           </div>
-          {vd.spark && <div style={{ flexShrink: 0 }}>{vd.spark}</div>}
+          <div style={{ flexShrink: 0, marginLeft: "auto", height: 40, display: "flex",
+            alignItems: "flex-end", justifyContent: "flex-end" }}>{vd.spark || null}</div>
         </div>
-      </div>, { minHeight: 118, ..._shellExtra }, _id0);
+      </div>, { minHeight: 100, ..._shellExtra }, _id0);
   };
   const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 10 : 10.5, fontWeight: 700, color: color || C.muted, letterSpacing: 1.6, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;
@@ -4539,7 +4538,7 @@ export default function App() {
                this card — no series to plot — so the icon earns it by carrying a number rather than
                decorating. Static red: it is an identity mark for blood, not a state colour. */
             spark: (
-              <svg width="44" height="52" viewBox="0 0 44 52" aria-hidden="true">
+              <svg width="34" height="40" viewBox="0 0 44 52" aria-hidden="true">
                 <path d="M22 4C22 4 6 22 6 31.5A16 16 0 0 0 38 31.5C38 22 22 4 22 4Z" fill={LAB_DROP} />
               </svg>),
           }; })())}</div>

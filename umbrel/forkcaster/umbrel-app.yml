@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.190"
+version: "0.9.191"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,7 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The blood drop on the lab card is a solid shape now rather than part-filled.
+  Collapsed cards now show just the number and what it is, the way Health does. All the
+  detail moved into the card you get when you tap it. Every row is exactly the same
+  height and the numbers are bigger.
 dependencies: []
 path: ""
 defaultUsername: ""

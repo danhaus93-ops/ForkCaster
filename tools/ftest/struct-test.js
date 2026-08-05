@@ -1690,20 +1690,28 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 }
 
 
-// v0.9.188: every collapsed row is the same box.
+// v0.9.191: a collapsed row is a number and what it is. Nothing else.
 {
   const CH=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  // height varied 88 vs 104px purely on whether the sub happened to wrap onto a second line, so
-  // the grid was set by sentence length. The sub RESERVES two lines whether it needs them or not.
-  ok(/minHeight: 32, display: "-webkit-box"/.test(CH),'the sub reserves two lines');
-  ok(/WebkitLineClamp: 2/.test(CH),'and is clamped to two, so a long caption cannot push the row taller');
-  ok(/\{vd\.sub \|\| ""\}/.test(CH),'a row with no sub still holds the space, or it would be shorter than its neighbours');
-  ok(/<\/div>, \{ minHeight: 118, \.\.\._shellExtra \}, _id0\);/.test(CH),'and the shell carries a floor of 118');
-  // bigger, per the preview he approved
-  ok(/fontSize: 34, fontWeight: 700, letterSpacing: -0\.8/.test(CH),'the hero number is 34px');
-  ok(/borderRadius: 18, padding: _cmp \? 16 : 18/.test(CH),'compact padding is 16 and the radius matches comfortable');
-  // the floor must come BEFORE the spread, so a card can still override it if it ever needs to
-  ok(/\{ minHeight: 118, \.\.\._shellExtra \}/.test(CH),'the floor is a default, not an override');
+  // the sub line is gone from the ROW — every fact it carried lives in the card it opens, which
+  // was checked per card in the SOURCE. My first pass checked a render seeded with no health data,
+  // so the Health card showed its setup branch and two facts looked orphaned that were not.
+  ok(!/\{vd\.sub \|\| ""\}/.test(CH),'the collapsed row renders no sub line');
+  ok(!/WebkitLineClamp: 2/.test(CH),'and reserves no space for one');
+  ok(!/vd\.sub\b/.test(CH.replace(/vd\.subTone/g, '')),'nothing READS vd.sub any more');
+  ok((CH.match(/\n\s*sub: /g) || []).length >= 15,'cards still declare it, ready for the expanded view');
+  // whatever a row draws sits in one band, or a taller drawing makes its row taller
+  ok(/flexShrink: 0, marginLeft: "auto", height: 40, display: "flex"/.test(CH),
+     'the art occupies a fixed 40px band');
+  ok(/alignItems: "flex-end", justifyContent: "flex-end" \}\}>\{vd\.spark \|\| null\}/.test(CH),
+     'and the band is rendered even when a row has no art, so the rows stay level');
+  ok(/<svg width="34" height="40" viewBox="0 0 44 52" aria-hidden="true">/.test(CH),
+     'the blood drop is scaled into the band rather than setting its own height');
+  ok(/<\/div>, \{ minHeight: 100, \.\.\._shellExtra \}, _id0\);/.test(CH),'the row floor is 100');
+  ok(/fontSize: 36, fontWeight: 700, letterSpacing: -0\.9/.test(CH),'and the number grew into the space');
+  // the arithmetic, so a future change to padding or the band cannot silently unlevel the rows
+  const PAD=16, TITLE=14, GAP=14, BAND=40;
+  ok(PAD + TITLE + GAP + BAND + PAD === 100, 'padding, title, gap and band sum to exactly the floor');
 }
 
 
