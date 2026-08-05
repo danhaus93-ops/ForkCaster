@@ -4994,12 +4994,7 @@ export default function App() {
                       return L.length ? +L[L.length - 1].mg : glp.dose; })()} {medObj.unit}</div></div>
             </div>
           )}
-        </>, {}, {
-            id: "med", tone: "none", color: C.violet, title: "Medication",
-            when: medObj && medObj.cadence === "daily" ? "daily pill" : "injection",
-            value: medObj ? medObj.label : String(glp.med || "\u2014"),
-            unit: "", spark: null,
-          })}</div>
+        </>)}</div>
 
       
 

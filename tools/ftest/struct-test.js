@@ -1816,8 +1816,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.198: four GLP-1 cards get a verdict so compact can do its job on that tab.
 {
   const CN=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  for (const id of ['proj','med','doseday','ceil'])
+  for (const id of ['proj','doseday','ceil'])
     ok(new RegExp('id: "' + id + '"').test(CN), 'the ' + id + ' card carries a verdict');
+  ok(!/id: "med", tone: "none", color: C\.violet, title: "Medication"/.test(CN),
+     'the medication picker is NOT collapsed — it owns the form switch and the med list');
   // his v0.9.115 decision stands: these three stay whole. The guard blocked a change that would
   // have reversed it, which is the guard doing exactly what it exists for.
   ok(!/id: "(nudge|proto|journey)"/.test(CN),'the ladder, the nudges and the stages are still NOT collapsed');
@@ -1828,8 +1830,28 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/when: _ready \? "now reading" : "collecting"/.test(CN),
      'it announces itself the moment it can read, rather than popping open and breaking compact');
   // every verdict must use variables that exist — three invented ones reached his phone this week
-  ok(/value: medObj \? medObj\.label/.test(CN),'the medication row reads medObj, which is in scope');
+
   ok(/when: `every \$\{injInterval\}d`/.test(CN),'and dose day reads injInterval');
+}
+
+
+// v0.9.199: a card id must be unique. Two cards on one id collide in the collapse system, and the
+// second one silently loses — which took the medication picker off the tab entirely.
+{
+  const CO=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const ids=[...CO.matchAll(/\bid: "([a-z][\w-]{1,20})", tone:/g)].map((m)=>m[1]);
+  const seen={}, dupes=[];
+  for (const id of ids) { if (seen[id]) { if (!dupes.includes(id)) dupes.push(id); } seen[id]=1; }
+  // 'med' legitimately appears twice inside ONE card's two return paths — no doses yet, and with
+  // doses — so it is counted once per CARD rather than per occurrence.
+  // med and fc each appear twice inside ONE card's two return paths — with data and without —
+  // so they are legitimate. Anything else sharing an id is two cards colliding.
+  const MULTI=['med','fc'];
+  ok(dupes.filter((d) => !MULTI.includes(d)).length === 0,
+     'no two different cards share a verdict id (' + dupes.filter((d) => !MULTI.includes(d)).join(',') + ')');
+  ok(/title: "Estimated med level"/.test(CO),'the med level card keeps the id it had first');
+  ok(/\uD83D\uDC89 Injections|Injections"\]/.test(CO) || /"inj", "/.test(CO),
+     'and the form switch still exists');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
