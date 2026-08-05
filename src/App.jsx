@@ -601,6 +601,15 @@ const LAB_GROUPS = ["Lipid panel", "Comprehensive metabolic panel", "Hemoglobin 
    are answers rather than oversights. */
 const SLEEP_STAGE = { deep: "#4C3FD4", rem: "#67E8F9", light: "#3B84BC" };   // awake uses C.avoid
 const LAB_DROP = "#C8322B";   // blood. Static — never carries state, never varies by theme.
+/* A scale that reports body fat and weight has told us the lean mass, whether or not it named it.
+   Both readers use this, so a scan can never be visible to one and invisible to the other. */
+const leanOf = (d) => {
+  if (!d) return null;
+  if (d.leanMassLbs != null && +d.leanMassLbs > 0) return +d.leanMassLbs;
+  if (d.bodyFatPct != null && d.weightLbs != null)
+    return Math.round(+d.weightLbs * (1 - +d.bodyFatPct / 100) * 10) / 10;
+  return null;
+};
 const CHART_DARK  = { fc: "#C7E04A", ah: "#67E8F9", wt: "#3BDF93", wk: "#F0B455", comp: "#3D7FD6" };
 const CHART_LIGHT = { fc: "#879C1B", ah: "#07A3B8", wt: "#1CAA68", wk: "#CD8512", comp: "#3D7FD6" };
 const MEDS = {
@@ -2830,7 +2839,7 @@ export default function App() {
         surveillance: { rhr: _rhrRpt, sleep: _sleepRpt },
         doseResp: doseResponseRead(mealLog, glp),
         medication: { current: glp.med || null, label: (MEDS[glp.med] || {}).label || glp.med || null },
-        contract: (() => { const hd0 = hd; const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
+        contract: (() => { const hd0 = hd; const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd0].reverse().find((d) => leanOf(d) != null);
           const c = goalContract({ weightLbs: curWeight, bodyFatPct: lastBf ? lastBf.bodyFatPct : bodyFat, leanMassLbs: lastLm ? lastLm.leanMassLbs : 0, goalWeight, sex: body.sex, todayISO: todayISO() });
           return c.status === "ok" ? { line: c.line, proteinFloor: c.proteinFloor, weeksTarget: c.weeksTarget, plausible: c.plausible } : null; })(),
         training: workoutLog.length ? (() => {
@@ -4156,9 +4165,10 @@ export default function App() {
         const pAvg = pVals.length ? Math.round(pVals.reduce((a2, b2) => a2 + b2, 0) / pVals.length) : null;
         const pFloor = ct.proteinFloor || targets.protein;
         const lifts = (workoutLog || []).filter((w2) => w2.kind !== "cardio" && w2.date >= wk).length;
-        const scans = ((healthSync && healthSync.days) || []).filter((d2) => d2.leanMassLbs != null);
+        const scans = ((healthSync && healthSync.days) || []).filter((d2) => leanOf(d2) != null);
         let leanTrend = null;
-        if (scans.length >= 2) { const s1 = scans[scans.length - 2], s2 = scans[scans.length - 1], dd = (new Date(s2.date) - new Date(s1.date)) / 86400000; if (dd >= 7) leanTrend = ((s2.leanMassLbs - s1.leanMassLbs) / s1.leanMassLbs) * 100 / (dd / 7); }
+        if (scans.length >= 2) { const s1 = scans[scans.length - 2], s2 = scans[scans.length - 1], dd = (new Date(s2.date) - new Date(s1.date)) / 86400000; const l1 = leanOf(s1), l2 = leanOf(s2);
+            if (dd >= 7 && l1) leanTrend = ((l2 - l1) / l1) * 100 / (dd / 7); }
         const rows = [
           { l: "Loss rate in band", v: rate == null ? "log weigh-ins" : rate.toFixed(2) + " %/wk", st: rate == null ? "wait" : rate >= 0.25 && rate <= 1.25 ? "ok" : "flag" },
           { l: "Protein ≥ floor", v: pAvg == null ? "log meals" : pAvg + " / " + pFloor, st: pAvg == null ? "wait" : pAvg >= pFloor ? "ok" : "flag" },
@@ -4316,7 +4326,30 @@ export default function App() {
             </div>
           );
         })()}
-      </>, {}, {
+      {(() => {
+            const pts = ((healthSync && healthSync.days) || [])
+              .filter((d0) => d0.bodyFatPct != null)
+              .slice(-14)
+              .map((d0) => ({ date: d0.date, v: +d0.bodyFatPct }));
+            if (pts.length < 2) return null;
+            const W3 = 300, H3 = 110;
+            const hi = Math.max(...pts.map((p0) => p0.v)), lo = Math.min(...pts.map((p0) => p0.v));
+            const span = Math.max(0.6, hi - lo);
+            const xc = (n) => 6 + (n / (pts.length - 1)) * (W3 - 12);
+            const yc = (v) => 12 + (1 - (v - lo) / span) * (H3 - 40);
+            const d3 = pts.map((p0, n) => `${n ? "L" : "M"}${xc(n).toFixed(1)} ${yc(p0.v).toFixed(1)}`).join(" ");
+            const lastP = pts[pts.length - 1];
+            return (
+              <svg viewBox={`0 0 ${W3} ${H3}`} style={{ width: "100%", height: "auto", marginTop: 12, display: "block" }}>
+                <path d={d3} fill="none" stroke={CHART.comp} strokeWidth="2.6"
+                  strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx={xc(pts.length - 1)} cy={yc(lastP.v)} r="4" fill={CHART.comp} />
+                <text x="6" y={H3 - 6} fontFamily={DATA} fontSize="12" fill={C.faint}>{fmtDate(pts[0].date)}</text>
+                <text x={W3 - 6} y={H3 - 6} textAnchor="end" fontFamily={DATA} fontSize="12" fill={C.faint}>
+                  {lastP.v}%</text>
+              </svg>);
+          })()}
+          </>, {}, {
         id: "comp", tone: bfMeasured ? C.go : "none", color: C.blue, title: "Composition",
         when: bfMeasured ? "Measured" : "Estimated",
         value: bfShown != null ? bfShown.toFixed(1) : "—", unit: "% body fat",
@@ -5747,7 +5780,7 @@ export default function App() {
         <div style={{ display: "contents" }}>{(() => {
             const hd0 = healthSync && healthSync.days ? healthSync.days : [];
             const lastBf = [...hd0].reverse().find((d) => d.bodyFatPct != null);
-            const lastLm = [...hd0].reverse().find((d) => d.leanMassLbs != null);
+            const lastLm = [...hd0].reverse().find((d) => leanOf(d) != null);
             const ct = goalContract({ weightLbs: curWeight, bodyFatPct: lastBf ? lastBf.bodyFatPct : bodyFat, leanMassLbs: lastLm ? lastLm.leanMassLbs : 0,
               goalWeight, sex: body.sex, ratePctWk: (adaptiveRead(weightLog, hd0, glp, 0) || {}).ratePctWk, todayISO: todayISO() });
             const fmtETA = (iso) => (iso ? new Date(iso + "T12:00:00").toLocaleDateString(undefined, { month: "long", year: "numeric" }) : null);
@@ -5854,7 +5887,7 @@ export default function App() {
                       </div>);
                   })()}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {(() => { const lastBf = [...hd].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd].reverse().find((d) => d.leanMassLbs != null || (d.bodyFatPct != null && d.weightLbs != null));
+                    {(() => { const lastBf = [...hd].reverse().find((d) => d.bodyFatPct != null); const lastLm = [...hd].reverse().find((d) => leanOf(d) != null);
                       const lmVal = lastLm ? (lastLm.leanMassLbs != null ? +lastLm.leanMassLbs : Math.round(lastLm.weightLbs * (1 - lastLm.bodyFatPct / 100) * 10) / 10) : null;
                       return [["avg steps/day", avgSteps ? avgSteps.toLocaleString() : "—"], ["strength this wk", `${strengthWk}×`], ["last synced weight", lastW ? `${lastW.weightLbs} lb` : "—"], ...(lastBf ? [["body fat", `${lastBf.bodyFatPct}%`]] : []), ...(lmVal ? [["lean mass", `${lmVal} lb`]] : [])]; })().map(([l, v]) => (
                       <div key={l} style={{ flex: "1 1 30%", background: C.surfaceAlt, borderRadius: 8, padding: "9px 10px" }}>

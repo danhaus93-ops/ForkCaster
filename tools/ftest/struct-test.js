@@ -2010,5 +2010,29 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
     ok(t.length*34*INTER <= 307, `"${t}" fits the content width at 375pt`);
 }
 
+
+// v0.9.209: lean mass derives, and composition plots the scale.
+{
+  const CU=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // his scans were invisible to the weight card: it demanded leanMassLbs, which the server only
+  // stores when the scale NAMES it. A scale reporting body fat and weight has told us the same thing.
+  ok(/const leanOf = \(d\) => \{/.test(CU),'there is one way to read lean mass from a scan');
+  ok(/Math\.round\(\+d\.weightLbs \* \(1 - \+d\.bodyFatPct \/ 100\) \* 10\) \/ 10/.test(CU),
+     'derived from body fat and weight when the scale did not name it');
+  ok(/filter\(\(d2\) => leanOf\(d2\) != null\)/.test(CU),'the weight card counts derived scans');
+  ok(/const l1 = leanOf\(s1\), l2 = leanOf\(s2\);/.test(CU),'and its trend reads through the same helper');
+  ok(/if \(dd >= 7 && l1\)/.test(CU),'guarding against a zero baseline');
+  // the arithmetic, on a scan that gives body fat and weight but no lean figure
+  const leanOf=(d)=> d.leanMassLbs != null ? d.leanMassLbs
+    : (d.bodyFatPct != null && d.weightLbs != null
+       ? Math.round(d.weightLbs * (1 - d.bodyFatPct/100) * 10)/10 : null);
+  ok(leanOf({ weightLbs: 212.5, bodyFatPct: 34.4 }) === 139.4, 'a scan with body fat and weight yields lean mass');
+  ok(leanOf({ weightLbs: 212.5 }) === null, 'and one with neither yields nothing');
+  // composition plots the series it already had
+  ok(/filter\(\(d0\) => d0\.bodyFatPct != null\)/.test(CU),'composition reads body fat from the scale');
+  ok(/if \(pts\.length < 2\) return null;/.test(CU),'and draws nothing from a single reading');
+  ok(/const W3 = 300, H3 = 110;/.test(CU),'at a height worth reading');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
