@@ -5337,12 +5337,21 @@ export default function App() {
             <div><div style={{ fontFamily: DISPLAY, fontSize: 24, fontWeight: 700, color: C.go }}>{goalDate ? fmtDate(goalDate) : "—"}</div><div style={{ fontSize: 15.5, color: C.faint }}>{weeksToGoal ? `${goalWeight} lb in ~${weeksToGoal} wks` : "log more to project"}</div></div>
           </div>
           {goalDate ? lineChart(projection(curWeight, goalWeight, recentRate), { color: C.violet, goal: goalWeight, goalLabel: `${goalWeight}`, dashed: true }, C) : <div style={{ padding: "22px 0", textAlign: "center", color: C.faint, fontSize: 17.5, lineHeight: 1.5 }}>Collecting — log ~2 weeks of weigh-ins for a real projection.<br/>A rate needs at least 4 weigh-ins across 12+ days.</div>}
-        </>, {}, {
-            id: "proj", tone: projReady ? "ok" : "none", color: projReady ? C.go : C.faint,
-            title: "Projection", when: projReady && goalDate ? fmtDate(goalDate) : "collecting",
-            value: projReady ? recentRate.toFixed(1) : String((weightLog || []).length),
-            unit: projReady ? "lb/wk recent" : "of 4 weigh-ins needed", spark: null,
-          })}</div>
+        </>, {}, (() => {
+            const _wl = weightSeries || [];
+            const _span = _wl.length >= 2
+              ? Math.round((new Date(_wl[_wl.length - 1].date) - new Date(_wl[0].date)) / 86400000) : 0;
+            const _needCount = _wl.length < 4;
+            return {
+              id: "proj", tone: projReady ? "ok" : "none", color: projReady ? C.go : C.faint,
+              title: "Projection",
+              when: projReady && goalDate ? fmtDate(goalDate) : "collecting",
+              value: projReady ? recentRate.toFixed(1) : String(_needCount ? _wl.length : _span),
+              unit: projReady ? "lb/wk recent"
+                : _needCount ? `of 4 weigh-ins` : `of 12 days spanned`,
+              spark: null,
+            };
+          })())}</div>
 
       {fatCorrelation && (
         <div style={{ display: "contents" }}>{card(
@@ -6317,6 +6326,22 @@ export default function App() {
               </div>
               <div style={{ fontSize: 15.5, color: C.faint, marginTop: 12, lineHeight: 1.4 }}>Switching goal mode resets today's targets to that preset. Allergy filtering applies to every meal suggestion and the coach.</div></>)}
               {settingsGroup("preferences", "Preferences", `${prefs.compact ? "compact" : "comfortable"} · ${prefs.units === "metric" ? "metric" : "imperial"}`, <>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 2px" }}>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 15.5, color: C.ink }}>Daily step goal</span>
+                <span style={{ display: "block", fontSize: 13.5, color: C.faint, marginTop: 2 }}>
+                  draws a line on your step chart</span>
+              </span>
+              <select value={String(+prefs.stepGoal || 0)}
+                onChange={(e) => setPrefs((p) => ({ ...p, stepGoal: +e.target.value }))}
+                style={{ background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`,
+                  borderRadius: 12, padding: "10px 12px", fontFamily: DATA, fontSize: 15.5, minHeight: 44 }}>
+                <option value="0">none</option>
+                {[4000, 6000, 8000, 10000, 12000].map((n) => (
+                  <option key={n} value={n}>{n.toLocaleString()}</option>))}
+              </select>
+            </div>
+
                 {(() => {
                   const row = (label, control) => (
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: `1px solid ${C.hair}` }}>
@@ -6392,7 +6417,40 @@ export default function App() {
               
 
               {settingsGroup("reminders", "Reminders", `dose ${prefs.doseReminder === false ? "off" : "on"} · weigh-in ${prefs.weighReminder === false ? "off" : "on"} · protein ${prefs.proteinReminder === false ? "off" : "on"}`, <>
-                <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 15.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", marginBottom: 4, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
+                {[["doseReminder", "Dose reminder", "on your shot day"],
+              ["weighReminder", "Weigh-in nudge", "if nothing logged that day"],
+              ["proteinReminder", "Protein check-in", "later on, if you are well under"]].map(([k, label, note]) => {
+              const on = prefs[k] !== false;
+              return (
+                <button key={k} onClick={() => setPrefs((p) => ({ ...p, [k]: !on }))}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "none",
+                    border: "none", padding: "12px 2px", cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 15.5, color: C.ink }}>{label}</span>
+                    <span style={{ display: "block", fontSize: 13.5, color: C.faint, marginTop: 2 }}>{note}</span>
+                  </span>
+                  <span style={{ flexShrink: 0, width: 46, height: 28, borderRadius: 999,
+                    background: on ? C.go : C.hair, position: "relative", transition: "background .16s ease" }}>
+                    <span style={{ position: "absolute", top: 3, left: on ? 21 : 3, width: 22, height: 22,
+                      borderRadius: 999, background: on ? C.bg : C.faint, transition: "left .16s ease" }} />
+                  </span>
+                </button>);
+            })}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 2px",
+              borderTop: `1px solid ${C.hair}`, marginTop: 8 }}>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 15.5, color: C.ink }}>Lab panel interval</span>
+                <span style={{ display: "block", fontSize: 13.5, color: C.faint, marginTop: 2 }}>
+                  how long before a redraw is due</span>
+              </span>
+              <select value={String(Math.max(30, +prefs.labIntervalDays || 90))}
+                onChange={(e) => setPrefs((p) => ({ ...p, labIntervalDays: +e.target.value }))}
+                style={{ background: C.surfaceAlt, color: C.ink, border: `1px solid ${C.hair}`,
+                  borderRadius: 12, padding: "10px 12px", fontFamily: DATA, fontSize: 15.5, minHeight: 44 }}>
+                {[60, 90, 120, 180, 365].map((d) => <option key={d} value={d}>{d} days</option>)}
+              </select>
+            </div>
+            <button onClick={togglePush} disabled={pushBusy} style={{ width: "100%", background: pushOn ? C.go : "none", color: pushOn ? C.surface : C.go, border: `1.5px solid ${C.go}`, borderRadius: 12, padding: "12px 0", fontFamily: DATA, fontSize: 15.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", cursor: "pointer", marginBottom: 4, opacity: pushBusy ? 0.6 : 1 }}>{pushOn ? "✓ Dose-day push reminders ON" : "Enable dose-day push reminders"}</button>
                 <div style={{ fontSize: 15.5, color: C.faint, marginBottom: 16, lineHeight: 1.45 }}>Fires at your reminder hour on dose day with the suggested site. iPhone: add ForkCaster to the Home Screen first (Share → Add to Home Screen).</div></>)}
               {settingsGroup("exportbackup", "Export & backup", "backup, restore, reset", <>
                 <button onClick={exportPDF} style={{ width: "100%", background: C.go, color: C.bg, border: "none", borderRadius: 999, padding: "13px 0", fontFamily: DATA, fontSize: 15.5, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", cursor: "pointer", marginBottom: 8 }}>Export PDF report — for your prescriber</button>

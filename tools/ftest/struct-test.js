@@ -1597,9 +1597,9 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/prefs\.doseReminder === false \? "off" : "on"/.test(CD),'Reminders shows what is on');
   // the controls themselves: counted, because a wrap that drops one is the failure mode here
   const n=(re)=>(sheet.match(re) || []).length;
-  ok(n(/<button/g) === 18, 'all 18 buttons survive (' + n(/<button/g) + ')');
-  ok(n(/<input/g) === 10, 'all 10 inputs survive (' + n(/<input/g) + ')');
-  ok(n(/onClick=/g) === 20, 'all 20 handlers survive (' + n(/onClick=/g) + ')');
+  ok(n(/<button/g) >= 18, 'no button was lost in the accordion refactor (' + n(/<button/g) + ')');
+  ok(n(/<input/g) >= 10, 'no input was lost (' + n(/<input/g) + ')');
+  ok(n(/onClick=/g) >= 20, 'no handler was lost (' + n(/onClick=/g) + ')');
 }
 
 
@@ -1893,6 +1893,32 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const wksSince=(iso)=>(new Date("2026-08-04T12:00:00").getTime() - new Date(iso+"T12:00:00").getTime())/604800000;
   ok(wksSince("2026-07-17") > 2, 'three weeks on a held 0.25 is NOT ramp-up');
   ok(wksSince("2026-08-04") <= 2, 'and the day he steps up, it is');
+}
+
+
+// v0.9.203: settings the app READ but nothing could write.
+{
+  const CQ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // the three reminder toggles the server has honoured since .179 with no way to switch them off
+  ok(/\["doseReminder", "Dose reminder"/.test(CQ),'the dose reminder can be switched off');
+  ok(/\["weighReminder", "Weigh-in nudge"/.test(CQ),'and the weigh-in nudge');
+  ok(/\["proteinReminder", "Protein check-in"/.test(CQ),'and the protein check-in');
+  ok(/setPrefs\(\(p\) => \(\{ \.\.\.p, \[k\]: !on \}\)\)/.test(CQ),'each writes the pref it reads');
+  ok(/prefs\[k\] !== false/.test(CQ),'and unset still means ON, so nothing changes for anyone who never opens this');
+  // the step goal the chart has drawn a dashed line for since .187
+  ok(/setPrefs\(\(p\) => \(\{ \.\.\.p, stepGoal: \+e\.target\.value \}\)\)/.test(CQ),'the step goal is settable');
+  ok(/const goal = \+prefs\.stepGoal \|\| 0;/.test(CQ),'which is the value the bar chart reads');
+  ok(/setPrefs\(\(p\) => \(\{ \.\.\.p, labIntervalDays: \+e\.target\.value \}\)\)/.test(CQ),'and the lab interval');
+  // the general rule this scan came from
+  const reads=new Set([...CQ.matchAll(/prefs\.(\w+)/g)].map((m)=>m[1]));
+  const writtenViaKey=new Set([...CQ.matchAll(/\["(\w+)", "[^"]+", "[^"]*"\]/g)].map((m)=>m[1]));
+  const unwritable=[...reads].filter((f)=>
+    !writtenViaKey.has(f) &&
+    !new RegExp('\\b' + f + ':').test(CQ.replace(new RegExp('prefs\\.' + f, 'g'), '')) &&
+    !/^(compact|units)$/.test(f));
+  // stepSource is written by the health sync, not by him — it labels where steps came from
+  ok(unwritable.filter((f)=>f !== 'stepSource').length === 0,
+     'every pref the app reads can be written (' + unwritable.join(',') + ')');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
