@@ -1791,5 +1791,26 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/aria-hidden="true"/.test(CL),'decorative to a screen reader — the button is what is announced');
 }
 
+
+// v0.9.197: six clips the audit found after the type bump, and why source scanning missed them.
+{
+  const CM=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // a text div inside a flex row cannot shrink below its content without minWidth 0, so at the
+  // larger type it got clipped by its parent instead of wrapping. No nowrap was involved, which is
+  // why a scan for nowrap elements found nothing — the constraint was the flex model, not a style.
+  ok(/lineHeight: 1\.2, minWidth: 0, overflowWrap: "anywhere" \}\}>\{slot\.name\}/.test(CM),
+     'the plan slot headline can wrap');
+  ok(/lineHeight: 1\.25, minWidth: 0, overflowWrap: "anywhere" \}\}>\{slot\.name\}/.test(CM),'the tonight row too');
+  ok(/lineHeight: 1\.25, minWidth: 0, overflowWrap: "anywhere" \}\}>\{r\.name\}/.test(CM),'and the swap suggestions');
+  // the counter value: five cells across 307pt is a 58px cell, and a five-character number needs 60
+  const MONO=0.60, cell=(307-4*4)/5;
+  ok(5*17.5*MONO <= cell, 'a five-character counter value fits at 17.5px');
+  ok(!(5*20*MONO <= cell), 'and genuinely did not at 20 — the audit measured exactly that 2px');
+  ok(/fontSize: 17\.5, fontWeight: 700, color: C\.ink, marginTop: 2, fontVariantNumeric: "tabular-nums"/.test(CM),
+     'so the counter value takes the lead rung rather than the section rung');
+  // SESSIONS is the longest label in a four-across row; tracking was what pushed it out
+  ok(8*12*MONO <= (275-3*8)/4, 'SESSIONS fits its cell once the tracking is dropped');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

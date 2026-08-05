@@ -3729,7 +3729,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 4 }}>
             {counters.map(([l, v, sub, fld]) => (<div key={l} onClick={() => fld && openQuick(fld, l, "")} style={{ flex: 1, minWidth: 0, cursor: fld ? "pointer" : "default" }}>
               <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0, color: C.faint, textTransform: "uppercase", whiteSpace: "nowrap" }}>{l}</div>
-              <div style={{ fontFamily: DATA, fontSize: 20, fontWeight: 700, color: C.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{v}</div>
+              <div style={{ fontFamily: DATA, fontSize: 17.5, fontWeight: 700, color: C.ink, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{v}</div>
               <div style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginTop: 0 }}>{sub}</div>
             </div>))}
           </div>
@@ -5402,7 +5402,7 @@ export default function App() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             {cells.map(([l, v]) => (<div key={l} style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 1, color: C.faint, textTransform: "uppercase" }}>{l}</div>
+              <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0, color: C.faint, textTransform: "uppercase" }}>{l}</div>
               <div style={{ fontFamily: DATA, fontSize: 17.5, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                 {v > 0 && <span style={{ width: 4, height: 4, borderRadius: 4, background: C.go, flexShrink: 0 }} />}{v}
               </div>
@@ -5528,7 +5528,7 @@ export default function App() {
           {shopScan.status === "miss" && <div style={{ fontSize: 17.5, color: C.avoid, marginTop: 8 }}>Not found in Open Food Facts / USDA — log it by name from Today instead.</div>}
           {shopScan.status === "found" && (() => { const f = shopScan.food; const dense = f.calories > 0 && f.protein * 4 >= f.calories * 0.22; const mi = shopListMatch(); return (
             <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.ink }}>{f.name}{f.brand ? <span style={{ color: C.muted, fontWeight: 500 }}> · {f.brand}</span> : null}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.ink, minWidth: 0, overflowWrap: "anywhere" }}>{f.name}{f.brand ? <span style={{ color: C.muted, fontWeight: 500 }}> · {f.brand}</span> : null}</div>
               <div style={{ fontSize: 17.5, color: C.muted, margin: "3px 0 7px" }}>per {f.basis}: <b style={{ color: C.go }}>{f.protein}g protein</b> · {f.calories} cal · {f.carbs}g carb · {f.fat}g fat</div>
               {dense ? <div style={{ fontSize: 17.5, color: C.go, fontWeight: 700 }}>✓ Protein-dense — fits the plan</div> : <div style={{ fontSize: 17.5, color: C.caution, fontWeight: 700 }}>Light on protein for its calories{f.fat >= 15 ? " · higher fat — go slow" : ""}</div>}
               {mi >= 0 && !mealPlan.grocery[mi].checked && <button onClick={() => toggleGroceryItem(mi)} style={{ marginTop: 8, width: "100%", background: C.surfaceAlt, border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 8, padding: "10px 0", fontFamily: BODY, fontSize: 17.5, fontWeight: 700, cursor: "pointer" }}>✓ Check off "{mealPlan.grocery[mi].item}"</button>}
@@ -5555,7 +5555,7 @@ export default function App() {
           </label>
         </div>
         <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{day.label} {slot.slot === "snack2" ? "snack" : slot.slot}{(day.dose || day.after) ? " · gentle menu" : ""}</div>
-        <div style={{ fontFamily: DISPLAY, fontSize: 23, fontWeight: 800, color: C.ink, margin: "4px 0 5px", lineHeight: 1.2 }}>{slot.name}</div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 23, fontWeight: 800, color: C.ink, margin: "4px 0 5px", lineHeight: 1.2, minWidth: 0, overflowWrap: "anywhere" }}>{slot.name}</div>
         <div style={{ fontSize: 17.5, color: C.go, fontWeight: 800, marginBottom: 12 }}>{Math.round(slot.perServing.protein * slot.servings)}g protein <span style={{ color: C.muted, fontWeight: 500 }}>· {Math.round(slot.perServing.calories * slot.servings)} cal · {Math.round((slot.perServing.carbs || 0) * slot.servings)}g carbs · {Math.round((slot.perServing.fat || 0) * slot.servings)}g fat · {slot.servings}× serving</span></div>
         {(day.dose || day.after) && <div style={{ background: C.violet + "1A", borderLeft: `4px solid ${C.violet}`, borderRadius: 12, padding: "11px 13px", marginBottom: 12, fontSize: 17.5, color: C.ink, lineHeight: 1.45 }}><b style={{ color: C.violet }}>Why this meal today:</b> post-shot, warm bland low-fat food is easiest to keep down. Eat slowly — stop at comfortable, not full.</div>}
         {slot.ingredients.length > 0 && card(<div>{sectionTitle("Ingredients · on your grocery list")}{slot.ingredients.map((x, i) => <div key={i} style={{ fontSize: 17.5, color: C.ink, padding: "6px 0", borderTop: i ? `1px solid ${C.hair}` : "none" }}>{x}</div>)}</div>, {})}
@@ -5576,7 +5576,7 @@ export default function App() {
               {swapList.map((r, i) => (
                 <div key={i} onClick={() => applySwap(di, si, r)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, background: C.surface, border: `1px solid ${C.hair}`, borderRadius: 12, padding: "11px 13px", marginBottom: 8, cursor: "pointer" }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 17.5, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{r.name}</div>
+                    <div style={{ fontSize: 17.5, fontWeight: 700, color: C.ink, lineHeight: 1.25, minWidth: 0, overflowWrap: "anywhere" }}>{r.name}</div>
                     <div style={{ fontFamily: DATA, fontSize: 15.5, color: C.faint, marginTop: 2 }}>{Math.round(r.p || 0)} P · {Math.round(r.cal || 0)} cal · {(r.ingredients || []).length} ingredients</div>
                   </div>
                   <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, color: C.go, border: `1px solid ${C.go}55`, borderRadius: 999, padding: "4px 10px", flexShrink: 0 }}>Swap</span>
@@ -5621,7 +5621,7 @@ export default function App() {
                 <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: 0.8, color: (day.dose || day.after) ? C.violet : C.muted, textTransform: "uppercase" }}>{slot.slot === "snack2" ? "snack" : slot.slot}</div>
                 {si === tonightIdx && <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "2px 7px", color: C.go, border: `1px solid ${C.go}55`, background: C.go + "1A" }}>TONIGHT</span>}
               </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{slot.name}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.ink, lineHeight: 1.25, minWidth: 0, overflowWrap: "anywhere" }}>{slot.name}</div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: 21, fontWeight: 800, color: C.go, lineHeight: 1 }}>{Math.round(slot.perServing.protein * slot.servings)}g</div>
