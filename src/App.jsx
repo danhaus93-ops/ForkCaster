@@ -4949,13 +4949,13 @@ export default function App() {
             })()}
           </div>, {}, (() => {
             const _fc = doseResponseRead(mealLog, glp) || {};
-            const _ready = _fc.status === "ready";
+            const _ok = _fc.status === "ok";
             return {
-              id: "ceil", tone: _ready ? "ok" : "none", color: _ready ? C.go : C.faint,
+              id: "ceil", tone: _ok ? "ok" : "none", color: _ok ? C.go : C.faint,
               title: "Fat ceiling",
-              when: _ready ? "now reading" : "collecting",
-              value: _ready ? String((_fc.rows || []).length) : String(_fc.days || 0),
-              unit: _ready ? "rungs compared" : `of ${_fc.need || 10} meal days`,
+              when: _ok ? "now reading" : "collecting",
+              value: _ok && _fc.ceiling != null ? String(_fc.ceiling) : String(_fc.days || 0),
+              unit: _ok ? "g fat ceiling" : "meal days logged",
               spark: null,
             };
           })())}</div>

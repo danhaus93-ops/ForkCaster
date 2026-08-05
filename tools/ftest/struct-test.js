@@ -1828,10 +1828,30 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/when: `stage \$\{phaseIdx \+ 1\} of \$\{PHASES\.length\}`/.test(CN),'and where that sits in the four');
   // the fat-ceiling engine returns empty | ready | nodose — never "ok". Checking for "ok" would
   // have pinned this row on "collecting" forever, silently, which is the worst kind of wrong.
-  ok(/_fc\.status === "ready"/.test(CN),'the ceiling row reads the status the engine actually returns');
-  ok(!/_fc\.status === "ok"/.test(CN),'and not a status that does not exist');
-  ok(/when: _ready \? "now reading" : "collecting"/.test(CN),
-     'it announces itself the moment it can read, rather than popping open and breaking compact');
+  ok(/_fc\.status === "ok"/.test(CN),'the ceiling row reads status ok, which is what the engine returns');
+  ok(!/_fc\.status === "ready"/.test(CN),'not "ready", which belongs to the rhr and sleep engines');
+  ok(!/_fc\.rows|_fc\.need/.test(CN),'and reads no field the engine never returns');
+  ok(/_fc\.ceiling/.test(CN),'the value is the ceiling itself once it can read');
+  ok(/when: _ok \? "now reading" : "collecting"/.test(CN),
+     'it announces itself rather than popping open and breaking compact');
+  // the check that would have caught all of this: every field read off the engine must be a field
+  // the engine can return. Derived from the engine body, not from a list I maintain.
+  {
+    const gi=CN.indexOf('function doseResponseRead') >= 0
+      ? CN.indexOf('function doseResponseRead') : CN.search(/(?:const|function)\s+doseResponseRead/);
+    let dd=0, gk=CN.indexOf('{', gi);
+    while (gk < CN.length) { if (CN[gk]==='{') dd++; else if (CN[gk]==='}') { dd--; if (!dd) break; } gk++; }
+    const gbody=CN.slice(gi, gk+1);
+    const keys=new Set();
+    for (const m of gbody.matchAll(/return \{/g)) {
+      let j=m.index+m[0].length, e=j, d3=1;
+      while (e < gbody.length) { if (gbody[e]==='{') d3++; else if (gbody[e]==='}') { d3--; if (!d3) break; } e++; }
+      for (const f of gbody.slice(j,e).matchAll(/(\w+):/g)) keys.add(f[1]);
+    }
+    const reads=[...new Set([...CN.matchAll(/_fc\.(\w+)/g)].map((m)=>m[1]))];
+    const bogus=reads.filter((r)=>!keys.has(r));
+    ok(bogus.length === 0, 'every field read off the ceiling engine exists in its return (' + bogus.join(',') + ')');
+  }
   // every verdict must use variables that exist — three invented ones reached his phone this week
 
   ok(/when: `every \$\{injInterval\}d`/.test(CN),'and dose day reads injInterval');
