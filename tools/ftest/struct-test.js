@@ -1969,9 +1969,12 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const CS=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   // a bar filling its flex column is 36px wide at 375pt, which reads as a block. The column keeps
   // owning the spacing; the bar just sits inside it.
-  ok(/width: "100%", maxWidth: 14, height: h/.test(CS),'the week bars are capped at 14px');
-  const inner=275, n=7, gap=4;
-  ok((inner - gap*(n-1))/n > 14, 'which is comfortably inside a ' + Math.round((inner-gap*(n-1))/n) + 'px column');
+  ok(/width: 26, display: "flex", flexDirection: "column"/.test(CS),'each bar column is 26px wide');
+  ok(/justifyContent: "center", gap: 8, height: 92/.test(CS),'with an 8px gap, centred in the card');
+  const BAR=26, GAP=8, N=7;
+  ok(BAR / GAP >= 3, 'the bar is at least three times the gap — what makes it read as one series');
+  ok(N*BAR + (N-1)*GAP <= 275, 'and the whole chart fits a 275px card (' + (N*BAR+(N-1)*GAP) + 'px)');
+  ok(/<span key=\{i2\} style=\{\{ width: 26, textAlign: "center"/.test(CS),'each day label sits under its own bar');
   // the collapsed chart fills the taller art band rather than floating in it
   ok(/<svg width="92" height="44" viewBox="0 0 92 44">/.test(CS),'the collapsed bar chart is 44 tall');
   ok(/\(n2 \/ hi\) \* 40/.test(CS),'with heights scaled to it');
@@ -1979,6 +1982,21 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the goal line only exists when a goal exists — which is why he has never seen it
   ok(/const goal = \+prefs\.stepGoal \|\| 0;/.test(CS),'the goal line reads prefs.stepGoal');
   ok(/goal \? <line/.test(CS) || /\{goal \?/.test(CS),'and draws nothing when no goal is set');
+}
+
+
+// v0.9.207: the page title leads the page again.
+{
+  const CT=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const n=(CT.match(/fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0\.4, color: C\.ink/g) || []).length;
+  ok(n === 6, 'all six page headings are 34px (' + n + ')');
+  ok(!/fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C\.ink/.test(CT),'none is left at 26');
+  // it must lead the page but not out-shout the number it sits above
+  ok(34 < 48, 'the title is smaller than the hero value beneath it');
+  ok(34 > 20, 'and larger than any section head');
+  const INTER=0.52;
+  for (const t of ["Today","GLP-1","Coach","Train"])
+    ok(t.length*34*INTER <= 307, `"${t}" fits the content width at 375pt`);
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

@@ -3715,7 +3715,7 @@ export default function App() {
     ];
     return (
       <div style={{ padding: "18px 18px 12px" , display: "flex", flexDirection: "column"}}>
-        <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Today</div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0.4, color: C.ink }}>Today</div>
         <div style={{ fontSize: 17.5, color: C.muted, marginBottom: 12 }}>{new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}{(() => { const k = todayISO(), plain = dayKeyAt(Date.now(), { rolloverHour: prefs.rolloverHour }); return k !== plain ? <span style={{ marginLeft: 8, fontSize: 15.5, fontWeight: 800, color: C.violet, border: `1px solid ${C.violet}55`, borderRadius: 18, padding: "3px 9px" }}>NIGHT DAY · counts toward {new Date(k + "T12:00:00").toLocaleDateString([], { weekday: "short" })}</span> : null; })()}</div>
         {/* PROTEIN LEADS. The contract names it the one lever that decides whether the weight
             coming off is fat or muscle, so it gets the hero and everything else compresses. */}
@@ -3877,7 +3877,7 @@ export default function App() {
     if (trainView === "session" && liveSession) return (
       <div style={{ padding: "14px 18px" }}>
         <button onClick={() => { setLiveSession(null); setTrainView("today"); }} style={{ background: "none", border: "none", color: C.go, fontFamily: BODY, fontSize: 17.5, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 8 }}>← Cancel session</button>
-        <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 12 }}>{liveSession.name}</div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0.4, color: C.ink, marginBottom: 12 }}>{liveSession.name}</div>
         {(() => {   // a core day runs as a circuit — say so once, at the top, instead of per-exercise
           const cc = ((routine && (routine.days_ || []).find((d) => d.id === liveSession.dayId)) || {}).coreCircuit;
           if (!cc) return null;
@@ -3946,7 +3946,7 @@ export default function App() {
     );
     return (
       <div style={{ padding: "14px 18px" }}>
-        <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Train</div>
+        <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0.4, color: C.ink }}>Train</div>
         <div style={{ fontSize: 17.5, color: C.muted, marginBottom: 12 }}>Lifting is the half of muscle protection food can't do</div>
         {nav}
         {trainView === "today" && (!routine ? card(<div style={{ fontSize: 17.5, color: C.muted, lineHeight: 1.55 }}>No routine yet — open <b style={{ color: C.ink }}>Routine</b> and generate one. Pick your days per week, equipment, and session length; everything else is automatic.</div>) : (<div>
@@ -4646,7 +4646,7 @@ export default function App() {
       spark: _rr.status === "ready" ? _spark((_rr.series || []).slice(-10).map((r) => r.rhr), RED, [_rr.baseline - 4, _rr.baseline + 4]) : null })}</div>; };
   const renderGlp = () => (
     <div style={{ padding: "18px 18px 12px", display: "flex", flexDirection: "column" }}>
-      <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>GLP-1</div>
+      <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0.4, color: C.ink }}>GLP-1</div>
       {/* v0.9.81: the stages belong with the medication, not the scale. Ramp-up, active loss and the
           off-ramp are things the DRUG does to you over months — the Body tab measures, this narrates. */}
       <div style={{ display: "contents" }}>{card(
@@ -5438,7 +5438,7 @@ export default function App() {
 
   const renderCoach = () => (
     <div style={{ position: "fixed", top: "calc(52px + env(safe-area-inset-top, 0px))", bottom: "calc(66px + env(safe-area-inset-bottom, 0px))", left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, display: "flex", flexDirection: "column", overflow: "hidden", background: C.bg, zIndex: 10 }}>
-      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Coach</div><button onClick={async () => { if (await askConfirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15.5, cursor: "pointer", fontFamily: BODY, padding: "8px 10px" }}>Clear</button></div></div>
+      <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0.4, color: C.ink }}>Coach</div><button onClick={async () => { if (await askConfirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15.5, cursor: "pointer", fontFamily: BODY, padding: "8px 10px" }}>Clear</button></div></div>
       {(() => { const hd = (healthSync && healthSync.days) || [];
         const cells = [["Doses", ((glp && glp.doseLog) || []).length], ["Meals", (mealLog || []).length],
           ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
@@ -5740,7 +5740,7 @@ export default function App() {
         {/* v0.9.126: the heading leads the tab. It used to live inside renderBody, which runs AFTER
             the engine cards, so four cards appeared above the word Body. */}
         <div style={{ padding: "18px 0 0", order: -1 }}>
-          <div style={{ fontFamily: DISPLAY, fontSize: 26, fontWeight: 700, color: C.ink }}>Body</div>
+          <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0.4, color: C.ink }}>Body</div>
         </div>
         {/* v0.9.127: the engine cards used to render at full bleed while renderBody inset by 18px,
             so the tab had two card widths. One wrapper, one width. */}
@@ -5819,23 +5819,23 @@ export default function App() {
                     const dayL = ["S", "M", "T", "W", "T", "F", "S"];
                     return (
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 92 }}>
+                        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 8, height: 92 }}>
                           {vals.map((v, i2) => {
                             const h = Math.max(3, (v / hi) * 88);
                             const last = i2 === vals.length - 1;
                             return (
-                              <div key={i2} style={{ flex: 1, display: "flex", flexDirection: "column",
+                              <div key={i2} style={{ width: 26, display: "flex", flexDirection: "column",
                                 alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
                                 <span style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginBottom: 4 }}>
                                   {v >= 1000 ? (v / 1000).toFixed(1) + "k" : v || ""}</span>
-                                <div style={{ width: "100%", maxWidth: 14, height: h, borderRadius: 4,
+                                <div style={{ width: "100%", height: h, borderRadius: 4,
                                   background: CHART.ah, opacity: v ? (last ? 1 : 0.55) : 0.15 }} />
                               </div>);
                           })}
                         </div>
-                        <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 4 }}>
                           {vals.map((v, i2) => (
-                            <span key={i2} style={{ flex: 1, textAlign: "center", fontFamily: DATA,
+                            <span key={i2} style={{ width: 26, textAlign: "center", fontFamily: DATA,
                               fontSize: 12, color: i2 === vals.length - 1 ? C.ink : C.faint }}>
                               {dayL[(new Date(wk[i2].date + "T12:00:00").getDay())]}</span>))}
                         </div>
