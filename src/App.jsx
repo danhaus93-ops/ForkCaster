@@ -2236,7 +2236,15 @@ export default function App() {
 
   // ── med-aware signals (WHITE SPACE #1) ──
   const onMed = !!medObj; // any selected GLP-1 (incl. investigational) drives appetite/nausea-aware ordering
-  const escalating = onMed && (glp.lastDoseChangeWk ?? 99) <= 2;                 // recent step-up → GI risk up
+  const escalating = onMed && (() => {
+    const L = (glp.doseLog || []).filter((d) => d && d.date && +d.mg > 0 && d.med === glp.med)
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+    if (!L.length) return false;
+    let lastUp = L[0].date;                       // the first dose of a drug IS a step up
+    for (let i = 1; i < L.length; i++) if (+L[i].mg > +L[i - 1].mg) lastUp = L[i].date;
+    const wks = (Date.now() - new Date(lastUp + "T12:00:00").getTime()) / 604800000;
+    return wks <= 2;
+  })();                 // recent step-up → GI risk up
   const recentNausea = glp.sideEffects.filter((s) => s.symptom === "Nausea" && daysAgo(s.date) <= 5);
   const nauseaScore = recentNausea.reduce((a, s) => a + s.severity, 0) + (escalating ? 1 : 0);
   const nauseaShift = prefs.nauseaSensitivity === "high" ? 1 : prefs.nauseaSensitivity === "low" ? -1 : 0;

@@ -1854,5 +1854,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
      'and the form switch still exists');
 }
 
+
+// v0.9.200: the journey phase derives. glp.lastDoseChangeWk is written once when state is created
+// and NEVER updated — zero setGlp calls touch it — so the phase was decided by a number frozen at
+// onboarding. He was showing Ramp-up three weeks into a held dose.
+{
+  const CP=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(!/const escalating = onMed && \(glp\.lastDoseChangeWk \?\? 99\) <= 2;/.test(CP),
+     'the phase no longer reads the frozen field');
+  ok(/for \(let i = 1; i < L\.length; i\+\+\) if \(\+L\[i\]\.mg > \+L\[i - 1\]\.mg\) lastUp = L\[i\]\.date;/.test(CP),
+     'it finds the last dose INCREASE in the log');
+  ok(/let lastUp = L\[0\]\.date;/.test(CP),'treating the first dose of a drug as a step up');
+  ok(/d\.med === glp\.med/.test(CP),'scoped to the current medication, like weeksOn');
+  // the arithmetic, run here against his real log
+  const wksSince=(iso)=>(new Date("2026-08-04T12:00:00").getTime() - new Date(iso+"T12:00:00").getTime())/604800000;
+  ok(wksSince("2026-07-17") > 2, 'three weeks on a held 0.25 is NOT ramp-up');
+  ok(wksSince("2026-08-04") <= 2, 'and the day he steps up, it is');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
