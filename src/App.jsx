@@ -3350,7 +3350,7 @@ export default function App() {
       onContextMenu={arrangeable ? ((e) => e.preventDefault()) : undefined}
       style={{ marginBottom: _cmp ? 9 : 14,
         background: C.dark ? `linear-gradient(168deg, ${C.surfaceAlt}, ${C.surface})` : C.surface,
-        border: `1px solid ${lifted ? C.go : C.hair}`, borderRadius: 18, padding: _cmp ? 16 : 18,
+        border: `1px solid ${lifted ? C.go : C.hair}`, borderRadius: 18, padding: _cmp ? 20 : 18,
         boxShadow: lifted ? `0 18px 40px rgba(0,0,0,.55), 0 0 0 1px ${C.go}55` : (C.dark ? "0 2px 14px rgba(0,0,0,0.28)" : "none"),
         transform: lifted ? `translateY(${dragRef.current.dy}px) scale(1.03)` : (arming ? "scale(0.99)" : "none"),
         transition: lifted ? "none" : "transform .16s ease, box-shadow .16s ease",
@@ -3385,14 +3385,20 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
-            <span style={{ fontFamily: DATA, fontSize: 36, fontWeight: 700, letterSpacing: -0.9, lineHeight: 1, color: C.ink }}>{vd.value}</span>
+            <span style={{ fontFamily: DATA, fontSize: (() => {
+              const t = String(vd.value == null ? "" : vd.value);
+              if (t.length <= 5) return 48;        // a number, or a short word
+              if (t.length <= 7) return 40;
+              if (t.length <= 9) return 34;
+              return 28;                            // a phrase — still the largest thing in the row
+            })(), fontWeight: 700, letterSpacing: -1.1, lineHeight: 1, color: C.ink }}>{vd.value}</span>
             {vd.unit && <span style={{ fontFamily: DATA, fontSize: 15.5, color: C.faint, marginLeft: 4, fontWeight: 600 }}>{vd.unit}</span>}
             
           </div>
-          <div style={{ flexShrink: 0, marginLeft: "auto", height: 40, display: "flex",
+          <div style={{ flexShrink: 0, marginLeft: "auto", height: 52, display: "flex",
             alignItems: "flex-end", justifyContent: "flex-end" }}>{vd.spark || null}</div>
         </div>
-      </div>, { minHeight: 100, ..._shellExtra }, _id0);
+      </div>, { minHeight: 132, ..._shellExtra }, _id0);
   };
   const sectionTitle = (t, color) => (<div style={{ fontFamily: DATA, fontSize: _cmp ? 12 : 13, fontWeight: 700, color: color || C.muted, letterSpacing: 1.1, textTransform: "uppercase", marginBottom: _cmp ? 7 : 10 }}>{t}</div>);
   const numField = (label, val, onChange) => <NumFieldC key={label} label={label} value={val} onChange={onChange} C={C} DISPLAY={DISPLAY} />;

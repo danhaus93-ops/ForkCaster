@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.204"
+version: "0.9.205"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,10 +20,9 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Adds a source analysis that looks for whole classes of bug rather than specific ones —
-  values that can never change, fields read from somewhere that never provides them,
-  two cards claiming the same slot, and states with nothing to display them. It runs
-  during release.sh. Nothing in the app itself changes.
+  The collapsed cards are noticeably bigger — taller rows, more padding, and numbers at
+  48px. Values that are words rather than numbers shrink just enough to fit rather than
+  being cut off.
 dependencies: []
 path: ""
 defaultUsername: ""

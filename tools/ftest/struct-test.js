@@ -506,7 +506,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/const _cmp = !!prefs\.compact;/.test(A9),'density reads from one stored preference');
   // v0.9.105: the radii moved a point when the collapsed row landed; the invariant is that ONE
   // helper owns card geometry, not the exact numbers.
-  ok(/borderRadius: 18, padding: _cmp \? 16 : 18/.test(A9),'the card primitive is the only place geometry changes');
+  ok(/borderRadius: 18, padding: _cmp \? 20 : 18/.test(A9),'the card primitive is the only place geometry changes');
   ok((A9.match(/const cardShell = /g) || []).length === 1,'exactly one card shell draws every card');
   ok(/marginBottom: _cmp \? 7 : 10/.test(A9),'section titles tighten with it');
   ok(!/_cmp \?[^:]*display: "none"/.test(A9),'compact never hides anything');
@@ -1376,7 +1376,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(radii.includes(4), 'the small rung survives — a 3px bar snapped to 8 would clamp to half its height and read as a lozenge');
   ok(radii.includes(999), 'pills are still pills');
   // the chassis is the one pinned design decision and is deliberately off the scale
-  ok(/borderRadius: 18, padding: _cmp \? 16 : 18/.test(BR),'the chassis is radius 18 in both densities, with padding carrying the difference');
+  ok(/borderRadius: 18, padding: _cmp \? 20 : 18/.test(BR),'the chassis is radius 18 in both densities, with padding carrying the difference');
 }
 
 
@@ -1701,17 +1701,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/vd\.sub\b/.test(CH.replace(/vd\.subTone/g, '')),'nothing READS vd.sub any more');
   ok((CH.match(/\n\s*sub: /g) || []).length >= 15,'cards still declare it, ready for the expanded view');
   // whatever a row draws sits in one band, or a taller drawing makes its row taller
-  ok(/flexShrink: 0, marginLeft: "auto", height: 40, display: "flex"/.test(CH),
-     'the art occupies a fixed 40px band');
+  ok(/flexShrink: 0, marginLeft: "auto", height: 52, display: "flex"/.test(CH),
+     'the art occupies a fixed 52px band');
   ok(/alignItems: "flex-end", justifyContent: "flex-end" \}\}>\{vd\.spark \|\| null\}/.test(CH),
      'and the band is rendered even when a row has no art, so the rows stay level');
   ok(/<svg width="34" height="40" viewBox="0 0 44 52" aria-hidden="true">/.test(CH),
      'the blood drop is scaled into the band rather than setting its own height');
-  ok(/<\/div>, \{ minHeight: 100, \.\.\._shellExtra \}, _id0\);/.test(CH),'the row floor is 100');
-  ok(/fontSize: 36, fontWeight: 700, letterSpacing: -0\.9/.test(CH),'and the number grew into the space');
+  ok(/<\/div>, \{ minHeight: 132, \.\.\._shellExtra \}, _id0\);/.test(CH),'the row floor is 132');
+  ok(/fontSize: \(\(\) => \{/.test(CH),'and the hero size is chosen by the length of the value');
   // the arithmetic, so a future change to padding or the band cannot silently unlevel the rows
-  const PAD=16, TITLE=14, GAP=14, BAND=40;
-  ok(PAD + TITLE + GAP + BAND + PAD === 100, 'padding, title, gap and band sum to exactly the floor');
+  const PAD=20, TITLE=16, GAP=12, BAND=52;
+  ok(PAD + TITLE + GAP + BAND + PAD === 120, 'padding, title, gap and band sum to 120, inside the 132 floor');
 }
 
 
@@ -1940,6 +1940,27 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/node deep-scan\.js/.test(RS2),'the rig runs it');
   const REL=fs7.readFileSync(__FCROOT + '/release.sh','utf8');
   ok(/deep-scan\.js/.test(REL),'and so does the release script');
+}
+
+
+// v0.9.205: Large — the compact row at Apple Health scale.
+{
+  const CR=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/minHeight: 132, \.\.\._shellExtra/.test(CR),'the row floor is 132');
+  ok(/padding: _cmp \? 20 : 18/.test(CR),'compact padding is 20');
+  ok(/marginLeft: "auto", height: 52/.test(CR),'and the art band is 52');
+  // a hero value that is a WORD cannot take 48px. "Abdomen L" needs 259px of the 201 available at
+  // 375pt, so the size steps down by length — the same fit-to-box a short number gets for free.
+  ok(/if \(t\.length <= 5\) return 48;/.test(CR),'a short value takes 48px');
+  ok(/return 28;/.test(CR),'and a phrase steps down rather than clipping');
+  const MONO=0.60, avail=307-40-52-14;
+  const size=(t)=>t.length<=5?48:t.length<=7?40:t.length<=9?34:28;
+  for (const t of ["212.5","4,541","Ramp-up","Abdomen L","Active loss","Semaglutide"])
+    ok(t.length*size(t)*MONO <= avail, `"${t}" fits at ${size(t)}px (${Math.round(t.length*size(t)*MONO)} of ${avail})`);
+  ok(!(9*48*MONO <= avail), 'and "Abdomen L" genuinely did not fit at 48 — this is why the step exists');
+  // the row TITLE does not grow with the card: the width available did not change
+  ok(/fontSize: 12, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(CR),
+     'the row title stays at 12 — bigger cards do not widen the screen');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
