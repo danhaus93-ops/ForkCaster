@@ -2098,5 +2098,17 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!((307-16)/3 - 12 >= 11*12*K + 11*0.4), 'RETATRUTIDE genuinely did not fit at the old tracking');
 }
 
+
+// v0.9.213: the last deep-scan finding, which I twice called benign without checking.
+{
+  const CY=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const SV=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  // read in one place, written NOWHERE — so it was always undefined and the chip always fell
+  // through to "SYNCED". A field that can only take its default is not a setting.
+  ok(!/stepSource/.test(CY),'the dead stepSource read is gone from the client');
+  ok(!/stepSource/.test(SV),'and it was never written on the server either');
+  ok(/\{syn > 0 \? "SYNCED" : "NOT SYNCED"\}/.test(CY),'the chip says what it actually knows');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

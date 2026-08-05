@@ -3812,7 +3812,7 @@ export default function App() {
         <div style={{ display: "contents" }}>{card(<>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             {sectionTitle("Activity", C.muted)}
-            <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: syn > 0 ? C.go : C.faint, border: `1px solid ${syn > 0 ? C.go + "55" : C.hair}`, background: syn > 0 ? C.go + "1A" : "transparent" }}>{syn > 0 ? (prefs.stepSource || "SYNCED") : "NOT SYNCED"}</span>
+            <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1, borderRadius: 999, padding: "3px 9px", marginTop: -8, color: syn > 0 ? C.go : C.faint, border: `1px solid ${syn > 0 ? C.go + "55" : C.hair}`, background: syn > 0 ? C.go + "1A" : "transparent" }}>{syn > 0 ? "SYNCED" : "NOT SYNCED"}</span>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             {[["Steps", stepsShown ? stepsShown.toLocaleString() : null, syn > 0, syn > (+eaten.steps || 0) ? "synced \u00b7 goal 10,000" : "goal 10,000"],
