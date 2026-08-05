@@ -8,4 +8,8 @@ for t in grocery-test.js struct-test.js engines-test.js chain-test.js delivery-t
   node "$t"; [ $? -ne 0 ] && bad=$((bad+1))
 done
 echo; echo "SUITES FAILED: $bad"
+# v0.9.204: the class-of-fault scan. Advisory — it reports SHAPES of fault rather than
+# asserting known behaviours, so a finding is a prompt to look, not a reason to block.
+node deep-scan.js 2>&1 | tail -20
+
 exit $bad

@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.203"
+version: "0.9.204"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,10 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Settings you could not reach are now in the app: switches for each of the three
-  reminders, a daily step goal that draws a line on your step chart, and how often a
-  lab redraw comes due. The projection card also stops saying things like "6 of 4".
+  Adds a source analysis that looks for whole classes of bug rather than specific ones —
+  values that can never change, fields read from somewhere that never provides them,
+  two cards claiming the same slot, and states with nothing to display them. It runs
+  during release.sh. Nothing in the app itself changes.
 dependencies: []
 path: ""
 defaultUsername: ""

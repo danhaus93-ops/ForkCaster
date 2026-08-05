@@ -20,6 +20,11 @@ sudo docker push "$IMG"
 # now, not the image just built — so it reports what is live before you tap Update. Advisory: it
 # prints findings and never blocks the release, because a tap-target report should not stop a fix
 # from reaching the phone. Add --shots to write screenshots into the app's data dir.
+echo ""
+echo "── deep scan (source analysis) ─────────────────────────────────"
+node tools/ftest/deep-scan.js 2>&1 | tail -30 || true
+echo "───────────────────────────────────────────────────────────────"
+
 CID=$(sudo docker ps --filter "name=forkcaster" --format "{{.Names}}" | grep -E '_web(_[0-9]+)?$' | head -1)
 if [ -z "$CID" ]; then
   # fall back to whichever forkcaster container actually carries the audit

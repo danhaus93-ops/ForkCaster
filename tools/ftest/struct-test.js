@@ -1921,5 +1921,26 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
      'every pref the app reads can be written (' + unwritable.join(',') + ')');
 }
 
+
+// v0.9.204: the deep scan itself — it must keep working, and must not invent findings.
+{
+  const fs7=require('fs');
+  const DS=fs7.readFileSync(__FCROOT + '/tools/ftest/deep-scan.js','utf8');
+  ok(/CONTRACT/.test(DS) && /COLLIDE/.test(DS) && /ORPHAN/.test(DS) && /STALE/.test(DS),
+     'the scan covers the four shapes that recurred');
+  // each of these was a false positive it produced before being corrected, and each correction
+  // matters more than the check itself — a tool that cries wolf gets switched off
+  ok(/for \(const k of obj\.matchAll\(\/\(\?:\^\|\[\{,\]\)/.test(DS),'it reads ES6 shorthand properties');
+  ok(/for \(const sp of obj\.matchAll\(\/\\\.\\\.\\\.\(\\w\+\)\//.test(DS),'and resolves spread returns');
+  ok(/keys\.add\("\*"\)/.test(DS),'admitting when a spread cannot be resolved rather than claiming absence');
+  ok(/\["glp", "glp"\], \["prefs", "prefs"\]/.test(DS),"it does not confuse the server's request body with body state");
+  ok(/GHOST — deliberately NOT done here/.test(DS),
+     'and it declines the check regex cannot do, rather than doing it badly');
+  const RS2=fs7.readFileSync(__FCROOT + '/tools/ftest/run.sh','utf8');
+  ok(/node deep-scan\.js/.test(RS2),'the rig runs it');
+  const REL=fs7.readFileSync(__FCROOT + '/release.sh','utf8');
+  ok(/deep-scan\.js/.test(REL),'and so does the release script');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
