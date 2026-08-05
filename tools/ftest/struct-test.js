@@ -1777,5 +1777,19 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
      'and would have overflowed at 13.5 — it carries an ellipsis, so it would have truncated a label');
 }
 
+
+// v0.9.196: the settings mark is sliders, not a cog.
+{
+  const CL=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(!/M19 12a7 7 0/.test(CL),'the hand-rolled cog is gone — uneven teeth at a 1.4px stroke');
+  ok(/M4 7h10M18\.5 7H20M4 12h3M11 12h9M4 17h9M17\.5 17H20/.test(CL),'three slider tracks');
+  ok(/<circle cx="16\.2" cy="7" r="2\.1" \/>/.test(CL),'with filled handles, which hold their weight at 21px');
+  // it must follow the theme like every other mark — a hard-coded grey would survive a theme switch
+  ok(/<g stroke=\{C\.muted\} strokeWidth="1\.8" strokeLinecap="round">/.test(CL),'stroked in the theme colour');
+  ok(/<g fill=\{C\.muted\}>/.test(CL),'and filled in it too');
+  ok(!/stroke="#[0-9A-Fa-f]{6}"[^>]*\/>\s*<\/g>\s*<g fill="#/.test(CL),'no hard-coded grey in the icon');
+  ok(/aria-hidden="true"/.test(CL),'decorative to a screen reader — the button is what is announced');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

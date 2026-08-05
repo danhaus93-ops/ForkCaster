@@ -5673,7 +5673,16 @@ export default function App() {
             {appVer && <span style={{ fontSize: 13.5, color: C.faint, fontWeight: 600, marginTop: 4 }}>v{appVer}</span>}
           </div>
           <button onClick={() => setSettingsOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke={C.muted} strokeWidth="2" /><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 1h-4l-.5 2.4a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 23h4l.5-2.4a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z" stroke={C.muted} strokeWidth="1.4" strokeLinejoin="round" /></svg>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <g stroke={C.muted} strokeWidth="1.8" strokeLinecap="round">
+              <path d="M4 7h10M18.5 7H20M4 12h3M11 12h9M4 17h9M17.5 17H20" />
+            </g>
+            <g fill={C.muted}>
+              <circle cx="16.2" cy="7" r="2.1" />
+              <circle cx="9" cy="12" r="2.1" />
+              <circle cx="15.2" cy="17" r="2.1" />
+            </g>
+          </svg>
           </button>
         </div>
 
