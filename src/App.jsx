@@ -5742,7 +5742,12 @@ export default function App() {
           [role="button"]::after,a[href]::after{content:"";position:absolute;left:0;right:0;top:-8px;bottom:-8px;}
           .fc-nohit::after{display:none;}
           @media (prefers-reduced-motion:reduce){button,[role="button"]{transition:none;}}
-          @keyframes fcToastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}`}</style>
+          @keyframes fcToastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+          @keyframes fcSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+          @keyframes fcScrimIn{from{opacity:0}to{opacity:1}}
+          @media (prefers-reduced-motion:reduce){
+            [data-fc-sheet]{animation:fcScrimIn .16s ease!important}
+          }`}</style>
       <div style={{ width: "100%", maxWidth: 430, background: C.bg, minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
 
         {/* Header */}
@@ -6122,7 +6127,13 @@ export default function App() {
             </div>
           </div>)}
         {sheetCard && (
-          <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 50, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+          <>
+            {/* the scrim the sheet never had — without it there is no sense of a layer above the page */}
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 49,
+              animation: "fcScrimIn .22s ease" }} onClick={() => setSheetCard(null)} />
+            <div data-fc-sheet="1" style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 50,
+              overflowY: "auto", WebkitOverflowScrolling: "touch",
+              animation: "fcSheetUp .34s cubic-bezier(.22,1,.36,1)", willChange: "transform" }}>
             <div style={{ position: "sticky", top: 0, background: C.bg, borderBottom: `1px solid ${C.hair}`, display: "flex", alignItems: "center", gap: 8, padding: "calc(12px + env(safe-area-inset-top, 0px)) 13px 12px", zIndex: 2 }}>
               <button onClick={() => setSheetCard(null)} style={{ width: 30, height: 30, borderRadius: 999, background: C.surfaceAlt, border: "none", color: C.ink2, fontSize: 19, lineHeight: 1, cursor: "pointer", flexShrink: 0 }}>{"‹"}</button>
               <span style={{ fontFamily: DATA, fontSize: 15.5, fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase", color: sheetCard.color || C.ink }}>{sheetCard.title}</span>
@@ -6130,7 +6141,8 @@ export default function App() {
             </div>
             {/* the SAME children the open card renders — one source, so the detail cannot drift */}
             <div style={{ padding: "14px 16px calc(40px + env(safe-area-inset-bottom, 0px))" }}>{sheetKidsRef.current[sheetCard.id]}</div>
-          </div>)}
+            </div>
+          </>)}
         {logOpen && (
           <div onClick={() => setLogOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 430, background: C.surface, borderTop: `1px solid ${C.hair}`, borderRadius: "18px 18px 0 0", padding: "20px 20px calc(28px + env(safe-area-inset-bottom, 0px))", maxHeight: "82vh", overflowY: "auto" }}>

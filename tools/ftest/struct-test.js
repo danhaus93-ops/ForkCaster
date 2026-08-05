@@ -646,7 +646,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 // v0.9.124: stacking. The detail sheet is a page and every modal must be able to open ON TOP of it.
 {
   const AE=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
-  const sheetZ=/zIndex: (\d+), overflowY: "auto", WebkitOverflowScrolling/.exec(AE);
+  const sheetZ=/zIndex: (\d+),\s*\n?\s*overflowY: "auto", WebkitOverflowScrolling/.exec(AE);
   ok(!!sheetZ,'the detail sheet declares a z-index');
   const z=sheetZ?+sheetZ[1]:0;
   ok(z>45,'the sheet covers the sticky header');
@@ -2108,6 +2108,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!/stepSource/.test(CY),'the dead stepSource read is gone from the client');
   ok(!/stepSource/.test(SV),'and it was never written on the server either');
   ok(/\{syn > 0 \? "SYNCED" : "NOT SYNCED"\}/.test(CY),'the chip says what it actually knows');
+}
+
+
+// v0.9.214: the sheet arrives instead of appearing.
+{
+  const CZ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/@keyframes fcSheetUp\{from\{transform:translateY\(100%\)\}/.test(CZ),'the sheet slides up from the bottom');
+  ok(/animation: "fcSheetUp \.34s cubic-bezier\(\.22,1,\.36,1\)"/.test(CZ),'on the same spring curve as the pressed states');
+  // it had no scrim at all — an opaque page with no sense of a layer above the one beneath it
+  ok(/background: "rgba\(0,0,0,\.5\)", zIndex: 49/.test(CZ),'a scrim sits behind it');
+  ok(/onClick=\{\(\) => setSheetCard\(null\)\} \/>/.test(CZ),'and tapping the scrim closes the sheet');
+  // the scrim must be UNDER the sheet and OVER the page, or it either hides the sheet or does nothing
+  const sz=/zIndex: (\d+),\s*\n?\s*overflowY: "auto", WebkitOverflowScrolling/.exec(CZ);
+  ok(sz && +sz[1] === 50, 'the sheet is at 50');
+  ok(49 < 50 && 49 > 45, 'and the scrim at 49 sits between the page and the sheet');
+  ok(/prefers-reduced-motion:reduce\)\{\s*\[data-fc-sheet\]/.test(CZ.replace(/\n\s*/g, ' ')) ||
+     /\[data-fc-sheet\]\{animation:fcScrimIn/.test(CZ),'motion is dropped for anyone who asks for that');
+  // ONE sheet serves every tab — that is why this lands everywhere without seven edits
+  ok((CZ.match(/\{sheetCard && \(/g) || []).length === 1,'there is exactly one sheet, at app root');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
