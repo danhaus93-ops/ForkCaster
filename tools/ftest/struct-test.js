@@ -2151,5 +2151,18 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(!(satNum + 15 < labTop || satNum > labTop + 15), 'and they genuinely overlapped where they were');
 }
 
+
+// v0.9.216: a pick made inside the sheet showed one tap behind.
+{
+  const DB=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // the sheet replays ELEMENTS captured into a ref during the card's own render. Keying the
+  // container on the live pick forces that subtree to reconcile against the pick that is current,
+  // rather than letting React reuse the one it already had.
+  ok(/key=\{`\$\{sheetCard\.id\}:\$\{pick \? pick\.chart \+ ":" \+ pick\.i : "none"\}`\}/.test(DB),
+     'the sheet body is keyed on the live pick');
+  ok(/sheetKidsRef\.current\[vd\.id\] = children;/.test(DB),'the card still writes its children once');
+  ok((DB.match(/sheetKidsRef\.current\[sheetCard\.id\]/g) || []).length === 1,'and the sheet reads them in one place');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

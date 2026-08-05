@@ -6159,7 +6159,9 @@ export default function App() {
               {(sheetCard.sheetWhen || sheetCard.when) && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, color: C.faint, letterSpacing: 0.6, textTransform: "uppercase" }}>{sheetCard.sheetWhen || sheetCard.when}</span>}
             </div>
             {/* the SAME children the open card renders — one source, so the detail cannot drift */}
-            <div style={{ padding: "14px 16px calc(40px + env(safe-area-inset-bottom, 0px))" }}>{sheetKidsRef.current[sheetCard.id]}</div>
+            <div key={`${sheetCard.id}:${pick ? pick.chart + ":" + pick.i : "none"}`}
+              style={{ padding: "14px 16px calc(40px + env(safe-area-inset-bottom, 0px))" }}>
+              {sheetKidsRef.current[sheetCard.id]}</div>
             </div>
           </>)}
         {logOpen && (
