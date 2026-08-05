@@ -74,7 +74,10 @@ console.log('  glp1 picks:',JSON.stringify(picks.map(p=>p.item||p.name||p.id)));
   // manual + synced), not the raw weightLog, or synced weigh-ins vanish from the trend.
   ok(/weightSeries\.length > 1 \?/.test(SRC2), 'the Body chart still branches on the merged series');
   ok(/const vs = weightSeries\.map\(\(w\) => \+fmtWt\(w\.lbs\)\)/.test(SRC2), 'the Body chart plots the merged series (manual + synced), not raw weightLog');
-  ok(/url\(#wg\)/.test(SRC2) && /GOAL \{fmtWt\(goalWeight, 0\)\}/.test(SRC2), 'chart carries the gradient fill and the dashed goal rule from the design');
+  ok(/url\(#wg\)/.test(SRC2), 'chart carries the gradient fill from the design');
+  ok(/goal \{fmtWt\(goalWeight, 0\)\}/.test(SRC2), 'and the goal is still labelled — on the header line now, not inside the plot');
+  ok(!/y=\{GY - 3\}[^>]*>GOAL/.test(SRC2), 'the old in-plot GOAL label is gone');
+  ok(/M0 \$\{GY\}h\$\{W2\}/.test(SRC2), 'the dashed goal rule itself stays');
   ok(/w\.synced \? <span/.test(SRC2), 'synced rows are tagged and cannot be deleted from the list');
 }
 // v0.9.21: the projection honesty floor — same rule adaptiveRead lives by

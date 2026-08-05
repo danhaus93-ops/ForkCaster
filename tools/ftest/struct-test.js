@@ -2164,5 +2164,21 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok((DB.match(/sheetKidsRef\.current\[sheetCard\.id\]/g) || []).length === 1,'and the sheet reads them in one place');
 }
 
+
+// v0.9.217: the weight chart takes a tap, and eight SVG labels finally cleared the floor.
+{
+  const DC=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/p0\.chart === "wt" && p0\.i === i3 \? null : \{ chart: "wt", i: i3 \}/.test(DC),'every weigh-in is a tap target');
+  ok(/<circle cx=\{xw\(i3\)\} cy=\{yw\(v\)\} r="14" fill="transparent" \/>/.test(DC),
+     'with an invisible 14px target, because a 3.6px dot is not something a thumb can hit');
+  ok(/_wRow \? fmtDate\(_wRow\.date\) : "trend"/.test(DC),'the readout names the date of the weigh-in');
+  // SVG text uses fontSize as an ATTRIBUTE, which the .195 codemod never saw — it rewrote object
+  // properties. Eight labels sat below the floor inside charts for twenty-two releases.
+  const attr=[...DC.matchAll(/fontSize="(\d+)"/g)].map((m)=>+m[1]);
+  ok(attr.length > 0, 'there are SVG text labels');
+  ok(Math.min(...attr) >= 12, 'and none is below the 12px floor (' + Math.min(...attr) + ')');
+  ok(!/fontSize="[789]"/.test(DC),'specifically none at 7, 8 or 9');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

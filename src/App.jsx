@@ -3507,7 +3507,7 @@ export default function App() {
               <circle cx="34" cy="34" r={R} fill="none" stroke={m.col} strokeWidth="6" strokeLinecap="round"
                 strokeDasharray={`${(m.pct / 100) * CIRC} ${CIRC}`} transform="rotate(-90 34 34)" />
               <text x="34" y="34" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="16" fontWeight="700" fill={C.ink}>{Math.round(m.left)}</text>
-              <text x="34" y="44" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8" fill={C.faint}>{m.unit}</text>
+              <text x="34" y="44" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="12" fill={C.faint}>{m.unit}</text>
             </svg>
             <div style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: m.col, marginTop: 2, lineHeight: 1.3 }}>{m.label}</div>
           </div>); })}
@@ -4204,15 +4204,39 @@ export default function App() {
             const yw = (v) => 8 + (1 - (v - lo) / span) * (GY - 14);
             const line = vs.map((v, i) => `${i ? "L" : "M"}${xw(i).toFixed(1)} ${yw(v).toFixed(1)}`).join(" ");
             const lastX = xw(vs.length - 1), lastY = yw(vs[vs.length - 1]);
-            return (<svg viewBox={`0 0 ${W2} ${H2}`} style={{ width: "100%", height: "auto", marginTop: 8, display: "block" }}>
+            const _wpk = pick && pick.chart === "wt" ? pick.i : null;
+                          const _wRow = _wpk != null && weightSeries[_wpk] ? weightSeries[_wpk] : null;
+                          return (<>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8, minHeight: 16 }}>
+                              <span style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase", color: C.faint }}>
+                                {_wRow ? fmtDate(_wRow.date) : "trend"}</span>
+                              {_wRow ? (
+                                <span style={{ fontFamily: DATA, fontSize: 15.5, fontWeight: 700, color: C.go }}>
+                                  {fmtWt(_wRow.lbs)} {wtU}</span>) : null}
+                              <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, color: C.faint }}>
+                                goal {fmtWt(goalWeight, 0)}</span>
+                            </div>
+                            <svg viewBox={`0 0 ${W2} ${H2}`} style={{ width: "100%", height: "auto", marginTop: 4, display: "block" }}>
               <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={C.go} stopOpacity="0.38" /><stop offset="1" stopColor={C.go} stopOpacity="0" /></linearGradient></defs>
               <path d={`${line} L${lastX.toFixed(1)} ${H2} L0 ${H2} Z`} fill="url(#wg)" />
               <path d={line} fill="none" stroke={C.go} strokeWidth="2" strokeLinejoin="round" />
-              <circle cx={lastX} cy={lastY} r="7" fill={C.go} opacity="0.2" />
-              <circle cx={lastX} cy={lastY} r="3.6" fill={C.go} />
+              {vs.map((v, i3) => {
+                              const _sel = pick && pick.chart === "wt" && pick.i === i3;
+                              const _any = pick && pick.chart === "wt";
+                              return (
+                                <g key={i3} onClick={() => setPick((p0) =>
+                                    p0 && p0.chart === "wt" && p0.i === i3 ? null : { chart: "wt", i: i3 })}
+                                  style={{ cursor: "pointer" }}>
+                                  <circle cx={xw(i3)} cy={yw(v)} r="14" fill="transparent" />
+                                  <circle cx={xw(i3)} cy={yw(v)} r={_sel ? 9 : 7} fill={C.go}
+                                    opacity={_sel ? 0.28 : (i3 === vs.length - 1 && !_any ? 0.2 : 0)} />
+                                  <circle cx={xw(i3)} cy={yw(v)} r={_sel ? 5 : (i3 === vs.length - 1 ? 3.6 : 2.4)}
+                                    fill={C.go} opacity={_any ? (_sel ? 1 : 0.35) : (i3 === vs.length - 1 ? 1 : 0.6)} />
+                                </g>);
+                            })}
               <path d={`M0 ${GY}h${W2}`} stroke={C.hair} strokeDasharray="3 4" />
-              <text x="2" y={GY - 3} fontFamily="ui-monospace,monospace" fontSize="7" fill={C.faint}>GOAL {fmtWt(goalWeight, 0)}</text>
-            </svg>); })() : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 17.5 }}>Log your first weight below to start the trend.</div>}
+              
+            </svg></>); })() : <div style={{ padding: "26px 0", textAlign: "center", color: C.faint, fontSize: 17.5 }}>Log your first weight below to start the trend.</div>}
           {ct.status !== "incomplete" && <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 8 }}>
             {[[Math.round(ct.lean || 0) + " lb", "LEAN TO HOLD"], [Math.round(ct.fatToLose || 0) + " lb", "FAT TO LOSE"], [ct.bfAtGoal ? "~" + Math.round(ct.bfAtGoal) + "%" : "—", "AT GOAL"]].map(([v4, l4]) => (
               <div key={l4} style={{ flex: 1 }}>
@@ -5210,7 +5234,7 @@ export default function App() {
               {[[420, "7H", C.hair2 || "#2C3742"], [300, "5H", C.hair]].map(([m, lab, col]) => (
                 <g key={lab}>
                   <line x1="34" y1={yOf(m)} x2="300" y2={yOf(m)} stroke={col} strokeDasharray="2 4" />
-                  <text x="0" y={yOf(m) + 3} fontFamily="ui-monospace, monospace" fontSize="7" fill={C.faint}>{lab}</text>
+                  <text x="0" y={yOf(m) + 3} fontFamily="ui-monospace, monospace" fontSize="12" fill={C.faint}>{lab}</text>
                 </g>))}
               {_n7.map((d, i) => { const x = 40 + i * (colW + gap);
                 const seg = [["awake", +d.awakeMin || 0, C.avoid, 0.55], ["rem", +d.remMin || 0, SLEEP_STAGE.rem, 0.9], ["light", +d.lightMin || 0, SLEEP_STAGE.light, 0.9], ["deep", +d.deepMin || 0, SLEEP_STAGE.deep, 1]];
@@ -5222,8 +5246,8 @@ export default function App() {
                 const dose = _doseDays.has(d.date);
                 return (<g key={d.date || i}>
                   {stack}
-                  {dose && <text x={x + colW / 2} y={yOf(totals[i]) - 5} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="7" fill={C.violet}>SHOT</text>}
-                  <text x={x + colW / 2} y="118" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="8" fill={dose ? C.violet : (i === cols - 1 ? C.ink : C.faint)}>{d.date ? new Date(d.date + "T12:00:00").toLocaleDateString([], { weekday: "short" }).slice(0, 2) : ""}</text>
+                  {dose && <text x={x + colW / 2} y={yOf(totals[i]) - 5} textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="12" fill={C.violet}>SHOT</text>}
+                  <text x={x + colW / 2} y="118" textAnchor="middle" fontFamily="ui-monospace, monospace" fontSize="12" fill={dose ? C.violet : (i === cols - 1 ? C.ink : C.faint)}>{d.date ? new Date(d.date + "T12:00:00").toLocaleDateString([], { weekday: "short" }).slice(0, 2) : ""}</text>
                 </g>); })}
             </svg>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, paddingTop: 9, borderTop: `1px solid ${C.hair}` }}>
@@ -6953,7 +6977,7 @@ export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPend
   // component in a 46px row dragged all of that prose in with it.
   if (mini) return (
       <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: mini ? 46 : 240, margin: "0 auto" }}>
-        <g fontWeight="700" fontSize="9">
+        <g fontWeight="700" fontSize="12">
           <text x="26" y="14" fill={C.muted} textAnchor="middle">R</text>
           <text x="94" y="14" fill={C.muted} textAnchor="middle">L</text>
           <text x="26" y="21" fill={C.faint} fontSize="4.6" fontWeight="500" textAnchor="middle">your right</text>
@@ -6997,7 +7021,7 @@ export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPend
       </div>
       <div style={{ fontSize: 15.5, color: C.faint, marginBottom: 4 }}>Cycle {cycleLogged}/{cyc} · {perSite} per site · resets when every site is used</div>
       <svg width="100%" viewBox="8 4 104 152" style={{ display: "block", maxWidth: 240, margin: "0 auto" }}>
-        <g fontWeight="700" fontSize="9">
+        <g fontWeight="700" fontSize="12">
           <text x="26" y="14" fill={C.muted} textAnchor="middle">R</text>
           <text x="94" y="14" fill={C.muted} textAnchor="middle">L</text>
           <text x="26" y="21" fill={C.faint} fontSize="4.6" fontWeight="500" textAnchor="middle">your right</text>
@@ -7171,7 +7195,7 @@ function lineChart(data, opts, C) {
   return (
     <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 120, marginTop: 12, display: "block" }}>
       {goalY != null && <line x1={padL} y1={goalY} x2={w - padR} y2={goalY} stroke={C.faint} strokeWidth="1" strokeDasharray="4 4" />}
-      {goalY != null && <text x={w - padR} y={goalY - 5} textAnchor="end" fontSize="10" fill={C.faint} fontFamily={BODY}>{opts.goalLabel}</text>}
+      {goalY != null && <text x={w - padR} y={goalY - 5} textAnchor="end" fontSize="12" fill={C.faint} fontFamily={BODY}>{opts.goalLabel}</text>}
       <polyline points={pts} fill="none" stroke={opts.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={opts.dashed ? "5 4" : "none"} />
       {data.map((d, i) => <circle key={i} cx={X(i)} cy={Y(d.value)} r={i === data.length - 1 ? 4 : 2.5} fill={opts.color} />)}
     </svg>
@@ -7194,7 +7218,7 @@ function donut(val, max, color, big, unit, C) {
       <circle cx="36" cy="36" r={r} fill="none" stroke={C.hair} strokeWidth="6" />
       <circle cx="36" cy="36" r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={off} transform="rotate(-90 36 36)" />
       <text x="36" y="34" textAnchor="middle" fontSize="17" fontWeight="700" fill={C.ink} fontFamily={DISPLAY}>{big}</text>
-      <text x="36" y="47" textAnchor="middle" fontSize="9" fill={C.muted} fontFamily={BODY}>{unit}</text>
+      <text x="36" y="47" textAnchor="middle" fontSize="12" fill={C.muted} fontFamily={BODY}>{unit}</text>
     </svg>
   );
 }
