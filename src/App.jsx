@@ -1877,8 +1877,12 @@ export default function App() {
   // or on the minute tick if the app simply sat open through 4am (or 11am on a night day).
   const rollDayIfNeeded = () => {
     const k = dayKeyAt(Date.now(), prefs);
-    if (!eatenDayRef.current) { eatenDayRef.current = k; return; }
-    if (eatenDayRef.current === k) return;
+          if (!eatenDayRef.current) { eatenDayRef.current = k; return; }
+          if (eatenDayRef.current === k) return;
+          /* a key change is not proof a day passed — prefs arrive after the first render, so the
+             key also moves when settings load. Only a key that is LATER than the tracked one means
+             time has actually passed; anything else is the same day being renamed. */
+          if (k < eatenDayRef.current) { eatenDayRef.current = k; return; }
     eatenDayRef.current = k;
     eatenAtRef.current = new Date().toISOString();
     setEaten({ protein: 0, calories: 0, carbs: 0, fat: 0, waterOz: 0, fiber: 0, steps: 0, exerciseCal: 0 });
@@ -2009,7 +2013,17 @@ export default function App() {
             const mlog = s.mealLog || [];
             stale = !mlog.some((m) => m.date === k0) && mlog.some((m) => m.date && m.date < k0);
           } else stale = s.eatenDate !== k0;
-          setEaten(stale ? ZERO : s.eaten); }
+          const _mealsToday = (s.mealLog || []).filter((m2) => m2 && m2.date === k0);
+          const _fromLog = _mealsToday.reduce((a, m2) => ({
+            protein: a.protein + (+m2.protein || 0), calories: a.calories + (+m2.calories || 0),
+            carbs: a.carbs + (+m2.carbs || 0), fat: a.fat + (+m2.fat || 0), fiber: a.fiber + (+m2.fiber || 0),
+          }), { protein: 0, calories: 0, carbs: 0, fat: 0, fiber: 0 });
+          const _base = stale ? ZERO : s.eaten;
+          /* the log is the record of what he ate; the counter is only a running sum of it. Where the log
+             holds more than the counter for the tracked day, the counter lost something — rebuild it.
+             Water, steps and exercise are not on a meal, so they are never touched by this. */
+          const _short = _mealsToday.length > 0 && (+_base.protein || 0) < _fromLog.protein;
+          setEaten(_short ? { ..._base, ..._fromLog } : _base); }
         if (s.allergies) setAllergies(s.allergies); if (s.diets) setDiets(s.diets);
         if (s.body) setBody(s.body); if (s.weightLog) setWeightLog(s.weightLog);
         if (s.trainPrefs) setTrainPrefs((t) => ({ ...t, ...s.trainPrefs, ...(s.trainPrefs.videoChannel === "athleanx" ? { videoChannel: "" } : {}) }));

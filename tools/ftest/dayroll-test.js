@@ -16,7 +16,7 @@ ok(/const eatenDayRef = useRef/.test(SRC),'eatenDayRef exists');
 ok(/const rollDayIfNeeded = \(\) => \{/.test(SRC),'rollDayIfNeeded exists');
 ok(/setInterval\(rollDayIfNeeded, 60000\)/.test(SRC),'minute tick wired');
 ok(/rollDayIfNeeded\(\);/.test(SRC.slice(SRC.indexOf('setFgTick((t) => t + 1)'))),'resume path calls it');
-const body=SRC.slice(SRC.indexOf('const rollDayIfNeeded'),SRC.indexOf('const rollDayIfNeeded')+700);
+const body=SRC.slice(SRC.indexOf('const rollDayIfNeeded'),SRC.indexOf('const rollDayIfNeeded')+1200);
 for(const f of ['protein','calories','carbs','fat','waterOz','fiber','steps','exerciseCal'])
   ok(new RegExp(f+':\\s*0').test(body),'roll zeroes '+f);
 ok(/if \(!eatenDayRef\.current\)/.test(body),'first run seeds the ref instead of wiping');
@@ -56,6 +56,23 @@ ok(sim({eaten:{protein:40},eatenDate:'2026-08-01',mealLog:[{date:'2026-08-01'}]}
    'a real meal logged today is never wiped');
 ok(sim({eaten:{protein:40},eatenAt:'x',eatenAtDay:'2026-08-01',eatenDate:'2026-08-01'},'2026-08-01')===false,
    'same-day hand entry survives once the instant exists');
+
+
+// v0.9.193: a key change is not proof a day ended.
+{
+  const body2=SRC.slice(SRC.indexOf('const rollDayIfNeeded'), SRC.indexOf('const rollDayIfNeeded')+1200);
+  ok(/if \(k < eatenDayRef\.current\) \{ eatenDayRef\.current = k; return; \}/.test(body2),
+     'the watcher only clears when the clock moved FORWARD past the tracked day');
+  // prefs load in two steps, so the key also moves when settings arrive — that renamed his day and
+  // wiped 117g of logged protein at 19:38 on a day that had not ended
+  ok(/prefs arrive after the first render/.test(body2),'and the reason is written where the next person will read it');
+}
+// and the counters can be rebuilt from the log, because the log is the record
+ok(/const _mealsToday = \(s\.mealLog \|\| \[\]\)\.filter/.test(SRC),'load rebuilds the day from the meal log');
+ok(/const _short = _mealsToday\.length > 0 && \(\+_base\.protein \|\| 0\) < _fromLog\.protein;/.test(SRC),
+   'when the counter holds less than the log for that day, the log wins');
+ok(/setEaten\(_short \? \{ \.\.\._base, \.\.\._fromLog \} : _base\)/.test(SRC),
+   'and water, steps and exercise survive, since they are not on a meal');
 
 console.log('\nDAYROLL: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
