@@ -2028,7 +2028,12 @@ export default function App() {
             protein: a.protein + (+m2.protein || 0), calories: a.calories + (+m2.calories || 0),
             carbs: a.carbs + (+m2.carbs || 0), fat: a.fat + (+m2.fat || 0), fiber: a.fiber + (+m2.fiber || 0),
           }), { protein: 0, calories: 0, carbs: 0, fat: 0, fiber: 0 });
-          const _base = stale ? ZERO : s.eaten;
+          /* v0.9.219: a meal logged for the tracked day PROVES the day is current, whatever the date
+             stamp says. Without this, a wrongly-stale load replaced the counter with ZERO and the
+             rebuild below repaired only the macros — water, steps and exercise are not on a meal,
+             so they were silently lost while the food came back. */
+          const _staleReal = stale && _mealsToday.length === 0;
+          const _base = _staleReal ? ZERO : s.eaten;
           /* the log is the record of what he ate; the counter is only a running sum of it. Where the log
              holds more than the counter for the tracked day, the counter lost something — rebuild it.
              Water, steps and exercise are not on a meal, so they are never touched by this. */

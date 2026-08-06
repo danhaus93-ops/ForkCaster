@@ -2198,5 +2198,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/baseline \{_rr\.baseline\}/.test(DD),'and its baseline sits on the header line, not in the plot');
 }
 
+
+// v0.9.219: the source side of the water bug.
+{
+  const DE=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const _staleReal = stale && _mealsToday\.length === 0;/.test(DE),
+     'a meal logged for the tracked day proves the day is current');
+  ok(/const _base = _staleReal \? ZERO : s\.eaten;/.test(DE),'and the counter is only zeroed when it is');
+  ok(!/const _base = stale \? ZERO : s\.eaten;/.test(DE),'the old date-stamp-only test is gone');
+  // the asymmetry that made this invisible: the rebuild covers macros, ZERO covers everything
+  const zeroFields=(DE.match(/const ZERO = \{[^}]*\}/) || [''])[0];
+  for (const f of ['waterOz','steps','exerciseCal'])
+    ok(zeroFields.includes(f), 'ZERO clears ' + f + ' — which no meal can restore');
+  const rebuild=(DE.match(/const _fromLog = [\s\S]{0,400}?\}\);/) || [''])[0];
+  for (const f of ['waterOz','steps','exerciseCal'])
+    ok(!rebuild.includes(f), 'and the meal rebuild cannot bring ' + f + ' back');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

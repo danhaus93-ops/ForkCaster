@@ -74,5 +74,39 @@ ok(/const _short = _mealsToday\.length > 0 && \(\+_base\.protein \|\| 0\) < _fro
 ok(/setEaten\(_short \? \{ \.\.\._base, \.\.\._fromLog \} : _base\)/.test(SRC),
    'and water, steps and exercise survive, since they are not on a meal');
 
+
+// v0.9.219: logging a meal reset his water.
+{
+  // the load path replaced the counter with ZERO whenever `stale` was true, and the meal-log
+  // rebuild repaired MACROS ONLY — water, steps and exercise are not on a meal. So a wrongly-stale
+  // load lost exactly those three while the food came back, which is what he saw on his phone.
+  const ZERO={protein:0,calories:0,carbs:0,fat:0,waterOz:0,fiber:0,steps:0,exerciseCal:0};
+  const load=(stale, mealsToday, stored)=>{
+    const staleReal = stale && mealsToday.length === 0;
+    const base = staleReal ? ZERO : stored;
+    const fromLog = mealsToday.reduce((a,m)=>({...a, protein:a.protein+(m.protein||0)}), {protein:0});
+    const short = mealsToday.length > 0 && (+base.protein||0) < fromLog.protein;
+    return short ? {...base, ...fromLog} : base;
+  };
+  const stored={...ZERO, protein:117, calories:1840, waterOz:64, steps:4541};
+  const meals=[{protein:40},{protein:40},{protein:37}];
+
+  let r=load(true, meals, stored);
+  ok(r.waterOz === 64, 'a wrongly-stale load with meals today KEEPS the water (' + r.waterOz + ')');
+  ok(r.steps === 4541, 'and the steps');
+  ok(r.protein === 117, 'and the protein is unharmed');
+
+  r=load(true, [], stored);
+  ok(r.waterOz === 0, 'a genuine new day with nothing logged still clears');
+
+  r=load(false, meals, stored);
+  ok(r.waterOz === 64 && r.protein === 117, 'a normal load changes nothing');
+
+  // and the rebuild still does its .193 job when the counter really did lose the macros
+  r=load(false, meals, {...ZERO, protein:40, waterOz:64});
+  ok(r.protein === 117, 'the log still wins when the counter is short');
+  ok(r.waterOz === 64, 'without taking the water with it');
+}
+
 console.log('\nDAYROLL: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
