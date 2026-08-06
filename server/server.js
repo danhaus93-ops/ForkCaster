@@ -7,6 +7,11 @@ const path = require("path");
 const PORT = process.env.PORT || 3450;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "..", "data");
 const PHOTO_DIR = path.join(DATA_DIR, "photos");
+const TENANCY = require("./tenancy.js");
+/* Solo resolves to the same paths this server has always used, so an existing node needs no
+   migration. Multi gives each clinic its own directory under tenants/. Handlers must never join a
+   path from DATA_DIR themselves — they call P(req) and use what it returns. */
+const P = (req) => TENANCY.pathsFor(TENANCY.tenantOf(req));
 const STATE_FILE = path.join(DATA_DIR, "state.json");
 /* Keys: env first, else /data/secrets.json — so nothing secret ever
    lives in the (public) store repo. Create the file on the node:

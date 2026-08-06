@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.222"
+version: "0.9.223"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,8 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Internal change: stops cards being rebuilt unnecessarily when you tap a chart, which is
-  what made the calendar jump months. No visible change.
+  Groundwork only — nothing changes on your node. Adds the internal separation that would
+  let one server hold more than one account.
 dependencies: []
 path: ""
 defaultUsername: ""
