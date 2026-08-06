@@ -1629,6 +1629,7 @@ export default function App() {
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
   const [sheetCard, setSheetCard] = useState(null);
+  const [calYm, setCalYm] = useState(null)   /* the calendar month, lifted so a remount cannot reset it */
   const [pick, setPick] = useState(null)   /* {chart, i} — the data point he is asking about */;
   /* v0.9.160: toast. Replaces the OS alert dialog, which stopped the app dead in an OS-chrome box with a system
      font — the least premium element available on the web, in an app that otherwise looks like an
@@ -5196,6 +5197,7 @@ export default function App() {
           </div>) }; })())}</div>}
       <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO}
             pickedDay={pick && pick.chart === "cal" ? pick.i : null}
+            ym={calYm || undefined} setYm={(v) => setCalYm((p0) => (typeof v === "function" ? v(p0 || (() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; })()) : v))}
             onPickDay={(di) => setPick((q) => q && q.chart === "cal" && q.i === di ? null : { chart: "cal", i: di })} onRemove={async (di) => { if (await askConfirm(`Remove the dose logged on ${di}?`, true)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
           {pick && pick.chart === "cal" ? (() => {
             const _d = (glp.doseLog || []).find((x) => x && x.date === pick.i);
@@ -7130,9 +7132,12 @@ export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPend
     </div>
   );
 }
-function DoseCalendar({ C, pill, doseLog, dueISO, onRemove, onPickDay, pickedDay }) {
+function DoseCalendar({ C, pill, doseLog, dueISO, onRemove, onPickDay, pickedDay, ym: ymProp, setYm: setYmProp }) {
   const holdRef = useRef(null);
-  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const [ymLocal, setYmLocal] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  /* the month comes from above when the caller keeps it, so a remount cannot send him back to today */
+  const ym = ymProp || ymLocal;
+  const setYm = setYmProp || setYmLocal;
   const todayIso = new Date().toLocaleDateString("sv-SE");
   const first = new Date(ym.y, ym.m, 1);
   const startDow = first.getDay();
@@ -7182,8 +7187,8 @@ const pillIc = (color, s = 12) => (
                       if (onPickDay) onPickDay(di);
                     }}
                     onPointerLeave={() => { const t = holdRef.current; if (t && t !== "fired") clearTimeout(t); holdRef.current = null; }}
-                    style={{ height: 36, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 8, margin: "0 2px", transition: "background .14s ease, border-color .14s ease", border: _pkd ? `1.5px solid ${C.violet}` : due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: _pkd ? C.violet + "2A" : lg ? C.goSoft : "transparent" }}>
-              <span style={{ fontSize: 15.5, fontWeight: today || due || lg ? 800 : 500, color: lg ? C.go : due ? C.violet : today ? C.ink : C.muted }}>{d}</span>
+                    style={{ height: 44, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 8, margin: "0 2px", transition: "background .14s ease, border-color .14s ease", border: _pkd ? `1.5px solid ${C.violet}` : due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: _pkd ? C.violet + "2A" : lg ? C.goSoft : "transparent" }}>
+              <span style={{ fontSize: 17.5, fontWeight: today || due || lg ? 800 : 500, color: lg ? C.go : due ? C.violet : today ? C.ink : C.muted }}>{d}</span>
               {lg ? (pill ? pillIc(C.go) : syr(C.go)) : due ? <span style={{ fontSize: 12, color: C.violet, fontWeight: 800, letterSpacing: 0.5 }}>DUE</span> : <span style={{ height: 11 }} />}
             </div>
           );

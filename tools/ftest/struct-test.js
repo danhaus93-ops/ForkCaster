@@ -2235,5 +2235,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/sort\(\(a, b\) => \(a\.date < b\.date \? 1 : -1\)\)/.test(DF),'newest first, so _hist[0] is the last use');
 }
 
+
+// v0.9.221: the calendar jumped to today, and its cells were under the touch floor.
+{
+  const DG=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // .216 keyed the sheet body on the pick to stop the pick lagging — which REMOUNTS that subtree.
+  // DoseCalendar kept its month in its own state, so picking a dose in July snapped back to August.
+  ok(/const \[calYm, setCalYm\] = useState\(null\)/.test(DG),'the calendar month lives above the component');
+  ok(/const ym = ymProp \|\| ymLocal;/.test(DG),'the component takes it from above when given');
+  ok(/const setYm = setYmProp \|\| setYmLocal;/.test(DG),'and keeps a local fallback for any other caller');
+  ok(/ym=\{calYm \|\| undefined\}/.test(DG),'the card passes it, so a remount cannot reset the month');
+  // 40px wide and 36 tall — wider than tall, and under the 44pt floor the app was raised to in .146
+  ok(/style=\{\{ height: 44, cursor: "pointer", display: "flex", flexDirection: "column"/.test(DG),
+     'a calendar cell is 44px tall');
+  const inner375 = 375 - 24 - 40, col = inner375 / 7, MONO = 0.627;
+  ok(col - 4 >= 40, 'and about ' + Math.round(col - 4) + 'px wide at 375pt');
+  ok(2 * 17.5 * MONO <= col - 4 - 6, 'a two-digit day fits at 17.5px with room to spare');
+  ok(44 * 6 + 5 * 4 + 24 <= 320, 'six rows plus the header stay inside a single card');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

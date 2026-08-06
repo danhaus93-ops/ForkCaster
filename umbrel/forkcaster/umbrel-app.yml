@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.220"
+version: "0.9.221"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Tap any day on the dose calendar to see what was logged. Removing a dose is now a
-  press-and-hold rather than a tap. Choosing an injection site also tells you when you
-  last used it.
+  Fixes the dose calendar jumping back to this month when you tap a dose in an earlier
+  one. The day cells are also larger and easier to hit.
 dependencies: []
 path: ""
 defaultUsername: ""
