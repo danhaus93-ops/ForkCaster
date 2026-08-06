@@ -4702,7 +4702,7 @@ export default function App() {
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8 }}>
               <span style={{ fontFamily: DATA, fontSize: 32, fontWeight: 700, color: C.ink }}>{_rr.current}</span>
               <span style={{ fontSize: 15.5, color: C.faint }}>bpm today</span>
-              <span style={{ marginLeft: "auto", fontSize: 17.5, fontWeight: 700, color: _rr.delta >= 8 ? RED : C.good }}>{_rr.delta >= 0 ? "+" : ""}{_rr.delta} vs your baseline ({_rr.baseline})</span>
+              <span style={{ marginLeft: "auto", fontSize: 17.5, fontWeight: 700, color: _rr.delta >= 8 ? RED : C.go }}>{_rr.delta >= 0 ? "+" : ""}{_rr.delta} vs your baseline ({_rr.baseline})</span>
             </div>
             {(() => {
                   const _rpk = pick && pick.chart === "rhr" ? pick.i : null;
@@ -4718,11 +4718,16 @@ export default function App() {
                         baseline {_rr.baseline}</span>
                     </div>);
                 })()}
-                <svg viewBox="0 0 300 64" style={{ width: "100%", display: "block", marginTop: 4 }}>
+                <svg viewBox="0 0 300 108" style={{ width: "100%", display: "block", marginTop: 4 }}>
               {(() => { const se = _rr.series; const lo = Math.min(...se.map((r) => r.rhr), _rr.baseline) - 4, hi = Math.max(...se.map((r) => r.rhr), _rr.baseline + 8) + 4;
-                const x = (i) => 4 + (i / Math.max(1, se.length - 1)) * 292, y = (v) => 4 + (1 - (v - lo) / (hi - lo)) * 56;
+                const x = (i) => 4 + (i / Math.max(1, se.length - 1)) * 268, y = (v) => 10 + (1 - (v - lo) / (hi - lo)) * 84;
                 return <g>
-                  <rect x="4" y={y(_rr.baseline + 4)} width="292" height={Math.max(2, y(_rr.baseline - 4) - y(_rr.baseline + 4))} fill="rgba(59,223,147,0.10)" rx="2" />
+                  <rect x="4" y={y(_rr.baseline + 4)} width="268" height={Math.max(2, y(_rr.baseline - 4) - y(_rr.baseline + 4))} fill="rgba(59,223,147,0.10)" rx="2" />
+                  {/* the band meant nothing without numbers on it */}
+                  <line x1="4" y1={y(_rr.baseline)} x2="272" y2={y(_rr.baseline)} stroke={C.go} strokeWidth="1" strokeDasharray="3 4" opacity="0.45" />
+                  {[Math.round(hi), _rr.baseline, Math.round(lo)].map((v, n5) => (
+                    <text key={n5} x="298" y={y(v) + 4} textAnchor="end" fontFamily={DATA} fontSize="12"
+                      fill={n5 === 1 ? C.go : C.faint} opacity={n5 === 1 ? 0.9 : 0.7}>{v}</text>))}
                   <path d={se.map((r, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(r.rhr).toFixed(1)).join(" ")} fill="none" stroke={RED} strokeWidth="2" strokeLinejoin="round" />
                   {se.map((r, i4) => {
                     const _sel = pick && pick.chart === "rhr" && pick.i === i4;
@@ -4732,8 +4737,8 @@ export default function App() {
                           q && q.chart === "rhr" && q.i === i4 ? null : { chart: "rhr", i: i4 })}
                         style={{ cursor: "pointer" }}>
                         <circle cx={x(i4)} cy={y(r.rhr)} r="9" fill="transparent" />
-                        <circle cx={x(i4)} cy={y(r.rhr)} r={_sel ? 4.5 : (i4 === se.length - 1 ? 2.6 : 1.6)}
-                          fill={RED} opacity={_any ? (_sel ? 1 : 0.3) : (i4 === se.length - 1 ? 1 : 0.45)} />
+                        <circle cx={x(i4)} cy={y(r.rhr)} r={_sel ? 6 : (i4 === se.length - 1 ? 4.5 : 3)}
+                          fill={RED} opacity={_any ? (_sel ? 1 : 0.45) : (i4 === se.length - 1 ? 1 : 0.8)} />
                       </g>);
                   })}
                 </g>; })()}
@@ -5305,7 +5310,7 @@ export default function App() {
               {sl.status === "ready" && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 15.5, fontWeight: 700, color: sl.flagged ? C.avoid : C.go }}>{sl.delta >= 0 ? "+" : ""}{sl.delta} min vs baseline</span>}
             </div>
             <svg viewBox="0 0 300 126" style={{ width: "100%", display: "block", marginTop: 4 }}>
-              {[[420, "7H", C.hair2 || "#2C3742"], [300, "5H", C.hair]].map(([m, lab, col]) => (
+              {[[420, "7H", C.hair], [300, "5H", C.hair]].map(([m, lab, col]) => (
                 <g key={lab}>
                   <line x1="34" y1={yOf(m)} x2="300" y2={yOf(m)} stroke={col} strokeDasharray="2 4" />
                   <text x="0" y={yOf(m) + 3} fontFamily="ui-monospace, monospace" fontSize="12" fill={C.faint}>{lab}</text>

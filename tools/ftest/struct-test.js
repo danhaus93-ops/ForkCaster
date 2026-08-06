@@ -2302,5 +2302,32 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/const ym = ymProp \|\| ymLocal;/.test(DH),'the calendar is exempt only because its month is lifted');
 }
 
+
+// v0.9.224: three faults on the resting-HR card, all visible the moment it had real data.
+{
+  const DI=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // 1. C.good is not a theme key — the themes define `go`. undefined renders as inherited black on
+  // a dark card, so the delta in the top right was unreadable from the day it shipped.
+  ok(!/C\.good/.test(DI),'no reference to C.good, which was never a theme key');
+  const themeKeys=(DI.match(/\bgo: "#[0-9A-Fa-f]{6}"/g) || []).length;
+  ok(themeKeys >= 2, 'the themes define go (' + themeKeys + ')');
+  ok(/color: _rr\.delta >= 8 \? RED : C\.go/.test(DI),'and the delta uses it');
+  // a colour that is not a theme key anywhere in the app
+  const used=new Set([...DI.matchAll(/\bC\.([a-zA-Z]\w*)/g)].map((m)=>m[1]));
+  const defined=new Set([...DI.matchAll(/(\w+):\s*(?:"#[0-9A-Fa-f]{3,8}"|true|false)/g)].map((m)=>m[1]));
+  const ghosts=[...used].filter((k)=>!defined.has(k) && !/^(name|label|key)$/.test(k));
+  ok(ghosts.length === 0, 'no colour reads a key the themes do not define (' + ghosts.join(',') + ')');
+  // 2. the points were 1.6px unpicked — a hairline, on a chart he is meant to tap
+  ok(/r=\{_sel \? 6 : \(i4 === se\.length - 1 \? 4\.5 : 3\)\}/.test(DI),'the rhr dots are 3px, 4.5 latest, 6 picked');
+  ok(/<svg viewBox="0 0 300 108"/.test(DI),'in a 108px box rather than 64');
+  // 3. the band marked a range with no numbers on it
+  ok(/\[Math\.round\(hi\), _rr\.baseline, Math\.round\(lo\)\]\.map/.test(DI),'high, baseline and low are labelled');
+  // and the labels must not sit on the newest points, which they would have at the old plot width
+  const MONO=0.627, labW=3*12*MONO;
+  ok(272 <= 298 - labW, 'the plot ends before the labels begin');
+  ok(!(296 <= 298 - labW), 'and at the old width of 296 it genuinely did not');
+  ok(268 / 27 >= 9, 'point spacing still exceeds the 9px tap target');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
