@@ -5155,7 +5155,21 @@ export default function App() {
           })}</div>}
       {(!medObj || medObj.cadence !== "daily") && <div style={{ display: "contents" }}>{card(<>
         <SiteAvatar C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={Math.max(1, Math.min(4, Math.round(+prefs.sitePerCycle || 1)))} pendingSite={pendingSite} setPendingSite={setPendingSite} />
-      {(() => (
+      {pendingSite ? (() => {
+            const _hist = (glp.doseLog || []).filter((d) => d && d.site === pendingSite && d.date)
+              .sort((a, b) => (a.date < b.date ? 1 : -1));
+            const _last = _hist[0];
+            return (
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12,
+                background: C.surfaceAlt, borderRadius: 12, padding: "12px 14px" }}>
+                <span style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase", color: C.violet }}>
+                  {pendingSite}</span>
+                <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 15.5, fontWeight: 700,
+                  color: _last ? C.ink : C.faint }}>
+                  {_last ? `last used ${fmtDate(_last.date)}` : "never used"}</span>
+              </div>);
+          })() : null}
+          {(() => (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
           <div style={{ flex: 1, fontSize: 15.5, color: C.faint }}>
             {lastDoseDate ? `Last dose ${fmtDate(lastDoseDate)}${lastDoseEntry.mg ? ` · ${lastDoseEntry.mg} mg` : ""} · week ${weeksOnMed}` : "No dose logged yet"}
@@ -5180,7 +5194,21 @@ export default function App() {
           spark: (<div style={{ width: 46, flexShrink: 0, pointerEvents: "none" }}>
             <SiteAvatar mini C={C} sex={body.sex} bmi={bmi} doseLog={glp.doseLog || []} perSite={_ps} pendingSite={null} setPendingSite={() => {}} />
           </div>) }; })())}</div>}
-      <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO} onRemove={async (di) => { if (await askConfirm(`Remove the dose logged on ${di}?`, true)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
+      <div style={{ display: "contents" }}>{card(<><DoseCalendar C={C} pill={!!(medObj && medObj.cadence === "daily")} doseLog={glp.doseLog || []} dueISO={dueISO}
+            pickedDay={pick && pick.chart === "cal" ? pick.i : null}
+            onPickDay={(di) => setPick((q) => q && q.chart === "cal" && q.i === di ? null : { chart: "cal", i: di })} onRemove={async (di) => { if (await askConfirm(`Remove the dose logged on ${di}?`, true)) setGlp((g) => { const log = (g.doseLog || []).filter((d) => d.date !== di); const last = log.length ? log.map((d) => d.date).sort().slice(-1)[0] : null; return { ...g, doseLog: log, lastInjection: last, weeksOn: Math.max(1, g.weeksOn - 1), dose: log.length ? +log[log.length - 1].mg : g.dose }; }); }} />
+          {pick && pick.chart === "cal" ? (() => {
+            const _d = (glp.doseLog || []).find((x) => x && x.date === pick.i);
+            return (
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 12,
+                background: C.surfaceAlt, borderRadius: 12, padding: "12px 14px" }}>
+                <span style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase", color: C.faint }}>
+                  {fmtDate(pick.i)}</span>
+                <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 15.5, fontWeight: 700,
+                  color: _d ? C.violet : C.faint }}>
+                  {_d ? `${_d.mg} mg${_d.med ? " " + _d.med : ""}` : "no dose"}</span>
+              </div>);
+          })() : null}
       {medObj && medObj.cadence === "daily" && (() => { const _wk = weeksOnMed; return (
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
           <div style={{ flex: 1, fontSize: 15.5, color: C.faint }}>
@@ -7102,7 +7130,8 @@ export function SiteAvatar({ C, sex, bmi, doseLog, perSite, pendingSite, setPend
     </div>
   );
 }
-function DoseCalendar({ C, pill, doseLog, dueISO, onRemove }) {
+function DoseCalendar({ C, pill, doseLog, dueISO, onRemove, onPickDay, pickedDay }) {
+  const holdRef = useRef(null);
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const todayIso = new Date().toLocaleDateString("sv-SE");
   const first = new Date(ym.y, ym.m, 1);
@@ -7136,8 +7165,24 @@ const pillIc = (color, s = 12) => (
         {cells.map((d, i) => {
           if (d == null) return <div key={i} />;
           const di = iso(d), lg = logged(di), due = di === dueISO, today = di === todayIso;
+                  const _pkd = pickedDay === di;
           return (
-            <div key={i} onClick={() => { if (lg && onRemove) onRemove(di); }} style={{ height: 36, cursor: lg ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 8, margin: "0 2px", border: due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: lg ? C.goSoft : "transparent" }}>
+            <div key={i}
+                    onPointerDown={(ev) => {
+                      if (!(lg && onRemove)) return;
+                      const t = setTimeout(() => { holdRef.current = "fired"; onRemove(di); }, 400);
+                      holdRef.current = t;
+                      ev.currentTarget.setPointerCapture && ev.currentTarget.setPointerCapture(ev.pointerId);
+                    }}
+                    onPointerUp={() => {
+                      const t = holdRef.current;
+                      if (t === "fired") { holdRef.current = null; return; }   /* the hold already removed it */
+                      if (t) clearTimeout(t);
+                      holdRef.current = null;
+                      if (onPickDay) onPickDay(di);
+                    }}
+                    onPointerLeave={() => { const t = holdRef.current; if (t && t !== "fired") clearTimeout(t); holdRef.current = null; }}
+                    style={{ height: 36, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, borderRadius: 8, margin: "0 2px", transition: "background .14s ease, border-color .14s ease", border: _pkd ? `1.5px solid ${C.violet}` : due ? `1.5px dashed ${C.violet}` : today ? `1.5px solid ${C.go}88` : "1.5px solid transparent", background: _pkd ? C.violet + "2A" : lg ? C.goSoft : "transparent" }}>
               <span style={{ fontSize: 15.5, fontWeight: today || due || lg ? 800 : 500, color: lg ? C.go : due ? C.violet : today ? C.ink : C.muted }}>{d}</span>
               {lg ? (pill ? pillIc(C.go) : syr(C.go)) : due ? <span style={{ fontSize: 12, color: C.violet, fontWeight: 800, letterSpacing: 0.5 }}>DUE</span> : <span style={{ height: 11 }} />}
             </div>

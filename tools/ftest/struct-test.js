@@ -2215,5 +2215,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
     ok(!rebuild.includes(f), 'and the meal rebuild cannot bring ' + f + ' back');
 }
 
+
+// v0.9.220: the last two tappable surfaces — and one of them had to give up a gesture.
+{
+  const DF=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // the calendar's tap REMOVED a dose. That was the only destructive tap in the app; everywhere
+  // else deletion is a hold (lab draws .154, arrange .131). Tap shows the day, hold removes it.
+  ok(/holdRef\.current = "fired"; onRemove\(di\); \}, 400\)/.test(DF),'removing a dose is a 400ms hold');
+  ok(/if \(onPickDay\) onPickDay\(di\);/.test(DF),'a short tap picks the day instead');
+  ok(!/onClick=\{\(\) => \{ if \(lg && onRemove\) onRemove\(di\); \}\}/.test(DF),'the destructive tap is gone');
+  ok(/if \(t === "fired"\) \{ holdRef\.current = null; return; \}/.test(DF),
+     'and a fired hold does not then also pick — the two gestures cannot both run');
+  ok(/cursor: "pointer", display: "flex", flexDirection: "column"/.test(DF),
+     'every cell is tappable, not only logged ones — "no dose" is an answer too');
+  // the site map's tap was already taken: it SELECTS where to inject next. So the gap was never
+  // tappability, it was that selecting told him nothing about when he last used that site.
+  ok(/d\.site === pendingSite && d\.date/.test(DF),'selecting a site reads its history from the dose log');
+  ok(/_last \? `last used \$\{fmtDate\(_last\.date\)\}` : "never used"/.test(DF),'and says when, or that he never has');
+  ok(/sort\(\(a, b\) => \(a\.date < b\.date \? 1 : -1\)\)/.test(DF),'newest first, so _hist[0] is the last use');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
