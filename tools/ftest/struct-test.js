@@ -2056,9 +2056,9 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
      CV.indexOf('const pts = ((healthSync') - CV.lastIndexOf('card(<>', CV.indexOf('const pts = ((healthSync')) < 400,
      'the composition chart is at the top of its card');
   // every reading is a real weigh-in, so every reading gets a dot
-  ok(/pts\.map\(\(p0, n\) => \(\s*<circle key=\{n\}/.test(CV.replace(/\n\s*/g, ' ')),
-     'each point on the composition line is drawn');
-  ok(/r=\{n === pts\.length - 1 \? 4\.5 : 2\.8\}/.test(CV),'with the latest one larger');
+  ok(/pts\.map\(\(p0, n\) => \{/.test(CV),'each point on the composition line is drawn');
+  ok(/r=\{_sel \? 5\.5 : \(n === pts\.length - 1 \? 4\.5 : 2\.8\)\}/.test(CV),
+     'with the latest larger, and the picked one larger still');
 }
 
 
@@ -2178,6 +2178,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(attr.length > 0, 'there are SVG text labels');
   ok(Math.min(...attr) >= 12, 'and none is below the 12px floor (' + Math.min(...attr) + ')');
   ok(!/fontSize="[789]"/.test(DC),'specifically none at 7, 8 or 9');
+}
+
+
+// v0.9.218: composition and resting HR take a tap too.
+{
+  const DD=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  for (const [c, label] of [['comp','composition'],['rhr','resting HR']]) {
+    ok(new RegExp('chart: "' + c + '", i: ').test(DD), 'the ' + label + ' chart is tappable');
+    ok(new RegExp('q\\.chart === "' + c + '" && q\\.i === ').test(DD), 'and tapping twice clears it');
+  }
+  // both draw dots small enough that the target has to be bigger than the mark
+  ok(/<circle cx=\{xc\(n\)\} cy=\{yc\(p0\.v\)\} r="14" fill="transparent" \/>/.test(DD),'composition has a 14px target');
+  ok(/<circle cx=\{x\(i4\)\} cy=\{y\(r\.rhr\)\} r="9" fill="transparent" \/>/.test(DD),
+     'and resting HR a 9px one — 28 points across 292px leaves 10.4px between them, so 14 would overlap');
+  const gapRhr = 292 / 27;
+  ok(9 * 2 <= gapRhr * 2, 'the rhr target does not swallow its neighbour');
+  ok(/_rRow \? fmtDate\(_rRow\.date\) : "28 nights"/.test(DD),'the rhr readout names the night');
+  ok(/baseline \{_rr\.baseline\}/.test(DD),'and its baseline sits on the header line, not in the plot');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

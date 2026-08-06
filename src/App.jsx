@@ -4305,12 +4305,22 @@ export default function App() {
               <svg viewBox={`0 0 ${W3} ${H3}`} style={{ width: "100%", height: "auto", marginBottom: 16, display: "block" }}>
                 <path d={d3} fill="none" stroke={CHART.comp} strokeWidth="2.6"
                   strokeLinecap="round" strokeLinejoin="round" />
-                {pts.map((p0, n) => (
-                    <circle key={n} cx={xc(n)} cy={yc(p0.v)} r={n === pts.length - 1 ? 4.5 : 2.8}
-                      fill={CHART.comp} opacity={n === pts.length - 1 ? 1 : 0.65} />))}
+                {pts.map((p0, n) => {
+                    const _sel = pick && pick.chart === "comp" && pick.i === n;
+                    const _any = pick && pick.chart === "comp";
+                    return (
+                      <g key={n} onClick={() => setPick((q) =>
+                          q && q.chart === "comp" && q.i === n ? null : { chart: "comp", i: n })}
+                        style={{ cursor: "pointer" }}>
+                        <circle cx={xc(n)} cy={yc(p0.v)} r="14" fill="transparent" />
+                        <circle cx={xc(n)} cy={yc(p0.v)} r={_sel ? 5.5 : (n === pts.length - 1 ? 4.5 : 2.8)}
+                          fill={CHART.comp} opacity={_any ? (_sel ? 1 : 0.35) : (n === pts.length - 1 ? 1 : 0.65)} />
+                      </g>);
+                  })}
                 <text x="6" y={H3 - 6} fontFamily={DATA} fontSize="12" fill={C.faint}>{fmtDate(pts[0].date)}</text>
                 <text x={W3 - 6} y={H3 - 6} textAnchor="end" fontFamily={DATA} fontSize="12" fill={C.faint}>
-                  {lastP.v}%</text>
+                  {(() => { const _q = pick && pick.chart === "comp" ? pts[pick.i] : null;
+                    return _q ? `${fmtDate(_q.date)} · ${_q.v}%` : `${lastP.v}%`; })()}</text>
               </svg>);
           })()}
         {(() => { const ds0 = ((healthSync && healthSync.days) || []).filter((d0) => d0.bodyFatPct != null || d0.muscleMassLbs != null || d0.visceralFat != null);
@@ -4684,13 +4694,38 @@ export default function App() {
               <span style={{ fontSize: 15.5, color: C.faint }}>bpm today</span>
               <span style={{ marginLeft: "auto", fontSize: 17.5, fontWeight: 700, color: _rr.delta >= 8 ? RED : C.good }}>{_rr.delta >= 0 ? "+" : ""}{_rr.delta} vs your baseline ({_rr.baseline})</span>
             </div>
-            <svg viewBox="0 0 300 64" style={{ width: "100%", display: "block", marginTop: 8 }}>
+            {(() => {
+                  const _rpk = pick && pick.chart === "rhr" ? pick.i : null;
+                  const _rRow = _rpk != null && _rr.series[_rpk] ? _rr.series[_rpk] : null;
+                  return (
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 8, minHeight: 16 }}>
+                      <span style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase", color: C.faint }}>
+                        {_rRow ? fmtDate(_rRow.date) : "28 nights"}</span>
+                      {_rRow ? (
+                        <span style={{ fontFamily: DATA, fontSize: 15.5, fontWeight: 700, color: RED }}>
+                          {_rRow.rhr} bpm</span>) : null}
+                      <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, color: C.faint }}>
+                        baseline {_rr.baseline}</span>
+                    </div>);
+                })()}
+                <svg viewBox="0 0 300 64" style={{ width: "100%", display: "block", marginTop: 4 }}>
               {(() => { const se = _rr.series; const lo = Math.min(...se.map((r) => r.rhr), _rr.baseline) - 4, hi = Math.max(...se.map((r) => r.rhr), _rr.baseline + 8) + 4;
                 const x = (i) => 4 + (i / Math.max(1, se.length - 1)) * 292, y = (v) => 4 + (1 - (v - lo) / (hi - lo)) * 56;
                 return <g>
                   <rect x="4" y={y(_rr.baseline + 4)} width="292" height={Math.max(2, y(_rr.baseline - 4) - y(_rr.baseline + 4))} fill="rgba(59,223,147,0.10)" rx="2" />
                   <path d={se.map((r, i) => (i ? "L" : "M") + x(i).toFixed(1) + "," + y(r.rhr).toFixed(1)).join(" ")} fill="none" stroke={RED} strokeWidth="2" strokeLinejoin="round" />
-                  <circle cx={x(se.length - 1)} cy={y(se[se.length - 1].rhr)} r="2.6" fill={RED} />
+                  {se.map((r, i4) => {
+                    const _sel = pick && pick.chart === "rhr" && pick.i === i4;
+                    const _any = pick && pick.chart === "rhr";
+                    return (
+                      <g key={i4} onClick={() => setPick((q) =>
+                          q && q.chart === "rhr" && q.i === i4 ? null : { chart: "rhr", i: i4 })}
+                        style={{ cursor: "pointer" }}>
+                        <circle cx={x(i4)} cy={y(r.rhr)} r="9" fill="transparent" />
+                        <circle cx={x(i4)} cy={y(r.rhr)} r={_sel ? 4.5 : (i4 === se.length - 1 ? 2.6 : 1.6)}
+                          fill={RED} opacity={_any ? (_sel ? 1 : 0.3) : (i4 === se.length - 1 ? 1 : 0.45)} />
+                      </g>);
+                  })}
                 </g>; })()}
             </svg>
             {_rr.flagged
