@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.221"
+version: "0.9.222"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,8 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Fixes the dose calendar jumping back to this month when you tap a dose in an earlier
-  one. The day cells are also larger and easier to hit.
+  Internal change: stops cards being rebuilt unnecessarily when you tap a chart, which is
+  what made the calendar jump months. No visible change.
 dependencies: []
 path: ""
 defaultUsername: ""

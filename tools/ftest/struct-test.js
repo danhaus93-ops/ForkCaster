@@ -2158,8 +2158,8 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the sheet replays ELEMENTS captured into a ref during the card's own render. Keying the
   // container on the live pick forces that subtree to reconcile against the pick that is current,
   // rather than letting React reuse the one it already had.
-  ok(/key=\{`\$\{sheetCard\.id\}:\$\{pick \? pick\.chart \+ ":" \+ pick\.i : "none"\}`\}/.test(DB),
-     'the sheet body is keyed on the live pick');
+  ok(/PICKABLE_CARDS\.has\(sheetCard\.id\)/.test(DB),
+     'the sheet body is keyed on the live pick — for the pickable cards only');
   ok(/sheetKidsRef\.current\[vd\.id\] = children;/.test(DB),'the card still writes its children once');
   ok((DB.match(/sheetKidsRef\.current\[sheetCard\.id\]/g) || []).length === 1,'and the sheet reads them in one place');
 }
@@ -2252,6 +2252,54 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(col - 4 >= 40, 'and about ' + Math.round(col - 4) + 'px wide at 375pt');
   ok(2 * 17.5 * MONO <= col - 4 - 6, 'a two-digit day fits at 17.5px with room to spare');
   ok(44 * 6 + 5 * 4 + 24 <= 320, 'six rows plus the header stay inside a single card');
+}
+
+
+// v0.9.222: keying remounts, and a remount destroys every piece of state in the subtree.
+{
+  const DH=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const PICKABLE_CARDS = new Set\(\["ah", "wt", "comp", "rhr", "cal", "site"\]\);/.test(DH),
+     'only the pickable cards are keyed on the pick');
+  ok(/PICKABLE_CARDS\.has\(sheetCard\.id\)/.test(DH),'and every other card keeps a stable key');
+
+  /* THE RULE THIS ENFORCES: a component that keeps its own state must not sit inside a card whose
+     key changes, or every pick throws that state away. The calendar's month was the first casualty
+     (.221) and it was found on his phone, not here. This derives the answer from the source rather
+     than from a list, so a component added later cannot slip past it. */
+  const cards=[];
+  for (const m of DH.matchAll(/\bcard\(/g)) {
+    let d=0, k=DH.indexOf('(', m.index), end=null;
+    for (let j=k; j<Math.min(DH.length, k+60000); j++) {
+      if (DH[j]==='(') d++; else if (DH[j]===')') { d--; if (!d) { end=j; break; } }
+    }
+    if (end==null) continue;
+    const body=DH.slice(m.index, end+1);
+    const id=/id: "([a-z][\w-]{1,20})", tone:/.exec(body);
+    if (id) cards.push({ id: id[1], a: m.index, e: end });
+  }
+  const PICK=new Set(["ah","wt","comp","rhr","cal","site"]);
+  const stateful=[];
+  for (const m of DH.matchAll(/function ([A-Z]\w+)\s*\(/g)) {
+    let k=DH.indexOf('{', DH.indexOf(')', m.index)), d=0, end=null;
+    for (let j=k; j<Math.min(DH.length, k+40000); j++) {
+      if (DH[j]==='{') d++; else if (DH[j]==='}') { d--; if (!d) { end=j; break; } }
+    }
+    if (end==null) continue;
+    const body=DH.slice(m.index, end+1);
+    if (/useState\(|useRef\(/.test(body)) stateful.push(m[1]);
+  }
+  const atRisk=[];
+  for (const name of stateful) {
+    for (const m of DH.matchAll(new RegExp('<' + name + '\\b', 'g'))) {
+      const host=cards.find((c) => c.a < m.index && m.index < c.e);
+      // DoseCalendar is inside a keyed card but takes its month from above, so a remount costs it nothing
+      if (host && PICK.has(host.id) && name !== 'DoseCalendar') atRisk.push(name + ' in ' + host.id);
+    }
+  }
+  ok(atRisk.length === 0,
+     'no component keeping its own state sits inside a card that remounts on pick (' + atRisk.join(', ') + ')');
+  ok(stateful.length >= 4, 'and the check actually found the stateful components (' + stateful.length + ')');
+  ok(/const ym = ymProp \|\| ymLocal;/.test(DH),'the calendar is exempt only because its month is lifted');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

@@ -610,6 +610,10 @@ const leanOf = (d) => {
     return Math.round(+d.weightLbs * (1 - +d.bodyFatPct / 100) * 10) / 10;
   return null;
 };
+/* v0.9.222: only these cards are keyed on the pick. Keying remounts, and a remount destroys every
+   piece of state inside — a live map, a scroll position, a half-typed number. These six hold none
+   of their own, so remounting them costs nothing; anything else keeps a stable key and its state. */
+const PICKABLE_CARDS = new Set(["ah", "wt", "comp", "rhr", "cal", "site"]);
 const CHART_DARK  = { fc: "#C7E04A", ah: "#67E8F9", wt: "#3BDF93", wk: "#F0B455", comp: "#3D7FD6" };
 const CHART_LIGHT = { fc: "#879C1B", ah: "#07A3B8", wt: "#1CAA68", wk: "#CD8512", comp: "#3D7FD6" };
 const MEDS = {
@@ -6253,7 +6257,9 @@ export default function App() {
               {(sheetCard.sheetWhen || sheetCard.when) && <span style={{ marginLeft: "auto", fontFamily: DATA, fontSize: 12, color: C.faint, letterSpacing: 0.6, textTransform: "uppercase" }}>{sheetCard.sheetWhen || sheetCard.when}</span>}
             </div>
             {/* the SAME children the open card renders — one source, so the detail cannot drift */}
-            <div key={`${sheetCard.id}:${pick ? pick.chart + ":" + pick.i : "none"}`}
+            <div key={PICKABLE_CARDS.has(sheetCard.id)
+                ? `${sheetCard.id}:${pick ? pick.chart + ":" + pick.i : "none"}`
+                : sheetCard.id}
               style={{ padding: "14px 16px calc(40px + env(safe-area-inset-bottom, 0px))" }}>
               {sheetKidsRef.current[sheetCard.id]}</div>
             </div>
