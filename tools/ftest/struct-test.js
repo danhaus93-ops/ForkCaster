@@ -1329,8 +1329,8 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 {
   const BP=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   const sizes=[...BP.matchAll(/fontSize: (\d+(?:\.\d+)?)/g)].map((m)=>+m[1]);
-  const small=[...new Set(sizes.filter((v)=>v<=18))].sort((a,b)=>a-b);
-  const SCALE=[12,13.5,15.5,17.5];
+  const small=[...new Set(sizes.filter((v)=>v<=20 && v !== 19))].sort((a,b)=>a-b);
+  const SCALE=[12,15.5,17.5,20];
   ok(small.length === SCALE.length, 'the body range uses ' + SCALE.length + ' sizes (found ' + small.length + ': ' + small.join(',') + ')');
   ok(small.every((v)=>SCALE.includes(v)), 'and every one of them is on the scale');
   ok(Math.min(...small) >= 12, 'the floor is 12px — half the app used to render at 10.5');
@@ -1484,7 +1484,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // the 6 Pack hand-off is an ANCHOR, not a button, which is why every button-shaped pass missed it
   ok(/display: "inline-block", padding: "8px 4px" \}\}>or use \{SIXPACK\.label\}/.test(BX),'the 6 Pack link is padded');
   ok(/display: "inline-block"/.test(BX),'and made inline-block, since padding does nothing on an inline anchor');
-  ok(/padding: "8px 0", cursor: "pointer", textAlign: "left", fontSize: 15.5, letterSpacing: 1\.1/.test(BX),'the GPS pin row is padded');
+  ok(/padding: "8px 0", cursor: "pointer", textAlign: "left", fontSize: 17.5, letterSpacing: 1\.1/.test(BX),'the GPS pin row is padded');
 }
 
 
@@ -1766,7 +1766,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const sizes=[...CK.matchAll(/fontSize: (\d+(?:\.\d+)?)/g)].map((m)=>+m[1]);
   ok(Math.min(...sizes) >= 12, 'nothing in the app is declared below 12px (' + Math.min(...sizes) + ')');
   // the section title is a TERNARY, which is exactly how it stayed at 10.5 through the preview
-  ok(/fontSize: _cmp \? 12 : 13, fontWeight: 700/.test(CK),'including the section title, which is written as a ternary');
+  ok(/fontSize: _cmp \? 12 : 15.5, fontWeight: 700/.test(CK),'including the section title, which is written as a ternary');
   // the three narrow cells needed their own fix rather than a smaller scale for everything
   const MONO=0.627;
   ok(8*12*MONO + 8*-0.3 <= (307-4*2)/5, 'CALORIES fits its cell once the row gap drops to 4');
@@ -1810,7 +1810,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const MONO=0.627, cell=(307-4*4)/5;
   ok(5*17.5*MONO <= cell, 'a five-character counter value fits at 17.5px');
   ok(!(5*20*MONO <= cell), 'and genuinely did not at 20 — the audit measured exactly that 2px');
-  ok(/fontSize: 17\.5, fontWeight: 700, color: C\.ink, marginTop: 2, fontVariantNumeric: "tabular-nums"/.test(CM),
+  ok(/fontSize: 20, fontWeight: 700, color: C\.ink, marginTop: 2, fontVariantNumeric: "tabular-nums"/.test(CM),
      'so the counter value takes the lead rung rather than the section rung');
   // SESSIONS is the longest label in a four-across row; tracking was what pushed it out
   ok(8*12*MONO <= (275-3*8)/4, 'SESSIONS fits its cell once the tracking is dropped');
@@ -2327,6 +2327,26 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(272 <= 298 - labW, 'the plot ends before the labels begin');
   ok(!(296 <= 298 - labW), 'and at the old width of 296 it genuinely did not');
   ok(268 / 27 >= 9, 'point spacing still exceeds the 9px tap target');
+}
+
+
+// v0.9.225: comfortable type raised; compact deliberately untouched.
+{
+  const DJ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/fontSize: _cmp \? 12 : 15\.5, fontWeight: 700/.test(DJ),'section titles are 15.5 comfortable, 12 compact');
+  // the two cells that pin the 12px rung. Both have clipped on his device before; neither moves.
+  const MONO=0.627;
+  ok(11 * 12 * MONO + 11 * -0.3 <= (307 - 16) / 3 - 12, 'RETATRUTIDE still fits its chip at 12');
+  ok(!(11 * 13.5 * MONO + 11 * -0.3 <= (307 - 16) / 3 - 12), 'and could not at 13.5 — this is why 12 is pinned');
+  ok(8 * 12 * MONO + 8 * -0.3 <= (307 - 4 * 2) / 5, 'CALORIES still fits its cell at 12 with its tracking');
+  // the COLLAPSED row title is compact and must not ride along with a comfortable raise. The sweep
+  // caught it and .210 had already measured why it cannot: the screen did not get wider.
+  ok(/fontSize: 15\.5, fontWeight: 700, letterSpacing: 1\.1, textTransform: "uppercase", color: vd\.color/.test(DJ),
+     'the collapsed row title stays at 15.5');
+  const inner = 307 - 40, w = (fs) => "Adaptive targets".length * fs * MONO + "Adaptive targets".length * 1.1
+    + "Watching".length * 12 * MONO + "Watching".length * 0.8 + 22;
+  ok(w(15.5) <= inner, 'because it fits at 15.5');
+  ok(w(17.5) > inner, 'and overflows at 17.5 by ' + Math.round(w(17.5) - inner) + 'px');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
