@@ -403,7 +403,8 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // before the hold completes. That single control replaced a lock + auto-re-arm + periodic review.
   ok(app.includes('Evaluate if a dose increase is suggested'), 'the escalation verdict is user-triggered, never volunteered');
   ok(app.includes('const locked = cp.days < cp.need;'), 'the button is gated on hold completion, not on a status string');
-  ok(app.includes('Unlocks in {cp.need - cp.days} days'), 'a locked button says when it opens and why');
+  ok(/Unlocks in \$\{left\} days/.test(app), 'a locked button says when it opens and why');
+  ok(app.includes('const left = cp.need - cp.days;'), 'counted from the hold, not from a status string');
   ok(app.indexOf('Tolerability flags right now') < app.indexOf('{locked ?'), 'tolerability surveillance renders BEFORE the gate — safety is never opt-in');
   ok(app.includes('const stall = { on: flatWeeks >= 4 && belowGoal'), 'the stall watch requires being below goal — flat AT goal is maintenance');
   ok(app.includes('rateOver = (wk)'), 'stall uses a ROLLING window, so a long hold cannot smear a recent plateau into invisibility');
@@ -2354,6 +2355,25 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // noon is the right anchor: far enough from both edges that no DST shift crosses a date boundary
   ok(fmt("2026-03-08", "America/Chicago") === "Mar 8", 'including across a DST spring-forward');
   ok(fmt("2026-11-01", "America/Chicago") === "Nov 1", 'and a fall-back');
+}
+
+
+// v0.9.228: the hold clearing and the day he can act on it are different dates.
+{
+  const DL=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/first \$\{DAY_FULL\[want\]\} after is/.test(DL),'the unlock line names his own injection day');
+  ok(/while \(d\.getDay\(\) !== want\) d = new Date\(d\.getTime\(\) \+ 86400000\);/.test(DL),
+     'walking forward from the day the hold clears');
+  ok(/onDay === left\s*\?/.test(DL),'and says nothing extra when they happen to be the same day');
+  ok(/if \(want < 0\) return/.test(DL),'falling back cleanly when no injection day is set');
+  // his case: 28-day hold from Jul 26 clears Sunday Aug 23, and he injects Fridays
+  const DOW=["SU","MO","TU","WE","TH","FR","SA"], want=DOW.indexOf("FR");
+  const now=new Date("2026-08-07T12:00:00").getTime();
+  let d=new Date(now + 16*86400000);
+  ok(d.getDay() === 0, 'the hold clears on a Sunday');
+  while (d.getDay() !== want) d = new Date(d.getTime() + 86400000);
+  ok(Math.round((d - now)/86400000) === 21, 'so the first actionable Friday is 21 days out, not 16');
+  ok(d.toISOString().slice(0,10) === "2026-08-28", 'which is Aug 28');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

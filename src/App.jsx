@@ -614,6 +614,7 @@ const leanOf = (d) => {
    piece of state inside — a live map, a scroll position, a half-typed number. These six hold none
    of their own, so remounting them costs nothing; anything else keeps a stable key and its state. */
 const PICKABLE_CARDS = new Set(["ah", "wt", "comp", "rhr", "cal", "site"]);
+const DAY_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const CHART_DARK  = { fc: "#C7E04A", ah: "#67E8F9", wt: "#3BDF93", wk: "#F0B455", comp: "#3D7FD6" };
 const CHART_LIGHT = { fc: "#879C1B", ah: "#07A3B8", wt: "#1CAA68", wk: "#CD8512", comp: "#3D7FD6" };
 const MEDS = {
@@ -4923,7 +4924,21 @@ export default function App() {
               </div>
               <button disabled style={{ width: "100%", background: "transparent", border: `1px dashed ${C.hair}`,
                 color: C.faint, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 17.5, fontWeight: 700 }}>
-                Unlocks in {cp.need - cp.days} days at this dose
+                {(() => {
+                  const left = cp.need - cp.days;
+                  const clears = new Date(Date.now() + left * 86400000);
+                  const DOW = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+                  const want = DOW.indexOf(glp.injectionDay || "");
+                  if (want < 0) return `Unlocks in ${left} days at this dose`;
+                  /* walk forward to his own injection day — the hold clearing mid-week is no use
+                     when the next needle is on a Friday */
+                  let d = new Date(clears);
+                  while (d.getDay() !== want) d = new Date(d.getTime() + 86400000);
+                  const onDay = Math.round((d - Date.now()) / 86400000);
+                  return onDay === left
+                    ? `Unlocks in ${left} days at this dose`
+                    : `Unlocks in ${left} days · first ${DAY_FULL[want]} after is ${fmtDate(d.toLocaleDateString("sv-SE"))}`;
+                })()}
               </button>
               <div style={{ fontSize: 15.5, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
                 You're {cp.days} of {cp.need} days at {cp.cur} mg. Levels are still climbing toward steady state,
