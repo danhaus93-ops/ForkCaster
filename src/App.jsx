@@ -4355,15 +4355,17 @@ export default function App() {
                       </g>);
                   })}
                 {(() => {
-                  return pts.map((p0, n) => {
-                    const isPick = pick && pick.chart === "comp" && pick.i === n;
-                    /* every label centres on its OWN point — anchoring the ends to the chart edge
-                       is what made them collide with their neighbours */
-                    return (
-                      <text key={n} x={xc(n)} y={H3 - 6} textAnchor="middle" fontFamily={DATA} fontSize="12"
-                        fill={isPick ? CHART.comp : C.faint} opacity={isPick ? 1 : 0.75}>
-                        {fmtDate(p0.date)}</text>);
-                  });
+                  const _lp = pick && pick.chart === "comp" ? pick.i : null;
+                  if (_lp == null || !pts[_lp]) return null;
+                  const LABW = 6 * 12 * 0.627;
+                  let x = xc(_lp), anchor = "middle";
+                  /* clamp at the edges so the label stays inside the plot without moving off its point
+                     any further than it has to */
+                  if (x - LABW / 2 < 2) { x = 2; anchor = "start"; }
+                  else if (x + LABW / 2 > W3 - 2) { x = W3 - 2; anchor = "end"; }
+                  return (
+                    <text x={x} y={Math.min(H3 - 4, yc(pts[_lp].v) + 22)} textAnchor={anchor}
+                      fontFamily={DATA} fontSize="12" fill={CHART.comp}>{fmtDate(pts[_lp].date)}</text>);
                 })()}
                 <text x={W3 - 6} y={H3 - 6} textAnchor="end" fontFamily={DATA} fontSize="12" fill={C.faint}>
                   {(() => { const _q = pick && pick.chart === "comp" ? pts[pick.i] : null;

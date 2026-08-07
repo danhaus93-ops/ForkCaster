@@ -2402,8 +2402,9 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // a date in the CORNER names one reading without saying which, which is why it read as hardcoded
   ok(!/\{fmtDate\(pts\[0\]\.date\)\} · \{pts\.length\}/.test(DN),'the corner date label is gone');
   ok(/const LABW = 6 \* 12 \* 0\.627/.test(DN),'label width comes from the calibrated advance, not a guess');
-  ok(!/textAnchor=\{anchor\}/.test(DN),'no reading is dropped and no label is anchored to the chart edge');
-  ok(/textAnchor="middle"/.test(DN),'every label centres on its own point');
+  ok(/const _lp = pick && pick\.chart === "comp" \? pick\.i : null;/.test(DN),
+     'only the tapped reading is labelled — one label cannot collide with another');
+  ok(/if \(_lp == null \|\| !pts\[_lp\]\) return null;/.test(DN),'and nothing is drawn until he taps');
   // the arithmetic: at 3 readings every point is labelled, at 14 they would collide
   const LW = 6 * 12 * 0.627, W3 = 300;
   const gapFor = (n) => (W3 - 12) / (n - 1);
@@ -2443,29 +2444,24 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // label's box ran into the second point's. Padding the plot lets every label centre on its point.
   ok(/const LABW = 6 \* 12 \* 0\.627, PADX = LABW \/ 2 \+ 4;/.test(DP),'the plot is padded by half a label');
   ok(/PADX \+ \(n \/ Math\.max\(1, pts\.length - 1\)\) \* \(W3 - 2 \* PADX\)/.test(DP),'and the points sit inside that padding');
-  ok(/x=\{xc\(n\)\} y=\{H3 - 6\} textAnchor="middle"/.test(DP),'every label centres on its own point');
+  ok(/y=\{Math\.min\(H3 - 4, yc\(pts\[_lp\]\.v\) \+ 22\)\}/.test(DP),
+     'the label sits under the point it names, not on a baseline');
   ok(!/const anchor = n === 0 \? "start"/.test(DP),'no label is anchored to the chart edge any more');
 
-  /* the arithmetic, at every count he could reach — this is the check that was missing when the
-     53px-per-point figure was chosen, because it assumed centred labels while the code anchored
-     the ends outward. */
-  const LW = 6 * 12 * 0.627, PAD = LW / 2 + 4;
-  const boxes = (n) => {
-    const W3 = Math.max(300, n * 53);
-    const xc = (i) => PAD + (i / Math.max(1, n - 1)) * (W3 - 2 * PAD);
-    return { W3, b: Array.from({ length: n }, (_, i) => [xc(i) - LW / 2, xc(i) + LW / 2]) };
-  };
-  for (const n of [2, 3, 5, 6, 8, 10, 14, 20, 52]) {
-    const { W3, b } = boxes(n);
-    let worst = Infinity;
-    for (let i = 0; i < n - 1; i++) worst = Math.min(worst, b[i + 1][0] - b[i][1]);
-    ok(worst >= 0, n + ' labels do not overlap (' + worst.toFixed(1) + 'px apart)');
-    ok(b[0][0] >= 0, n + ': the first label does not hang off the left');
-    ok(b[n - 1][1] <= W3, n + ': nor the last off the right');
+  /* one label, so there is nothing to collide with. What still has to hold is that it stays
+     inside the plot at either end — the case the previous approach kept getting wrong. */
+  const LW = 6 * 12 * 0.627;
+  const clamp = (x, W) => (x - LW / 2 < 2 ? { x: 2, a: "start" } : x + LW / 2 > W - 2 ? { x: W - 2, a: "end" } : { x, a: "middle" });
+  for (const n of [2, 3, 6, 10, 18, 52]) {
+    const W3 = Math.max(300, n * 53), PAD = LW / 2 + 4;
+    const xc = (i2) => PAD + (i2 / Math.max(1, n - 1)) * (W3 - 2 * PAD);
+    for (const i2 of [0, Math.floor(n / 2), n - 1]) {
+      const c = clamp(xc(i2), W3);
+      const left = c.a === "start" ? c.x : c.a === "end" ? c.x - LW : c.x - LW / 2;
+      ok(left >= 0 && left + LW <= W3, n + ' readings: the label at point ' + i2 + ' stays inside the plot');
+    }
   }
-  // and the old approach genuinely failed, so nobody restores it
-  const oldFirst = [6, 6 + LW], oldSecond6 = (() => { const W3 = 318, xc = 6 + (1 / 5) * (W3 - 12); return [xc - LW / 2, xc + LW / 2]; })();
-  ok(oldFirst[1] > oldSecond6[0], 'edge-anchored ends genuinely collided at six readings');
+
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
