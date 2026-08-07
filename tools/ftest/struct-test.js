@@ -2464,5 +2464,23 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
 
 }
 
+
+// v0.9.235: state.json was written in place.
+{
+  const SV=require('fs').readFileSync(__FCROOT + '/server/server.js','utf8');
+  // a container stop, a power cut or a full disk partway through a write left the file truncated —
+  // and that file is every dose, weigh-in, meal and lab he has. The 10-minute snapshots are a
+  // recovery path, not a prevention.
+  ok(/const tmp = STATE_FILE \+ "\.tmp";/.test(SV),'state is written to a temp file first');
+  ok(/fs\.fsyncSync\(fd\);/.test(SV),'flushed to disk rather than left in the page cache');
+  ok(/fs\.renameSync\(tmp, STATE_FILE\);/.test(SV),'then renamed, which is atomic within a filesystem');
+  ok(!/fs\.writeFileSync\(STATE_FILE, JSON\.stringify\(req\.body\)\);/.test(SV),'never written in place');
+  ok(/if \(fs\.existsSync\(STATE_FILE \+ "\.tmp"\)\) fs\.unlinkSync/.test(SV),'and a crash leftover is cleared at boot');
+  // the ordering is the whole point: close before rename, fsync before close
+  const w=SV.indexOf('fs.writeFileSync(fd, body)'), f=SV.indexOf('fs.fsyncSync(fd)'),
+        c=SV.indexOf('fs.closeSync(fd)'), r=SV.indexOf('fs.renameSync(tmp, STATE_FILE)');
+  ok(w < f && f < c && c < r, 'write, fsync, close, rename — in that order');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

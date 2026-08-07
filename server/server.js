@@ -13,6 +13,9 @@ const TENANCY = require("./tenancy.js");
    path from DATA_DIR themselves — they call P(req) and use what it returns. */
 const P = (req) => TENANCY.pathsFor(TENANCY.tenantOf(req));
 const STATE_FILE = path.join(DATA_DIR, "state.json");
+/* v0.9.235: a crash between the write and the rename leaves a .tmp. It is never read — state.json
+   is still whole — but clear it at boot so it cannot accumulate or confuse a later reader. */
+try { if (fs.existsSync(STATE_FILE + ".tmp")) fs.unlinkSync(STATE_FILE + ".tmp"); } catch (e) {}
 /* Keys: env first, else /data/secrets.json — so nothing secret ever
    lives in the (public) store repo. Create the file on the node:
    echo '{"ANTHROPIC_API_KEY":"sk-ant-..."}' > .../app-data/forkcaster-coach/data/secrets.json */
@@ -95,7 +98,16 @@ app.post("/api/state", (req, res) => {
       if (shrank) { _snapshot(prevRaw, "shrink"); console.log(`[state] SAVE SHRANK — snapshot kept. before=${JSON.stringify(_counts(prev))} after=${JSON.stringify(_counts(req.body))}`); }
       else if (Date.now() - _lastSnap > 10 * 60 * 1000) { _snapshot(prevRaw, "auto"); _lastSnap = Date.now(); }
     }
-    fs.writeFileSync(STATE_FILE, JSON.stringify(req.body));
+    (() => {
+    const body = JSON.stringify(req.body);
+    const tmp = STATE_FILE + ".tmp";
+    const fd = fs.openSync(tmp, "w");
+    try {
+      fs.writeFileSync(fd, body);
+      fs.fsyncSync(fd);          /* on disk, not just in the page cache */
+    } finally { fs.closeSync(fd); }
+    fs.renameSync(tmp, STATE_FILE);   /* atomic — the old file is whole until this returns */
+  })();
     res.json({ ok: true, rev: (req.body && req.body._rev) || 0 });
   } catch (e) { res.status(500).json({ error: String(e) }); }
 });

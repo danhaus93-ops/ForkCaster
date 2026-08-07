@@ -3,7 +3,7 @@ id: forkcaster
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.234"
+version: "0.9.235"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,8 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  The body fat chart now shows a date only for the point you tap, just beneath it, instead
-  of crowding a date under every reading.
+  Your data file is now written safely — if the node loses power or the app is stopped
+  mid-save, the existing file stays intact instead of being left half-written.
 dependencies: []
 path: ""
 defaultUsername: ""
