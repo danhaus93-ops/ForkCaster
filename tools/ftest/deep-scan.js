@@ -104,7 +104,7 @@ function bodyAt(src, i) {
     // every variable assigned from this engine, and what is read off it
     for (const a of APP.matchAll(new RegExp("\\b(\\w+)\\s*=\\s*" + name + "\\(", "g"))) {
       const v = a[1];
-      if (v.length > 12) continue;
+      if (v.length > 12 || v.length < 3) continue;   // short names collide with unrelated locals
       const reads = new Set([...APP.matchAll(new RegExp("\\b" + v + "\\.(\\w+)", "g"))].map((m) => m[1]));
       for (const f of reads) {
         if (keys.has("*")) continue;   // an unresolvable spread — cannot prove absence

@@ -2534,8 +2534,67 @@ export default function App() {
       weight_lbs: curWeight, goal_lbs: goalWeight, weekly_loss_lbs: +recentRate.toFixed(2),
       body_fat_pct: bfShown ? +bfShown.toFixed(1) : null, body_fat_source: bfMeasured ? "measured" : (bodyFat ? "tape-measure estimate" : null),
       lean_mass_lbs: leanShown ? +leanShown.toFixed(1) : null,
-      medication: medObj ? `${medObj.label} ${glp.dose}${medObj.unit} weekly, week ${weeksOnMed}` : "none", allergies, diets };
-    const sys = "You are ForkCaster, a concise, encouraging nutrition and GLP-1 coach. Use the user's live stats. " + (restrictions.length ? `HARD SAFETY RULE: user has ${restrictions.join("; ")} — never suggest foods containing these. ` : "") +
+      medication: medObj ? `${medObj.label} ${glp.dose}${medObj.unit} weekly, week ${weeksOnMed}` : "none", allergies, diets,
+
+      /* v0.9.236: the clinical half. Everything below is already on his device — none of it is
+         fetched or derived specially for the Coach, it is the same reads the cards make. */
+      labs: (() => {
+        const draw = (labs || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+        if (!draw || !draw.values) return null;
+        const flagged = [], normal = [];
+        for (const mk of LAB_MARKERS) {
+          const v = draw.values[mk.key];
+          if (v == null) continue;
+          const out = (mk.lo != null && v < mk.lo) ? "low" : (mk.hi != null && v > mk.hi) ? "high" : null;
+          (out ? flagged : normal).push(out
+            ? `${mk.name} ${v} ${mk.unit} (${out}, ref ${mk.lo}\u2013${mk.hi})`
+            : `${mk.name} ${v}`);
+        }
+        const missing = LAB_MARKERS.filter((mk) => mk.required && draw.values[mk.key] == null).map((mk) => mk.name);
+        return { drawn: draw.date, out_of_range: flagged, in_range_count: normal.length,
+          never_drawn: missing.length ? missing : null };
+      })(),
+
+      side_effects: (() => {
+        const se = (glp.sideEffects || []).slice(-10);
+        if (!se.length) return "none logged";
+        return se.map((e) => `${e.date}: ${e.kind || e.name || "symptom"}${e.severity ? ` severity ${e.severity}` : ""}`);
+      })(),
+
+      ...(() => {
+        const cp = checkpointRead({ protocol: glp.protocol, doseLog: glp.doseLog, today: dayKeyAt(Date.now(), prefs),
+          mealLog, weightLog, sideEffects: glp.sideEffects, workoutLog,
+          healthDays: (healthSync && healthSync.days) || [] });
+        if (!cp) return { titration: null, training: null };
+        return {
+          titration: { day_of_hold: cp.days, hold_days: cp.need, doses_at_this_rung: cp.dosesAt,
+            status: cp.status, injection_day: glp.injectionDay || null,
+            next_rung_mg: cp.next != null ? cp.next : null },
+          /* trainDays lives inside checkpointRead and comes back on its result — no need for a
+             variable at this level, which is where I invented one that did not exist. */
+          training: { strength_days: cp.trainDays, over_weeks: cp.trainWeeks },
+        };
+      })(),
+
+      resting_hr: (() => {
+        const _rhrCtx = rhrRead((healthSync && healthSync.days) || [], glp.doseLog);
+        if (!_rhrCtx || _rhrCtx.status !== "ready") return "not enough nights yet";
+        return { current: _rhrCtx.current, baseline: _rhrCtx.baseline, delta: _rhrCtx.delta,
+          note: _rhrCtx.delta >= 8 ? "a sustained rise can mean a dose is being tolerated badly" : null };
+      })(),
+
+
+      /* provenance matters: a tape estimate is a much softer number than a scale reading, and the
+         Coach should not reason confidently from one it cannot tell apart. */
+      data_quality: { body_fat_is_measured: !!bfMeasured, health_sync_connected: !!(healthSync && healthSync.days && healthSync.days.length) },
+    };
+    const sys = "You are ForkCaster, a concise, encouraging nutrition and GLP-1 coach. Use the user's live stats. " +
+      "You can now see lab results, logged side effects, titration progress and resting heart rate. " +
+      "With labs: state the value against its reference range and what is known to move it — diet, alcohol, training, the medication. " +
+      "Do NOT name a diagnosis, suggest or adjust a prescription, or tell him to change his dose; his prescriber decides that and he is a nurse who will ask you directly if he wants the reasoning. " +
+      "If a number is flagged out of range, say so plainly rather than softening it. " +
+      "If body_fat_is_measured is false the body-fat figure is a tape estimate — reason from it loosely. " +
+      "Prefer connecting domains he cannot connect at a glance: a side effect against the day of his shot, resting heart rate against a recent step-up, triglycerides against what he actually logged eating. " + (restrictions.length ? `HARD SAFETY RULE: user has ${restrictions.join("; ")} — never suggest foods containing these. ` : "") +
       "NEVER recommend any food containing the user's listed allergies; respect their diet. " +
       "Give specific, actionable answers in 2-4 sentences. Never encourage extreme restriction or unsafe rapid loss; " +
       "for medication questions defer final decisions to their prescriber. No markdown headers.";
@@ -5637,14 +5696,17 @@ export default function App() {
       <div style={{ padding: "14px 18px 6px" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 700, letterSpacing: -0.4, color: C.ink }}>Coach</div><button onClick={async () => { if (await askConfirm("Clear this conversation?")) setCoachMsgs((m) => m.slice(0, 1)); }} style={{ background: "none", border: "none", color: C.faint, fontSize: 15.5, cursor: "pointer", fontFamily: BODY, padding: "8px 10px" }}>Clear</button></div></div>
       {(() => { const hd = (healthSync && healthSync.days) || [];
         const cells = [["Doses", ((glp && glp.doseLog) || []).length], ["Meals", (mealLog || []).length],
-          ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
-          ["Scans", hd.filter((d) => d.bodyFatPct != null).length], ["Nights", hd.filter((d) => d.sleepMin).length]];
+      ["Labs", ((labs || []).length ? Object.keys((labs.slice().sort((a, b) => (a.date < b.date ? 1 : -1))[0] || {}).values || {}).length : 0)],
+      ["Symptoms", (((glp && glp.sideEffects) || []).length)],
+      ["Sessions", (workoutLog || []).filter((w) => w.kind !== "cardio").length],
+      ["Scans", hd.filter((d) => d.bodyFatPct != null).length],
+      ["Nights", hd.filter((d) => d.sleepMin).length]];;
         return (<div style={{ padding: "0 18px 4px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, letterSpacing: 1.4, textTransform: "uppercase", color: C.faint }}>Reading from</span>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {cells.map(([l, v]) => (<div key={l} style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", rowGap: 12 }}>
+            {cells.map(([l, v]) => (<div key={l} style={{ flex: "1 1 22%", minWidth: 62 }}>
               <div style={{ fontFamily: DATA, fontSize: 12, letterSpacing: 0, color: C.faint, textTransform: "uppercase" }}>{l}</div>
               <div style={{ fontFamily: DATA, fontSize: 17.5, fontWeight: 700, color: v ? C.ink : C.faint, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
                 {v > 0 && <span style={{ width: 4, height: 4, borderRadius: 4, background: C.go, flexShrink: 0 }} />}{v}

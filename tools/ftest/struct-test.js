@@ -2482,5 +2482,36 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(w < f && f < c && c < r, 'write, fsync, close, rename — in that order');
 }
 
+
+// v0.9.236: the Coach can see the clinical half of the app.
+{
+  const DQ=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // it had 13 fields and none of them clinical, so every cross-domain question got a macro answer
+  for (const k of ['labs:', 'side_effects:', 'titration:', 'resting_hr:', 'data_quality:'])
+    ok(DQ.includes(k), 'the payload carries ' + k.replace(':', ''));
+  ok(/out_of_range: flagged/.test(DQ),'labs are sent flagged against their reference ranges');
+  ok(/never_drawn: missing\.length \? missing : null/.test(DQ),'including markers never drawn');
+  ok(/day_of_hold: cp\.days, hold_days: cp\.need, doses_at_this_rung: cp\.dosesAt/.test(DQ),
+     'titration sends both frames, the same two the card shows');
+  ok(/training: \{ strength_days: cp\.trainDays, over_weeks: cp\.trainWeeks \}/.test(DQ),
+     'training reads off the checkpoint rather than a variable at this level');
+  ok(!/trainDaysWk/.test(DQ),'and trainDaysWk, which I invented, is gone');
+  // provenance: a tape estimate is a much softer number than a scale reading
+  ok(/body_fat_is_measured: !!bfMeasured/.test(DQ),'the payload says whether body fat was measured');
+  ok(/If body_fat_is_measured is false/.test(DQ),'and the prompt tells it to reason loosely when it was not');
+  // the line it must not cross
+  ok(/Do NOT name a diagnosis, suggest or adjust a prescription, or tell him to change his dose/.test(DQ),
+     'no diagnosis, no prescription, no dose change');
+  ok(/state the value against its reference range and what is known to move it/.test(DQ),
+     'but it does report a lab against its range plainly');
+  // the chips must list what it can actually see, or he will not use the capability
+  ok(/\["Labs",/.test(DQ) && /\["Symptoms",/.test(DQ),'Reading-from lists labs and symptoms');
+  const MONO=0.627, perRow=(271-3*8)/4;
+  for (const c of ["Doses","Meals","Labs","Symptoms","Sessions","Scans","Nights"])
+    ok(c.length*12*MONO <= perRow, '"' + c + '" fits a chip at four per row');
+  ok(!(("Symptoms").length*12*MONO <= (271-6*8)/7), 'and genuinely would not have at seven across');
+  ok(/flexWrap: "wrap", rowGap: 12/.test(DQ),'so the chips wrap to two rows');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
