@@ -2329,5 +2329,32 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(268 / 27 >= 9, 'point spacing still exceeds the 9px tap target');
 }
 
+
+// v0.9.227: every date in the app rendered a day early for anyone west of Greenwich.
+{
+  const DK2=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // new Date("2026-08-07") is UTC MIDNIGHT. In America/Chicago that is 7pm on the 6th, so the
+  // label read Aug 6 next to the cell for Aug 7. It surfaced on the calendar because that is the
+  // one place a date sits beside the day it names — but fmtDate has 23 call sites.
+  ok(/\/\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$\/\.test\(d\) \? d \+ "T12:00:00" : d/.test(DK2),
+     'a bare YYYY-MM-DD is anchored at local noon before formatting');
+  ok(!/const fmtDate = \(d\) => new Date\(d\)\.toLocaleDateString/.test(DK2),'the raw parse is gone');
+
+  // the arithmetic, run in the timezone he actually lives in
+  const fmt=(d, tz)=>{
+    const v = typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d + "T12:00:00" : d;
+    return new Date(v).toLocaleDateString("en-US", { timeZone: tz, month: "short", day: "numeric" });
+  };
+  const raw=(d, tz)=>new Date(d).toLocaleDateString("en-US", { timeZone: tz, month: "short", day: "numeric" });
+  for (const tz of ["America/Chicago","America/Los_Angeles","Pacific/Honolulu","America/New_York"]) {
+    ok(fmt("2026-08-07", tz) === "Aug 7", 'noon-anchored is correct in ' + tz);
+    ok(raw("2026-08-07", tz) === "Aug 6", 'and the bare parse genuinely was a day early in ' + tz);
+  }
+  ok(fmt("2026-08-07", "Asia/Tokyo") === "Aug 7", 'and east of Greenwich is unaffected either way');
+  // noon is the right anchor: far enough from both edges that no DST shift crosses a date boundary
+  ok(fmt("2026-03-08", "America/Chicago") === "Mar 8", 'including across a DST spring-forward');
+  ok(fmt("2026-11-01", "America/Chicago") === "Nov 1", 'and a fall-back');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

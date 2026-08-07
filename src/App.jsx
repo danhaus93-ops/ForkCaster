@@ -1511,7 +1511,13 @@ function doseResponseRead(mealLog, glp) {
   return { status: "ok", ceiling: best.T, scope, sym: gi.size, days: rows.length, inWin: winRows.length, ...best, ...medInfo };
 }
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
-const fmtDate = (d) => new Date(d).toLocaleDateString([], { month: "short", day: "numeric" });
+const fmtDate = (d) => {
+  /* Anchor a bare YYYY-MM-DD at local noon. Parsed bare it is UTC midnight, which renders as the
+     previous day anywhere west of Greenwich; noon is far enough from both edges that no timezone
+     or DST shift can move it across a date boundary. */
+  const v = typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d + "T12:00:00" : d;
+  return new Date(v).toLocaleDateString([], { month: "short", day: "numeric" });
+};
 const daysAgo = (iso) => Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 const distMi = (a, b, c, d) => { const R = 3958.8, dl = (c - a) * Math.PI / 180, dg = (d - b) * Math.PI / 180, h = Math.sin(dl / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(dg / 2) ** 2; return R * 2 * Math.asin(Math.sqrt(h)); };
 
