@@ -91,7 +91,11 @@ function bodyAt(src, i) {
       for (const k of obj.matchAll(/(?:^|[{,])\s*(\w+)\s*(?=[,}]|$)/g)) keys.add(k[1]);
       for (const sp of obj.matchAll(/\.\.\.(\w+)/g)) {
         const src = new RegExp("(?:const|let)\\s+" + sp[1] + "\\s*=\\s*\\{").exec(body);
-        if (src) for (const k of bodyAt(body, src.index).matchAll(/(\w+):/g)) keys.add(k[1]);
+        if (src) {
+          const sb = bodyAt(body, src.index);
+          for (const k of sb.matchAll(/(\w+):/g)) keys.add(k[1]);
+          for (const k of sb.matchAll(/(?:^|[{,])\s*(\w+)\s*(?=[,}]|$)/g)) keys.add(k[1]);
+        }
         else keys.add("*");                        // spread from something we cannot resolve
       }
       for (const st of obj.matchAll(/status:\s*"(\w+)"/g)) statuses.add(st[1]);

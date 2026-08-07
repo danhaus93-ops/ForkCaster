@@ -369,7 +369,8 @@ function checkpointRead(input) {
   const stall = { on: flatWeeks >= 4 && belowGoal, weeks: flatWeeks, recentRate: rateOver(4),
     atGoal: !belowGoal, lbsToGoal: goal && nowLbs != null ? Math.max(0, Math.round(nowLbs - goal)) : null };
 
-  const base = { cur, next, atCeiling, days, need, rate, rows, veto, firstAt, stall,
+  const dosesAt = log.filter((d) => +d.mg === cur && String(d.date).slice(0, 10) >= firstAt).length;
+  const base = { cur, next, atCeiling, days, need, dosesAt, rate, rows, veto, firstAt, stall,
     proteinHit: pHit, proteinOf: pd.length, trainDays, trainWeeks, seModPlus, seLast };
   if (days < need || rate == null) return { ...base, status: "early", remaining: Math.max(0, need - days) };
   if (veto.length) return { ...base, status: "veto" };
@@ -4941,8 +4942,10 @@ export default function App() {
                 })()}
               </button>
               <div style={{ fontSize: 15.5, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>
-                You're {cp.days} of {cp.need} days at {cp.cur} mg. Levels are still climbing toward steady state,
-                so an evaluation now would judge a dose you haven't fully received yet.
+                You're {cp.days} of {cp.need} days at {cp.cur} mg{cp.dosesAt ? `, ${cp.dosesAt} ${cp.dosesAt === 1 ? "dose" : "doses"} received` : ""}.
+                Levels are still climbing toward steady state, so an evaluation now would judge a dose you
+                haven't fully received yet. Doses are how much drug you have had; days are how close it is to
+                levelling off — a shortened interval moves one and not the other.
               </div>
             </div>) : (<div>
               <button onClick={() => setCpOpenFor(cpOpen ? null : cp.cur)}

@@ -292,5 +292,28 @@ ok(TN.rungCellTone('protein',90)==='go'&&TN.rungCellTone('protein',89)==='cautio
 ok(TN.rungCellTone('lifts',2)==='go'&&TN.rungCellTone('lifts',1.9)==='caution','lifts green at 2/wk — the contractScorecard bar');
 ok(TN.rungCellTone('wt',-0.9)==='go'&&TN.rungCellTone('wt',0.5)==='caution','weight is never red — gaining is amber, never a verdict');
 ok(TN.rungCellTone('sym',0.5)==='go'&&TN.rungCellTone('sym',1)==='caution'&&TN.rungCellTone('sym',3)==='avoid','symptom load steps green/amber/red by magnitude');
+
+// v0.9.229: the checkpoint reports doses as well as days.
+{
+  const SRC9=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/const dosesAt = log\.filter\(\(d\) => \+d\.mg === cur && String\(d\.date\)\.slice\(0, 10\) >= firstAt\)\.length;/.test(SRC9),
+     'doses at the current rung are counted');
+  ok(/const base = \{ cur, next, atCeiling, days, need, dosesAt,/.test(SRC9),'and returned on every status');
+  ok(/\$\{cp\.dosesAt\} \$\{cp\.dosesAt === 1 \? "dose" : "doses"\} received/.test(SRC9),'the card shows them');
+
+  /* The two frames disagree when an interval is shortened, which is exactly his case: he moved his
+     shot day from Sunday to Friday with one 5-day gap, so he receives his 5th dose on day 26 of a
+     28-day hold. A card that shows only days hides that. */
+  const dn=(x)=>new Date(x+"T12:00:00").getTime();
+  const sched=["2026-07-26","2026-07-31","2026-08-07","2026-08-14","2026-08-21","2026-08-28"];
+  const days=(x)=>Math.round((dn(x)-dn(sched[0]))/86400000);
+  ok(days("2026-08-14") === 19, 'his 4th dose lands on day 19, not day 21');
+  ok(days("2026-08-21") === 26, 'and his 5th on day 26 — two short of the hold');
+  ok(days("2026-08-28") === 33, 'so the first Friday past the hold is day 33');
+  ok(sched.indexOf("2026-08-21") + 1 === 5, 'five doses by then');
+  // the label frame and the day frame genuinely differ here — that is why both are shown
+  ok(days("2026-08-21") < 28 && 5 > 4, 'doses say go and days say wait, which is the whole point');
+}
+
 console.log('\nENGINES: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

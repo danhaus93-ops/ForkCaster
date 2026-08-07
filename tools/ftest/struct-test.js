@@ -1936,7 +1936,10 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // each of these was a false positive it produced before being corrected, and each correction
   // matters more than the check itself — a tool that cries wolf gets switched off
   ok(/for \(const k of obj\.matchAll\(\/\(\?:\^\|\[\{,\]\)/.test(DS),'it reads ES6 shorthand properties');
-  ok(/for \(const sp of obj\.matchAll\(\/\\\.\\\.\\\.\(\\w\+\)\//.test(DS),'and resolves spread returns');
+  ok(/for \(const sp of obj\.matchAll/.test(DS),'and resolves spread returns');
+  ok(/const sb = bodyAt\(body, src\.index\);/.test(DS),'reading the spread source once');
+  ok((DS.match(/\(\?:\^\|\[\{,\]\)/g) || []).length >= 2,
+     'and applying the shorthand rule to the spread source too — applying it to only one path is how it cried wolf');
   ok(/keys\.add\("\*"\)/.test(DS),'admitting when a spread cannot be resolved rather than claiming absence');
   ok(/\["glp", "glp"\], \["prefs", "prefs"\]/.test(DS),"it does not confuse the server's request body with body state");
   ok(/GHOST — deliberately NOT done here/.test(DS),
