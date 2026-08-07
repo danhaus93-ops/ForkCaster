@@ -4329,7 +4329,8 @@ export default function App() {
                   const W3 = Math.max(300, pts.length * 53), H3 = 110;
             const hi = Math.max(...pts.map((p0) => p0.v)), lo = Math.min(...pts.map((p0) => p0.v));
             const span = Math.max(0.6, hi - lo);
-            const xc = (n) => 6 + (n / (pts.length - 1)) * (W3 - 12);
+            const LABW = 6 * 12 * 0.627, PADX = LABW / 2 + 4;
+                  const xc = (n) => PADX + (n / Math.max(1, pts.length - 1)) * (W3 - 2 * PADX);
             const yc = (v) => 12 + (1 - (v - lo) / span) * (H3 - 40);
             const d3 = pts.map((p0, n) => `${n ? "L" : "M"}${xc(n).toFixed(1)} ${yc(p0.v).toFixed(1)}`).join(" ");
             const lastP = pts[pts.length - 1];
@@ -4354,15 +4355,12 @@ export default function App() {
                       </g>);
                   })}
                 {(() => {
-                  const LW = 6 * 12 * 0.627;            /* "Jul 26" at 12px in the mono face */
-                  const gap = pts.length > 1 ? (xc(1) - xc(0)) : W3;
                   return pts.map((p0, n) => {
                     const isPick = pick && pick.chart === "comp" && pick.i === n;
-                    /* the ends anchor inward so a label cannot hang off the chart */
-                    const anchor = n === 0 ? "start" : n === pts.length - 1 ? "end" : "middle";
-                    const x = n === 0 ? 6 : n === pts.length - 1 ? W3 - 6 : xc(n);
+                    /* every label centres on its OWN point — anchoring the ends to the chart edge
+                       is what made them collide with their neighbours */
                     return (
-                      <text key={n} x={x} y={H3 - 6} textAnchor={anchor} fontFamily={DATA} fontSize="12"
+                      <text key={n} x={xc(n)} y={H3 - 6} textAnchor="middle" fontFamily={DATA} fontSize="12"
                         fill={isPick ? CHART.comp : C.faint} opacity={isPick ? 1 : 0.75}>
                         {fmtDate(p0.date)}</text>);
                   });

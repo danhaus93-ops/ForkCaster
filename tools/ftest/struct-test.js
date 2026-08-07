@@ -2390,7 +2390,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/last 12 of \{weightSeries\.length\} weigh-ins/.test(DM),'and says so when there are more');
   // the composition date is the OLDEST of the last 14 readings, so below 14 it never moves and
   // reads as hardcoded. Naming the count makes it obviously derived.
-  ok(/const LW = 6 \* 12 \* 0\.627;/.test(DM),'the composition dates sit on the points, not in the corner');
+  ok(/const LABW = 6 \* 12 \* 0\.627/.test(DM),'the composition dates sit on the points, not in the corner');
   // a silent cap is the fault here, not the number: state what is shown whenever something is cut
   ok(/\.slice\(-12\)/.test(DM) && /last 12 of/.test(DM), 'every cap on a visible list is stated');
 }
@@ -2401,10 +2401,9 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   const DN=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
   // a date in the CORNER names one reading without saying which, which is why it read as hardcoded
   ok(!/\{fmtDate\(pts\[0\]\.date\)\} · \{pts\.length\}/.test(DN),'the corner date label is gone');
-  ok(/const LW = 6 \* 12 \* 0\.627;/.test(DN),'label width comes from the calibrated advance, not a guess');
-  ok(!/return null;\s*const anchor/.test(DN),'no reading is dropped — the chart scrolls instead');
-  ok(/const anchor = n === 0 \? "start" : n === pts\.length - 1 \? "end" : "middle";/.test(DN),
-     'and the ends anchor inward so a label cannot hang off the chart');
+  ok(/const LABW = 6 \* 12 \* 0\.627/.test(DN),'label width comes from the calibrated advance, not a guess');
+  ok(!/textAnchor=\{anchor\}/.test(DN),'no reading is dropped and no label is anchored to the chart edge');
+  ok(/textAnchor="middle"/.test(DN),'every label centres on its own point');
   // the arithmetic: at 3 readings every point is labelled, at 14 they would collide
   const LW = 6 * 12 * 0.627, W3 = 300;
   const gapFor = (n) => (W3 - 12) / (n - 1);
@@ -2434,6 +2433,39 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/onScroll=\{\(e\) => setCompScroll\(e\.currentTarget\.scrollLeft\)\}/.test(DO2),'it is recorded as he scrolls');
   ok(/if \(el && el\.scrollLeft !== compScroll\) el\.scrollLeft = compScroll;/.test(DO2),'and restored after a remount');
   ok(/PICKABLE_CARDS = new Set\(\[[^\]]*"comp"/.test(DO2),'which matters because comp really is keyed on the pick');
+}
+
+
+// v0.9.233: the dates collided from six readings on, and my anchoring was the cause.
+{
+  const DP=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // pinning the END labels to the chart edge pushed them AWAY from their own points, so the first
+  // label's box ran into the second point's. Padding the plot lets every label centre on its point.
+  ok(/const LABW = 6 \* 12 \* 0\.627, PADX = LABW \/ 2 \+ 4;/.test(DP),'the plot is padded by half a label');
+  ok(/PADX \+ \(n \/ Math\.max\(1, pts\.length - 1\)\) \* \(W3 - 2 \* PADX\)/.test(DP),'and the points sit inside that padding');
+  ok(/x=\{xc\(n\)\} y=\{H3 - 6\} textAnchor="middle"/.test(DP),'every label centres on its own point');
+  ok(!/const anchor = n === 0 \? "start"/.test(DP),'no label is anchored to the chart edge any more');
+
+  /* the arithmetic, at every count he could reach — this is the check that was missing when the
+     53px-per-point figure was chosen, because it assumed centred labels while the code anchored
+     the ends outward. */
+  const LW = 6 * 12 * 0.627, PAD = LW / 2 + 4;
+  const boxes = (n) => {
+    const W3 = Math.max(300, n * 53);
+    const xc = (i) => PAD + (i / Math.max(1, n - 1)) * (W3 - 2 * PAD);
+    return { W3, b: Array.from({ length: n }, (_, i) => [xc(i) - LW / 2, xc(i) + LW / 2]) };
+  };
+  for (const n of [2, 3, 5, 6, 8, 10, 14, 20, 52]) {
+    const { W3, b } = boxes(n);
+    let worst = Infinity;
+    for (let i = 0; i < n - 1; i++) worst = Math.min(worst, b[i + 1][0] - b[i][1]);
+    ok(worst >= 0, n + ' labels do not overlap (' + worst.toFixed(1) + 'px apart)');
+    ok(b[0][0] >= 0, n + ': the first label does not hang off the left');
+    ok(b[n - 1][1] <= W3, n + ': nor the last off the right');
+  }
+  // and the old approach genuinely failed, so nobody restores it
+  const oldFirst = [6, 6 + LW], oldSecond6 = (() => { const W3 = 318, xc = 6 + (1 / 5) * (W3 - 12); return [xc - LW / 2, xc + LW / 2]; })();
+  ok(oldFirst[1] > oldSecond6[0], 'edge-anchored ends genuinely collided at six readings');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
