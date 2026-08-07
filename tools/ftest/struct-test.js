@@ -2379,5 +2379,22 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(d.toISOString().slice(0,10) === "2026-08-28", 'which is Aug 28');
 }
 
+
+// v0.9.230: two caps that made real data look missing.
+{
+  const DM=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // the weight list showed THREE entries — fine as a summary line on a small card, wrong now that
+  // the card is a full sheet with a 108px chart above it.
+  ok(/\[\.\.\.weightSeries\]\.slice\(-12\)\.reverse\(\)/.test(DM),'the weight list shows twelve weigh-ins');
+  ok(!/\[\.\.\.weightSeries\]\.slice\(-3\)/.test(DM),'not three');
+  ok(/last 12 of \{weightSeries\.length\} weigh-ins/.test(DM),'and says so when there are more');
+  // the composition date is the OLDEST of the last 14 readings, so below 14 it never moves and
+  // reads as hardcoded. Naming the count makes it obviously derived.
+  ok(/\{fmtDate\(pts\[0\]\.date\)\} · \{pts\.length\}/.test(DM),'the composition label names how many readings it covers');
+  ok(/pts\.length === 1 \? "reading" : "readings"/.test(DM),'pluralised');
+  // a silent cap is the fault here, not the number: state what is shown whenever something is cut
+  ok(/\.slice\(-12\)/.test(DM) && /last 12 of/.test(DM), 'every cap on a visible list is stated');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

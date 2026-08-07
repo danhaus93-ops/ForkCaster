@@ -4272,7 +4272,9 @@ export default function App() {
             </div>))}
           </div>
           {pAvg != null && pAvg < pFloor && <button onClick={() => setTargets((t) => ({ ...t, protein: pFloor }))} style={{ width: "100%", marginTop: 12, background: "transparent", border: `1px solid ${C.hair}`, color: C.ink, borderRadius: 12, padding: "13px 0", fontFamily: BODY, fontSize: 17.5, fontWeight: 600, cursor: "pointer" }}>Raise protein target to {pFloor} g</button>}
-          {weightSeries.length > 0 && <div style={{ marginTop: 8 }}>{[...weightSeries].slice(-3).reverse().map((w, i) => (
+          {weightSeries.length > 12 && <div style={{ fontFamily: DATA, fontSize: 12, color: C.faint, marginTop: 12 }}>
+            last 12 of {weightSeries.length} weigh-ins</div>}
+          {weightSeries.length > 0 && <div style={{ marginTop: 8 }}>{[...weightSeries].slice(-12).reverse().map((w, i) => (
             <div key={w.date + i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.hair}` }}>
               <span style={{ fontFamily: DATA, fontSize: 15.5, color: C.ink2 }}>{fmtDate(w.date)} · {fmtWt(w.lbs)} {wtU}</span>
               {w.synced ? <span style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700, color: C.muted, letterSpacing: 0.8, border: `1px solid ${C.hair}`, borderRadius: 999, padding: "3px 8px" }}>{w.source ? ({ "apple-health": "APPLE HEALTH", "google-health": "GOOGLE HEALTH" }[w.source] || w.source.toUpperCase().replace(/-/g, " ")) : "SYNCED"}</span> : <button onClick={() => setWeightLog((l) => l.filter((x) => !(x.date === w.date && x.lbs === w.lbs)))} style={{ background: "none", border: "none", color: C.faint, fontSize: 17.5, cursor: "pointer", padding: 4 }}>✕</button>}
@@ -4335,7 +4337,8 @@ export default function App() {
                           fill={CHART.comp} opacity={_any ? (_sel ? 1 : 0.35) : (n === pts.length - 1 ? 1 : 0.65)} />
                       </g>);
                   })}
-                <text x="6" y={H3 - 6} fontFamily={DATA} fontSize="12" fill={C.faint}>{fmtDate(pts[0].date)}</text>
+                <text x="6" y={H3 - 6} fontFamily={DATA} fontSize="12" fill={C.faint}>
+                  {fmtDate(pts[0].date)} · {pts.length} {pts.length === 1 ? "reading" : "readings"}</text>
                 <text x={W3 - 6} y={H3 - 6} textAnchor="end" fontFamily={DATA} fontSize="12" fill={C.faint}>
                   {(() => { const _q = pick && pick.chart === "comp" ? pts[pick.i] : null;
                     return _q ? `${fmtDate(_q.date)} · ${_q.v}%` : `${lastP.v}%`; })()}</text>
