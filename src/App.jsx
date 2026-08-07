@@ -1641,7 +1641,8 @@ export default function App() {
   // the new date onto them, welding them there.
   const [sleepView, setSleepView] = useState("week");
   const [sheetCard, setSheetCard] = useState(null);
-  const [calYm, setCalYm] = useState(null)   /* the calendar month, lifted so a remount cannot reset it */
+  const [calYm, setCalYm] = useState(null);
+  const [compScroll, setCompScroll] = useState(0)   /* comp is a keyed card — a DOM scroll would reset on every pick */   /* the calendar month, lifted so a remount cannot reset it */
   const [pick, setPick] = useState(null)   /* {chart, i} — the data point he is asking about */;
   /* v0.9.160: toast. Replaces the OS alert dialog, which stopped the app dead in an OS-chrome box with a system
      font — the least premium element available on the web, in an app that otherwise looks like an
@@ -2145,9 +2146,18 @@ export default function App() {
   // A scale reading beats a tape-measure estimate. Label whichever one is on screen so a derived
   // number is never mistaken for a measurement.
   const bfMeasured = (() => { const d = [...((healthSync && healthSync.days) || [])].reverse().find((x) => x.bodyFatPct != null); return d ? +d.bodyFatPct : 0; })();
-  const bfShown = bfMeasured || bodyFat;
+  /* v0.9.231: when a point on the composition line is picked, these read THAT day. A chart and the
+     numbers beneath it disagreeing is worse than either alone. */
+  const _cpk = pick && pick.chart === "comp" ? pick.i : null;
+  const _cRow = (() => {
+    if (_cpk == null) return null;
+    const rows = ((healthSync && healthSync.days) || []).filter((d0) => d0.bodyFatPct != null).slice(-14);
+    return rows[_cpk] || null;
+  })();
+  const bfShown = _cRow ? +_cRow.bodyFatPct : (bfMeasured || bodyFat);
   const bfSource = bfMeasured ? "measured" : (bodyFat ? "Navy estimate" : (!body.neck || !body.waist || !body.heightIn) ? "add height, neck & waist" : "—");
-  const leanShown = bfShown && curWeight ? curWeight * (1 - bfShown / 100) : 0;
+  const _wForComp = _cRow && _cRow.weightLbs != null ? +_cRow.weightLbs : curWeight;
+  const leanShown = bfShown && _wForComp ? _wForComp * (1 - bfShown / 100) : 0;
   // Every consumer reads leanShown, which prefers the MEASURED body fat. This was derived from the
   // Navy estimate while the tiles beside it showed the measured value, so the Journey card said
   // 174 lb next to a LEAN tile reading 136. One source, or they drift apart again.
@@ -4314,7 +4324,9 @@ export default function App() {
               .slice(-14)
               .map((d0) => ({ date: d0.date, v: +d0.bodyFatPct }));
             if (pts.length < 2) return null;
-            const W3 = 300, H3 = 110;
+            /* v0.9.232: past six readings the labels used to drop. The chart grows instead and scrolls, so
+                     no date is ever lost — 53px per point is the label width plus its gap. */
+                  const W3 = Math.max(300, pts.length * 53), H3 = 110;
             const hi = Math.max(...pts.map((p0) => p0.v)), lo = Math.min(...pts.map((p0) => p0.v));
             const span = Math.max(0.6, hi - lo);
             const xc = (n) => 6 + (n / (pts.length - 1)) * (W3 - 12);
@@ -4322,7 +4334,11 @@ export default function App() {
             const d3 = pts.map((p0, n) => `${n ? "L" : "M"}${xc(n).toFixed(1)} ${yc(p0.v).toFixed(1)}`).join(" ");
             const lastP = pts[pts.length - 1];
             return (
-              <svg viewBox={`0 0 ${W3} ${H3}`} style={{ width: "100%", height: "auto", marginBottom: 16, display: "block" }}>
+              <div
+                ref={(el) => { if (el && el.scrollLeft !== compScroll) el.scrollLeft = compScroll; }}
+                onScroll={(e) => setCompScroll(e.currentTarget.scrollLeft)}
+                style={{ overflowX: "auto", overflowY: "hidden", marginBottom: 16, WebkitOverflowScrolling: "touch" }}>
+              <svg viewBox={`0 0 ${W3} ${H3}`} style={{ width: W3, height: "auto", display: "block" }}>
                 <path d={d3} fill="none" stroke={CHART.comp} strokeWidth="2.6"
                   strokeLinecap="round" strokeLinejoin="round" />
                 {pts.map((p0, n) => {
@@ -4337,12 +4353,25 @@ export default function App() {
                           fill={CHART.comp} opacity={_any ? (_sel ? 1 : 0.35) : (n === pts.length - 1 ? 1 : 0.65)} />
                       </g>);
                   })}
-                <text x="6" y={H3 - 6} fontFamily={DATA} fontSize="12" fill={C.faint}>
-                  {fmtDate(pts[0].date)} · {pts.length} {pts.length === 1 ? "reading" : "readings"}</text>
+                {(() => {
+                  const LW = 6 * 12 * 0.627;            /* "Jul 26" at 12px in the mono face */
+                  const gap = pts.length > 1 ? (xc(1) - xc(0)) : W3;
+                  return pts.map((p0, n) => {
+                    const isPick = pick && pick.chart === "comp" && pick.i === n;
+                    /* the ends anchor inward so a label cannot hang off the chart */
+                    const anchor = n === 0 ? "start" : n === pts.length - 1 ? "end" : "middle";
+                    const x = n === 0 ? 6 : n === pts.length - 1 ? W3 - 6 : xc(n);
+                    return (
+                      <text key={n} x={x} y={H3 - 6} textAnchor={anchor} fontFamily={DATA} fontSize="12"
+                        fill={isPick ? CHART.comp : C.faint} opacity={isPick ? 1 : 0.75}>
+                        {fmtDate(p0.date)}</text>);
+                  });
+                })()}
                 <text x={W3 - 6} y={H3 - 6} textAnchor="end" fontFamily={DATA} fontSize="12" fill={C.faint}>
                   {(() => { const _q = pick && pick.chart === "comp" ? pts[pick.i] : null;
                     return _q ? `${fmtDate(_q.date)} · ${_q.v}%` : `${lastP.v}%`; })()}</text>
-              </svg>);
+              </svg>
+              </div>);
           })()}
         {(() => { const ds0 = ((healthSync && healthSync.days) || []).filter((d0) => d0.bodyFatPct != null || d0.muscleMassLbs != null || d0.visceralFat != null);
           const sc0 = ds0.length ? ds0[ds0.length - 1] : null;

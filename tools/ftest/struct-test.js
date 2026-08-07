@@ -99,7 +99,7 @@ ok(/padding: "20px 20px calc\(24px \+ env\(safe-area-inset-bottom, 0px\)\)"/.tes
   ok(/sectionTitle\("Composition"\)/.test(SRC),'the merged card exists');
   ok(!/stat\("BMI"/.test(SRC),'the separate BMI tile is gone');
   // a measured reading must outrank the tape-measure estimate, and be labelled as such
-  ok(/const bfShown = bfMeasured \|\| bodyFat/.test(SRC),'measured body fat outranks the Navy estimate');
+  ok(/\(bfMeasured \|\| bodyFat\)/.test(SRC),'measured body fat still outranks the Navy estimate');
   ok(/bfMeasured \? "measured"/.test(SRC),'the tile says "measured" when it is');
   ok(/"Navy estimate"/.test(SRC),'an estimate is labelled an estimate, not just a method name');
   ok(!/>Navy method</.test(SRC),'the bare "Navy method" label is gone — it read as a measurement');
@@ -110,7 +110,7 @@ ok(/padding: "20px 20px calc\(24px \+ env\(safe-area-inset-bottom, 0px\)\)"/.tes
 // The Journey card read 174 lb (Navy) while the LEAN tile beside it read 136 (measured).
 {
   ok(/const leanShown = bfShown/.test(SRC),'leanShown derives from bfShown');
-  ok(/const bfShown = bfMeasured \|\| bodyFat/.test(SRC),'bfShown prefers the measured reading');
+  ok(/\(bfMeasured \|\| bodyFat\)/.test(SRC),'bfShown still prefers the measured reading when nothing is picked');
   ok(/const leanMass = leanShown;/.test(SRC),'leanMass IS leanShown — not a second derivation');
   ok(!/const leanMass = bodyFat \?/.test(SRC),'leanMass must never re-derive from the raw estimate');
   ok(/body_fat_pct: bfShown/.test(SRC),'the coach is briefed with the measured value');
@@ -2044,7 +2044,7 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   // composition plots the series it already had
   ok(/filter\(\(d0\) => d0\.bodyFatPct != null\)/.test(CU),'composition reads body fat from the scale');
   ok(/if \(pts\.length < 2\) return null;/.test(CU),'and draws nothing from a single reading');
-  ok(/const W3 = 300, H3 = 110;/.test(CU),'at a height worth reading');
+  ok(/const W3 = Math\.max\(300, pts\.length \* 53\), H3 = 110;/.test(CU),'the chart is as wide as its readings need');
 }
 
 
@@ -2390,10 +2390,50 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/last 12 of \{weightSeries\.length\} weigh-ins/.test(DM),'and says so when there are more');
   // the composition date is the OLDEST of the last 14 readings, so below 14 it never moves and
   // reads as hardcoded. Naming the count makes it obviously derived.
-  ok(/\{fmtDate\(pts\[0\]\.date\)\} · \{pts\.length\}/.test(DM),'the composition label names how many readings it covers');
-  ok(/pts\.length === 1 \? "reading" : "readings"/.test(DM),'pluralised');
+  ok(/const LW = 6 \* 12 \* 0\.627;/.test(DM),'the composition dates sit on the points, not in the corner');
   // a silent cap is the fault here, not the number: state what is shown whenever something is cut
   ok(/\.slice\(-12\)/.test(DM) && /last 12 of/.test(DM), 'every cap on a visible list is stated');
+}
+
+
+// v0.9.231: dates on the points, and the tiles follow the pick.
+{
+  const DN=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // a date in the CORNER names one reading without saying which, which is why it read as hardcoded
+  ok(!/\{fmtDate\(pts\[0\]\.date\)\} · \{pts\.length\}/.test(DN),'the corner date label is gone');
+  ok(/const LW = 6 \* 12 \* 0\.627;/.test(DN),'label width comes from the calibrated advance, not a guess');
+  ok(!/return null;\s*const anchor/.test(DN),'no reading is dropped — the chart scrolls instead');
+  ok(/const anchor = n === 0 \? "start" : n === pts\.length - 1 \? "end" : "middle";/.test(DN),
+     'and the ends anchor inward so a label cannot hang off the chart');
+  // the arithmetic: at 3 readings every point is labelled, at 14 they would collide
+  const LW = 6 * 12 * 0.627, W3 = 300;
+  const gapFor = (n) => (W3 - 12) / (n - 1);
+  /* 53px per point is the label width plus its gap, so EVERY count has room — checked at the
+     sizes he will actually reach rather than asserted once. */
+  const wFor = (n) => Math.max(300, n * 53), spacing = (n) => (wFor(n) - 12) / (n - 1);
+  for (const n of [3, 6, 8, 10, 14, 20, 52])
+    ok(spacing(n) >= LW + 8, n + ' readings still leave room for every date (' + spacing(n).toFixed(1) + 'px)');
+  ok(wFor(3) === 300, 'and a short series does not stretch — it stays the card width');
+  // the tiles disagreed with the chart: they showed the latest reading whatever he tapped
+  ok(/const bfShown = _cRow \? \+_cRow\.bodyFatPct : \(bfMeasured \|\| bodyFat\);/.test(DN),
+     'body fat follows the picked reading');
+  ok(/const _wForComp = _cRow && _cRow\.weightLbs != null \? \+_cRow\.weightLbs : curWeight;/.test(DN),
+     'and lean mass uses the weight recorded THAT day, not today');
+  ok(/rows\[_cpk\] \|\| null/.test(DN),'indexed against the same last-14 slice the chart plots');
+}
+
+
+// v0.9.232: the composition chart scrolls rather than dropping dates.
+{
+  const DO2=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  ok(/overflowX: "auto", overflowY: "hidden"/.test(DO2),'the chart sits in a horizontal scroller');
+  ok(/style=\{\{ width: W3, height: "auto", display: "block" \}\}/.test(DO2),'and takes its real width, not 100%');
+  // comp is a PICKABLE card, so it remounts on every tap. A DOM scroll position or a ref would be
+  // thrown away each time — the same fault that sent the calendar back to today in .221.
+  ok(/const \[compScroll, setCompScroll\] = useState\(0\)/.test(DO2),'the scroll offset lives in app state');
+  ok(/onScroll=\{\(e\) => setCompScroll\(e\.currentTarget\.scrollLeft\)\}/.test(DO2),'it is recorded as he scrolls');
+  ok(/if \(el && el\.scrollLeft !== compScroll\) el\.scrollLeft = compScroll;/.test(DO2),'and restored after a remount');
+  ok(/PICKABLE_CARDS = new Set\(\[[^\]]*"comp"/.test(DO2),'which matters because comp really is keyed on the pick');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
