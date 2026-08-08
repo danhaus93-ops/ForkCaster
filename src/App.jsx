@@ -3721,8 +3721,14 @@ export default function App() {
                   <FoodImg photo={PHOTOS[selected] || ((venues.find((v) => v.id === selected) || {}).photo)} kind={FOOD_BY_ID[selected] || "bowl"} sc={scoreColor(4.5)} />
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 999, background: medalColor(i), color: "#fff", fontSize: 15.5, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 20, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 17.5, color: C.muted, marginTop: 2, lineHeight: 1.45 }}>{p.why ? <><b style={{ color: C.go, fontWeight: 700 }}>Why:</b> {p.why}</> : null}</div></div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div><div style={{ fontSize: 15.5, color: C.faint }}>{(p.calories ?? p.cal) || "—"} cal{p.carbs != null ? ` · ${p.carbs}g carb` : ""}{p.fat != null ? ` · ${p.fat}g fat` : ""}</div></div>
+                <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 20, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 17.5, color: C.muted, marginTop: 2, lineHeight: 1.45 }}>{p.why ? <><b style={{ color: C.go, fontWeight: 700 }}>Why:</b> {p.why}</> : null}</div>
+                            <div style={{ fontFamily: DATA, fontSize: 13.5, color: C.faint, marginTop: 4 }}>
+                              {(p.calories ?? p.cal) || "\u2014"} cal{p.carbs != null ? ` \u00b7 ${p.carbs}g carb` : ""}{p.fat != null ? ` \u00b7 ${p.fat}g fat` : ""}</div>
+                          </div>
+                <div style={{ textAlign: "right", flexShrink: 0, minWidth: 56 }}>
+                            <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div>
+                            <div style={{ fontFamily: DATA, fontSize: 12, color: C.faint }}>protein</div>
+                          </div>
                 <button onClick={() => { const nm = p.item || p.name; if (loggedPicks.includes(nm)) return; const pr = +p.protein || 0, ca = +(p.calories ?? p.cal) || 0, fa = p.fat == null ? 0 : +p.fat || 0, cb = p.carbs == null ? 0 : +p.carbs || 0, fb = +p.fiber || 0; setEaten((e) => ({ ...e, protein: e.protein + pr, calories: e.calories + ca, carbs: (e.carbs || 0) + cb, fat: (e.fat || 0) + fa, fiber: (e.fiber || 0) + fb })); setMealLog((m) => [...m, { id: uid(), date: todayISO(), name: nm, protein: pr, calories: ca, fat: fa, carbs: cb, fiber: fb }]); setLoggedPicks((l) => [...l, nm]); }}
                   style={{ marginLeft: 10, flexShrink: 0, alignSelf: "center", background: loggedPicks.includes(p.item || p.name) ? C.goSoft : "none", border: `1.5px solid ${C.go}`, color: C.go, borderRadius: 8, padding: "7px 10px", fontFamily: BODY, fontSize: 15.5, fontWeight: 800, cursor: "pointer" }}>{loggedPicks.includes(p.item || p.name) ? "✓" : "Log"}</button>
               </div>

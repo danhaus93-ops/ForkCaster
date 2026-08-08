@@ -3,7 +3,7 @@ id: forkcaster-coach
 name: ForkCaster
 tagline: Medication-aware nutrition coach — what to order, right now
 category: ai
-version: "0.9.236"
+version: "0.9.237"
 port: 3450
 description: >-
   ForkCaster is a self-hosted, GPS-aware nutrition coach. It ranks what to
@@ -20,9 +20,8 @@ support: https://github.com/danhaus93-ops/ForkCaster/issues
 icon: https://raw.githubusercontent.com/danhaus93-ops/ForkCaster/main/dist/icon.svg
 gallery: []
 releaseNotes: >-
-  Coach can now see your labs, logged side effects, titration progress and resting heart
-  rate — so you can ask it things that span them, like what to eat given a flagged lab.
-  It reports values against their ranges but will not diagnose or change a dose.
+  Fixes the calories and carbs overlapping the dish name on the Now tab. Protein stays on
+  the right; the rest sits under the name where there is room for it.
 dependencies: []
 path: ""
 defaultUsername: ""

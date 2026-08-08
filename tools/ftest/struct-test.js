@@ -2513,5 +2513,27 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
   ok(/flexWrap: "wrap", rowGap: 12/.test(DQ),'so the chips wrap to two rows');
 }
 
+
+// v0.9.237: the Now pick row overlapped once the type was raised.
+{
+  const DR2=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  const MONO=0.627, INTER=0.52, inner=307-36, badge=44;
+  // the macro line ran on ONE line with flexShrink 0, so it never gave way and the dish name was
+  // squeezed to nothing. It was already tight before .195 and impossible after it.
+  const oneLine = "420 cal · 62g carb · 18g fat".length * 15.5 * INTER;
+  ok(inner - badge - oneLine < 40, 'the old single-line macro block left the name almost no width (' + Math.round(inner-badge-oneLine) + 'px)');
+  ok(/minWidth: 56 \}\}>\s*<div style=\{\{ fontFamily: DISPLAY, fontSize: 21/.test(DR2.replace(/\n\s*/g, ' ')),
+     'the right column now holds protein alone');
+  ok(/<div style=\{\{ fontFamily: DATA, fontSize: 12, color: C\.faint \}\}>protein<\/div>/.test(DR2),
+     'labelled, so a bare number is not left to explain itself');
+  ok(/\{\(p\.calories \?\? p\.cal\) \|\| "\\u2014"\} cal/.test(DR2) || /\(p\.calories \?\? p\.cal\) \|\| "\u2014"\} cal/.test(DR2),
+     'and the rest of the macros moved under the name');
+  // under the name they have the full column and may wrap, which is the rule: never truncate
+  const nameCol = inner - badge - 53 - 14;
+  ok(nameCol > 150, 'the name column is usable again (' + Math.round(nameCol) + 'px)');
+  ok(!/textAlign: "right", flexShrink: 0 \}\}><div style=\{\{ fontFamily: DISPLAY, fontSize: 21[^]*?g carb/.test(DR2),
+     'the macros are no longer in the unshrinkable right column');
+}
+
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
