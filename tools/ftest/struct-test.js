@@ -2526,13 +2526,34 @@ ok(/padding: "8px 6px calc\(10px \+ env\(safe-area-inset-bottom, 0px\)\)"/.test(
      'the right column now holds protein alone');
   ok(/<div style=\{\{ fontFamily: DATA, fontSize: 12, color: C\.faint \}\}>protein<\/div>/.test(DR2),
      'labelled, so a bare number is not left to explain itself');
-  ok(/\{\(p\.calories \?\? p\.cal\) \|\| "\\u2014"\} cal/.test(DR2) || /\(p\.calories \?\? p\.cal\) \|\| "\u2014"\} cal/.test(DR2),
-     'and the rest of the macros moved under the name');
+  ok(/\[\(p\.calories \?\? p\.cal\), "cal", C\.ink2\]/.test(DR2),'the rest of the macros sit under the name as chips');
+  ok(/\[p\.carbs, "g carb", C\.blue\]/.test(DR2),'carbs in the blue Today uses');
+  ok(/\[p\.fat, "g fat", C\.caution\]/.test(DR2),'and fat in its amber');
+  ok(/\.filter\(\(\[v\]\) => v != null\)/.test(DR2),'a macro the AI did not return draws no chip at all');
   // under the name they have the full column and may wrap, which is the rule: never truncate
   const nameCol = inner - badge - 53 - 14;
   ok(nameCol > 150, 'the name column is usable again (' + Math.round(nameCol) + 'px)');
   ok(!/textAlign: "right", flexShrink: 0 \}\}><div style=\{\{ fontFamily: DISPLAY, fontSize: 21[^]*?g carb/.test(DR2),
      'the macros are no longer in the unshrinkable right column');
+}
+
+
+// v0.9.238: the macros are chips, in the colours Today already uses.
+{
+  const DS2=require('fs').readFileSync(__FCROOT + '/src/App.jsx','utf8');
+  // a grey run-on line said three numbers with no way to tell them apart at a glance. Colour he
+  // already reads on the Today counters does that work without another legend to learn.
+  ok(/borderRadius: 999, padding: "2px 7px", color: col/.test(DS2),'each macro is a tinted pill');
+  ok(/background: col \+ "1A", border: `1px solid \$\{col\}44`/.test(DS2),'tinted from its own colour, not a fixed grey');
+  ok(/gap: 4, marginTop: 4, flexWrap: "wrap"/.test(DS2),'on the spacing scale, and wrapping rather than clipping');
+  // the middle column cannot hold three chips on one line, which is why wrap is not decorative
+  const MONO=0.627, mid=307-36-44-62-10;
+  const need=["420cal","18g carb","12g fat"].reduce((a,t)=>a+t.length*12*MONO+14+4,0);
+  ok(need > mid, 'three chips genuinely exceed the column (' + Math.round(need) + ' of ' + mid + 'px)');
+  ok(/flexWrap: "wrap"/.test(DS2),'so they wrap to a second row');
+  // colours must come from the theme, or they sit wrong on forest
+  ok(!/color: "#[0-9A-Fa-f]{6}"[^}]{0,40}borderRadius: 999, padding: "2px 7px"/.test(DS2),
+     'no hard-coded hex in the chips');
 }
 
 console.log('\nSTRUCT: '+pass+' passed, '+fail+' failed');

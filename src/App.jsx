@@ -3722,8 +3722,16 @@ export default function App() {
                   <div style={{ position: "absolute", top: -5, left: -5, width: 18, height: 18, borderRadius: 999, background: medalColor(i), color: "#fff", fontSize: 15.5, fontWeight: 700, fontFamily: DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff", zIndex: 2 }}>{i + 1}</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 20, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>{p.name}</div><div style={{ fontSize: 17.5, color: C.muted, marginTop: 2, lineHeight: 1.45 }}>{p.why ? <><b style={{ color: C.go, fontWeight: 700 }}>Why:</b> {p.why}</> : null}</div>
-                            <div style={{ fontFamily: DATA, fontSize: 13.5, color: C.faint, marginTop: 4 }}>
-                              {(p.calories ?? p.cal) || "\u2014"} cal{p.carbs != null ? ` \u00b7 ${p.carbs}g carb` : ""}{p.fat != null ? ` \u00b7 ${p.fat}g fat` : ""}</div>
+                            <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" }}>
+                              {[[(p.calories ?? p.cal), "cal", C.ink2],
+                                [p.carbs, "g carb", C.blue],
+                                [p.fat, "g fat", C.caution]]
+                                .filter(([v]) => v != null)
+                                .map(([v, unit, col]) => (
+                                  <span key={unit} style={{ fontFamily: DATA, fontSize: 12, fontWeight: 700,
+                                    borderRadius: 999, padding: "2px 7px", color: col,
+                                    background: col + "1A", border: `1px solid ${col}44` }}>{v}{unit}</span>))}
+                            </div>
                           </div>
                 <div style={{ textAlign: "right", flexShrink: 0, minWidth: 56 }}>
                             <div style={{ fontFamily: DISPLAY, fontSize: 21, fontWeight: 700, color: C.go, fontVariantNumeric: "tabular-nums" }}>{p.protein}g</div>
